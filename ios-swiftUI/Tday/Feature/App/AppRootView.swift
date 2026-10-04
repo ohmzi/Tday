@@ -549,12 +549,17 @@ struct AppRootView: View {
                                         onDeclineReports: { container.telemetryConsent.decline() }
                                     )
                                     .transition(.opacity)
-                                    // The wizard is what makes the question this session's to ask, so
-                                    // the moment it is on screen is the moment that is recorded. Set
-                                    // here rather than when the question is reached: a flow that opens
-                                    // the workspace has to find the answer already true, and this has
+                                    // The wizard is what makes the question this session's flow to
+                                    // ask, so the moment it is on screen is the moment that is
+                                    // recorded — and the moment a new flow begins, which is what
+                                    // makes the crash-reports step due again on every sign-in. Set
+                                    // here rather than when the question is reached: a flow that
+                                    // opens the workspace has to find this already true, and it has
                                     // long since run by then.
-                                    .onAppear { hasShownOnboardingWizard = true }
+                                    .onAppear {
+                                        hasShownOnboardingWizard = true
+                                        container.telemetryConsent.beginConnectFlow()
+                                    }
                                 }
                             }
 
@@ -863,10 +868,13 @@ struct AppRootView: View {
             && appViewModel.user?.requireSecurityQuestions == true
     }
 
-    /// Whether this launch's wizard has a last step at all: a DSN to send to, no answer yet, and a
-    /// wizard that was actually on screen for the flow. This is the whole of the chip — a build with
-    /// no DSN, or a device that has already answered, has no fourth chip and no step, which is what
-    /// makes both a strict no-op there.
+    /// Whether this launch's wizard has a last step at all: a DSN to send to, a connect flow that has
+    /// not been answered yet, and a wizard that was actually on screen for the flow. This is the whole
+    /// of the chip — a build with no DSN, or a flow that has already been answered, has no fourth chip
+    /// and no step, which is what makes both a strict no-op there.
+    ///
+    /// The device's stored answer is deliberately not read here: a person who answered on a previous
+    /// sign-in is asked again by this one, and only an answer given in this flow ends its step.
     private var isOnboardingPrivacyStepOffered: Bool {
         container.telemetryConsent.shouldPresentWizardStep(wizardWasOnScreen: hasShownOnboardingWizard)
     }
@@ -875,9 +883,9 @@ struct AppRootView: View {
     /// is open behind the wizard.
     ///
     /// The workspace opening IS the moment, and it is the same one whichever way it opened — a
-    /// sign-in, or "This device" — so nothing about the answer or the sign-in is read here. This is
+    /// sign-in, or "This device" — so nothing about which way it opened is read here. This is
     /// also what holds the overlay up, and what the consent card is held back by: the step and the
-    /// card are the same question, and only ever one of them is up.
+    /// card are never up at once.
     private var isOnboardingPrivacyStepDue: Bool {
         isOnboardingPrivacyStepOffered && appViewModel.isWorkspaceAvailable
     }

@@ -686,16 +686,14 @@
     <string name="settings_crash_reports_toggle">Invia segnalazioni di crash e problemi quando qualcosa non funziona</string>
     <string name="settings_crash_reports_help">Informazioni sulle segnalazioni di crash e problemi</string>
 
-    <!-- Crash reports: the one-time consent card -->
-    <string name="telemetry_card_title">Aiutaci a risolvere i crash?</string>
-    <string name="telemetry_card_intro">T\'Day può inviare una breve segnalazione tecnica solo quando qualcosa va storto, ad esempio un crash, un blocco o un errore imprevisto. Aiuta lo sviluppatore a riprodurre il problema su un dispositivo simile.</string>
-    <string name="telemetry_card_sent_label">Cosa è incluso</string>
-    <string name="telemetry_card_sent">Versione dell\'app, modello del dispositivo, versione del sistema operativo, cosa non ha funzionato e dove.</string>
-    <string name="telemetry_card_never_sent_label">Mai incluso</string>
-    <string name="telemetry_card_never_sent">Il tuo nome o account, l\'indirizzo IP, la posizione, l\'indirizzo del server o qualsiasi contenuto di attività o elenchi.</string>
-    <string name="telemetry_card_footnote">Disattivato per impostazione predefinita. Puoi cambiarlo in qualsiasi momento in Impostazioni → Privacy.</string>
-    <string name="telemetry_card_share">Condividi segnalazioni</string>
-    <string name="telemetry_card_not_now">Non ora</string>
+    <!-- Crash reports: the sign-in wizard's consent step and its card -->
+    <string name="telemetry_card_title">Inviare segnalazioni di errore?</string>
+    <string name="telemetry_card_intro">Se qualcosa si rompe, T\'Day può inviare un breve rapporto tecnico per aiutare a risolverlo. Puoi cambiarlo in qualsiasi momento in Impostazioni.</string>
+    <string name="telemetry_card_never_sent_label">Mai inviato</string>
+    <string name="telemetry_card_never_sent">nomi, account o contenuti di attività ed elenchi.</string>
+    <string name="telemetry_card_footnote">Disattivato per impostazione predefinita. Puoi cambiarlo in Impostazioni.</string>
+    <string name="telemetry_card_share">Invia segnalazioni</string>
+    <string name="telemetry_card_not_now">Non inviare</string>
     <string name="telemetry_card_read_faq">Leggi le FAQ complete</string>
     <string name="root_feed_search_scheduled">Cerca attività pianificate</string>
     <string name="root_feed_search_floater">Cerca attività fluttuanti</string>
@@ -747,8 +745,4 @@
         <item quantity="one">Non è stato possibile aggiornare un\'attività</item>
         <item quantity="other">Non è stato possibile aggiornare %d attività</item>
     </plurals>
-    <!-- TEST-CRASH: temporary freeze strings, removed with the TEST-CRASH commit -->
-    <string name="test_crash_freeze_stop">Interrompi</string>
-    <string name="test_crash_freeze_blocked">Thread principale bloccato per %1$s s</string>
-    <string name="test_crash_freeze_cancelled">Blocco annullato dopo %1$s s</string>
 </resources>

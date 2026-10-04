@@ -1,10 +1,5 @@
 package com.ohmz.tday.compose.feature.calendar
 
-import androidx.compose.runtime.CompositionLocalProvider // TEST-CRASH
-import com.ohmz.tday.compose.core.testcrash.LocalTestCrashFirstRow // TEST-CRASH
-import com.ohmz.tday.compose.core.testcrash.TestCrash // TEST-CRASH
-import com.ohmz.tday.compose.core.testcrash.TestCrashId // TEST-CRASH
-import com.ohmz.tday.compose.core.testcrash.testCrashItem // TEST-CRASH
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
@@ -990,7 +985,6 @@ fun CalendarScreen(
                                 )
                             }
                         }
-                        CompositionLocalProvider(LocalTestCrashFirstRow provides (index == 0)) { // TEST-CRASH
                         CalendarTodoRow(
                             modifier = Modifier
                                 // The day list is a task feed, so it takes the feed's
@@ -1063,9 +1057,7 @@ fun CalendarScreen(
                             onDragEnd = ::finishCalendarDrag,
                             onDragCancel = ::cancelCalendarDrag,
                         )
-                        } // TEST-CRASH
                     }
-                    testCrashItem(TestCrashId.CALENDAR) // TEST-CRASH
 
                 if (showsEmptyScene) {
                     item(key = "calendar-empty", contentType = "calendar-empty") {
@@ -2893,7 +2885,6 @@ private fun CalendarTodoRow(
     onDragEnd: (Offset?) -> Unit,
     onDragCancel: () -> Unit,
 ) {
-    val testCrashFirstRow = LocalTestCrashFirstRow.current // TEST-CRASH
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val taskCompletionSound = rememberTaskCompletionSound()
@@ -3088,7 +3079,6 @@ private fun CalendarTodoRow(
                     onClick = {
                         TdayHaptics.buttonPress(view)
                         closeSwipeSlot()
-                        TestCrash.onTaskEdit(testCrashFirstRow) // TEST-CRASH
                         onInfo()
                     },
                 )
@@ -3212,7 +3202,6 @@ private fun CalendarTodoRow(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                     ) {
-                        TestCrash.onTaskOpen(testCrashFirstRow) // TEST-CRASH
                         if (swipeRevealState.isOpenOrDragging) {
                             closeSwipeSlot()
                         } else if (!swipeRevealState.isHinting && !pendingCompletion) {

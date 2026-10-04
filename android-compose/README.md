@@ -45,7 +45,7 @@ android-compose/app/src/main/java/com/ohmz/tday/compose/
 │   ├── car/           # Internal car-mode Today/Floater surface
 │   ├── completed/     # Completed todo/floater history
 │   ├── settings/      # Settings and admin toggles
-│   ├── telemetry/     # One-time crash-reports consent card
+│   ├── telemetry/     # Crash-reports consent: the wizard step (asked each sign-in) and the card
 │   ├── release/       # Latest release and APK installer
 │   └── widget/        # Today/Floater/List widgets (plain RemoteViews) and the refresh coordinator
 └── ui/
@@ -253,11 +253,15 @@ the recognized phrase in place, and strips it from the saved task title.
 
 Off by default and per device. Nothing starts, is queued or is stored until the person says yes. The
 question is the last step of the sign-in wizard — a "Privacy" chip beside Mode, Server and Login,
-which the wizard is held on screen for once a workspace opens (Server and Local Mode alike). The
+which the wizard is held on screen for once a workspace opens (Server and Local Mode alike). It is
+asked on **every** sign-in: a device that answered before is asked again, and the answer on record
+stays in force until the new question replaces it. The
 after-sign-in card asks the same thing when the step cannot: an install that is already signed in at
 launch, a restart mid-step, or a failed sign-in or gate that took the wizard's place. It can also be
 answered any time in Settings → Privacy → "Crash & problem reports", which has a "?" to the
-`crash-reports` guide topic. The full privacy contract is in `docs/TELEMETRY.md`.
+`crash-reports` guide topic. Mobile keeps its per-device answer; the web and the server are governed
+by the admin's instance setting instead ([ADR 010](../docs/adr/010-instance-governed-web-crash-reports.md)).
+The full privacy contract is in `docs/TELEMETRY.md`.
 
 - **No DSN, no surface.** The DSN comes from `SENTRY_DSN` (environment or `sentryDsn` in
   `local.properties`). Empty (forks, self-built APKs) hides the step, the card and the Settings row and the

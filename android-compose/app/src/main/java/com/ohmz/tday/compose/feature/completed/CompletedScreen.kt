@@ -1,10 +1,5 @@
 package com.ohmz.tday.compose.feature.completed
 
-import androidx.compose.runtime.CompositionLocalProvider // TEST-CRASH
-import com.ohmz.tday.compose.core.testcrash.LocalTestCrashFirstRow // TEST-CRASH
-import com.ohmz.tday.compose.core.testcrash.TestCrash // TEST-CRASH
-import com.ohmz.tday.compose.core.testcrash.TestCrashId // TEST-CRASH
-import com.ohmz.tday.compose.core.testcrash.TestCrashSlot // TEST-CRASH
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
@@ -507,7 +502,6 @@ fun CompletedScreen(  // skipcq: KT-R1006
                             },
                         )
                     }
-                    val testCrashSlot = TestCrashSlot(TestCrashId.BUILTIN_DONE) // TEST-CRASH
                     timelineSections.forEachIndexed { sectionIndex, section ->
                         // A live query outranks a shut month: history opens with
                         // older months collapsed, and a task the search turns up
@@ -570,9 +564,7 @@ fun CompletedScreen(  // skipcq: KT-R1006
                                     sections = timelineSections,
                                     collapsedSectionKeys = collapsedSectionKeys,
                                 )
-                                val testCrashFirst = testCrashSlot.claimFirst() // TEST-CRASH
                                 item(key = "completed-row-${section.key}-${completed.id}") {
-                                    CompositionLocalProvider(LocalTestCrashFirstRow provides testCrashFirst) { // TEST-CRASH
                                     // Same gate as the header above, and for the same
                                     // reason: a tab switch re-keys every row, and the
                                     // three specs this row runs for a check-off are motion
@@ -609,13 +601,10 @@ fun CompletedScreen(  // skipcq: KT-R1006
                                         onUncomplete = { onUncomplete(completed) },
                                         swipeSlot = swipeSlot,
                                     )
-                                    } // TEST-CRASH
                                 }
-                                if (testCrashFirst) testCrashSlot.placeButton(this) // TEST-CRASH
                             }
                         }
                     }
-                    testCrashSlot.placeIfNoTasks(this) // TEST-CRASH
 
                     // This screen said "Loading" as a centred `displaySmall`
                     // ExtraBold word with 290 dp of padding around it — the
@@ -956,7 +945,6 @@ private fun CompletedSwipeRow(
     onUncomplete: () -> Unit,
     swipeSlot: TaskSwipeSlot,
 ) {
-    val testCrashFirstRow = LocalTestCrashFirstRow.current // TEST-CRASH
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val coroutineScope = rememberCoroutineScope()
@@ -1154,7 +1142,6 @@ private fun CompletedSwipeRow(
                         onClick = {
                             TdayHaptics.buttonPress(view)
                             closeSwipeSlot()
-                            TestCrash.onTaskEdit(testCrashFirstRow) // TEST-CRASH
                             onInfo()
                         },
                     )
@@ -1236,7 +1223,6 @@ private fun CompletedSwipeRow(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                         ) {
-                            TestCrash.onTaskOpen(testCrashFirstRow) // TEST-CRASH
                             if (swipeRevealState.isOpenOrDragging) {
                                 closeSwipeSlot()
                             } else if (!swipeRevealState.isHinting && !isRestoring) {

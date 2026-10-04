@@ -1,7 +1,5 @@
 package com.ohmz.tday.compose.ui.component
 
-import com.ohmz.tday.compose.core.testcrash.TestCrashButton // TEST-CRASH
-import com.ohmz.tday.compose.core.testcrash.TestCrashId // TEST-CRASH
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -814,8 +812,6 @@ fun CreateTaskBottomSheet(
                                     onNotesChange = { notes = it },
                                     onKeyboardDone = dismissKeyboard,
                                 )
-
-                                TestCrashButton(TestCrashId.NEW_TASK) // TEST-CRASH
 
                                 suggestedRepeatRrule?.let { rrule ->
                                     RepeatSuggestionChip(

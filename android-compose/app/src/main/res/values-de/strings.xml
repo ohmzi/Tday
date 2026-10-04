@@ -686,16 +686,14 @@
     <string name="settings_crash_reports_toggle">Absturz- und Problemberichte senden, wenn etwas fehlschlägt</string>
     <string name="settings_crash_reports_help">Info zu Absturz- und Problemberichten</string>
 
-    <!-- Crash reports: the one-time consent card -->
-    <string name="telemetry_card_title">Hilf mit, Abstürze zu beheben?</string>
-    <string name="telemetry_card_intro">T\'Day kann einen kurzen technischen Bericht senden, aber nur dann, wenn etwas schiefgeht, etwa bei einem Absturz, einem Einfrieren oder einem unerwarteten Fehler. Das hilft dem Entwickler, das Problem auf einem ähnlichen Gerät nachzustellen.</string>
-    <string name="telemetry_card_sent_label">Das ist enthalten</string>
-    <string name="telemetry_card_sent">App-Version, Gerätemodell, Betriebssystemversion, was fehlgeschlagen ist und wo.</string>
-    <string name="telemetry_card_never_sent_label">Nie enthalten</string>
-    <string name="telemetry_card_never_sent">Dein Name oder Konto, IP-Adresse, Standort, Serveradresse oder jegliche Inhalte von Aufgaben oder Listen.</string>
-    <string name="telemetry_card_footnote">Standardmäßig aus. Du kannst das jederzeit unter Einstellungen → Privatsphäre ändern.</string>
-    <string name="telemetry_card_share">Berichte teilen</string>
-    <string name="telemetry_card_not_now">Jetzt nicht</string>
+    <!-- Crash reports: the sign-in wizard's consent step and its card -->
+    <string name="telemetry_card_title">Fehlerberichte senden?</string>
+    <string name="telemetry_card_intro">Wenn etwas schiefgeht, kann T\'Day einen kurzen technischen Bericht senden, um es zu beheben. Du kannst das jederzeit in den Einstellungen ändern.</string>
+    <string name="telemetry_card_never_sent_label">Nie gesendet</string>
+    <string name="telemetry_card_never_sent">Namen, Konten oder Inhalte von Aufgaben und Listen.</string>
+    <string name="telemetry_card_footnote">Standardmäßig aus. Du kannst das in den Einstellungen ändern.</string>
+    <string name="telemetry_card_share">Berichte senden</string>
+    <string name="telemetry_card_not_now">Nicht senden</string>
     <string name="telemetry_card_read_faq">Vollständige FAQ lesen</string>
     <string name="root_feed_search_scheduled">Geplante Aufgaben suchen</string>
     <string name="root_feed_search_floater">Floater-Aufgaben suchen</string>
@@ -747,8 +745,4 @@
         <item quantity="one">Eine Aufgabe konnte nicht aktualisiert werden</item>
         <item quantity="other">%d Aufgaben konnten nicht aktualisiert werden</item>
     </plurals>
-    <!-- TEST-CRASH: temporary freeze strings, removed with the TEST-CRASH commit -->
-    <string name="test_crash_freeze_stop">Stoppen</string>
-    <string name="test_crash_freeze_blocked">Hauptthread %1$s s blockiert</string>
-    <string name="test_crash_freeze_cancelled">Freeze nach %1$s s abgebrochen</string>
 </resources>

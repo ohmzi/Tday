@@ -8,10 +8,11 @@ import "@/i18n";
 import SettingsPage from "@/components/settings/SettingsPage";
 
 /**
- * The Settings page around the two Privacy rows: when the card exists at all. The rows themselves
- * are covered in `settings-privacy.test.tsx`; what is checked here is the page's own decision —
- * this browser's row needs a build with a DSN, the server's row needs an admin, a server
- * workspace and a server that has a DSN of its own, and the card is there when either row is.
+ * The Settings page around the Privacy card. There is one setting on the web now: the admin's
+ * instance-wide error-report answer. The admin gets the switch, a user gets the same answer as
+ * read-only information, and a build that could not report at all gets neither — the card is on the
+ * page exactly when there is something to say. The rows themselves are covered in
+ * `settings-privacy.test.tsx`.
  */
 
 const api = vi.hoisted(() => ({ GET: vi.fn(), PATCH: vi.fn() }));
@@ -33,7 +34,15 @@ let localMode = false;
 vi.mock("@/hooks/useAppMode", () => ({ useIsLocalMode: () => localMode }));
 
 const CLIENT_DSN = "https://key@o1.ingest.example.invalid/2";
+/** The viewer and the two endpoints this page asks about. */
+const USER_ID = "u1";
+const USER_NAME = "Taylor";
+const ADMIN_ROLE = "ADMIN";
+const ADMIN_TELEMETRY_URL = "/api/admin/telemetry";
+const SENTRY_DSN_ENV = "VITE_SENTRY_DSN";
 const SERVER_OFFERED = { dsnConfigured: true, enabled: false, updatedAt: null };
+const SERVER_NO_DSN = { dsnConfigured: false, enabled: false, updatedAt: null };
+const INSTANCE_ANSWER = { enabled: false, updatedAt: "2026-09-01T00:00:00.000Z" };
 
 async function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -50,22 +59,29 @@ async function renderPage() {
 }
 
 const privacyHeading = () => screen.queryByRole("heading", { name: "Privacy" });
-const deviceRow = () => screen.queryByRole("switch", { name: "Send crash & problem reports when something fails" });
-const serverRow = () =>
-  screen.queryByRole("switch", { name: "Send this server's error reports to its operator's Sentry" });
-const askedForServerSetting = () =>
-  api.GET.mock.calls.some(([request]) => request?.url === "/api/admin/telemetry");
+const serverSwitch = () =>
+  screen.queryByRole("switch", { name: "Send error reports for this server and the web app" });
+const stateOff = () => screen.queryByText("Off");
+const askedForAdminSetting = () =>
+  api.GET.mock.calls.some(([request]) => request?.url === ADMIN_TELEMETRY_URL);
+const askedForInstanceAnswer = () =>
+  api.GET.mock.calls.some(([request]) => request?.url === "/api/instance/telemetry");
 
 beforeEach(() => {
-  vi.stubEnv("VITE_SENTRY_DSN", CLIENT_DSN);
-  authUser = { id: "u1", name: "Taylor", role: "USER" };
+  vi.stubEnv(SENTRY_DSN_ENV, CLIENT_DSN);
+  authUser = { id: USER_ID, name: USER_NAME, role: "USER" };
   localMode = false;
   api.GET.mockReset();
   api.GET.mockImplementation(({ url }: { url: string }) =>
-    Promise.resolve(url === "/api/admin/telemetry" ? SERVER_OFFERED : {}),
+    Promise.resolve(
+      url === ADMIN_TELEMETRY_URL
+        ? SERVER_OFFERED
+        : url === "/api/instance/telemetry"
+          ? INSTANCE_ANSWER
+          : {},
+    ),
   );
   window.localStorage.clear();
-  window.dispatchEvent(new StorageEvent("storage", { key: null }));
 });
 
 afterEach(() => {
@@ -74,66 +90,80 @@ afterEach(() => {
 });
 
 describe("the Privacy card on the Settings page", () => {
-  it("holds only this browser's row for someone who is not an admin", async () => {
+  it("gives a non-admin the instance answer as information, and asks the public endpoint", async () => {
     await renderPage();
 
     expect(privacyHeading()).not.toBeNull();
-    expect(deviceRow()).not.toBeNull();
-    expect(serverRow()).toBeNull();
-    expect(askedForServerSetting()).toBe(false);
+    expect(serverSwitch()).toBeNull();
+    expect(stateOff()).not.toBeNull();
+    expect(askedForInstanceAnswer()).toBe(true);
+    expect(askedForAdminSetting()).toBe(false);
   });
 
-  it("holds both rows for an admin of a server that has its own DSN", async () => {
-    authUser = { id: "u1", name: "Taylor", role: "ADMIN" };
+  it("gives an admin of a server that has its own DSN the switch", async () => {
+    authUser = { id: USER_ID, name: USER_NAME, role: ADMIN_ROLE };
 
     await renderPage();
 
     expect(privacyHeading()).not.toBeNull();
-    expect(deviceRow()).not.toBeNull();
-    expect(serverRow()).not.toBeNull();
+    expect(serverSwitch()).not.toBeNull();
+    expect(stateOff()).toBeNull();
+    expect(askedForAdminSetting()).toBe(true);
   });
 
-  it("leaves out the server's row when the server has no DSN", async () => {
-    authUser = { id: "u1", name: "Taylor", role: "ADMIN" };
+  it("has nothing to show an admin whose server has no DSN of its own", async () => {
+    authUser = { id: USER_ID, name: USER_NAME, role: ADMIN_ROLE };
     api.GET.mockImplementation(({ url }: { url: string }) =>
-      Promise.resolve(url === "/api/admin/telemetry" ? { ...SERVER_OFFERED, dsnConfigured: false } : {}),
+      Promise.resolve(url === ADMIN_TELEMETRY_URL ? SERVER_NO_DSN : INSTANCE_ANSWER),
     );
 
     await renderPage();
 
-    expect(deviceRow()).not.toBeNull();
-    expect(serverRow()).toBeNull();
+    expect(privacyHeading()).toBeNull();
+    expect(serverSwitch()).toBeNull();
   });
 
-  it("leaves out the server's row, and never asks about it, in Local Mode", async () => {
-    authUser = { id: "u1", name: "Taylor", role: "ADMIN" };
+  it("is not on the page in Local Mode, where there is no server answer to read", async () => {
+    authUser = { id: USER_ID, name: USER_NAME, role: ADMIN_ROLE };
     localMode = true;
 
     await renderPage();
 
-    expect(deviceRow()).not.toBeNull();
-    expect(serverRow()).toBeNull();
-    expect(askedForServerSetting()).toBe(false);
+    expect(privacyHeading()).toBeNull();
+    expect(serverSwitch()).toBeNull();
+    expect(askedForAdminSetting()).toBe(false);
+    expect(askedForInstanceAnswer()).toBe(false);
   });
 
-  it("leaves out this browser's row, and keeps the card for the admin, when the build has no DSN", async () => {
-    vi.stubEnv("VITE_SENTRY_DSN", "");
-    authUser = { id: "u1", name: "Taylor", role: "ADMIN" };
+  it("keeps the admin's switch when the web build carries no DSN of its own", async () => {
+    vi.stubEnv(SENTRY_DSN_ENV, "");
+    authUser = { id: USER_ID, name: USER_NAME, role: ADMIN_ROLE };
 
     await renderPage();
 
     expect(privacyHeading()).not.toBeNull();
-    expect(deviceRow()).toBeNull();
-    expect(serverRow()).not.toBeNull();
+    expect(serverSwitch()).not.toBeNull();
   });
 
-  it("is not on the page at all when there is nothing to switch", async () => {
-    vi.stubEnv("VITE_SENTRY_DSN", "");
+  it("is not on the page at all when neither the build nor the server can report", async () => {
+    vi.stubEnv(SENTRY_DSN_ENV, "");
+    authUser = { id: USER_ID, name: USER_NAME, role: ADMIN_ROLE };
+    api.GET.mockImplementation(({ url }: { url: string }) =>
+      Promise.resolve(url === ADMIN_TELEMETRY_URL ? SERVER_NO_DSN : INSTANCE_ANSWER),
+    );
 
     await renderPage();
 
     expect(privacyHeading()).toBeNull();
-    expect(deviceRow()).toBeNull();
-    expect(serverRow()).toBeNull();
+    expect(serverSwitch()).toBeNull();
+  });
+
+  it("tells a non-admin nothing when this build could not report anyway", async () => {
+    vi.stubEnv(SENTRY_DSN_ENV, "");
+
+    await renderPage();
+
+    expect(privacyHeading()).toBeNull();
+    expect(askedForInstanceAnswer()).toBe(false);
   });
 });

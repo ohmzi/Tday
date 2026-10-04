@@ -4,12 +4,17 @@ import { useAuth } from "@/providers/AuthProvider";
 import { DEFAULT_LOCALE } from "@/i18n";
 import AuthBootstrapScreen from "@/components/auth/AuthBootstrapScreen";
 import { markReturningBrowser } from "@/lib/security/returningBrowser";
+import { useOnboardingTelemetryHold } from "@/hooks/useOnboardingTelemetryHold";
 
 export default function AuthLayout() {
   const { user, authState } = useAuth();
   const { locale } = useParams();
   const loc = locale || DEFAULT_LOCALE;
   const isApprovedUser = user?.approvalStatus === "APPROVED";
+  // The wizard's last step asks the admin about instance-wide error reports, and it can only do
+  // that once the admin is signed in. The latch keeps this guard from handing the browser to the
+  // app (and unmounting the wizard) while that question is on screen.
+  const holdingTelemetryStep = useOnboardingTelemetryHold();
 
   useEffect(() => {
     markReturningBrowser();
@@ -23,7 +28,7 @@ export default function AuthLayout() {
     return <AuthBootstrapScreen />;
   }
 
-  if (isApprovedUser) {
+  if (isApprovedUser && !holdingTelemetryStep) {
     // Not straight to /app/tday: the Scheduled-vs-Floater default lives behind
     // UserPreferencesProvider, which only mounts inside AppLayout, below this gate. The /app
     // index route (AppHomeRedirectPage) makes the real call once that preference is loaded.

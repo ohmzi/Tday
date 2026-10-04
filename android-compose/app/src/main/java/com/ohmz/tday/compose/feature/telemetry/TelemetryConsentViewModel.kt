@@ -28,8 +28,19 @@ class TelemetryConsentViewModel @Inject constructor(
 
     val state: StateFlow<TelemetryConsentState> = manager.state
 
+    /**
+     * Whether the connect flow now on screen has been answered. Every sign-in asks the crash-report
+     * question again, so the answer the device carries is not an answer for the flow in progress.
+     */
+    val answeredInConnectFlow: StateFlow<Boolean> = manager.answeredInConnectFlow
+
     private val _cardDeferred = MutableStateFlow(false)
     val cardDeferred: StateFlow<Boolean> = _cardDeferred.asStateFlow()
+
+    /** A new connect flow is on screen: it owes an answer, whatever the device answered before. */
+    fun beginConnectFlow() {
+        manager.beginConnectFlow()
+    }
 
     fun setShareReports(granted: Boolean) {
         manager.setShareReports(granted)

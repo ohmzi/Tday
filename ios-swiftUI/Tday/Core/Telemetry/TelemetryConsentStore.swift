@@ -2,10 +2,9 @@ import Foundation
 
 /// The per-device answer to "may T'Day send a short technical report when something fails?".
 ///
-/// Three answers rather than a Bool, because "no answer yet" is a state of its own: the consent
-/// card is shown exactly once, and an `off` that could mean either would either re-ask everyone
-/// who said no or never ask anyone. `unanswered` behaves as off everywhere except in that one
-/// question.
+/// Three answers rather than a Bool, because "no answer yet" is a state of its own: an `off` that
+/// could mean either would either re-ask everyone who said no or never ask anyone. `unanswered`
+/// behaves as off everywhere except in that one question.
 ///
 /// UserDefaults and not the keychain, on purpose. This is a statement about the install, so it
 /// should reset with one, and the keychain outlives an uninstall (see
@@ -13,6 +12,11 @@ import Foundation
 /// `TdayApp.init`, before `AppContainer` exists, which is the moment the SDK either starts or
 /// never does. Signing out, leaving a workspace and deleting local data all leave it alone: they
 /// are about an account or a workspace, and this is about the device.
+///
+/// What a sign-in changes is when the question is asked, not what the answer means: the connect flow
+/// asks again on every sign-in, so this stored answer is not treated as an answer for the flow in
+/// progress. That per-flow half lives in memory, on `TelemetryConsentModel`; this store stays the one
+/// place the answer itself lives, and what the SDK obeys.
 struct TelemetryConsentStore {
     enum State: Equatable {
         case unanswered

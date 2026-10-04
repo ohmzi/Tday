@@ -685,16 +685,14 @@
     <string name="settings_crash_reports_toggle">出现故障时发送崩溃与问题报告</string>
     <string name="settings_crash_reports_help">关于崩溃与问题报告</string>
 
-    <!-- Crash reports: the one-time consent card -->
-    <string name="telemetry_card_title">帮助修复崩溃问题？</string>
-    <string name="telemetry_card_intro">只有在出现问题时，T\'Day 才会发送一份简短的技术报告，例如崩溃、卡死或意外错误。这能帮助开发者在相似的设备上重现问题。</string>
-    <string name="telemetry_card_sent_label">包含的内容</string>
-    <string name="telemetry_card_sent">应用版本、设备型号、系统版本，以及出错的内容和位置。</string>
-    <string name="telemetry_card_never_sent_label">绝不包含的内容</string>
-    <string name="telemetry_card_never_sent">你的姓名或账户、IP 地址、位置、服务器地址，以及任何任务或列表内容。</string>
-    <string name="telemetry_card_footnote">默认关闭。你可以随时在“设置 → 隐私”中更改。</string>
-    <string name="telemetry_card_share">分享报告</string>
-    <string name="telemetry_card_not_now">暂不</string>
+    <!-- Crash reports: the sign-in wizard's consent step and its card -->
+    <string name="telemetry_card_title">发送错误报告？</string>
+    <string name="telemetry_card_intro">出问题时，T\'Day 可以发送一份简短的技术报告来帮助修复。你可以随时在“设置”中更改。</string>
+    <string name="telemetry_card_never_sent_label">绝不发送</string>
+    <string name="telemetry_card_never_sent">姓名、账户，或任何任务和清单内容。</string>
+    <string name="telemetry_card_footnote">默认关闭。你可以在“设置”中更改。</string>
+    <string name="telemetry_card_share">发送报告</string>
+    <string name="telemetry_card_not_now">不发送</string>
     <string name="telemetry_card_read_faq">阅读完整常见问题解答</string>
     <string name="root_feed_search_scheduled">搜索计划任务</string>
     <string name="root_feed_search_floater">搜索浮动任务</string>
@@ -738,8 +736,4 @@
     <plurals name="bulk_update_failed">
         <item quantity="other">有 %d 个任务无法更新</item>
     </plurals>
-    <!-- TEST-CRASH: temporary freeze strings, removed with the TEST-CRASH commit -->
-    <string name="test_crash_freeze_stop">停止</string>
-    <string name="test_crash_freeze_blocked">主线程已阻塞 %1$s 秒</string>
-    <string name="test_crash_freeze_cancelled">已在 %1$s 秒后取消冻结</string>
 </resources>

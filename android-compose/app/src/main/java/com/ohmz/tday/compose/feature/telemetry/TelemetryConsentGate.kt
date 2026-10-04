@@ -36,11 +36,12 @@ import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.shared.guide.GuideTopicIds
 
 /**
- * Whether the one-time "send crash reports?" card should be up.
+ * Whether the standalone "send crash reports?" card should be up.
  *
- * It asks once, after the sign-in wizard, in a workspace of either kind. It never asks on a build
- * with no DSN (nothing could be sent), never again after an answer in either place, not for the
- * rest of the session once put off, and not while something more urgent has the screen.
+ * It is what is left for the device itself: a device nobody has ever asked, in a workspace of
+ * either kind. It never asks on a build with no DSN (nothing could be sent), never after an answer
+ * in either place, not for the rest of the session once put off, and not while something more
+ * urgent has the screen.
  *
  * The wizard's last step asks the same question in the flow that earned it, and this card is then
  * what a session that never saw the wizard falls back to: already signed in at launch, or a
@@ -61,9 +62,15 @@ internal fun shouldShowTelemetryCard(
         !aHigherGateIsUp
 
 /**
- * Whether the crash-report question is this sign-in flow's to ask, as the wizard's own last step:
- * a build that can send, an answer nobody has given yet, and a wizard that was actually on screen
+ * Whether the crash-report question is this connect flow's to ask, as the wizard's own last step:
+ * a build that can send, a flow nobody has answered yet, and a wizard that was actually on screen
  * for it.
+ *
+ * The device's stored answer is deliberately not part of this. That answer outlives sign-out — it is
+ * what Settings reads and writes, and what the SDK obeys — but it is not an answer for a new flow:
+ * every sign-in asks again, and only an answer given in this flow (either button on the step, or the
+ * Settings switch) takes the step away. A flow that reaches the workspace without one asks rather
+ * than sends, because an unanswered device still reads as off.
  *
  * The workspace is deliberately not part of it, for the opposite reason it is part of
  * [shouldShowTelemetryCard]: the step is what the sign-in flow ENDS on, so it comes due in the same
@@ -73,9 +80,9 @@ internal fun shouldShowTelemetryCard(
  */
 internal fun shouldPresentWizardPrivacyStep(
     available: Boolean,
-    state: TelemetryConsentState,
+    answeredInConnectFlow: Boolean,
     wizardWasOnScreen: Boolean,
-): Boolean = available && state == TelemetryConsentState.UNANSWERED && wizardWasOnScreen
+): Boolean = available && !answeredInConnectFlow && wizardWasOnScreen
 
 /**
  * The consent card, drawn as a dialog the way [com.ohmz.tday.compose.feature.auth.SetSecurityQuestionsGate]
@@ -181,8 +188,8 @@ private fun TelemetryConsentCard(
 
 /**
  * Everything the person is told before they answer — the glyph, the question, why it is asked, what
- * a report carries, what it never carries, and where the answer can be changed later — with no
- * answers and no container of its own.
+ * a report never carries, and where the answer can be changed later — with no answers and no
+ * container of its own.
  *
  * Extracted rather than copied because the sign-in wizard's last step makes the same offer: two
  * places asking for the same thing must not be able to drift into asking for two different things.
@@ -215,10 +222,6 @@ internal fun TelemetryDisclosure() {
             color = colorScheme.onSurface.copy(alpha = 0.7f),
         )
         DisclosureBlock(
-            label = stringResource(R.string.telemetry_card_sent_label),
-            body = stringResource(R.string.telemetry_card_sent),
-        )
-        DisclosureBlock(
             label = stringResource(R.string.telemetry_card_never_sent_label),
             body = stringResource(R.string.telemetry_card_never_sent),
         )
@@ -241,7 +244,7 @@ private fun ConsentChoiceButton(text: String, onClick: () -> Unit) {
     }
 }
 
-/** A bold heading over the sentence it introduces: what is sent, and what never is. */
+/** A bold heading over the sentence it introduces: what is never sent. */
 @Composable
 private fun DisclosureBlock(label: String, body: String) {
     val colorScheme = MaterialTheme.colorScheme

@@ -7,7 +7,7 @@ import {
   reactRootErrorHandlers,
   stopSentry,
 } from "@/lib/observability/sentryInit";
-import { setTelemetryConsent } from "@/lib/privacy/telemetryConsent";
+import { setInstanceAnswerForTests } from "./support/instanceTelemetry";
 
 /**
  * `startSentry` and `stopSentry` run for real here, against the real SDK, with only the network
@@ -56,7 +56,9 @@ beforeEach(() => {
   wire.length = 0;
   vi.stubEnv("VITE_SENTRY_DSN", DSN);
   window.localStorage.clear();
-  window.dispatchEvent(new StorageEvent("storage", { key: null }));
+  setInstanceAnswerForTests(false);
+  // The boot read stays unresolved: these tests drive the answer themselves.
+  vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
 });
 
 afterEach(() => {
@@ -64,11 +66,12 @@ afterEach(() => {
   unsubscribe = undefined;
   stopSentry();
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
 
 // The page-level proof comes first in this file on purpose: instrumentation, once installed, is
 // never removed from the page, and it must be seen not to be there before any test installs it.
-describe("a browser that has not said yes", () => {
+describe("before the server has said yes", () => {
   it("leaves the page untouched: no client, no patched fetch, no error handler", async () => {
     const fetchBefore = globalThis.fetch;
     const onerrorBefore = window.onerror;
@@ -83,8 +86,8 @@ describe("a browser that has not said yes", () => {
     expect(wire).toHaveLength(0);
   });
 
-  it("stays that way for a browser that said no", async () => {
-    setTelemetryConsent(false);
+  it("stays that way when the server answers no", async () => {
+    setInstanceAnswerForTests(false);
     const fetchBefore = globalThis.fetch;
 
     unsubscribe = initSentryIfConsented();
@@ -96,9 +99,9 @@ describe("a browser that has not said yes", () => {
 });
 
 describe("following the answer without a reload", () => {
-  it("starts a client on a yes and reports a failure from this page, tagged and scrubbed", async () => {
+  it("starts a client on the server's yes and reports a failure from this page, tagged and scrubbed", async () => {
     unsubscribe = initSentryIfConsented();
-    setTelemetryConsent(true);
+    setInstanceAnswerForTests(true);
 
     Sentry.captureException(appError("Could not load https://tday.my-home.example.net/api/todo"));
     await settle();
@@ -114,9 +117,9 @@ describe("following the answer without a reload", () => {
 
   it("unbinds the client on a no, so nothing captured afterwards is even queued", async () => {
     unsubscribe = initSentryIfConsented();
-    setTelemetryConsent(true);
+    setInstanceAnswerForTests(true);
 
-    setTelemetryConsent(false);
+    setInstanceAnswerForTests(false);
     Sentry.captureException(appError("after the withdrawal"));
     await settle();
 
@@ -129,11 +132,11 @@ describe("following the answer without a reload", () => {
     const expected = (event: Event) => event.preventDefault();
     window.addEventListener("error", expected);
     unsubscribe = initSentryIfConsented();
-    setTelemetryConsent(true);
+    setInstanceAnswerForTests(true);
     const first = Sentry.getClient();
-    setTelemetryConsent(false);
+    setInstanceAnswerForTests(false);
 
-    setTelemetryConsent(true);
+    setInstanceAnswerForTests(true);
     const second = Sentry.getClient();
     Sentry.captureException(appError("after the second yes"));
     window.dispatchEvent(
@@ -153,11 +156,11 @@ describe("following the answer without a reload", () => {
 
   it("does not deliver, after a new yes, anything that happened while it was no", async () => {
     unsubscribe = initSentryIfConsented();
-    setTelemetryConsent(true);
-    setTelemetryConsent(false);
+    setInstanceAnswerForTests(true);
+    setInstanceAnswerForTests(false);
     Sentry.captureException(appError("while it was off"));
 
-    setTelemetryConsent(true);
+    setInstanceAnswerForTests(true);
     await settle();
 
     expect(wire).toHaveLength(0);
@@ -168,11 +171,11 @@ describe("errors React reports outside any boundary", () => {
   const componentStack = `\n    at Page (${window.location.origin}/assets/index-abc123.js:9:9)`;
 
   it.each(["onUncaughtError", "onRecoverableError"] as const)(
-    "%s reaches Sentry once consent is granted, and still logs to the console",
+    "%s reaches Sentry once the server says yes, and still logs to the console",
     async (handler) => {
       const log = vi.spyOn(console, "error").mockImplementation(() => {});
       unsubscribe = initSentryIfConsented();
-      setTelemetryConsent(true);
+      setInstanceAnswerForTests(true);
 
       reactRootErrorHandlers[handler](appError("render failed"), { componentStack });
       await settle();
@@ -184,7 +187,7 @@ describe("errors React reports outside any boundary", () => {
   );
 
   it.each(["onUncaughtError", "onRecoverableError"] as const)(
-    "%s hands nothing to Sentry, and leaves the error as it was, while consent is not granted",
+    "%s hands nothing to Sentry, and leaves the error as it was, while reports are off",
     async (handler) => {
       const log = vi.spyOn(console, "error").mockImplementation(() => {});
       unsubscribe = initSentryIfConsented();
