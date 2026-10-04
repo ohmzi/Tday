@@ -91,7 +91,7 @@ web, Android and iOS projects show theirs under Unhandled by default.
 | ☐ | `TC-CALENDAR` | Calendar | DateTimeException | `removeFirst()` on empty | ReferenceError (unhandled rejection) |
 | ☐ | `TC-SET-CRASH` | Settings, fatal | SecurityException | String index out of bounds | Error |
 | ☐ | `TC-SET-ERROR` | Settings, **handled** (app keeps running) | IOException via `TdayTelemetry.capture` | NSError via `TdayTelemetry.capture` | Error via `captureUiException` |
-| ☐ | `TC-SET-FREEZE` | Settings, main-thread freeze | ANR 13 s, **Stop** ends it early — **no report expected**, see below | App Hanging (6 s, **Stop** ends it early; sent immediately) | busy loop 6 s, then a **Reload** notice (no hang detector on web) |
+| ☐ | `TC-SET-FREEZE` | Settings, main-thread freeze | ANR 13 s, **Stop** ends it early — **no report expected**, see below | 6 s freeze, **Stop** ends it early — **no report expected**, see below | busy loop 6 s, then a **Reload** notice (no hang detector on web) |
 
 Platform extras, all on Settings:
 
@@ -120,7 +120,18 @@ A blocked main thread cannot draw or take a tap, so every platform has a way bac
 `ANR in com.ohmz.tday.compose` at the ~5 s input-dispatch timeout — but the app survives it: the freeze finishes and the
 system has no exit record to hand back, so there is nothing for the SDK to send on the next launch. On top of that the
 app deliberately keeps `isReportHistoricalAnrs` off, so an ANR found in the exit history is not reported either. Treat the
-Android freeze as a UI-and-ANR-dialog test; the *reporting* side of a hang is what the iOS trigger covers.
+Android freeze as a UI-and-ANR-dialog test.
+
+**Neither does iOS, for a different reason.** App-hang tracking is on
+(`enableAppHangTracking`, `appHangTimeoutInterval = 2`), but the detector reads the frames tracker, and that is started by
+the UIViewController swizzling this app deliberately turns off (`enableSwizzling = false`). A simulator run produced the
+ANR thread running and no hang event, and Sentry has none for the trigger. MetricKit — the replacement once app-hang
+tracking is gone in the SDK's next major — is off as well (`enableMetricKit = false`). So a freeze is a UI test on all
+three clients: the Stop control, the notice and the ANR dialog are the deliverable, not a report.
+
+One cosmetic tail to expect on iOS's *handled* trigger: the app reports only an error's domain and code (privacy), so
+`TC-SET-ERROR`'s title ends with `: Code: 1` after the screen. The trigger still names itself once, which is what the
+cross-check reads.
 
   Two device-verified details worth keeping if this is ever reworked: the slices need a short idle gap (~32 ms) between
   them, or the frame pipeline never gets a turn and the Stop control is never drawn; and the solid window must run inside
