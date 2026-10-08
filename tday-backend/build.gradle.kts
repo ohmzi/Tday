@@ -58,8 +58,8 @@ dependencies {
 
     implementation("io.ktor:ktor-server-websockets-jvm")
 
-    implementation("org.flywaydb:flyway-core:13.8.1")
-    implementation("org.flywaydb:flyway-database-postgresql:13.8.1")
+    implementation("org.flywaydb:flyway-core:13.9.0")
+    implementation("org.flywaydb:flyway-database-postgresql:13.9.0")
 
     implementation("nl.martijndwars:web-push:5.1.2")
     // web-push 5.1.2 demotes its Apache HTTP client to a runtime dependency, but
