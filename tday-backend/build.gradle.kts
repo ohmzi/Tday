@@ -2,7 +2,7 @@ plugins {
     kotlin("jvm")
     kotlin("plugin.serialization")
     id("io.ktor.plugin")
-    id("io.sentry.jvm.gradle") version "6.23.0"
+    id("io.sentry.jvm.gradle") version "6.24.0"
     application
 }
 
@@ -13,7 +13,7 @@ application {
     mainClass.set("com.ohmz.tday.ApplicationKt")
 }
 
-val exposedVersion = "1.5.0"
+val exposedVersion = "1.6.0"
 
 dependencies {
     implementation(project(":shared"))
@@ -34,7 +34,7 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-java-time:$exposedVersion")
 
-    implementation("org.postgresql:postgresql:42.7.13")
+    implementation("org.postgresql:postgresql:42.7.14")
     implementation("com.zaxxer:HikariCP:7.1.0")
     implementation("com.nimbusds:nimbus-jose-jwt:10.10")
     implementation("org.bouncycastle:bcprov-jdk18on:1.86")
@@ -43,11 +43,11 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
     implementation("ch.qos.logback:logback-classic:1.6.5")
 
-    implementation("io.sentry:sentry:8.59.0")
-    implementation("io.sentry:sentry-logback:8.59.0")
+    implementation("io.sentry:sentry:8.61.0")
+    implementation("io.sentry:sentry-logback:8.61.0")
     // SentryContext gives each request its own scope. The Sentry Gradle plugin also installs it
     // at build time, but a dependency the code compiles against should not hinge on that.
-    implementation("io.sentry:sentry-kotlin-extensions:8.59.0")
+    implementation("io.sentry:sentry-kotlin-extensions:8.61.0")
 
     implementation("io.insert-koin:koin-ktor:4.2.2")
     implementation("io.insert-koin:koin-logger-slf4j:4.2.2")
@@ -58,8 +58,8 @@ dependencies {
 
     implementation("io.ktor:ktor-server-websockets-jvm")
 
-    implementation("org.flywaydb:flyway-core:13.8.1")
-    implementation("org.flywaydb:flyway-database-postgresql:13.8.1")
+    implementation("org.flywaydb:flyway-core:13.10.3")
+    implementation("org.flywaydb:flyway-database-postgresql:13.10.3")
 
     implementation("nl.martijndwars:web-push:5.1.2")
     // web-push 5.1.2 demotes its Apache HTTP client to a runtime dependency, but
