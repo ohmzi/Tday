@@ -1,0 +1,2200 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		50DB00000000000000000000 /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50DF00000000000000000000 /* SoundManager.swift */; };
+		50DB10000000000000000000 /* task_complete.wav in Resources */ = {isa = PBXBuildFile; fileRef = 50DF10000000000000000000 /* task_complete.wav */; };
+		CA1E7E020000000000000000 /* RecurrenceRuleParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1E7E010000000000000000 /* RecurrenceRuleParserTests.swift */; };
+		CA1EBF000000000000000000 /* CalendarSyncPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1EFE000000000000000000 /* CalendarSyncPreferenceStore.swift */; };
+		CA1EBF010000000000000000 /* RecurrenceRuleParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1EFE010000000000000000 /* RecurrenceRuleParser.swift */; };
+		CA1EBF020000000000000000 /* DeviceCalendarStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1EFE020000000000000000 /* DeviceCalendarStore.swift */; };
+		CA1EBF030000000000000000 /* CalendarSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1EFE030000000000000000 /* CalendarSyncManager.swift */; };
+		013BE5C9AD66548E50177C48 /* SettingsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC47AEF5EB0B44524D8C20B1 /* SettingsScreen.swift */; };
+		01C535860D5694F91772B940 /* CookieStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D210E2E24F013C1E30BE80A /* CookieStore.swift */; };
+		02DCC3220DC138F342784CA4 /* SyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6D61A167DBA9FD21F8CC00A /* SyncManager.swift */; };
+		03A0CCC6A8AAE2DB065E6DE6 /* ServerURLPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D206496BC88FF6272CFC286C /* ServerURLPersistenceTests.swift */; };
+		7D4A9E1200000000000000A2 /* TdaySheetChromeMotionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4A9E1200000000000000A1 /* TdaySheetChromeMotionTests.swift */; };
+		7D4A9E1300000000000000B2 /* RootFeedDockCollapseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4A9E1300000000000000B1 /* RootFeedDockCollapseTests.swift */; };
+		7D4A9E1400000000000000C2 /* TaskSwipeRevealDetentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4A9E1400000000000000C1 /* TaskSwipeRevealDetentTests.swift */; };
+		7D4A9E1400000000000000C4 /* TaskSwipeDismissPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4A9E1400000000000000C3 /* TaskSwipeDismissPolicyTests.swift */; };
+		E0D3B11DFB20419468405B6E /* DefaultHomeScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BF881C9B39C6DF685E58AA6 /* DefaultHomeScreenTests.swift */; };
+		041712E33446975E528F050E /* RealtimeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC7B17CE45842F8DF7D522B /* RealtimeClient.swift */; };
+		04EFD8B7BFDF9261BE3D88BE /* CacheMappers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CD3233C5F5D5FC1E058708 /* CacheMappers.swift */; };
+		0536D5C87C017F1DAC4F316C /* ThemeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD41A49221B1A947AF8A94D0 /* ThemeStore.swift */; };
+		07D1F4A0C9434C54853E9D29 /* AppDataMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E4F3B64B40942F48202C32E /* AppDataMode.swift */; };
+		0A6188D6B8C9FC92A9927F1C /* SettingsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DE0A20E66DEF6FD2146DB10 /* SettingsRepository.swift */; };
+		0BA0A83365B9CF5E63B5A9AA /* SnackbarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 133161412A6BD2A0C04F745A /* SnackbarManager.swift */; };
+		1618367E71392D77BC8C61B6 /* NavigationBackHistoryTitle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B9BC191869EBEA7E8340E6 /* NavigationBackHistoryTitle.swift */; };
+		17A2E96F8BEA64247551A742 /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22BFAB0C2FA0BB186AEBFC5F /* AppViewModel.swift */; };
+		1AC138341BE3A2841CF05908 /* StringHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 593DCCDF3ADC95BE1CDC78FC /* StringHelpers.swift */; };
+		1FE50ED779CB252C73B0A496 /* Sentry-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = A8BC3C28FBC8E4D5C38307DB /* Sentry-Dynamic */; };
+		222184A155C5A7B9F178007B /* SwiftDataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A754219844F42A2230F08B /* SwiftDataModels.swift */; };
+		271C111B35309CA229AC1400 /* CompletedRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E76499BCA95FB33B03366C1 /* CompletedRepository.swift */; };
+		2C1549AFC2F29218C879306C /* SwipeActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84798381A9E2DF3C9468ED8F /* SwipeActions.swift */; };
+		2D4CE01CFE08086ACC160F8B /* TdayAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78690CB92403D76DCA200972 /* TdayAPIService.swift */; };
+		2E1D50F9EEE6B8D7D9B14AEA /* TodoListScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62AD2C2DD2233FCBB4611E95 /* TodoListScreen.swift */; };
+		C0FE7715B8C9D0E1F2A30022 /* TodoListCelebration.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FE7715B8C9D0E1F2A30021 /* TodoListCelebration.swift */; };
+		C0FE7715B8C9D0E1F2A30032 /* FeedAnswer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FE7715B8C9D0E1F2A30031 /* FeedAnswer.swift */; };
+		3172D88F15D3395465E578E3 /* TaskReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D7ACBCBA57903A93BEC3BFA /* TaskReminderScheduler.swift */; };
+		384B88FF643D87A6157C76C2 /* Nunito.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D9D2A99D6C098B63352D4FB8 /* Nunito.ttf */; };
+		3E0BE8F327DB1A2EE5B101C4 /* ReminderPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3407352DB3FED037D2A26BF /* ReminderPreferenceStore.swift */; };
+		434143484D41505045525300 /* CacheMappersDateParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 434143484D41505045525301 /* CacheMappersDateParsingTests.swift */; };
+		494E748270A233BECED5A359 /* TodayTasksWidgetSnapshotStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC92D6152EADEDF915AE116B /* TodayTasksWidgetSnapshotStoreTests.swift */; };
+		4A7B9C0D1E2F3456789ABC01 /* CompletedSyncMergeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A7B9C0D1E2F3456789ABC02 /* CompletedSyncMergeTests.swift */; };
+		2E4095C91E58D5F74B3F3764 /* CachedRecordDiffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2641DC4E4BD6C1D1D5E14544 /* CachedRecordDiffTests.swift */; };
+		A5C0CF00000000000000A101 /* AsyncLockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0CF00000000000000A102 /* AsyncLockTests.swift */; };
+		A5C0CF00000000000000A201 /* PendingMutationReplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0CF00000000000000A202 /* PendingMutationReplayTests.swift */; };
+		4D2A9B7E2CE3424C9D111001 /* ConnectivityClassificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D2A9B7E2CE3424C9D111002 /* ConnectivityClassificationTests.swift */; };
+		4E4F544946444545504C3031 /* NotificationDeepLinkRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E4F544946444545504C3032 /* NotificationDeepLinkRouter.swift */; };
+		4F52544D434C49454E543031 /* RealtimeClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F52544D434C49454E543032 /* RealtimeClientTests.swift */; };
+		51A46F8E627C26BF34E91F7B /* TodoListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0DB445B9FEE9B047FBB708 /* TodoListViewModel.swift */; };
+		527A4947BD0D1BE156122F96 /* BootstrapSessionUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E70F2999E1965A77EB21FF8 /* BootstrapSessionUseCase.swift */; };
+		535CABAC18AD47FEF15D2C11 /* CredentialEnvelope.swift in Sources */ = {isa = PBXBuildFile; fileRef = E30D3242D00BC6C1C4BA862D /* CredentialEnvelope.swift */; };
+		5549AF8633C0733EDE2A2827 /* SentryConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86E84C14E60D9CBC7F667F1C /* SentryConfiguration.swift */; };
+		557E0B136F4C0A00AF79E4F0 /* ServerConfigRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ACC8B538184310B385746A /* ServerConfigRepository.swift */; };
+		558091FE1A8E358F473DE029 /* CompletedScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BA781886DCE6963CA364F6F /* CompletedScreen.swift */; };
+		58BD5E982FB87AE6986E3E79 /* CreateTodoUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 718528F64C339E527223D93F /* CreateTodoUseCase.swift */; };
+		58EB6EF803693EB982E331E4 /* SyncAndRefreshUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D0FD6CA5EE999F99D54CF94 /* SyncAndRefreshUseCase.swift */; };
+		5A4E00000000000000000001 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A4E00000000000000000002 /* ShareViewController.swift */; };
+		5A4E00000000000000000011 /* TdayShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5A4E00000000000000000010 /* TdayShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		5A4E00000000000000000031 /* PendingShareStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A4E00000000000000000032 /* PendingShareStore.swift */; };
+		5A4E00000000000000000035 /* PendingShareStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A4E00000000000000000034 /* PendingShareStoreTests.swift */; };
+		5B82443B89507719EDD7215C /* AppContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CF6FD5D2845A10D7052467D /* AppContainer.swift */; };
+		5D93F6903E05BD9902C43A51 /* SystemCredentialService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BC4FF9081195466EE7C3E89 /* SystemCredentialService.swift */; };
+		5DB03218BE341B7C186F01AE /* CalendarPagingScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95E5A511171F96ABDEC46926 /* CalendarPagingScrollView.swift */; };
+		5E7E7A8C0B534B26A6E2F910 /* TelemetrySanitizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E7E7A8C0B534B26A6E2F911 /* TelemetrySanitizerTests.swift */; };
+		64E0A2B205D80764F2BF52FB /* CalendarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53EFEAE1EE18AB86477A56BC /* CalendarViewModel.swift */; };
+		701E03BE9BBC8792CAD5919C /* CreateTaskSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEFA6E39FBCB063E54C61AF7 /* CreateTaskSheet.swift */; };
+		9652874529F94390BA9AA669 /* RichNotes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FB40BC301D7402C87138C52 /* RichNotes.swift */; };
+		B8A1D1E5801446BF8679D5B2 /* RichNotesAttributedString.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A68F19C0194654B67F8587 /* RichNotesAttributedString.swift */; };
+		55A4744804F44AAC83DD8A0A /* NotesField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 946502BEF8274E2EB39AB767 /* NotesField.swift */; };
+		F2ABDCC2586F4A91A6164D16 /* RichNotesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8412653FEEA14E08BD2EEFA7 /* RichNotesTests.swift */; };
+		72304EA28CF49303A8CCB6B0 /* TodayTasksWidgetSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC80072C8B232C0C09CE3139 /* TodayTasksWidgetSnapshotStore.swift */; };
+		765ED719B3CCBB90176C55EB /* DomainModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A6D006E491513605369E7D5 /* DomainModels.swift */; };
+		7A1C0FE30B2D4A9C8E5F1A20 /* WidgetBackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C0FE30B2D4A9C8E5F1A21 /* WidgetBackgroundRefresh.swift */; };
+		7A5C0F7E900000000000A103 /* TaskSortEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A5C0F7E900000000000A102 /* TaskSortEngine.swift */; };
+		846AE66C58EF435FB506E3E6 /* OnboardingWizardOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D617DF23936179DDFF13A36D /* OnboardingWizardOverlay.swift */; };
+		84B6C4F440AD30E4EFA1FA3F /* ReminderOption.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FBC41C56EEEFC8869E762B3 /* ReminderOption.swift */; };
+		85B5397D25D2A1436CF34394 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A64D35F145CD4F1CE4B6C558 /* LaunchScreen.storyboard */; };
+		861A548A6A3DDE0A78D35D83 /* TdayApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A4E591B572A2A9980EC6B7 /* TdayApp.swift */; };
+		8D227AE36B26809A15603F5E /* SecureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E867FA22FEB66EDCE837CF6D /* SecureStore.swift */; };
+		8F2E99D406CD695C364FE1DF /* UserFacingError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7EC85EB5D9686D401249C6 /* UserFacingError.swift */; };
+		9146B23E1A1F6A3A71DE7A5B /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2B21F3E1A43EAEECA86EE8 /* Colors.swift */; };
+		91660A57CFA826E39338BD33 /* CalendarScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25A90A443440754855071C9D /* CalendarScreen.swift */; };
+		957E83469CA6C09174B1B374 /* LoginCredentialCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C31F2E171A73F2774E89A1 /* LoginCredentialCoordinator.swift */; };
+		9D9B4F301D7261C3F4F95B6D /* ScheduledTaskHomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42749601AFF38EAE17BD3213 /* ScheduledTaskHomeViewModel.swift */; };
+		9F8E7D6C5B4A00000000B101 /* LanguageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F101 /* LanguageStore.swift */; };
+		9F8E7D6C5B4A00000000B301 /* MotionPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F301 /* MotionPreferenceStore.swift */; };
+		9F8E7D6C5B4A00000000B102 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F102 /* AppLanguage.swift */; };
+		9F8E7D6C5B4A00000000B103 /* Bundle+Language.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F103 /* Bundle+Language.swift */; };
+		9F8E7D6C5B4A00000000B104 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F104 /* Localization.swift */; };
+		9F8E7D6C5B4A00000000B105 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F105 /* Localizable.xcstrings */; };
+		A03B553E316CEEDFAB8EBA69 /* OfflineSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB49A43AFEE66EEDB3315F86 /* OfflineSyncModels.swift */; };
+		FEEDFACE0000000000000000 /* WatchSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEEDFACE0000000000000001 /* WatchSessionManager.swift */; };
+		7D4E57A1D0A1000000000001 /* TodayWidgetDayWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4E57A1D0A1000000000003 /* TodayWidgetDayWindow.swift */; };
+		7D4E57A1D0A1000000000002 /* TodayWidgetDayWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4E57A1D0A1000000000003 /* TodayWidgetDayWindow.swift */; };
+		7D4E57A1D0A1000000000011 /* ListWidgetSetupArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4E57A1D0A1000000000013 /* ListWidgetSetupArt.swift */; };
+		7D4E57A1D0A1000000000012 /* ListWidgetSetupArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4E57A1D0A1000000000013 /* ListWidgetSetupArt.swift */; };
+		A1C0FFEE000000000000B001 /* ListShareText.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE000000000000F001 /* ListShareText.swift */; };
+		A1C0FFEE000000000000B002 /* ListShareRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE000000000000F002 /* ListShareRepository.swift */; };
+		A1C0FFEE000000000000B003 /* ManageMembersSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE000000000000F003 /* ManageMembersSheet.swift */; };
+		A316B4B3BB1AEA5FDF9998DF /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BFFE8167D3639FF09C033A2 /* AppRootView.swift */; };
+		A3F2E1D0C9B8A7F6E5D4C3B2 /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A7B8C9D0E1F2A3 /* ShareSheet.swift */; };
+		A7319C922AE54DC944A9ECC5 /* AuthRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6E5E1DBE3F7999D219BE2EE /* AuthRepository.swift */; };
+		A9F10102A9F10102A9F10102 /* RootFeedDock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9F10101A9F10101A9F10101 /* RootFeedDock.swift */; };
+		B1C7E4A1B1C7E4A1B1C7E4A1 /* RootFeedHeroHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C7E4A0B1C7E4A0B1C7E4A0 /* RootFeedHeroHeader.swift */; };
+		B10000000000000000000021 /* CarTaskModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* CarTaskModels.swift */; };
+		B10000000000000000000022 /* CarPlayCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002 /* CarPlayCoordinator.swift */; };
+		B10000000000000000000023 /* CarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* CarPlaySceneDelegate.swift */; };
+		B10000000000000000000024 /* CarTaskIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000004 /* CarTaskIntents.swift */; };
+		B10000000000000000000025 /* CarTaskModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* CarTaskModelsTests.swift */; };
+		B34A31B1812FC676A3AC1871 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DCE08ADACC8F11CE2113C13B /* Assets.xcassets */; };
+		D4A100000000000000000031 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DCE08ADACC8F11CE2113C13B /* Assets.xcassets */; };
+		B4995200636F408E4296FF0D /* ApiModelContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 629820F1BA29236313992076 /* ApiModelContractTests.swift */; };
+		B5C6D7E8F9A000000000B201 /* AppLocale.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5C6D7E8F9A000000000F201 /* AppLocale.swift */; };
+		B5D28682AD0623E39CCD4F8E /* CompleteTodoUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F09E74879D0AAABCF70E20 /* CompleteTodoUseCase.swift */; };
+		B648A67EAD215BE5B74F7460 /* ApiModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6049166B683EE082F8C551DD /* ApiModels.swift */; };
+		BA2D51423497337836ADD5E9 /* TdayTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39ADD9E07BF8B32C3FC7B170 /* TdayTheme.swift */; };
+		C013C84CCBF84A849CE93963 /* NetworkConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91CFC3C0B9ADD376389DF63C /* NetworkConfiguration.swift */; };
+		C0768A60B1B807FCA7A6D37F /* ScheduledTaskHomeScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D2CB40ACEE85331512EEC2 /* ScheduledTaskHomeScreen.swift */; };
+		C0ABAA1F11269C7FC0682201 /* PullToRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32538D5E9182018AFEAB8DEC /* PullToRefresh.swift */; };
+		C0DE000000000000000000A1 /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000A0 /* ForgotPasswordView.swift */; };
+		C0DE000000000000000000B1 /* SecurityQuestionsGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000B0 /* SecurityQuestionsGateView.swift */; };
+		C1B29C5E4D5D247E8D0B5C0C /* TodoRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055D0F0501B287B70456AF4B /* TodoRepository.swift */; };
+		C4E342DFC88BD5C188893628 /* Nunito-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = DF332994A97F93EBE1525BB5 /* Nunito-OFL.txt */; };
+		C7229E3F4839B156CDEFA453 /* UpdateRequiredView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F15244DE3A08B82F3DDD8EB /* UpdateRequiredView.swift */; };
+		C8B96DDF0DC7AD0B8DD54E4F /* SystemCredentialLoginTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19F61DADBD9B8EFC300698C4 /* SystemCredentialLoginTests.swift */; };
+		CAFE0D1E0000000000000011 /* GuideContentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000001 /* GuideContentStore.swift */; };
+		CAFE0D1E0000000000000012 /* GuideSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000002 /* GuideSearch.swift */; };
+		CAFE0D1E0000000000000013 /* GuideModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000003 /* GuideModels.swift */; };
+		CAFE0D1E0000000000000014 /* HelpGuideScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000004 /* HelpGuideScreen.swift */; };
+		CAFE0D1E0000000000000015 /* GuideContentContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000005 /* GuideContentContractTests.swift */; };
+		CCCE7C4513E61101A0C63CD8 /* OfflineCacheManagerPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A97522B7E4230E857CF3A372 /* OfflineCacheManagerPersistenceTests.swift */; };
+		CAFE0D1E0000000000000031 /* guide.de.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000041 /* guide.de.json */; };
+		CAFE0D1E0000000000000032 /* guide.en.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000042 /* guide.en.json */; };
+		CAFE0D1E0000000000000033 /* guide.es.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000043 /* guide.es.json */; };
+		CAFE0D1E0000000000000034 /* guide.fr.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000044 /* guide.fr.json */; };
+		CAFE0D1E0000000000000035 /* guide.it.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000045 /* guide.it.json */; };
+		CAFE0D1E0000000000000036 /* guide.ja.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000046 /* guide.ja.json */; };
+		CAFE0D1E0000000000000037 /* guide.ms.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000047 /* guide.ms.json */; };
+		CAFE0D1E0000000000000038 /* guide.pt.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000048 /* guide.pt.json */; };
+		CAFE0D1E0000000000000039 /* guide.ru.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000049 /* guide.ru.json */; };
+		CAFE0D1E000000000000003A /* guide.zh.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E000000000000004A /* guide.zh.json */; };
+		CAFE0D1E0000000000000051 /* guide-search-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000052 /* guide-search-vectors.json */; };
+		CAFE0D1E0000000000000053 /* GuideHelpLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000054 /* GuideHelpLink.swift */; };
+		CAFE0D1E0000000000000055 /* GuideStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000056 /* GuideStore.swift */; };
+		CAFE0D1E0000000000000057 /* QuickDefer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000058 /* QuickDefer.swift */; };
+		CAFE0D1E0000000000000059 /* MorningSweepScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E000000000000005A /* MorningSweepScreen.swift */; };
+		CAFE0D1E000000000000005C /* DayAhead.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E000000000000005D /* DayAhead.swift */; };
+		CEA5C5F8B16C461F661396D0 /* ProbeDecryptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0380EFC9ADD5303B83B5BD91 /* ProbeDecryptor.swift */; };
+		CFD25493E8027AACCC39FE21 /* CompletedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7699A4200FA2F2970A1838D6 /* CompletedViewModel.swift */; };
+		D1EC81F59DDFE7F8A10D1D30 /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEFF55971ADA0C60CD0F3074 /* AppRoute.swift */; };
+		D34840EBE7C4C90D2525F0DA /* VersionCompatibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE3297DCE3ECD21F5B0A4635 /* VersionCompatibility.swift */; };
+		D4A100000000000000000011 /* TdayWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D4A100000000000000000010 /* TdayWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D4A100000000000000000012 /* TodayTasksWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A100000000000000000013 /* TodayTasksWidget.swift */; };
+		FEEDFACE0000000000000002 /* DataExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEEDFACE0000000000000003 /* DataExport.swift */; };
+		FEEDFACE0000000000000004 /* DataExportMapperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEEDFACE0000000000000005 /* DataExportMapperTests.swift */; };
+		DAD1CE000000000000000009 /* TdayWatchComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD1CE000000000000000008 /* TdayWatchComplication.swift */; };
+		DAD1CE00000000000000000F /* TdayWatchWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DAD1CE000000000000000007 /* TdayWatchWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		DAD1CE00000000000000001D /* TdayWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD1CE00000000000000001C /* TdayWatchApp.swift */; };
+		DAD1CE00000000000000002A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DAD1CE000000000000000029 /* Assets.xcassets */; };
+		DAD1CE00000000000000001F /* WatchTodayListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD1CE00000000000000001E /* WatchTodayListView.swift */; };
+		DAD1CE000000000000000025 /* TdayWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = DAD1CE00000000000000001B /* TdayWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		DCD00FC940427B88E235F7F4 /* OfflineCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85ADE7E6DE0AADEF0E503DE5 /* OfflineCacheManager.swift */; };
+		DEA51B1F722372A094C125F9 /* ListRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = D19AB4B0B909242B323D5ABF /* ListRepository.swift */; };
+		E1BD58F3802B8806874A2E29 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DABE0225668571D48D55B96 /* AuthViewModel.swift */; };
+		EF64B4D7E0FB06A86DA86E0C /* TaskFloatingActionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */; };
+		7E1A4C90B3D2F5680A1C9E33 /* TdayEmptyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F84D07BC61E9A35D8B47021 /* TdayEmptyState.swift */; };
+		C0FE7712A4B6D8E90F1A2B3C /* TdayConfetti.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FE7714E5F60718293A4B5C /* TdayConfetti.swift */; };
+		F0A57E0100000000000000A2 /* TdayFeedItemMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0100000000000000A1 /* TdayFeedItemMotion.swift */; };
+		F0A57E0400000000000000A2 /* TdayBarTitleReserve.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0400000000000000A1 /* TdayBarTitleReserve.swift */; };
+		F0A57E0400000000000000B2 /* TdayBarTitleReserveTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0400000000000000B1 /* TdayBarTitleReserveTests.swift */; };
+		F0A57E0200000000000000A2 /* TdayTaskRowSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0200000000000000A1 /* TdayTaskRowSkeleton.swift */; };
+		C0FE7715B8C9D0E1F2A30002 /* TdayConfettiKinematicsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FE7715B8C9D0E1F2A30001 /* TdayConfettiKinematicsTests.swift */; };
+		C0FE7715B8C9D0E1F2A30012 /* ShouldCelebrateEmptyStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FE7715B8C9D0E1F2A30011 /* ShouldCelebrateEmptyStateTests.swift */; };
+		C0FE7715B8C9D0E1F2A30042 /* FeedAnswerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FE7715B8C9D0E1F2A30041 /* FeedAnswerTests.swift */; };
+		F0A57E0100000000000000C2 /* TdayFeedItemMotionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0100000000000000C1 /* TdayFeedItemMotionTests.swift */; };
+		F0A57E0200000000000000C2 /* TdayTaskRowSkeletonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0200000000000000C1 /* TdayTaskRowSkeletonTests.swift */; };
+		F0A57E0000000000000000A2 /* TdayMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000A1 /* TdayMotion.swift */; };
+		F0A57E0000000000000000B2 /* TdayMotionGenerated.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000B1 /* TdayMotionGenerated.swift */; };
+		F0A57E0000000000000000B3 /* TdayMotionGenerated.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000B1 /* TdayMotionGenerated.swift */; };
+		F0A57E0300000000000000A2 /* TaskRowListMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0300000000000000A1 /* TaskRowListMark.swift */; };
+		F0A57E0300000000000000B2 /* TdayListIconInference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0300000000000000B1 /* TdayListIconInference.swift */; };
+		F0A57E0300000000000000B3 /* TdayListIconInference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0300000000000000B1 /* TdayListIconInference.swift */; };
+		F0A57E0300000000000000C2 /* TdayListIconInferenceGenerated.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0300000000000000C1 /* TdayListIconInferenceGenerated.swift */; };
+		F0A57E0300000000000000C3 /* TdayListIconInferenceGenerated.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0300000000000000C1 /* TdayListIconInferenceGenerated.swift */; };
+		F0A57E0500000000000000B2 /* TdayListAccent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0500000000000000B1 /* TdayListAccent.swift */; };
+		F0A57E0500000000000000B3 /* TdayListAccent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0500000000000000B1 /* TdayListAccent.swift */; };
+		F0A57E0500000000000000D2 /* TdayListAccentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0500000000000000D1 /* TdayListAccentTests.swift */; };
+		F0A57E0300000000000000D2 /* TaskRowListMarkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0300000000000000D1 /* TaskRowListMarkTests.swift */; };
+		F0A57E0300000000000000E2 /* ListIconInferenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0300000000000000E1 /* ListIconInferenceTests.swift */; };
+		F0A57E0000000000000000C2 /* TdayMotionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000C1 /* TdayMotionTests.swift */; };
+		F0A57E0000000000000000D2 /* TdayMotionEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000D1 /* TdayMotionEnvironment.swift */; };
+		F0A57E0000000000000000E2 /* TdayMotionEnvironmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000E1 /* TdayMotionEnvironmentTests.swift */; };
+		F0A57E0000000000000000F2 /* ZoomNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000F1 /* ZoomNavigation.swift */; };
+		F0A57E0000000000000000F4 /* ZoomNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000F3 /* ZoomNavigationTests.swift */; };
+		F1A2B3C4D5E6F708192A3B4D /* FloaterListRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F708192A3B4C /* FloaterListRepository.swift */; };
+		F2C4D6E8A1B3456790ABCDE0 /* TdaySheetChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2C4D6E8A1B3456790ABCDEF /* TdaySheetChrome.swift */; };
+		F2E1D0C9B8A7F6E5D4C3B2A1 /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* HapticManager.swift */; };
+		F5D16EE508D6244152B8E4B2 /* ServerURLState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */; };
+		FCDE195DEB990E58558699B1 /* ErrorRetryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE3D896A638869384B4CF1EF /* ErrorRetryView.swift */; };
+		BD0FF85ED3C4ADA02B3D4508 /* SlowOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C4A120076AEA4D23A2FECF /* SlowOperation.swift */; };
+		82BEFBFEBA82B7B233D1BD3C /* TelemetryConsentModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E82BADDB0F421FEDB4AE2C78 /* TelemetryConsentModel.swift */; };
+		76FD1B62A577FC70877D5CF3 /* TelemetryConsentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48476967315177D0F41D0AA5 /* TelemetryConsentStore.swift */; };
+		C4372887F210671ACDDF4306 /* TelemetryLifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 661D21C26307ABAE56465993 /* TelemetryLifecycle.swift */; };
+		7B41BE78254884F02F6CA527 /* TelemetryScrubber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66C30EE6553DBF2DE2EBB5E9 /* TelemetryScrubber.swift */; };
+		4C55D2CB44A40B86DF640958 /* TelemetryConsentCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4617184504DDB21C95729411 /* TelemetryConsentCard.swift */; };
+		DD9B62D642F6FD4F1C067773 /* SentryConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA75002D78D6DC0FF70B1019 /* SentryConfigurationTests.swift */; };
+		2C8FBEB019195DBB9ADF4F47 /* SlowOperationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7711621D96EC718E5FA3252 /* SlowOperationTests.swift */; };
+		EEB7FC0322BDB9F52792220E /* TelemetryConsentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC0601D53154733344DEBE3 /* TelemetryConsentTests.swift */; };
+		3456D9EC9685351BD71D1BEB /* TelemetryEventScrubTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B30922DCF49B1B4EA624153 /* TelemetryEventScrubTests.swift */; };
+		2FEF0395C0DE979374663DD6 /* TelemetryLifecycleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 170037AFBF0247A60F8A42A1 /* TelemetryLifecycleTests.swift */; };
+		B2D912C7C3C918AC06A9F5E2 /* TelemetryScrubberTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B020C85FDD716AC5B6935B6 /* TelemetryScrubberTests.swift */; };
+		C46DDBCE3F3321935FAFBE05 /* Sentry-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 310C0E9E9ADE8EFB6F2491C1 /* Sentry-Dynamic */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		5892908396EB5C4983360D8B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DEBED54F5F85A969685E5452 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CEB0667A66D01D2A147D96AA;
+			remoteInfo = Tday;
+		};
+		5A4E0000000000000000001E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DEBED54F5F85A969685E5452 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5A4E00000000000000000016;
+			remoteInfo = TdayShareExtension;
+		};
+		D4A10000000000000000001E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DEBED54F5F85A969685E5452 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D4A100000000000000000016;
+			remoteInfo = TdayWidget;
+		};
+		DAD1CE00000000000000000D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DEBED54F5F85A969685E5452 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DAD1CE000000000000000001;
+			remoteInfo = TdayWatchWidget;
+		};
+		DAD1CE000000000000000023 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DEBED54F5F85A969685E5452 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DAD1CE000000000000000014;
+			remoteInfo = TdayWatch;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		D4A10000000000000000001C /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				D4A100000000000000000011 /* TdayWidget.appex in Embed Foundation Extensions */,
+				5A4E00000000000000000011 /* TdayShareExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DAD1CE00000000000000001A /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				DAD1CE00000000000000000F /* TdayWatchWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DAD1CE000000000000000028 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				DAD1CE000000000000000025 /* TdayWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		7A11CF6000000000000000A1 /* Tday.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Tday.xcconfig; sourceTree = "<group>"; };
+		50DF00000000000000000000 /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
+		50DF10000000000000000000 /* task_complete.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = task_complete.wav; sourceTree = "<group>"; };
+		CA1E7E010000000000000000 /* RecurrenceRuleParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurrenceRuleParserTests.swift; sourceTree = "<group>"; };
+		CA1EFE000000000000000000 /* CalendarSyncPreferenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarSyncPreferenceStore.swift; sourceTree = "<group>"; };
+		CA1EFE010000000000000000 /* RecurrenceRuleParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurrenceRuleParser.swift; sourceTree = "<group>"; };
+		CA1EFE020000000000000000 /* DeviceCalendarStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceCalendarStore.swift; sourceTree = "<group>"; };
+		CA1EFE030000000000000000 /* CalendarSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarSyncManager.swift; sourceTree = "<group>"; };
+		0380EFC9ADD5303B83B5BD91 /* ProbeDecryptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProbeDecryptor.swift; sourceTree = "<group>"; };
+		055D0F0501B287B70456AF4B /* TodoRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoRepository.swift; sourceTree = "<group>"; };
+		0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskFloatingActionButton.swift; sourceTree = "<group>"; };
+		2F84D07BC61E9A35D8B47021 /* TdayEmptyState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayEmptyState.swift; sourceTree = "<group>"; };
+		C0FE7714E5F60718293A4B5C /* TdayConfetti.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayConfetti.swift; sourceTree = "<group>"; };
+		0E4F3B64B40942F48202C32E /* AppDataMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDataMode.swift; sourceTree = "<group>"; };
+		133161412A6BD2A0C04F745A /* SnackbarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnackbarManager.swift; sourceTree = "<group>"; };
+		15B9BC191869EBEA7E8340E6 /* NavigationBackHistoryTitle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationBackHistoryTitle.swift; sourceTree = "<group>"; };
+		19F61DADBD9B8EFC300698C4 /* SystemCredentialLoginTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemCredentialLoginTests.swift; sourceTree = "<group>"; };
+		1DABE0225668571D48D55B96 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
+		22BFAB0C2FA0BB186AEBFC5F /* AppViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel.swift; sourceTree = "<group>"; };
+		25A90A443440754855071C9D /* CalendarScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarScreen.swift; sourceTree = "<group>"; };
+		2A80E8562326D2BB4FF7E8C7 /* Tday.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tday.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2BFFE8167D3639FF09C033A2 /* AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRootView.swift; sourceTree = "<group>"; };
+		2D210E2E24F013C1E30BE80A /* CookieStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CookieStore.swift; sourceTree = "<group>"; };
+		2E70F2999E1965A77EB21FF8 /* BootstrapSessionUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BootstrapSessionUseCase.swift; sourceTree = "<group>"; };
+		2F15244DE3A08B82F3DDD8EB /* UpdateRequiredView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateRequiredView.swift; sourceTree = "<group>"; };
+		2FBC41C56EEEFC8869E762B3 /* ReminderOption.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderOption.swift; sourceTree = "<group>"; };
+		32538D5E9182018AFEAB8DEC /* PullToRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PullToRefresh.swift; sourceTree = "<group>"; };
+		37A754219844F42A2230F08B /* SwiftDataModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftDataModels.swift; sourceTree = "<group>"; };
+		39ADD9E07BF8B32C3FC7B170 /* TdayTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayTheme.swift; sourceTree = "<group>"; };
+		42749601AFF38EAE17BD3213 /* ScheduledTaskHomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledTaskHomeViewModel.swift; sourceTree = "<group>"; };
+		434143484D41505045525301 /* CacheMappersDateParsingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheMappersDateParsingTests.swift; sourceTree = "<group>"; };
+		4A7B9C0D1E2F3456789ABC02 /* CompletedSyncMergeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedSyncMergeTests.swift; sourceTree = "<group>"; };
+		2641DC4E4BD6C1D1D5E14544 /* CachedRecordDiffTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedRecordDiffTests.swift; sourceTree = "<group>"; };
+		A5C0CF00000000000000A102 /* AsyncLockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AsyncLockTests.swift; sourceTree = "<group>"; };
+		A5C0CF00000000000000A202 /* PendingMutationReplayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingMutationReplayTests.swift; sourceTree = "<group>"; };
+		4D2A9B7E2CE3424C9D111002 /* ConnectivityClassificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectivityClassificationTests.swift; sourceTree = "<group>"; };
+		4E4F544946444545504C3032 /* NotificationDeepLinkRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationDeepLinkRouter.swift; sourceTree = "<group>"; };
+		4F52544D434C49454E543032 /* RealtimeClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeClientTests.swift; sourceTree = "<group>"; };
+		53EFEAE1EE18AB86477A56BC /* CalendarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarViewModel.swift; sourceTree = "<group>"; };
+		593DCCDF3ADC95BE1CDC78FC /* StringHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringHelpers.swift; sourceTree = "<group>"; };
+		5A4E00000000000000000002 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		5A4E00000000000000000010 /* TdayShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TdayShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		5A4E00000000000000000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		5A4E00000000000000000015 /* TdayShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TdayShareExtension.entitlements; sourceTree = "<group>"; };
+		5A4E00000000000000000032 /* PendingShareStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingShareStore.swift; sourceTree = "<group>"; };
+		5A4E00000000000000000034 /* PendingShareStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingShareStoreTests.swift; sourceTree = "<group>"; };
+		5D7ACBCBA57903A93BEC3BFA /* TaskReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskReminderScheduler.swift; sourceTree = "<group>"; };
+		5E7E7A8C0B534B26A6E2F911 /* TelemetrySanitizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetrySanitizerTests.swift; sourceTree = "<group>"; };
+		6049166B683EE082F8C551DD /* ApiModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiModels.swift; sourceTree = "<group>"; };
+		629820F1BA29236313992076 /* ApiModelContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiModelContractTests.swift; sourceTree = "<group>"; };
+		62AD2C2DD2233FCBB4611E95 /* TodoListScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoListScreen.swift; sourceTree = "<group>"; };
+		C0FE7715B8C9D0E1F2A30021 /* TodoListCelebration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoListCelebration.swift; sourceTree = "<group>"; };
+		C0FE7715B8C9D0E1F2A30031 /* FeedAnswer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedAnswer.swift; sourceTree = "<group>"; };
+		6CF6FD5D2845A10D7052467D /* AppContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppContainer.swift; sourceTree = "<group>"; };
+		6D0FD6CA5EE999F99D54CF94 /* SyncAndRefreshUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncAndRefreshUseCase.swift; sourceTree = "<group>"; };
+		70A4E591B572A2A9980EC6B7 /* TdayApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayApp.swift; sourceTree = "<group>"; };
+		70F09E74879D0AAABCF70E20 /* CompleteTodoUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompleteTodoUseCase.swift; sourceTree = "<group>"; };
+		718528F64C339E527223D93F /* CreateTodoUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateTodoUseCase.swift; sourceTree = "<group>"; };
+		7699A4200FA2F2970A1838D6 /* CompletedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedViewModel.swift; sourceTree = "<group>"; };
+		78690CB92403D76DCA200972 /* TdayAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayAPIService.swift; sourceTree = "<group>"; };
+		7A1C0FE30B2D4A9C8E5F1A21 /* WidgetBackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetBackgroundRefresh.swift; sourceTree = "<group>"; };
+		7A5C0F7E900000000000A102 /* TaskSortEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSortEngine.swift; sourceTree = "<group>"; };
+		7BC4FF9081195466EE7C3E89 /* SystemCredentialService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemCredentialService.swift; sourceTree = "<group>"; };
+		7DE0A20E66DEF6FD2146DB10 /* SettingsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsRepository.swift; sourceTree = "<group>"; };
+		84798381A9E2DF3C9468ED8F /* SwipeActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeActions.swift; sourceTree = "<group>"; };
+		85ADE7E6DE0AADEF0E503DE5 /* OfflineCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCacheManager.swift; sourceTree = "<group>"; };
+		86E84C14E60D9CBC7F667F1C /* SentryConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentryConfiguration.swift; sourceTree = "<group>"; };
+		8A6D006E491513605369E7D5 /* DomainModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainModels.swift; sourceTree = "<group>"; };
+		8A7EC85EB5D9686D401249C6 /* UserFacingError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserFacingError.swift; sourceTree = "<group>"; };
+		8E76499BCA95FB33B03366C1 /* CompletedRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedRepository.swift; sourceTree = "<group>"; };
+		91CFC3C0B9ADD376389DF63C /* NetworkConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkConfiguration.swift; sourceTree = "<group>"; };
+		95E5A511171F96ABDEC46926 /* CalendarPagingScrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarPagingScrollView.swift; sourceTree = "<group>"; };
+		9BA781886DCE6963CA364F6F /* CompletedScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedScreen.swift; sourceTree = "<group>"; };
+		9CC7B17CE45842F8DF7D522B /* RealtimeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeClient.swift; sourceTree = "<group>"; };
+		9F8E7D6C5B4A00000000F101 /* LanguageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageStore.swift; sourceTree = "<group>"; };
+		9F8E7D6C5B4A00000000F301 /* MotionPreferenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionPreferenceStore.swift; sourceTree = "<group>"; };
+		9F8E7D6C5B4A00000000F102 /* AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguage.swift; sourceTree = "<group>"; };
+		9F8E7D6C5B4A00000000F103 /* Bundle+Language.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Bundle+Language.swift"; sourceTree = "<group>"; };
+		9F8E7D6C5B4A00000000F104 /* Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
+		9F8E7D6C5B4A00000000F105 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		FEEDFACE0000000000000001 /* WatchSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionManager.swift; sourceTree = "<group>"; };
+		7D4E57A1D0A1000000000003 /* TodayWidgetDayWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayWidgetDayWindow.swift; sourceTree = "<group>"; };
+		7D4E57A1D0A1000000000013 /* ListWidgetSetupArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListWidgetSetupArt.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* HapticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticManager.swift; sourceTree = "<group>"; };
+		A1C0FFEE000000000000F001 /* ListShareText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListShareText.swift; sourceTree = "<group>"; };
+		A1C0FFEE000000000000F002 /* ListShareRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListShareRepository.swift; sourceTree = "<group>"; };
+		A1C0FFEE000000000000F003 /* ManageMembersSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageMembersSheet.swift; sourceTree = "<group>"; };
+		A5C31F2E171A73F2774E89A1 /* LoginCredentialCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginCredentialCoordinator.swift; sourceTree = "<group>"; };
+		A64D35F145CD4F1CE4B6C558 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		A9F10101A9F10101A9F10101 /* RootFeedDock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootFeedDock.swift; sourceTree = "<group>"; };
+		B1C7E4A0B1C7E4A0B1C7E4A0 /* RootFeedHeroHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootFeedHeroHeader.swift; sourceTree = "<group>"; };
+		AB49A43AFEE66EEDB3315F86 /* OfflineSyncModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSyncModels.swift; sourceTree = "<group>"; };
+		AC2B21F3E1A43EAEECA86EE8 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
+		AD41A49221B1A947AF8A94D0 /* ThemeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeStore.swift; sourceTree = "<group>"; };
+		AE3D896A638869384B4CF1EF /* ErrorRetryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorRetryView.swift; sourceTree = "<group>"; };
+		AEFA6E39FBCB063E54C61AF7 /* CreateTaskSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateTaskSheet.swift; sourceTree = "<group>"; };
+		9FB40BC301D7402C87138C52 /* RichNotes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichNotes.swift; sourceTree = "<group>"; };
+		60A68F19C0194654B67F8587 /* RichNotesAttributedString.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichNotesAttributedString.swift; sourceTree = "<group>"; };
+		946502BEF8274E2EB39AB767 /* NotesField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesField.swift; sourceTree = "<group>"; };
+		8412653FEEA14E08BD2EEFA7 /* RichNotesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichNotesTests.swift; sourceTree = "<group>"; };
+		AF0DB445B9FEE9B047FBB708 /* TodoListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoListViewModel.swift; sourceTree = "<group>"; };
+		B10000000000000000000001 /* CarTaskModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarTaskModels.swift; sourceTree = "<group>"; };
+		B10000000000000000000002 /* CarPlayCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlayCoordinator.swift; sourceTree = "<group>"; };
+		B10000000000000000000003 /* CarPlaySceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlaySceneDelegate.swift; sourceTree = "<group>"; };
+		B10000000000000000000004 /* CarTaskIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarTaskIntents.swift; sourceTree = "<group>"; };
+		B10000000000000000000005 /* CarTaskModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarTaskModelsTests.swift; sourceTree = "<group>"; };
+		B2C3D4E5F6A7B8C9D0E1F2A3 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
+		B3F7D3043A1EFC1A4EBBDA02 /* Tday.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tday.entitlements; sourceTree = "<group>"; };
+		B5C6D7E8F9A000000000F201 /* AppLocale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLocale.swift; sourceTree = "<group>"; };
+		C0DE000000000000000000A0 /* ForgotPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgotPasswordView.swift; sourceTree = "<group>"; };
+		C0DE000000000000000000B0 /* SecurityQuestionsGateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityQuestionsGateView.swift; sourceTree = "<group>"; };
+		C3407352DB3FED037D2A26BF /* ReminderPreferenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderPreferenceStore.swift; sourceTree = "<group>"; };
+		C9D2CB40ACEE85331512EEC2 /* ScheduledTaskHomeScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledTaskHomeScreen.swift; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000001 /* GuideContentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideContentStore.swift; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000002 /* GuideSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideSearch.swift; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000003 /* GuideModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideModels.swift; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000004 /* HelpGuideScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpGuideScreen.swift; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000005 /* GuideContentContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideContentContractTests.swift; sourceTree = "<group>"; };
+		A97522B7E4230E857CF3A372 /* OfflineCacheManagerPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCacheManagerPersistenceTests.swift; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000041 /* guide.de.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.de.json; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000042 /* guide.en.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.en.json; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000043 /* guide.es.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.es.json; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000044 /* guide.fr.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.fr.json; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000045 /* guide.it.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.it.json; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000046 /* guide.ja.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.ja.json; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000047 /* guide.ms.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.ms.json; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000048 /* guide.pt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.pt.json; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000049 /* guide.ru.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.ru.json; sourceTree = "<group>"; };
+		CAFE0D1E000000000000004A /* guide.zh.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.zh.json; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000052 /* guide-search-vectors.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "guide-search-vectors.json"; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000054 /* GuideHelpLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideHelpLink.swift; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000056 /* GuideStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideStore.swift; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000058 /* QuickDefer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickDefer.swift; sourceTree = "<group>"; };
+		CAFE0D1E000000000000005A /* MorningSweepScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorningSweepScreen.swift; sourceTree = "<group>"; };
+		CAFE0D1E000000000000005D /* DayAhead.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayAhead.swift; sourceTree = "<group>"; };
+		CC80072C8B232C0C09CE3139 /* TodayTasksWidgetSnapshotStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayTasksWidgetSnapshotStore.swift; sourceTree = "<group>"; };
+		CE3297DCE3ECD21F5B0A4635 /* VersionCompatibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionCompatibility.swift; sourceTree = "<group>"; };
+		CEFF55971ADA0C60CD0F3074 /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
+		D0ACC8B538184310B385746A /* ServerConfigRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerConfigRepository.swift; sourceTree = "<group>"; };
+		D19AB4B0B909242B323D5ABF /* ListRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListRepository.swift; sourceTree = "<group>"; };
+		D206496BC88FF6272CFC286C /* ServerURLPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerURLPersistenceTests.swift; sourceTree = "<group>"; };
+		7D4A9E1200000000000000A1 /* TdaySheetChromeMotionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdaySheetChromeMotionTests.swift; sourceTree = "<group>"; };
+		7D4A9E1300000000000000B1 /* RootFeedDockCollapseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootFeedDockCollapseTests.swift; sourceTree = "<group>"; };
+		7D4A9E1400000000000000C1 /* TaskSwipeRevealDetentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSwipeRevealDetentTests.swift; sourceTree = "<group>"; };
+		7D4A9E1400000000000000C3 /* TaskSwipeDismissPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSwipeDismissPolicyTests.swift; sourceTree = "<group>"; };
+		7BF881C9B39C6DF685E58AA6 /* DefaultHomeScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultHomeScreenTests.swift; sourceTree = "<group>"; };
+		D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerURLState.swift; sourceTree = "<group>"; };
+		D26B48A87B57A0417CC3F578 /* TdayTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TdayTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D3CD3233C5F5D5FC1E058708 /* CacheMappers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheMappers.swift; sourceTree = "<group>"; };
+		D4A100000000000000000010 /* TdayWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TdayWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		D4A100000000000000000013 /* TodayTasksWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayTasksWidget.swift; sourceTree = "<group>"; };
+		D4A100000000000000000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D4A100000000000000000015 /* TdayWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TdayWidget.entitlements; sourceTree = "<group>"; };
+		D617DF23936179DDFF13A36D /* OnboardingWizardOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWizardOverlay.swift; sourceTree = "<group>"; };
+		D6D61A167DBA9FD21F8CC00A /* SyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncManager.swift; sourceTree = "<group>"; };
+		D9D2A99D6C098B63352D4FB8 /* Nunito.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Nunito.ttf; sourceTree = "<group>"; };
+		FEEDFACE0000000000000003 /* DataExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataExport.swift; sourceTree = "<group>"; };
+		FEEDFACE0000000000000005 /* DataExportMapperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataExportMapperTests.swift; sourceTree = "<group>"; };
+		DAD1CE000000000000000007 /* TdayWatchWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TdayWatchWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		DAD1CE000000000000000008 /* TdayWatchComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayWatchComplication.swift; sourceTree = "<group>"; };
+		DAD1CE00000000000000000A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		DAD1CE00000000000000000B /* TdayWatchWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TdayWatchWidget.entitlements; sourceTree = "<group>"; };
+		DAD1CE00000000000000001B /* TdayWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TdayWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		DAD1CE00000000000000001C /* TdayWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayWatchApp.swift; sourceTree = "<group>"; };
+		DAD1CE00000000000000001E /* WatchTodayListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchTodayListView.swift; sourceTree = "<group>"; };
+		DAD1CE000000000000000029 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		DAD1CE000000000000000020 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		DAD1CE000000000000000021 /* TdayWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TdayWatch.entitlements; sourceTree = "<group>"; };
+		DCE08ADACC8F11CE2113C13B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		DF332994A97F93EBE1525BB5 /* Nunito-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Nunito-OFL.txt"; sourceTree = "<group>"; };
+		E30D3242D00BC6C1C4BA862D /* CredentialEnvelope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialEnvelope.swift; sourceTree = "<group>"; };
+		E6E5E1DBE3F7999D219BE2EE /* AuthRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthRepository.swift; sourceTree = "<group>"; };
+		E867FA22FEB66EDCE837CF6D /* SecureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureStore.swift; sourceTree = "<group>"; };
+		F0A57E0100000000000000A1 /* TdayFeedItemMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayFeedItemMotion.swift; sourceTree = "<group>"; };
+		F0A57E0400000000000000A1 /* TdayBarTitleReserve.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayBarTitleReserve.swift; sourceTree = "<group>"; };
+		F0A57E0400000000000000B1 /* TdayBarTitleReserveTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayBarTitleReserveTests.swift; sourceTree = "<group>"; };
+		F0A57E0200000000000000A1 /* TdayTaskRowSkeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayTaskRowSkeleton.swift; sourceTree = "<group>"; };
+		C0FE7715B8C9D0E1F2A30001 /* TdayConfettiKinematicsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayConfettiKinematicsTests.swift; sourceTree = "<group>"; };
+		C0FE7715B8C9D0E1F2A30011 /* ShouldCelebrateEmptyStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShouldCelebrateEmptyStateTests.swift; sourceTree = "<group>"; };
+		C0FE7715B8C9D0E1F2A30041 /* FeedAnswerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedAnswerTests.swift; sourceTree = "<group>"; };
+		F0A57E0100000000000000C1 /* TdayFeedItemMotionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayFeedItemMotionTests.swift; sourceTree = "<group>"; };
+		F0A57E0200000000000000C1 /* TdayTaskRowSkeletonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayTaskRowSkeletonTests.swift; sourceTree = "<group>"; };
+		F0A57E0000000000000000A1 /* TdayMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotion.swift; sourceTree = "<group>"; };
+		F0A57E0000000000000000B1 /* TdayMotionGenerated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotionGenerated.swift; sourceTree = "<group>"; };
+		F0A57E0300000000000000A1 /* TaskRowListMark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRowListMark.swift; sourceTree = "<group>"; };
+		F0A57E0300000000000000B1 /* TdayListIconInference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayListIconInference.swift; sourceTree = "<group>"; };
+		F0A57E0300000000000000C1 /* TdayListIconInferenceGenerated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayListIconInferenceGenerated.swift; sourceTree = "<group>"; };
+		F0A57E0500000000000000B1 /* TdayListAccent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayListAccent.swift; sourceTree = "<group>"; };
+		F0A57E0500000000000000D1 /* TdayListAccentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayListAccentTests.swift; sourceTree = "<group>"; };
+		F0A57E0300000000000000D1 /* TaskRowListMarkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRowListMarkTests.swift; sourceTree = "<group>"; };
+		F0A57E0300000000000000E1 /* ListIconInferenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListIconInferenceTests.swift; sourceTree = "<group>"; };
+		F0A57E0000000000000000C1 /* TdayMotionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotionTests.swift; sourceTree = "<group>"; };
+		F0A57E0000000000000000D1 /* TdayMotionEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotionEnvironment.swift; sourceTree = "<group>"; };
+		F0A57E0000000000000000E1 /* TdayMotionEnvironmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotionEnvironmentTests.swift; sourceTree = "<group>"; };
+		F0A57E0000000000000000F1 /* ZoomNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoomNavigation.swift; sourceTree = "<group>"; };
+		F0A57E0000000000000000F3 /* ZoomNavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoomNavigationTests.swift; sourceTree = "<group>"; };
+		F1A2B3C4D5E6F708192A3B4C /* FloaterListRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloaterListRepository.swift; sourceTree = "<group>"; };
+		F2C4D6E8A1B3456790ABCDEF /* TdaySheetChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdaySheetChrome.swift; sourceTree = "<group>"; };
+		FC47AEF5EB0B44524D8C20B1 /* SettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreen.swift; sourceTree = "<group>"; };
+		FC92D6152EADEDF915AE116B /* TodayTasksWidgetSnapshotStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayTasksWidgetSnapshotStoreTests.swift; sourceTree = "<group>"; };
+		A5C4A120076AEA4D23A2FECF /* SlowOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlowOperation.swift; sourceTree = "<group>"; };
+		E82BADDB0F421FEDB4AE2C78 /* TelemetryConsentModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryConsentModel.swift; sourceTree = "<group>"; };
+		48476967315177D0F41D0AA5 /* TelemetryConsentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryConsentStore.swift; sourceTree = "<group>"; };
+		661D21C26307ABAE56465993 /* TelemetryLifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryLifecycle.swift; sourceTree = "<group>"; };
+		66C30EE6553DBF2DE2EBB5E9 /* TelemetryScrubber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryScrubber.swift; sourceTree = "<group>"; };
+		4617184504DDB21C95729411 /* TelemetryConsentCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryConsentCard.swift; sourceTree = "<group>"; };
+		BA75002D78D6DC0FF70B1019 /* SentryConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentryConfigurationTests.swift; sourceTree = "<group>"; };
+		B7711621D96EC718E5FA3252 /* SlowOperationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlowOperationTests.swift; sourceTree = "<group>"; };
+		0AC0601D53154733344DEBE3 /* TelemetryConsentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryConsentTests.swift; sourceTree = "<group>"; };
+		8B30922DCF49B1B4EA624153 /* TelemetryEventScrubTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryEventScrubTests.swift; sourceTree = "<group>"; };
+		170037AFBF0247A60F8A42A1 /* TelemetryLifecycleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryLifecycleTests.swift; sourceTree = "<group>"; };
+		7B020C85FDD716AC5B6935B6 /* TelemetryScrubberTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryScrubberTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		3FDD7DCF0206921E0210DA60 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1FE50ED779CB252C73B0A496 /* Sentry-Dynamic in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5A4E00000000000000000018 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D4A100000000000000000018 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DAD1CE000000000000000006 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DAD1CE000000000000000019 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6B3006D75D0C52A267A9BF28 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C46DDBCE3F3321935FAFBE05 /* Sentry-Dynamic in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		50DC00000000000000000000 /* Sounds */ = {
+			isa = PBXGroup;
+			children = (
+				50DF10000000000000000000 /* task_complete.wav */,
+			);
+			path = Sounds;
+			sourceTree = "<group>";
+		};
+		CA1E6B000000000000000000 /* Calendar */ = {
+			isa = PBXGroup;
+			children = (
+				CA1EFE000000000000000000 /* CalendarSyncPreferenceStore.swift */,
+				CA1EFE010000000000000000 /* RecurrenceRuleParser.swift */,
+				CA1EFE020000000000000000 /* DeviceCalendarStore.swift */,
+				CA1EFE030000000000000000 /* CalendarSyncManager.swift */,
+			);
+			path = Calendar;
+			sourceTree = "<group>";
+		};
+		0032E16ECBA0642C6108F28D /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				E6E5E1DBE3F7999D219BE2EE /* AuthRepository.swift */,
+				E30D3242D00BC6C1C4BA862D /* CredentialEnvelope.swift */,
+				7BC4FF9081195466EE7C3E89 /* SystemCredentialService.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		04A2B0C78D99EDD01626D5CB /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				9F8E7D6C5B4A00000000F105 /* Localizable.xcstrings */,
+				2D679EC9EE22239446D1DE67 /* Fonts */,
+				CAFE0D1E0000000000000023 /* Guide */,
+				50DC00000000000000000000 /* Sounds */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		05ADD4FAA554BDBEA68C7904 /* List */ = {
+			isa = PBXGroup;
+			children = (
+				D19AB4B0B909242B323D5ABF /* ListRepository.swift */,
+				F1A2B3C4D5E6F708192A3B4C /* FloaterListRepository.swift */,
+				A1C0FFEE000000000000F002 /* ListShareRepository.swift */,
+			);
+			path = List;
+			sourceTree = "<group>";
+		};
+		0887DFEE17FD8E0DCDABDD10 /* TdayCoreTests */ = {
+			isa = PBXGroup;
+			children = (
+				629820F1BA29236313992076 /* ApiModelContractTests.swift */,
+				A5C0CF00000000000000A102 /* AsyncLockTests.swift */,
+				434143484D41505045525301 /* CacheMappersDateParsingTests.swift */,
+				B10000000000000000000005 /* CarTaskModelsTests.swift */,
+				4A7B9C0D1E2F3456789ABC02 /* CompletedSyncMergeTests.swift */,
+				2641DC4E4BD6C1D1D5E14544 /* CachedRecordDiffTests.swift */,
+				4D2A9B7E2CE3424C9D111002 /* ConnectivityClassificationTests.swift */,
+				FEEDFACE0000000000000005 /* DataExportMapperTests.swift */,
+				CA1E7E010000000000000000 /* RecurrenceRuleParserTests.swift */,
+				CAFE0D1E0000000000000005 /* GuideContentContractTests.swift */,
+				A97522B7E4230E857CF3A372 /* OfflineCacheManagerPersistenceTests.swift */,
+				4F52544D434C49454E543032 /* RealtimeClientTests.swift */,
+				A5C0CF00000000000000A202 /* PendingMutationReplayTests.swift */,
+				5A4E00000000000000000034 /* PendingShareStoreTests.swift */,
+				8412653FEEA14E08BD2EEFA7 /* RichNotesTests.swift */,
+				D206496BC88FF6272CFC286C /* ServerURLPersistenceTests.swift */,
+				7BF881C9B39C6DF685E58AA6 /* DefaultHomeScreenTests.swift */,
+				19F61DADBD9B8EFC300698C4 /* SystemCredentialLoginTests.swift */,
+				5E7E7A8C0B534B26A6E2F911 /* TelemetrySanitizerTests.swift */,
+				BA75002D78D6DC0FF70B1019 /* SentryConfigurationTests.swift */,
+				B7711621D96EC718E5FA3252 /* SlowOperationTests.swift */,
+				0AC0601D53154733344DEBE3 /* TelemetryConsentTests.swift */,
+				8B30922DCF49B1B4EA624153 /* TelemetryEventScrubTests.swift */,
+				170037AFBF0247A60F8A42A1 /* TelemetryLifecycleTests.swift */,
+				7B020C85FDD716AC5B6935B6 /* TelemetryScrubberTests.swift */,
+				C0FE7715B8C9D0E1F2A30001 /* TdayConfettiKinematicsTests.swift */,
+				C0FE7715B8C9D0E1F2A30011 /* ShouldCelebrateEmptyStateTests.swift */,
+				F0A57E0300000000000000D1 /* TaskRowListMarkTests.swift */,
+				F0A57E0300000000000000E1 /* ListIconInferenceTests.swift */,
+				F0A57E0500000000000000D1 /* TdayListAccentTests.swift */,
+				C0FE7715B8C9D0E1F2A30041 /* FeedAnswerTests.swift */,
+				F0A57E0100000000000000C1 /* TdayFeedItemMotionTests.swift */,
+				F0A57E0200000000000000C1 /* TdayTaskRowSkeletonTests.swift */,
+				F0A57E0000000000000000C1 /* TdayMotionTests.swift */,
+				F0A57E0000000000000000E1 /* TdayMotionEnvironmentTests.swift */,
+				F0A57E0000000000000000F3 /* ZoomNavigationTests.swift */,
+				7D4A9E1200000000000000A1 /* TdaySheetChromeMotionTests.swift */,
+				7D4A9E1300000000000000B1 /* RootFeedDockCollapseTests.swift */,
+				F0A57E0400000000000000B1 /* TdayBarTitleReserveTests.swift */,
+				7D4A9E1400000000000000C1 /* TaskSwipeRevealDetentTests.swift */,
+				7D4A9E1400000000000000C3 /* TaskSwipeDismissPolicyTests.swift */,
+				FC92D6152EADEDF915AE116B /* TodayTasksWidgetSnapshotStoreTests.swift */,
+			);
+			path = TdayCoreTests;
+			sourceTree = "<group>";
+		};
+		0D57A85AA8A54CBA3AB77925 /* Todos */ = {
+			isa = PBXGroup;
+			children = (
+				F0A57E0300000000000000A1 /* TaskRowListMark.swift */,
+				A1C0FFEE000000000000F001 /* ListShareText.swift */,
+				A1C0FFEE000000000000F003 /* ManageMembersSheet.swift */,
+				62AD2C2DD2233FCBB4611E95 /* TodoListScreen.swift */,
+				C0FE7715B8C9D0E1F2A30021 /* TodoListCelebration.swift */,
+				C0FE7715B8C9D0E1F2A30031 /* FeedAnswer.swift */,
+				AF0DB445B9FEE9B047FBB708 /* TodoListViewModel.swift */,
+			);
+			path = Todos;
+			sourceTree = "<group>";
+		};
+		2D679EC9EE22239446D1DE67 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				DF332994A97F93EBE1525BB5 /* Nunito-OFL.txt */,
+				D9D2A99D6C098B63352D4FB8 /* Nunito.ttf */,
+			);
+			path = Fonts;
+			sourceTree = "<group>";
+		};
+		362209AA0D62827302EA84D5 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				8ABBAAD4B9843E5DB809B88F /* Component */,
+				9FEEE8F124199E28F2EF2E5D /* Theme */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		3F0733C5DBF6EC9BC6DBCB4D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				2A80E8562326D2BB4FF7E8C7 /* Tday.app */,
+				D26B48A87B57A0417CC3F578 /* TdayTests.xctest */,
+				D4A100000000000000000010 /* TdayWidget.appex */,
+				5A4E00000000000000000010 /* TdayShareExtension.appex */,
+				DAD1CE00000000000000001B /* TdayWatch.app */,
+				DAD1CE000000000000000007 /* TdayWatchWidget.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		4E5771B69142214019F82B21 /* Security */ = {
+			isa = PBXGroup;
+			children = (
+				0380EFC9ADD5303B83B5BD91 /* ProbeDecryptor.swift */,
+			);
+			path = Security;
+			sourceTree = "<group>";
+		};
+		52B2765D1F90C3C5C936DBD0 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				1DABE0225668571D48D55B96 /* AuthViewModel.swift */,
+				A5C31F2E171A73F2774E89A1 /* LoginCredentialCoordinator.swift */,
+				C0DE000000000000000000A0 /* ForgotPasswordView.swift */,
+				C0DE000000000000000000B0 /* SecurityQuestionsGateView.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		5477B1D0058C97A680F19FA5 /* Widget */ = {
+			isa = PBXGroup;
+			children = (
+				CC80072C8B232C0C09CE3139 /* TodayTasksWidgetSnapshotStore.swift */,
+				7D4E57A1D0A1000000000003 /* TodayWidgetDayWindow.swift */,
+				7D4E57A1D0A1000000000013 /* ListWidgetSetupArt.swift */,
+				7A1C0FE30B2D4A9C8E5F1A21 /* WidgetBackgroundRefresh.swift */,
+				FEEDFACE0000000000000001 /* WatchSessionManager.swift */,
+			);
+			path = Widget;
+			sourceTree = "<group>";
+		};
+		554826ABF1DA81CDB2234C1D /* Feature */ = {
+			isa = PBXGroup;
+			children = (
+				A7F6C08DE36D993639B83726 /* App */,
+				52B2765D1F90C3C5C936DBD0 /* Auth */,
+				867DC72A3F5B3C04E5C36879 /* Calendar */,
+				B10000000000000000000010 /* CarPlay */,
+				FE3DA39BEFDCE31E8159D522 /* Completed */,
+				CAFE0D1E0000000000000022 /* Guide */,
+				CAFE0D1E000000000000005B /* Sweep */,
+				7BA4A69F753AF1C268BCD197 /* ScheduledTaskHome */,
+				DA05A67258F74BF398DCADA3 /* Onboarding */,
+				9F18066D3B63DF80ECB870BB /* Settings */,
+				74889EEE72EA877B097F862A /* Telemetry */,
+				0D57A85AA8A54CBA3AB77925 /* Todos */,
+			);
+			path = Feature;
+			sourceTree = "<group>";
+		};
+		5A4E00000000000000000020 /* TdayShareExtension */ = {
+			isa = PBXGroup;
+			children = (
+				5A4E00000000000000000002 /* ShareViewController.swift */,
+				5A4E00000000000000000014 /* Info.plist */,
+				5A4E00000000000000000015 /* TdayShareExtension.entitlements */,
+			);
+			path = TdayShareExtension;
+			sourceTree = "<group>";
+		};
+		5A4E00000000000000000033 /* Share */ = {
+			isa = PBXGroup;
+			children = (
+				5A4E00000000000000000032 /* PendingShareStore.swift */,
+			);
+			path = Share;
+			sourceTree = "<group>";
+		};
+		6AAB55D1C8A8C8C66368EE0C = {
+			isa = PBXGroup;
+			children = (
+				83705160F9DB3C02FBD56E41 /* Tday */,
+				D4A100000000000000000020 /* TdayWidget */,
+				5A4E00000000000000000020 /* TdayShareExtension */,
+				DAD1CE000000000000000022 /* TdayWatch */,
+				DAD1CE00000000000000000C /* TdayWatchWidget */,
+				75319F4921808A73555E9EC0 /* Tests */,
+				7A11CF6000000000000000A1 /* Tday.xcconfig */,
+				3F0733C5DBF6EC9BC6DBCB4D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		6DFF136486536F6077D88A7F /* Navigation */ = {
+			isa = PBXGroup;
+			children = (
+				CEFF55971ADA0C60CD0F3074 /* AppRoute.swift */,
+				F0A57E0000000000000000F1 /* ZoomNavigation.swift */,
+			);
+			path = Navigation;
+			sourceTree = "<group>";
+		};
+		703B1885FA053FA502D97DBC /* Domain */ = {
+			isa = PBXGroup;
+			children = (
+				2E70F2999E1965A77EB21FF8 /* BootstrapSessionUseCase.swift */,
+				70F09E74879D0AAABCF70E20 /* CompleteTodoUseCase.swift */,
+				CAFE0D1E0000000000000058 /* QuickDefer.swift */,
+				718528F64C339E527223D93F /* CreateTodoUseCase.swift */,
+				6D0FD6CA5EE999F99D54CF94 /* SyncAndRefreshUseCase.swift */,
+			);
+			path = Domain;
+			sourceTree = "<group>";
+		};
+		72FDFB18FAE7DA7B2B569510 /* Notification */ = {
+			isa = PBXGroup;
+			children = (
+				4E4F544946444545504C3032 /* NotificationDeepLinkRouter.swift */,
+				2FBC41C56EEEFC8869E762B3 /* ReminderOption.swift */,
+				C3407352DB3FED037D2A26BF /* ReminderPreferenceStore.swift */,
+				5D7ACBCBA57903A93BEC3BFA /* TaskReminderScheduler.swift */,
+				CAFE0D1E000000000000005D /* DayAhead.swift */,
+			);
+			path = Notification;
+			sourceTree = "<group>";
+		};
+		75319F4921808A73555E9EC0 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				0887DFEE17FD8E0DCDABDD10 /* TdayCoreTests */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		7A5C0F7E900000000000A101 /* Sort */ = {
+			isa = PBXGroup;
+			children = (
+				7A5C0F7E900000000000A102 /* TaskSortEngine.swift */,
+			);
+			path = Sort;
+			sourceTree = "<group>";
+		};
+		7BA4A69F753AF1C268BCD197 /* ScheduledTaskHome */ = {
+			isa = PBXGroup;
+			children = (
+				C9D2CB40ACEE85331512EEC2 /* ScheduledTaskHomeScreen.swift */,
+				42749601AFF38EAE17BD3213 /* ScheduledTaskHomeViewModel.swift */,
+			);
+			path = ScheduledTaskHome;
+			sourceTree = "<group>";
+		};
+		7EE08339CAFC6311E33197B7 /* Sync */ = {
+			isa = PBXGroup;
+			children = (
+				D3CD3233C5F5D5FC1E058708 /* CacheMappers.swift */,
+				D6D61A167DBA9FD21F8CC00A /* SyncManager.swift */,
+			);
+			path = Sync;
+			sourceTree = "<group>";
+		};
+		83705160F9DB3C02FBD56E41 /* Tday */ = {
+			isa = PBXGroup;
+			children = (
+				DCE08ADACC8F11CE2113C13B /* Assets.xcassets */,
+				A64D35F145CD4F1CE4B6C558 /* LaunchScreen.storyboard */,
+				B3F7D3043A1EFC1A4EBBDA02 /* Tday.entitlements */,
+				70A4E591B572A2A9980EC6B7 /* TdayApp.swift */,
+				DD5065F404F570ED9397862C /* Core */,
+				554826ABF1DA81CDB2234C1D /* Feature */,
+				04A2B0C78D99EDD01626D5CB /* Resources */,
+				362209AA0D62827302EA84D5 /* UI */,
+			);
+			path = Tday;
+			sourceTree = "<group>";
+		};
+		867DC72A3F5B3C04E5C36879 /* Calendar */ = {
+			isa = PBXGroup;
+			children = (
+				95E5A511171F96ABDEC46926 /* CalendarPagingScrollView.swift */,
+				25A90A443440754855071C9D /* CalendarScreen.swift */,
+				53EFEAE1EE18AB86477A56BC /* CalendarViewModel.swift */,
+			);
+			path = Calendar;
+			sourceTree = "<group>";
+		};
+		88C7365D1162E02AF8EB4258 /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				6049166B683EE082F8C551DD /* ApiModels.swift */,
+				FEEDFACE0000000000000003 /* DataExport.swift */,
+				8A6D006E491513605369E7D5 /* DomainModels.swift */,
+				CAFE0D1E0000000000000003 /* GuideModels.swift */,
+				AB49A43AFEE66EEDB3315F86 /* OfflineSyncModels.swift */,
+				593DCCDF3ADC95BE1CDC78FC /* StringHelpers.swift */,
+				CE3297DCE3ECD21F5B0A4635 /* VersionCompatibility.swift */,
+			);
+			path = Model;
+			sourceTree = "<group>";
+		};
+		8ABBAAD4B9843E5DB809B88F /* Component */ = {
+			isa = PBXGroup;
+			children = (
+				AEFA6E39FBCB063E54C61AF7 /* CreateTaskSheet.swift */,
+				946502BEF8274E2EB39AB767 /* NotesField.swift */,
+				32538D5E9182018AFEAB8DEC /* PullToRefresh.swift */,
+				84798381A9E2DF3C9468ED8F /* SwipeActions.swift */,
+				F2C4D6E8A1B3456790ABCDEF /* TdaySheetChrome.swift */,
+			);
+			path = Component;
+			sourceTree = "<group>";
+		};
+		967A6B5FC45694B849B1972E /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				0E4F3B64B40942F48202C32E /* AppDataMode.swift */,
+				6CF6FD5D2845A10D7052467D /* AppContainer.swift */,
+				E867FA22FEB66EDCE837CF6D /* SecureStore.swift */,
+				D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */,
+				AD41A49221B1A947AF8A94D0 /* ThemeStore.swift */,
+				9F8E7D6C5B4A00000000F101 /* LanguageStore.swift */,
+				9F8E7D6C5B4A00000000F301 /* MotionPreferenceStore.swift */,
+				0032E16ECBA0642C6108F28D /* Auth */,
+				9B7A416E298DA7E2D5DAD2FC /* Cache */,
+				A4AB62DB656606572D396BB2 /* Completed */,
+				CD839531581A4EFC90B74EE5 /* Database */,
+				CAFE0D1E0000000000000021 /* Guide */,
+				05ADD4FAA554BDBEA68C7904 /* List */,
+				EFBAA9912D7DFA7C8B8C2BD0 /* Server */,
+				CBFE1162EFBEBE3E95E1E0BE /* Settings */,
+				7A5C0F7E900000000000A101 /* Sort */,
+				7EE08339CAFC6311E33197B7 /* Sync */,
+				CF66D0E8B85B6BE3E20C256D /* Todo */,
+			);
+			path = Data;
+			sourceTree = "<group>";
+		};
+		9B7A416E298DA7E2D5DAD2FC /* Cache */ = {
+			isa = PBXGroup;
+			children = (
+				85ADE7E6DE0AADEF0E503DE5 /* OfflineCacheManager.swift */,
+			);
+			path = Cache;
+			sourceTree = "<group>";
+		};
+		9F18066D3B63DF80ECB870BB /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				FC47AEF5EB0B44524D8C20B1 /* SettingsScreen.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		9F8E7D6C5B4A00000000A001 /* Localization */ = {
+			isa = PBXGroup;
+			children = (
+				9F8E7D6C5B4A00000000F102 /* AppLanguage.swift */,
+				B5C6D7E8F9A000000000F201 /* AppLocale.swift */,
+				9F8E7D6C5B4A00000000F103 /* Bundle+Language.swift */,
+				9F8E7D6C5B4A00000000F104 /* Localization.swift */,
+			);
+			path = Localization;
+			sourceTree = "<group>";
+		};
+		9FEEE8F124199E28F2EF2E5D /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				AC2B21F3E1A43EAEECA86EE8 /* Colors.swift */,
+				F0A57E0000000000000000A1 /* TdayMotion.swift */,
+				F0A57E0000000000000000D1 /* TdayMotionEnvironment.swift */,
+				F0A57E0000000000000000B1 /* TdayMotionGenerated.swift */,
+				F0A57E0300000000000000B1 /* TdayListIconInference.swift */,
+				F0A57E0300000000000000C1 /* TdayListIconInferenceGenerated.swift */,
+				F0A57E0500000000000000B1 /* TdayListAccent.swift */,
+				39ADD9E07BF8B32C3FC7B170 /* TdayTheme.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		A3A6721B3AFD5E9252EF45BB /* Network */ = {
+			isa = PBXGroup;
+			children = (
+				2D210E2E24F013C1E30BE80A /* CookieStore.swift */,
+				91CFC3C0B9ADD376389DF63C /* NetworkConfiguration.swift */,
+				9CC7B17CE45842F8DF7D522B /* RealtimeClient.swift */,
+				78690CB92403D76DCA200972 /* TdayAPIService.swift */,
+			);
+			path = Network;
+			sourceTree = "<group>";
+		};
+		A4AB62DB656606572D396BB2 /* Completed */ = {
+			isa = PBXGroup;
+			children = (
+				8E76499BCA95FB33B03366C1 /* CompletedRepository.swift */,
+			);
+			path = Completed;
+			sourceTree = "<group>";
+		};
+		A7F6C08DE36D993639B83726 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				2BFFE8167D3639FF09C033A2 /* AppRootView.swift */,
+				22BFAB0C2FA0BB186AEBFC5F /* AppViewModel.swift */,
+				2F15244DE3A08B82F3DDD8EB /* UpdateRequiredView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		B10000000000000000000010 /* CarPlay */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000002 /* CarPlayCoordinator.swift */,
+				B10000000000000000000003 /* CarPlaySceneDelegate.swift */,
+				B10000000000000000000004 /* CarTaskIntents.swift */,
+				B10000000000000000000001 /* CarTaskModels.swift */,
+			);
+			path = CarPlay;
+			sourceTree = "<group>";
+		};
+		CAFE0D1E0000000000000021 /* Guide */ = {
+			isa = PBXGroup;
+			children = (
+				CAFE0D1E0000000000000001 /* GuideContentStore.swift */,
+				CAFE0D1E0000000000000002 /* GuideSearch.swift */,
+				CAFE0D1E0000000000000056 /* GuideStore.swift */,
+			);
+			path = Guide;
+			sourceTree = "<group>";
+		};
+		CAFE0D1E0000000000000022 /* Guide */ = {
+			isa = PBXGroup;
+			children = (
+				CAFE0D1E0000000000000054 /* GuideHelpLink.swift */,
+				CAFE0D1E0000000000000004 /* HelpGuideScreen.swift */,
+			);
+			path = Guide;
+			sourceTree = "<group>";
+		};
+		CAFE0D1E0000000000000023 /* Guide */ = {
+			isa = PBXGroup;
+			children = (
+				CAFE0D1E0000000000000052 /* guide-search-vectors.json */,
+				CAFE0D1E0000000000000041 /* guide.de.json */,
+				CAFE0D1E0000000000000042 /* guide.en.json */,
+				CAFE0D1E0000000000000043 /* guide.es.json */,
+				CAFE0D1E0000000000000044 /* guide.fr.json */,
+				CAFE0D1E0000000000000045 /* guide.it.json */,
+				CAFE0D1E0000000000000046 /* guide.ja.json */,
+				CAFE0D1E0000000000000047 /* guide.ms.json */,
+				CAFE0D1E0000000000000048 /* guide.pt.json */,
+				CAFE0D1E0000000000000049 /* guide.ru.json */,
+				CAFE0D1E000000000000004A /* guide.zh.json */,
+			);
+			path = Guide;
+			sourceTree = "<group>";
+		};
+		CAFE0D1E000000000000005B /* Sweep */ = {
+			isa = PBXGroup;
+			children = (
+				CAFE0D1E000000000000005A /* MorningSweepScreen.swift */,
+			);
+			path = Sweep;
+			sourceTree = "<group>";
+		};
+		CBFE1162EFBEBE3E95E1E0BE /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				7DE0A20E66DEF6FD2146DB10 /* SettingsRepository.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		CD839531581A4EFC90B74EE5 /* Database */ = {
+			isa = PBXGroup;
+			children = (
+				37A754219844F42A2230F08B /* SwiftDataModels.swift */,
+			);
+			path = Database;
+			sourceTree = "<group>";
+		};
+		CF66D0E8B85B6BE3E20C256D /* Todo */ = {
+			isa = PBXGroup;
+			children = (
+				055D0F0501B287B70456AF4B /* TodoRepository.swift */,
+			);
+			path = Todo;
+			sourceTree = "<group>";
+		};
+		D4A100000000000000000020 /* TdayWidget */ = {
+			isa = PBXGroup;
+			children = (
+				D4A100000000000000000013 /* TodayTasksWidget.swift */,
+				D4A100000000000000000014 /* Info.plist */,
+				D4A100000000000000000015 /* TdayWidget.entitlements */,
+			);
+			path = TdayWidget;
+			sourceTree = "<group>";
+		};
+		DA05A67258F74BF398DCADA3 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				D617DF23936179DDFF13A36D /* OnboardingWizardOverlay.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		DAD1CE00000000000000000C /* TdayWatchWidget */ = {
+			isa = PBXGroup;
+			children = (
+				DAD1CE000000000000000008 /* TdayWatchComplication.swift */,
+				DAD1CE00000000000000000A /* Info.plist */,
+				DAD1CE00000000000000000B /* TdayWatchWidget.entitlements */,
+			);
+			path = TdayWatchWidget;
+			sourceTree = "<group>";
+		};
+		DAD1CE000000000000000022 /* TdayWatch */ = {
+			isa = PBXGroup;
+			children = (
+				DAD1CE000000000000000029 /* Assets.xcassets */,
+				DAD1CE00000000000000001C /* TdayWatchApp.swift */,
+				DAD1CE00000000000000001E /* WatchTodayListView.swift */,
+				DAD1CE000000000000000020 /* Info.plist */,
+				DAD1CE000000000000000021 /* TdayWatch.entitlements */,
+			);
+			path = TdayWatch;
+			sourceTree = "<group>";
+		};
+		DD5065F404F570ED9397862C /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				86E84C14E60D9CBC7F667F1C /* SentryConfiguration.swift */,
+				CA1E6B000000000000000000 /* Calendar */,
+				967A6B5FC45694B849B1972E /* Data */,
+				9F8E7D6C5B4A00000000A001 /* Localization */,
+				703B1885FA053FA502D97DBC /* Domain */,
+				88C7365D1162E02AF8EB4258 /* Model */,
+				6DFF136486536F6077D88A7F /* Navigation */,
+				A3A6721B3AFD5E9252EF45BB /* Network */,
+				72FDFB18FAE7DA7B2B569510 /* Notification */,
+				4E5771B69142214019F82B21 /* Security */,
+				5A4E00000000000000000033 /* Share */,
+				7CDC143AC586EFAD241E77F7 /* Telemetry */,
+				1B2C7D3B4B2547C0818F50C1 /* Text */,
+				DF657ECAF439ED3F03187CCE /* UI */,
+				5477B1D0058C97A680F19FA5 /* Widget */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		1B2C7D3B4B2547C0818F50C1 /* Text */ = {
+			isa = PBXGroup;
+			children = (
+				9FB40BC301D7402C87138C52 /* RichNotes.swift */,
+				60A68F19C0194654B67F8587 /* RichNotesAttributedString.swift */,
+			);
+			path = Text;
+			sourceTree = "<group>";
+		};
+		DF657ECAF439ED3F03187CCE /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				AE3D896A638869384B4CF1EF /* ErrorRetryView.swift */,
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* HapticManager.swift */,
+				50DF00000000000000000000 /* SoundManager.swift */,
+				15B9BC191869EBEA7E8340E6 /* NavigationBackHistoryTitle.swift */,
+				A9F10101A9F10101A9F10101 /* RootFeedDock.swift */,
+				B1C7E4A0B1C7E4A0B1C7E4A0 /* RootFeedHeroHeader.swift */,
+				B2C3D4E5F6A7B8C9D0E1F2A3 /* ShareSheet.swift */,
+				133161412A6BD2A0C04F745A /* SnackbarManager.swift */,
+				0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */,
+				2F84D07BC61E9A35D8B47021 /* TdayEmptyState.swift */,
+				C0FE7714E5F60718293A4B5C /* TdayConfetti.swift */,
+				F0A57E0100000000000000A1 /* TdayFeedItemMotion.swift */,
+				F0A57E0200000000000000A1 /* TdayTaskRowSkeleton.swift */,
+				F0A57E0400000000000000A1 /* TdayBarTitleReserve.swift */,
+				8A7EC85EB5D9686D401249C6 /* UserFacingError.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		EFBAA9912D7DFA7C8B8C2BD0 /* Server */ = {
+			isa = PBXGroup;
+			children = (
+				D0ACC8B538184310B385746A /* ServerConfigRepository.swift */,
+			);
+			path = Server;
+			sourceTree = "<group>";
+		};
+		FE3DA39BEFDCE31E8159D522 /* Completed */ = {
+			isa = PBXGroup;
+			children = (
+				9BA781886DCE6963CA364F6F /* CompletedScreen.swift */,
+				7699A4200FA2F2970A1838D6 /* CompletedViewModel.swift */,
+			);
+			path = Completed;
+			sourceTree = "<group>";
+		};
+		7CDC143AC586EFAD241E77F7 /* Telemetry */ = {
+			isa = PBXGroup;
+			children = (
+				A5C4A120076AEA4D23A2FECF /* SlowOperation.swift */,
+				E82BADDB0F421FEDB4AE2C78 /* TelemetryConsentModel.swift */,
+				48476967315177D0F41D0AA5 /* TelemetryConsentStore.swift */,
+				661D21C26307ABAE56465993 /* TelemetryLifecycle.swift */,
+				66C30EE6553DBF2DE2EBB5E9 /* TelemetryScrubber.swift */,
+			);
+			path = Telemetry;
+			sourceTree = "<group>";
+		};
+		74889EEE72EA877B097F862A /* Telemetry */ = {
+			isa = PBXGroup;
+			children = (
+				4617184504DDB21C95729411 /* TelemetryConsentCard.swift */,
+			);
+			path = Telemetry;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		5A4E00000000000000000016 /* TdayShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5A4E0000000000000000001B /* Build configuration list for PBXNativeTarget "TdayShareExtension" */;
+			buildPhases = (
+				5A4E00000000000000000017 /* Sources */,
+				5A4E00000000000000000018 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TdayShareExtension;
+			packageProductDependencies = (
+			);
+			productName = TdayShareExtension;
+			productReference = 5A4E00000000000000000010 /* TdayShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		870B7E606F6196C1CA699A1F /* TdayTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 032110A302C6CF9B65A2760A /* Build configuration list for PBXNativeTarget "TdayTests" */;
+			buildPhases = (
+				64E975FE272A463522F716BE /* Sources */,
+				6B3006D75D0C52A267A9BF28 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				02FB644F67D312B59373E866 /* PBXTargetDependency */,
+			);
+			name = TdayTests;
+			packageProductDependencies = (
+				310C0E9E9ADE8EFB6F2491C1 /* Sentry-Dynamic */,
+			);
+			productName = TdayTests;
+			productReference = D26B48A87B57A0417CC3F578 /* TdayTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		CEB0667A66D01D2A147D96AA /* Tday */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B5D9306D62E6A4AB95C26819 /* Build configuration list for PBXNativeTarget "Tday" */;
+			buildPhases = (
+				EE513C8DAF31C33B310B4E38 /* Sources */,
+				32A3CADD0462E89BFAB9B2DA /* Resources */,
+				3FDD7DCF0206921E0210DA60 /* Frameworks */,
+				D4A10000000000000000001C /* Embed Foundation Extensions */,
+				DAD1CE000000000000000028 /* Embed Watch Content */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D4A10000000000000000001D /* PBXTargetDependency */,
+				5A4E0000000000000000001D /* PBXTargetDependency */,
+				DAD1CE000000000000000024 /* PBXTargetDependency */,
+			);
+			name = Tday;
+			packageProductDependencies = (
+				A8BC3C28FBC8E4D5C38307DB /* Sentry-Dynamic */,
+			);
+			productName = Tday;
+			productReference = 2A80E8562326D2BB4FF7E8C7 /* Tday.app */;
+			productType = "com.apple.product-type.application";
+		};
+		D4A100000000000000000016 /* TdayWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D4A10000000000000000001B /* Build configuration list for PBXNativeTarget "TdayWidget" */;
+			buildPhases = (
+				D4A100000000000000000017 /* Sources */,
+				D4A100000000000000000018 /* Frameworks */,
+				D4A100000000000000000030 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TdayWidget;
+			packageProductDependencies = (
+			);
+			productName = TdayWidget;
+			productReference = D4A100000000000000000010 /* TdayWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		DAD1CE000000000000000001 /* TdayWatchWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DAD1CE000000000000000002 /* Build configuration list for PBXNativeTarget "TdayWatchWidget" */;
+			buildPhases = (
+				DAD1CE000000000000000005 /* Sources */,
+				DAD1CE000000000000000006 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TdayWatchWidget;
+			packageProductDependencies = (
+			);
+			productName = TdayWatchWidget;
+			productReference = DAD1CE000000000000000007 /* TdayWatchWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		DAD1CE000000000000000014 /* TdayWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DAD1CE000000000000000015 /* Build configuration list for PBXNativeTarget "TdayWatch" */;
+			buildPhases = (
+				DAD1CE000000000000000018 /* Sources */,
+				DAD1CE000000000000000019 /* Frameworks */,
+				DAD1CE00000000000000002B /* Resources */,
+				DAD1CE00000000000000001A /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DAD1CE00000000000000000E /* PBXTargetDependency */,
+			);
+			name = TdayWatch;
+			packageProductDependencies = (
+			);
+			productName = TdayWatch;
+			productReference = DAD1CE00000000000000001B /* TdayWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		DEBED54F5F85A969685E5452 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2700;
+			};
+			buildConfigurationList = 98FEFA2339B3785EC6B323E6 /* Build configuration list for PBXProject "TdayApp" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 6AAB55D1C8A8C8C66368EE0C;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				25F077B213506555FEDF5480 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 3F0733C5DBF6EC9BC6DBCB4D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				CEB0667A66D01D2A147D96AA /* Tday */,
+				D4A100000000000000000016 /* TdayWidget */,
+				5A4E00000000000000000016 /* TdayShareExtension */,
+				870B7E606F6196C1CA699A1F /* TdayTests */,
+				DAD1CE000000000000000014 /* TdayWatch */,
+				DAD1CE000000000000000001 /* TdayWatchWidget */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		DAD1CE00000000000000002B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DAD1CE00000000000000002A /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		32A3CADD0462E89BFAB9B2DA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				50DB10000000000000000000 /* task_complete.wav in Resources */,
+				9F8E7D6C5B4A00000000B105 /* Localizable.xcstrings in Resources */,
+				B34A31B1812FC676A3AC1871 /* Assets.xcassets in Resources */,
+				85B5397D25D2A1436CF34394 /* LaunchScreen.storyboard in Resources */,
+				C4E342DFC88BD5C188893628 /* Nunito-OFL.txt in Resources */,
+				384B88FF643D87A6157C76C2 /* Nunito.ttf in Resources */,
+				CAFE0D1E0000000000000031 /* guide.de.json in Resources */,
+				CAFE0D1E0000000000000032 /* guide.en.json in Resources */,
+				CAFE0D1E0000000000000033 /* guide.es.json in Resources */,
+				CAFE0D1E0000000000000034 /* guide.fr.json in Resources */,
+				CAFE0D1E0000000000000035 /* guide.it.json in Resources */,
+				CAFE0D1E0000000000000036 /* guide.ja.json in Resources */,
+				CAFE0D1E0000000000000037 /* guide.ms.json in Resources */,
+				CAFE0D1E0000000000000038 /* guide.pt.json in Resources */,
+				CAFE0D1E0000000000000039 /* guide.ru.json in Resources */,
+				CAFE0D1E000000000000003A /* guide.zh.json in Resources */,
+				CAFE0D1E0000000000000051 /* guide-search-vectors.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		5A4E00000000000000000017 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5A4E00000000000000000001 /* ShareViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		64E975FE272A463522F716BE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CA1E7E020000000000000000 /* RecurrenceRuleParserTests.swift in Sources */,
+				B4995200636F408E4296FF0D /* ApiModelContractTests.swift in Sources */,
+				A5C0CF00000000000000A101 /* AsyncLockTests.swift in Sources */,
+				434143484D41505045525300 /* CacheMappersDateParsingTests.swift in Sources */,
+				B10000000000000000000025 /* CarTaskModelsTests.swift in Sources */,
+				4A7B9C0D1E2F3456789ABC01 /* CompletedSyncMergeTests.swift in Sources */,
+				2E4095C91E58D5F74B3F3764 /* CachedRecordDiffTests.swift in Sources */,
+				4D2A9B7E2CE3424C9D111001 /* ConnectivityClassificationTests.swift in Sources */,
+				FEEDFACE0000000000000004 /* DataExportMapperTests.swift in Sources */,
+				CAFE0D1E0000000000000015 /* GuideContentContractTests.swift in Sources */,
+				CCCE7C4513E61101A0C63CD8 /* OfflineCacheManagerPersistenceTests.swift in Sources */,
+				4F52544D434C49454E543031 /* RealtimeClientTests.swift in Sources */,
+				A5C0CF00000000000000A201 /* PendingMutationReplayTests.swift in Sources */,
+				5A4E00000000000000000035 /* PendingShareStoreTests.swift in Sources */,
+				F2ABDCC2586F4A91A6164D16 /* RichNotesTests.swift in Sources */,
+				03A0CCC6A8AAE2DB065E6DE6 /* ServerURLPersistenceTests.swift in Sources */,
+				E0D3B11DFB20419468405B6E /* DefaultHomeScreenTests.swift in Sources */,
+				C8B96DDF0DC7AD0B8DD54E4F /* SystemCredentialLoginTests.swift in Sources */,
+				5E7E7A8C0B534B26A6E2F910 /* TelemetrySanitizerTests.swift in Sources */,
+				DD9B62D642F6FD4F1C067773 /* SentryConfigurationTests.swift in Sources */,
+				2C8FBEB019195DBB9ADF4F47 /* SlowOperationTests.swift in Sources */,
+				EEB7FC0322BDB9F52792220E /* TelemetryConsentTests.swift in Sources */,
+				3456D9EC9685351BD71D1BEB /* TelemetryEventScrubTests.swift in Sources */,
+				2FEF0395C0DE979374663DD6 /* TelemetryLifecycleTests.swift in Sources */,
+				B2D912C7C3C918AC06A9F5E2 /* TelemetryScrubberTests.swift in Sources */,
+				C0FE7715B8C9D0E1F2A30002 /* TdayConfettiKinematicsTests.swift in Sources */,
+				C0FE7715B8C9D0E1F2A30012 /* ShouldCelebrateEmptyStateTests.swift in Sources */,
+				F0A57E0300000000000000D2 /* TaskRowListMarkTests.swift in Sources */,
+				F0A57E0400000000000000B2 /* TdayBarTitleReserveTests.swift in Sources */,
+				F0A57E0300000000000000E2 /* ListIconInferenceTests.swift in Sources */,
+				F0A57E0500000000000000D2 /* TdayListAccentTests.swift in Sources */,
+				C0FE7715B8C9D0E1F2A30042 /* FeedAnswerTests.swift in Sources */,
+				F0A57E0100000000000000C2 /* TdayFeedItemMotionTests.swift in Sources */,
+				F0A57E0200000000000000C2 /* TdayTaskRowSkeletonTests.swift in Sources */,
+				F0A57E0000000000000000C2 /* TdayMotionTests.swift in Sources */,
+				F0A57E0000000000000000E2 /* TdayMotionEnvironmentTests.swift in Sources */,
+				F0A57E0000000000000000F4 /* ZoomNavigationTests.swift in Sources */,
+				7D4A9E1200000000000000A2 /* TdaySheetChromeMotionTests.swift in Sources */,
+				7D4A9E1300000000000000B2 /* RootFeedDockCollapseTests.swift in Sources */,
+				7D4A9E1400000000000000C2 /* TaskSwipeRevealDetentTests.swift in Sources */,
+				7D4A9E1400000000000000C4 /* TaskSwipeDismissPolicyTests.swift in Sources */,
+				494E748270A233BECED5A359 /* TodayTasksWidgetSnapshotStoreTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D4A100000000000000000030 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D4A100000000000000000031 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D4A100000000000000000017 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D4A100000000000000000012 /* TodayTasksWidget.swift in Sources */,
+				7D4E57A1D0A1000000000002 /* TodayWidgetDayWindow.swift in Sources */,
+				7D4E57A1D0A1000000000012 /* ListWidgetSetupArt.swift in Sources */,
+				F0A57E0000000000000000B3 /* TdayMotionGenerated.swift in Sources */,
+				F0A57E0300000000000000B3 /* TdayListIconInference.swift in Sources */,
+				F0A57E0300000000000000C3 /* TdayListIconInferenceGenerated.swift in Sources */,
+				F0A57E0500000000000000B3 /* TdayListAccent.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DAD1CE000000000000000005 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DAD1CE000000000000000009 /* TdayWatchComplication.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DAD1CE000000000000000018 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DAD1CE00000000000000001D /* TdayWatchApp.swift in Sources */,
+				DAD1CE00000000000000001F /* WatchTodayListView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EE513C8DAF31C33B310B4E38 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				50DB00000000000000000000 /* SoundManager.swift in Sources */,
+				CA1EBF000000000000000000 /* CalendarSyncPreferenceStore.swift in Sources */,
+				CA1EBF010000000000000000 /* RecurrenceRuleParser.swift in Sources */,
+				CA1EBF020000000000000000 /* DeviceCalendarStore.swift in Sources */,
+				CA1EBF030000000000000000 /* CalendarSyncManager.swift in Sources */,
+				B648A67EAD215BE5B74F7460 /* ApiModels.swift in Sources */,
+				FEEDFACE0000000000000002 /* DataExport.swift in Sources */,
+				5A4E00000000000000000031 /* PendingShareStore.swift in Sources */,
+				07D1F4A0C9434C54853E9D29 /* AppDataMode.swift in Sources */,
+				5B82443B89507719EDD7215C /* AppContainer.swift in Sources */,
+				A316B4B3BB1AEA5FDF9998DF /* AppRootView.swift in Sources */,
+				CAFE0D1E0000000000000011 /* GuideContentStore.swift in Sources */,
+				CAFE0D1E0000000000000012 /* GuideSearch.swift in Sources */,
+				CAFE0D1E0000000000000013 /* GuideModels.swift in Sources */,
+				CAFE0D1E0000000000000014 /* HelpGuideScreen.swift in Sources */,
+				CAFE0D1E0000000000000059 /* MorningSweepScreen.swift in Sources */,
+				CAFE0D1E0000000000000053 /* GuideHelpLink.swift in Sources */,
+				CAFE0D1E0000000000000055 /* GuideStore.swift in Sources */,
+				D1EC81F59DDFE7F8A10D1D30 /* AppRoute.swift in Sources */,
+				17A2E96F8BEA64247551A742 /* AppViewModel.swift in Sources */,
+				A7319C922AE54DC944A9ECC5 /* AuthRepository.swift in Sources */,
+				E1BD58F3802B8806874A2E29 /* AuthViewModel.swift in Sources */,
+				527A4947BD0D1BE156122F96 /* BootstrapSessionUseCase.swift in Sources */,
+				04EFD8B7BFDF9261BE3D88BE /* CacheMappers.swift in Sources */,
+				7A5C0F7E900000000000A103 /* TaskSortEngine.swift in Sources */,
+				91660A57CFA826E39338BD33 /* CalendarScreen.swift in Sources */,
+				64E0A2B205D80764F2BF52FB /* CalendarViewModel.swift in Sources */,
+				B10000000000000000000022 /* CarPlayCoordinator.swift in Sources */,
+				B10000000000000000000023 /* CarPlaySceneDelegate.swift in Sources */,
+				B10000000000000000000024 /* CarTaskIntents.swift in Sources */,
+				B10000000000000000000021 /* CarTaskModels.swift in Sources */,
+				9146B23E1A1F6A3A71DE7A5B /* Colors.swift in Sources */,
+				B5D28682AD0623E39CCD4F8E /* CompleteTodoUseCase.swift in Sources */,
+				CAFE0D1E0000000000000057 /* QuickDefer.swift in Sources */,
+				271C111B35309CA229AC1400 /* CompletedRepository.swift in Sources */,
+				558091FE1A8E358F473DE029 /* CompletedScreen.swift in Sources */,
+				CFD25493E8027AACCC39FE21 /* CompletedViewModel.swift in Sources */,
+				01C535860D5694F91772B940 /* CookieStore.swift in Sources */,
+				701E03BE9BBC8792CAD5919C /* CreateTaskSheet.swift in Sources */,
+				55A4744804F44AAC83DD8A0A /* NotesField.swift in Sources */,
+				9652874529F94390BA9AA669 /* RichNotes.swift in Sources */,
+				B8A1D1E5801446BF8679D5B2 /* RichNotesAttributedString.swift in Sources */,
+				F2C4D6E8A1B3456790ABCDE0 /* TdaySheetChrome.swift in Sources */,
+				58BD5E982FB87AE6986E3E79 /* CreateTodoUseCase.swift in Sources */,
+				535CABAC18AD47FEF15D2C11 /* CredentialEnvelope.swift in Sources */,
+				765ED719B3CCBB90176C55EB /* DomainModels.swift in Sources */,
+				FCDE195DEB990E58558699B1 /* ErrorRetryView.swift in Sources */,
+				F2E1D0C9B8A7F6E5D4C3B2A1 /* HapticManager.swift in Sources */,
+				5DB03218BE341B7C186F01AE /* CalendarPagingScrollView.swift in Sources */,
+				C0768A60B1B807FCA7A6D37F /* ScheduledTaskHomeScreen.swift in Sources */,
+				9D9B4F301D7261C3F4F95B6D /* ScheduledTaskHomeViewModel.swift in Sources */,
+				DEA51B1F722372A094C125F9 /* ListRepository.swift in Sources */,
+				F1A2B3C4D5E6F708192A3B4D /* FloaterListRepository.swift in Sources */,
+				A1C0FFEE000000000000B002 /* ListShareRepository.swift in Sources */,
+				A1C0FFEE000000000000B003 /* ManageMembersSheet.swift in Sources */,
+				957E83469CA6C09174B1B374 /* LoginCredentialCoordinator.swift in Sources */,
+				C0DE000000000000000000A1 /* ForgotPasswordView.swift in Sources */,
+				C0DE000000000000000000B1 /* SecurityQuestionsGateView.swift in Sources */,
+				1618367E71392D77BC8C61B6 /* NavigationBackHistoryTitle.swift in Sources */,
+				C013C84CCBF84A849CE93963 /* NetworkConfiguration.swift in Sources */,
+				4E4F544946444545504C3031 /* NotificationDeepLinkRouter.swift in Sources */,
+				DCD00FC940427B88E235F7F4 /* OfflineCacheManager.swift in Sources */,
+				A03B553E316CEEDFAB8EBA69 /* OfflineSyncModels.swift in Sources */,
+				846AE66C58EF435FB506E3E6 /* OnboardingWizardOverlay.swift in Sources */,
+				CEA5C5F8B16C461F661396D0 /* ProbeDecryptor.swift in Sources */,
+				C0ABAA1F11269C7FC0682201 /* PullToRefresh.swift in Sources */,
+				041712E33446975E528F050E /* RealtimeClient.swift in Sources */,
+				84B6C4F440AD30E4EFA1FA3F /* ReminderOption.swift in Sources */,
+				3E0BE8F327DB1A2EE5B101C4 /* ReminderPreferenceStore.swift in Sources */,
+				8D227AE36B26809A15603F5E /* SecureStore.swift in Sources */,
+				5549AF8633C0733EDE2A2827 /* SentryConfiguration.swift in Sources */,
+				BD0FF85ED3C4ADA02B3D4508 /* SlowOperation.swift in Sources */,
+				82BEFBFEBA82B7B233D1BD3C /* TelemetryConsentModel.swift in Sources */,
+				76FD1B62A577FC70877D5CF3 /* TelemetryConsentStore.swift in Sources */,
+				C4372887F210671ACDDF4306 /* TelemetryLifecycle.swift in Sources */,
+				7B41BE78254884F02F6CA527 /* TelemetryScrubber.swift in Sources */,
+				4C55D2CB44A40B86DF640958 /* TelemetryConsentCard.swift in Sources */,
+				557E0B136F4C0A00AF79E4F0 /* ServerConfigRepository.swift in Sources */,
+				F5D16EE508D6244152B8E4B2 /* ServerURLState.swift in Sources */,
+				0A6188D6B8C9FC92A9927F1C /* SettingsRepository.swift in Sources */,
+				013BE5C9AD66548E50177C48 /* SettingsScreen.swift in Sources */,
+				A3F2E1D0C9B8A7F6E5D4C3B2 /* ShareSheet.swift in Sources */,
+				0BA0A83365B9CF5E63B5A9AA /* SnackbarManager.swift in Sources */,
+				1AC138341BE3A2841CF05908 /* StringHelpers.swift in Sources */,
+				222184A155C5A7B9F178007B /* SwiftDataModels.swift in Sources */,
+				2C1549AFC2F29218C879306C /* SwipeActions.swift in Sources */,
+				A9F10102A9F10102A9F10102 /* RootFeedDock.swift in Sources */,
+				B1C7E4A1B1C7E4A1B1C7E4A1 /* RootFeedHeroHeader.swift in Sources */,
+				58EB6EF803693EB982E331E4 /* SyncAndRefreshUseCase.swift in Sources */,
+				02DCC3220DC138F342784CA4 /* SyncManager.swift in Sources */,
+				5D93F6903E05BD9902C43A51 /* SystemCredentialService.swift in Sources */,
+				EF64B4D7E0FB06A86DA86E0C /* TaskFloatingActionButton.swift in Sources */,
+				7E1A4C90B3D2F5680A1C9E33 /* TdayEmptyState.swift in Sources */,
+				C0FE7712A4B6D8E90F1A2B3C /* TdayConfetti.swift in Sources */,
+				3172D88F15D3395465E578E3 /* TaskReminderScheduler.swift in Sources */,
+				CAFE0D1E000000000000005C /* DayAhead.swift in Sources */,
+				2D4CE01CFE08086ACC160F8B /* TdayAPIService.swift in Sources */,
+				861A548A6A3DDE0A78D35D83 /* TdayApp.swift in Sources */,
+				F0A57E0100000000000000A2 /* TdayFeedItemMotion.swift in Sources */,
+				F0A57E0400000000000000A2 /* TdayBarTitleReserve.swift in Sources */,
+				F0A57E0200000000000000A2 /* TdayTaskRowSkeleton.swift in Sources */,
+				F0A57E0000000000000000A2 /* TdayMotion.swift in Sources */,
+				F0A57E0000000000000000D2 /* TdayMotionEnvironment.swift in Sources */,
+				F0A57E0000000000000000F2 /* ZoomNavigation.swift in Sources */,
+				F0A57E0000000000000000B2 /* TdayMotionGenerated.swift in Sources */,
+				F0A57E0300000000000000A2 /* TaskRowListMark.swift in Sources */,
+				F0A57E0300000000000000B2 /* TdayListIconInference.swift in Sources */,
+				F0A57E0300000000000000C2 /* TdayListIconInferenceGenerated.swift in Sources */,
+				F0A57E0500000000000000B2 /* TdayListAccent.swift in Sources */,
+				BA2D51423497337836ADD5E9 /* TdayTheme.swift in Sources */,
+				0536D5C87C017F1DAC4F316C /* ThemeStore.swift in Sources */,
+				9F8E7D6C5B4A00000000B101 /* LanguageStore.swift in Sources */,
+				9F8E7D6C5B4A00000000B301 /* MotionPreferenceStore.swift in Sources */,
+				9F8E7D6C5B4A00000000B102 /* AppLanguage.swift in Sources */,
+				B5C6D7E8F9A000000000B201 /* AppLocale.swift in Sources */,
+				9F8E7D6C5B4A00000000B103 /* Bundle+Language.swift in Sources */,
+				9F8E7D6C5B4A00000000B104 /* Localization.swift in Sources */,
+				72304EA28CF49303A8CCB6B0 /* TodayTasksWidgetSnapshotStore.swift in Sources */,
+				7D4E57A1D0A1000000000001 /* TodayWidgetDayWindow.swift in Sources */,
+				7D4E57A1D0A1000000000011 /* ListWidgetSetupArt.swift in Sources */,
+				7A1C0FE30B2D4A9C8E5F1A20 /* WidgetBackgroundRefresh.swift in Sources */,
+				FEEDFACE0000000000000000 /* WatchSessionManager.swift in Sources */,
+				A1C0FFEE000000000000B001 /* ListShareText.swift in Sources */,
+				2E1D50F9EEE6B8D7D9B14AEA /* TodoListScreen.swift in Sources */,
+				C0FE7715B8C9D0E1F2A30022 /* TodoListCelebration.swift in Sources */,
+				C0FE7715B8C9D0E1F2A30032 /* FeedAnswer.swift in Sources */,
+				51A46F8E627C26BF34E91F7B /* TodoListViewModel.swift in Sources */,
+				C1B29C5E4D5D247E8D0B5C0C /* TodoRepository.swift in Sources */,
+				C7229E3F4839B156CDEFA453 /* UpdateRequiredView.swift in Sources */,
+				8F2E99D406CD695C364FE1DF /* UserFacingError.swift in Sources */,
+				D34840EBE7C4C90D2525F0DA /* VersionCompatibility.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		02FB644F67D312B59373E866 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CEB0667A66D01D2A147D96AA /* Tday */;
+			targetProxy = 5892908396EB5C4983360D8B /* PBXContainerItemProxy */;
+		};
+		5A4E0000000000000000001D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5A4E00000000000000000016 /* TdayShareExtension */;
+			targetProxy = 5A4E0000000000000000001E /* PBXContainerItemProxy */;
+		};
+		D4A10000000000000000001D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D4A100000000000000000016 /* TdayWidget */;
+			targetProxy = D4A10000000000000000001E /* PBXContainerItemProxy */;
+		};
+		DAD1CE00000000000000000E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DAD1CE000000000000000001 /* TdayWatchWidget */;
+			targetProxy = DAD1CE00000000000000000D /* PBXContainerItemProxy */;
+		};
+		DAD1CE000000000000000024 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DAD1CE000000000000000014 /* TdayWatch */;
+			targetProxy = DAD1CE000000000000000023 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		5A4E00000000000000000019 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = TdayShareExtension/TdayShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 67;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TdayShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.8.5;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.TdayShareExtension;
+				PRODUCT_NAME = TdayShareExtension;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		5A4E0000000000000000001A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = TdayShareExtension/TdayShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 67;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TdayShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.8.5;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.TdayShareExtension;
+				PRODUCT_NAME = TdayShareExtension;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		74588D51AB2D65C6956DC010 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = JUFACN2FS3;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		AC5B9D6404DFE8D18A0D546C /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7A11CF6000000000000000A1 /* Tday.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Tday/Tday.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 67;
+				DEVELOPMENT_TEAM = JUFACN2FS3;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Tday/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.8.5;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios;
+				PRODUCT_NAME = Tday;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		B1DD4CAD649FE743CF85D3FA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7A11CF6000000000000000A1 /* Tday.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Tday/Tday.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 67;
+				DEVELOPMENT_TEAM = JUFACN2FS3;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Tday/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.8.5;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios;
+				PRODUCT_NAME = Tday;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		B38EA14A0A17C1F777BD5D3E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tday.app/Tday";
+			};
+			name = Release;
+		};
+		BEF868E3016FE4A0364CD65D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = JUFACN2FS3;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		D4A100000000000000000019 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = TdayWidget/TdayWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 67;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TdayWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.8.5;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.TdayTasksWidget;
+				PRODUCT_NAME = TdayWidget;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		D4A10000000000000000001A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = TdayWidget/TdayWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 67;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TdayWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.8.5;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.TdayTasksWidget;
+				PRODUCT_NAME = TdayWidget;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		DAD1CE000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TdayWatchWidget/TdayWatchWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 67;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TdayWatchWidget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.8.5;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.watchkitapp.widget;
+				PRODUCT_NAME = TdayWatchWidget;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchsimulator watchos";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		DAD1CE000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TdayWatchWidget/TdayWatchWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 67;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TdayWatchWidget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.8.5;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.watchkitapp.widget;
+				PRODUCT_NAME = TdayWatchWidget;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchsimulator watchos";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		DAD1CE000000000000000016 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TdayWatch/TdayWatch.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 67;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TdayWatch/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.8.5;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.watchkitapp;
+				PRODUCT_NAME = TdayWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchsimulator watchos";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		DAD1CE000000000000000017 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TdayWatch/TdayWatch.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 67;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TdayWatch/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.8.5;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.watchkitapp;
+				PRODUCT_NAME = TdayWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchsimulator watchos";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		EF702053FF0F6973A8F8181C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tday.app/Tday";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		032110A302C6CF9B65A2760A /* Build configuration list for PBXNativeTarget "TdayTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EF702053FF0F6973A8F8181C /* Debug */,
+				B38EA14A0A17C1F777BD5D3E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5A4E0000000000000000001B /* Build configuration list for PBXNativeTarget "TdayShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5A4E00000000000000000019 /* Debug */,
+				5A4E0000000000000000001A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		98FEFA2339B3785EC6B323E6 /* Build configuration list for PBXProject "TdayApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BEF868E3016FE4A0364CD65D /* Debug */,
+				74588D51AB2D65C6956DC010 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B5D9306D62E6A4AB95C26819 /* Build configuration list for PBXNativeTarget "Tday" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B1DD4CAD649FE743CF85D3FA /* Debug */,
+				AC5B9D6404DFE8D18A0D546C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D4A10000000000000000001B /* Build configuration list for PBXNativeTarget "TdayWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D4A100000000000000000019 /* Debug */,
+				D4A10000000000000000001A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		DAD1CE000000000000000002 /* Build configuration list for PBXNativeTarget "TdayWatchWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DAD1CE000000000000000003 /* Debug */,
+				DAD1CE000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		DAD1CE000000000000000015 /* Build configuration list for PBXNativeTarget "TdayWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DAD1CE000000000000000016 /* Debug */,
+				DAD1CE000000000000000017 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		25F077B213506555FEDF5480 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.30.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A8BC3C28FBC8E4D5C38307DB /* Sentry-Dynamic */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 25F077B213506555FEDF5480 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = "Sentry-Dynamic";
+		};
+		310C0E9E9ADE8EFB6F2491C1 /* Sentry-Dynamic */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 25F077B213506555FEDF5480 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = "Sentry-Dynamic";
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = DEBED54F5F85A969685E5452 /* Project object */;
+}

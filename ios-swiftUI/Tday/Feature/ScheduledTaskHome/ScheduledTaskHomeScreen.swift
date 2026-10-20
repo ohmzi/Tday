@@ -1,0 +1,1953 @@
+import SwiftUI
+
+private enum ScheduledTaskHomeMetrics {
+    static let screenPadding: CGFloat = 18
+    static let sectionSpacing: CGFloat = 14
+    static let tileGap: CGFloat = 10
+    /// The board's own name for the shared card corner — `TdayRadius.card`, the rung
+    /// `ZoomNavigation` also clips the zoom's source with, so the shape the tiles are
+    /// drawn with and the shape the pushed screen grows out of cannot drift apart.
+    static let tileCornerRadius: CGFloat = TdayRadius.card
+    static let tileHeight: CGFloat = 94
+    static let tileInnerPadding: CGFloat = 12
+    static let todayCardHeight: CGFloat = 70
+    static let listRowHeight: CGFloat = 70
+    static let listContainerColorWeight: CGFloat = 0.66
+    static let tileWatermarkSize: CGFloat = 116
+    static let tileWatermarkTrailingInset: CGFloat = 22
+}
+
+private func normalizedScheduledTaskHomeSearchQuery(_ value: String) -> String {
+    value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(with: .current)
+}
+
+private func scheduledTaskHomeSearchText(_ value: String) -> String {
+    value.lowercased(with: .current)
+}
+
+private struct ScheduledTaskHomeSearchResultsFrameKey: PreferenceKey {
+    static var defaultValue: CGRect = .zero
+
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        value = nextValue()
+    }
+}
+
+private struct ScheduledTaskHomeListColorOption {
+    let key: String
+    let color: Color
+}
+
+private struct ScheduledTaskHomeListIconOption {
+    let key: String
+    let symbolName: String
+}
+
+private enum CreateListSheetMetrics {
+    static let sheetHeight: CGFloat = 620
+    static let maximumHeightFraction: CGFloat = TdaySheetMetrics.maximumScreenHeightFraction
+    static let bottomContentPadding: CGFloat = 8
+}
+
+private let scheduledTaskHomeScrollTopID = "scheduled-task-home-scroll-top"
+
+/// Where this screen's view model lives: built on first read, then kept. This is the
+/// root feed `AppRootView` rebuilds on every push and pop, FAB tap and search toggle
+/// (and, before `AppSnackbarHost` and `RootChromeState`, on every toast and dock fold
+/// too), and `ScheduledTaskHomeViewModel.init` reads the whole dashboard snapshot. Under
+/// `State(initialValue:)` every one of those rebuilds paid for a model SwiftUI then threw
+/// away. `TodoListScreen`'s copy of this box has the full reasoning. This copy is
+/// file-private and identical, so no screen's file depends on another's.
+private final class LazyViewModelBox<M: AnyObject> {
+    var model: M?
+}
+
+struct ScheduledTaskHomeScreen: View {
+    let onRootFeedTabSelected: (RootFeedTab) -> Void
+    let showsRootControls: Bool
+    let createTaskRequestID: Int
+    // Prefill for the next create sheet (shared-in text); cleared by the
+    // owner via onCreateTaskSheetClosed so later manual creates start blank.
+    let createTaskPrefill: CreateTaskPayload?
+    let onCreateTaskSheetClosed: () -> Void
+    let scrollToTopRequestID: Int
+    let onRootDockCollapsedChange: (Bool) -> Void
+    let onRootControlsVisibleChange: (Bool) -> Void
+    let pullRefreshEnabled: Bool
+    let summaryAvailable: Bool
+    let onNavigate: (AppRoute) -> Void
+
+    /// The view model's box and the one input it is built from. See `LazyViewModelBox`.
+    @State private var viewModelBox = LazyViewModelBox<ScheduledTaskHomeViewModel>()
+    private let viewModelContainer: AppContainer
+    @Environment(\.tdayColors) private var colors
+    /// Gates the today block's own motion — see the `.animation(_:value:)` that
+    /// carries it and `TdayFeedItemMotion.row(reduceMotion:)`. The travel and the
+    /// row legs are refused separately because they come from two different
+    /// mechanisms; that method says why. The transition takes the boolean because
+    /// it cannot take a nil animation — `TdayMotionResolution.isEnabled` says why.
+    @Environment(\.tdayAnimation) private var tdayAnimation
+    @FocusState private var searchFieldFocused: Bool
+
+    @State private var searchExpanded = false
+    @State private var searchQuery = ""
+    @State private var searchBarFrame: CGRect = .zero
+    @State private var searchResultsFrame: CGRect = .zero
+    @State private var openingSearchResultID: String?
+    @State private var showingCreateTask = false
+    @State private var lastHandledCreateTaskRequestID = 0
+    @State private var showingCreateList = false
+    @State private var showingSummary = false
+    @State private var editingTodo: TodoItem?
+    @State private var headerScroll = RootFeedHeaderScrollState()
+    @State private var rootDockCollapsed = false
+    @State private var titleScrollToTopRequestID = 0
+    /// The screen's single swipe slot — see `TodoListScreen` for the shape and its one rule:
+    /// every dismissal is a WRITE to this and nothing else. No host `body` may read it, or a
+    /// cheap write becomes a full re-evaluation of the screen.
+    @State private var openSwipeTaskID: String?
+
+    init(
+        container: AppContainer,
+        onRootFeedTabSelected: @escaping (RootFeedTab) -> Void = { _ in },
+        showsRootControls: Bool = true,
+        createTaskRequestID: Int = 0,
+        createTaskPrefill: CreateTaskPayload? = nil,
+        onCreateTaskSheetClosed: @escaping () -> Void = {},
+        scrollToTopRequestID: Int = 0,
+        onRootDockCollapsedChange: @escaping (Bool) -> Void = { _ in },
+        onRootControlsVisibleChange: @escaping (Bool) -> Void = { _ in },
+        pullRefreshEnabled: Bool = false,
+        summaryAvailable: Bool = true,
+        onNavigate: @escaping (AppRoute) -> Void
+    ) {
+        self.onRootFeedTabSelected = onRootFeedTabSelected
+        self.showsRootControls = showsRootControls
+        self.createTaskRequestID = createTaskRequestID
+        self.createTaskPrefill = createTaskPrefill
+        self.onCreateTaskSheetClosed = onCreateTaskSheetClosed
+        self.scrollToTopRequestID = scrollToTopRequestID
+        self.onRootDockCollapsedChange = onRootDockCollapsedChange
+        self.onRootControlsVisibleChange = onRootControlsVisibleChange
+        self.pullRefreshEnabled = pullRefreshEnabled
+        self.summaryAvailable = summaryAvailable
+        self.onNavigate = onNavigate
+        self.viewModelContainer = container
+    }
+
+    /// Built on first read, which is the first body pass, then served from the box. The
+    /// model still hydrates synchronously before the first frame, so
+    /// `showsTodayFeedSkeleton`'s `hasHydratedFromCache` term is true from the start.
+    /// Never read this from `init`: the box `init` sees is the throwaway.
+    private var viewModel: ScheduledTaskHomeViewModel {
+        if let model = viewModelBox.model {
+            return model
+        }
+        let model = ScheduledTaskHomeViewModel(container: viewModelContainer)
+        viewModelBox.model = model
+        return model
+    }
+
+    private var normalizedSearchQuery: String {
+        normalizedScheduledTaskHomeSearchQuery(searchQuery)
+    }
+
+    private var listByID: [String: ListSummary] {
+        Dictionary(viewModel.summary.lists.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest })
+    }
+
+    private var filteredTodos: [TodoItem] {
+        guard !normalizedSearchQuery.isEmpty else {
+            return []
+        }
+
+        return viewModel.searchableTodos.filter { todo in
+            scheduledTaskHomeSearchText(todo.title).contains(normalizedSearchQuery) ||
+                scheduledTaskHomeSearchText(flattenNotesToPlainText(todo.description)).contains(normalizedSearchQuery) ||
+                (todo.listId.flatMap { listByID[$0]?.name }.map { scheduledTaskHomeSearchText($0).contains(normalizedSearchQuery) } ?? false)
+        }
+        .sorted(by: todoSortPrecedes)
+        .prefix(20)
+        .map { $0 }
+    }
+
+    private var overdueCount: Int {
+        let now = Date()
+        return viewModel.searchableTodos.count { ($0.due ?? .distantFuture) < now }
+    }
+
+    private var showSearchResultsOverlay: Bool {
+        searchExpanded && !normalizedSearchQuery.isEmpty
+    }
+
+    /// The first load, and only the first. Asking the item list as well as the
+    /// flag covered a pull over rows; it did nothing for a pull over a Today
+    /// feed the user had just cleared, which is the mirror image of the reported
+    /// bug and this root's own share of it — the gap under the hero was correctly
+    /// empty, and the pull grew three grey bars in it. `isLoading` is raised by
+    /// nothing but `refresh()`, and `ScheduledTaskHomeViewModel` hydrates from
+    /// the cache synchronously in `init`, so the flag never meant "no answer
+    /// yet". `feedAnswer` does, and has no term a pull can move.
+    private var showsTodayFeedSkeleton: Bool {
+        feedAnswer(
+            storeRead: viewModel.hasHydratedFromCache,
+            rowsEmpty: viewModel.todayTodos.isEmpty,
+            firstAnswerLanded: viewModel.firstAnswerLanded
+        ) == .awaitingFirst
+    }
+
+    private var shouldCollapseRootDock: Bool {
+        rootDockCollapsed
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            let fallbackSearchBarFrame = CGRect(
+                x: RootFeedHeroHeaderMetrics.horizontalPadding,
+                y: RootFeedHeroHeaderMetrics.topInset,
+                width: max(
+                    RootFeedHeroHeaderMetrics.barButtonSize,
+                    proxy.size.width - (RootFeedHeroHeaderMetrics.horizontalPadding * 2)
+                ),
+                height: RootFeedHeroHeaderMetrics.barButtonSize
+            )
+            let activeSearchBarFrame = searchBarFrame.width > 0 && searchBarFrame.height > 0
+                ? searchBarFrame
+                : fallbackSearchBarFrame
+
+            ZStack(alignment: .topLeading) {
+                TimelineView(.periodic(from: .now, by: 60)) { context in
+                    let daytime = TdayTimeOfDay.isDaytime(context.date)
+                    EmptyTaskWatermark(
+                        systemName: daytime ? "sun.max.fill" : "moon.stars.fill",
+                        accentColor: Color.tdayTodayBlue
+                    )
+                }
+
+                PullToRefreshContainer(
+                    isRefreshing: viewModel.isLoading,
+                    isEnabled: pullRefreshEnabled,
+                    // The header draws the pill itself, so it can fly in from the
+                    // top of the screen and hover in front of the title instead of
+                    // being painted underneath the pinned toolbar.
+                    showsIndicator: false,
+                    onIndicatorStateChange: { headerScroll.refresh = $0 },
+                    action: {
+                        await viewModel.refresh(userInitiated: true)
+                    }
+                ) {
+                    ScrollViewReader { scrollProxy in
+                        ScrollView(showsIndicators: false) {
+                            LazyVStack(alignment: .leading, spacing: ScheduledTaskHomeMetrics.sectionSpacing) {
+                                // Reserves the pinned hero header's space. The feed
+                                // scrolls behind the header, folding it down into its
+                                // always-visible toolbar strip.
+                                Color.clear
+                                    .frame(height: RootFeedHeroHeaderMetrics.expandedHeight)
+                                    .id(scheduledTaskHomeScrollTopID)
+                                    .background {
+                                        RootFeedHeaderScrollObserver(state: headerScroll) { collapsed in
+                                            guard rootDockCollapsed != collapsed else { return }
+                                            rootDockCollapsed = collapsed
+                                            onRootDockCollapsedChange(collapsed)
+                                        }
+                                        .frame(width: 0, height: 0)
+                                    }
+                                    .allowsHitTesting(false)
+                                    .onTopPartialScrollSnap(
+                                        anchorDistance: RootFeedHeroHeaderMetrics.collapseDistance,
+                                        isDisabled: searchExpanded
+                                    )
+
+                                // While a query is live the results take the
+                                // screen over: the feed emits nothing, leaving
+                                // the results panel and blank space. A tap on
+                                // that blank space dismisses the field.
+                                if !showSearchResultsOverlay {
+
+                                ScheduledTaskHomeTodayCard(
+                                    count: viewModel.summary.todayCount,
+                                    zoomRoute: .todayTodos(origin: .scheduledBoard),
+                                    action: {
+                                        closeSearch()
+                                        onNavigate(.todayTodos(origin: .scheduledBoard))
+                                    }
+                                )
+
+                                // One slot, not two rows of the stack.
+                                //
+                                // Before this a cold open drew the header, the Today
+                                // card and then nothing at all until the first response
+                                // landed — a frame that reads as a screen that failed
+                                // rather than one that is working.
+                                //
+                                // The `ZStack` is what makes the hand-over a crossfade
+                                // instead of a shuffle. Written as two siblings of the
+                                // `LazyVStack` the bars and the rows are in sequence, and
+                                // SwiftUI holds a view being removed in the layout for
+                                // the whole of its removal — so for the length of the
+                                // dissolve the stack would carry three placeholder rows
+                                // AND the rows that replace them, shoving the category
+                                // board below down by the better part of a screen and
+                                // snapping it back. Stacked, the two halves occupy the
+                                // same space and the block is only ever as tall as the
+                                // taller of them.
+                                //
+                                // `.topLeading` so the bars sit where the first row will,
+                                // and so a short list settles from the top rather than
+                                // from the middle of where the placeholder was. Each half
+                                // keeps its own `.animation` — they are siblings here, so
+                                // neither is inside the other and neither can override it.
+                                ZStack(alignment: .topLeading) {
+                                    Group {
+                                        if showsTodayFeedSkeleton {
+                                            TdayTaskRowSkeletonGroup()
+                                                .transition(.opacity)
+                                        }
+                                    }
+                                    .animation(
+                                        tdayAnimation(TdayTaskRowSkeleton.crossfade),
+                                        value: showsTodayFeedSkeleton
+                                    )
+
+                                    // The block's travel, hung on the `Group` and
+                                    // NOT inside the `if`. A modifier written inside
+                                    // the branch is part of that branch: the update
+                                    // that empties `todayTodos` takes the modifier out
+                                    // of the tree in the same pass it takes the rows
+                                    // out, so there is no open transaction at the
+                                    // moment the removal is decided and roughly 72pt
+                                    // of layout closes up in one frame — including the
+                                    // rows' own `.transition` legs, which are inert
+                                    // outside one. Out here the modifier outlives both
+                                    // states of the branch, which is the only position
+                                    // from which it can animate either.
+                                    Group {
+                                        if !viewModel.todayTodos.isEmpty {
+                                            VStack(spacing: 0) {
+                                                ForEach(viewModel.todayTodos) { todo in
+                                                    scheduledTaskHomeTodayTaskRow(todo)
+                                                        .transition(TdayFeedItemMotion.row(reduceMotion: !tdayAnimation.isEnabled))
+                                                }
+                                            }
+                                            // The block is what a feed adds and removes
+                                            // alongside its rows, so it leaves on the
+                                            // departure rung rather than inheriting the
+                                            // travel below — an exit that outlasts the
+                                            // arrival it undoes is the thing the rung
+                                            // split exists to prevent.
+                                            .transition(TdayFeedItemMotion.row(reduceMotion: !tdayAnimation.isEnabled))
+                                        }
+                                    }
+                                    .animation(
+                                        tdayAnimation(TdayFeedItemMotion.placement),
+                                        value: viewModel.todayTodos.map(\.id)
+                                    )
+                                }
+
+                                ScheduledTaskHomeCategoryBoard(
+                                    overdueCount: overdueCount,
+                                    scheduledCount: viewModel.summary.scheduledCount,
+                                    allCount: viewModel.summary.allCount,
+                                    priorityCount: viewModel.summary.priorityCount,
+                                    completedCount: viewModel.summary.completedCount,
+                                    calendarCount: viewModel.summary.scheduledCount,
+                                    onOpenOverdue: {
+                                        closeSearch()
+                                        onNavigate(.overdueTodos)
+                                    },
+                                    onOpenScheduled: {
+                                        closeSearch()
+                                        onNavigate(.scheduledTodos)
+                                    },
+                                    onOpenAll: {
+                                        closeSearch()
+                                        onNavigate(.allTodos(highlightTodoId: nil))
+                                    },
+                                    onOpenPriority: {
+                                        closeSearch()
+                                        onNavigate(.priorityTodos)
+                                    },
+                                    onOpenCompleted: {
+                                        closeSearch()
+                                        onNavigate(.completed(origin: .scheduledBoard))
+                                    },
+                                    onOpenCalendar: {
+                                        closeSearch()
+                                        onNavigate(.calendar)
+                                    }
+                                )
+
+                                if !viewModel.summary.lists.isEmpty {
+                                    ScheduledTaskHomeListsSection(
+                                        lists: viewModel.summary.lists,
+                                        displayName: displayName(for:)
+                                    ) { list, name in
+                                        closeSearch()
+                                        onNavigate(.listTodos(listId: list.id, listName: name, origin: .scheduledBoard))
+                                    }
+                                }
+
+                                if let errorMessage = viewModel.errorMessage {
+                                    ErrorRetryView(message: errorMessage) {
+                                        Task { await viewModel.refresh() }
+                                    }
+                                }
+
+                                }
+                            }
+                            .padding(.horizontal, ScheduledTaskHomeMetrics.screenPadding)
+
+                        }
+                        .scrollBounceBehavior(.always, axes: .vertical)
+                        .safeAreaInset(edge: .bottom) {
+                            if showsRootControls {
+                                HStack(alignment: .bottom) {
+                                    RootFeedDock(
+                                        activeTab: .scheduledTaskHome,
+                                        collapsed: shouldCollapseRootDock,
+                                        accentColor: .tdayTodayBlue,
+                                        onSelect: onRootFeedTabSelected
+                                    )
+                                    .padding(.leading, 18)
+                                    .padding(.vertical, 8)
+
+                                    Spacer(minLength: 12)
+
+                                    TaskFloatingActionButton {
+                                        HapticManager.buttonPress()
+                                        closeSearch()
+                                        showingCreateTask = true
+                                    }
+                                    .padding(.trailing, 18)
+                                    .padding(.vertical, 8)
+                                }
+                            } else {
+                                Color.clear.frame(height: 80)
+                            }
+                        }
+                        .onChange(of: scrollToTopRequestID) { _, requestID in
+                            guard requestID > 0 else { return }
+                            closeSearch()
+                            withAnimation(tdayAnimation(.easeInOut(duration: 0.34))) {
+                                scrollProxy.scrollTo(scheduledTaskHomeScrollTopID, anchor: .top)
+                            }
+                        }
+                        // Tapping the header mark or title restores the feed's
+                        // opened state: hero title, full-width search, big sun.
+                        .onChange(of: titleScrollToTopRequestID) { _, requestID in
+                            guard requestID > 0 else { return }
+                            closeSearch()
+                            withAnimation(tdayAnimation(.easeInOut(duration: 0.34))) {
+                                scrollProxy.scrollTo(scheduledTaskHomeScrollTopID, anchor: .top)
+                            }
+                        }
+                    }
+                }
+
+                RootFeedHeroHeader(
+                    title: "T'Day",
+                    searchPlaceholder: L("Search Scheduled Task"),
+                    searchPlaceholderShort: L("Search"),
+                    mark: .timeOfDay,
+                    scroll: headerScroll,
+                    coordinateSpaceName: "scheduled-task-home-root",
+                    searchExpanded: $searchExpanded,
+                    searchQuery: $searchQuery,
+                    searchFieldFocused: $searchFieldFocused,
+                    onSearchClose: {
+                        closeSearch()
+                    },
+                    onCreateList: {
+                        closeSearch()
+                        showingCreateList = true
+                    },
+                    onOpenSettings: {
+                        closeSearch()
+                        onNavigate(.settings)
+                    },
+                    onScrollToTop: {
+                        titleScrollToTopRequestID += 1
+                    }
+                )
+                .zIndex(50)
+
+                if showSearchResultsOverlay {
+                    ScheduledTaskHomeSearchResultsOverlay(
+                        todos: filteredTodos,
+                        listsByID: listByID,
+                        onOpenTodo: { todo in
+                            openSearchResult(todo)
+                        }
+                    )
+                    .frame(width: activeSearchBarFrame.width)
+                    .offset(x: activeSearchBarFrame.minX, y: activeSearchBarFrame.maxY + 8)
+                    .background(
+                        GeometryReader { resultsProxy in
+                            Color.clear
+                                .preference(
+                                    key: ScheduledTaskHomeSearchResultsFrameKey.self,
+                                    value: resultsProxy.frame(in: .named("scheduled-task-home-root"))
+                            )
+                        }
+                    )
+                    .zIndex(100)
+                }
+            }
+            .coordinateSpace(name: "scheduled-task-home-root")
+            .background(colors.background)
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 0, coordinateSpace: .named("scheduled-task-home-root"))
+                    .onEnded { value in
+                        let isTap = abs(value.translation.width) < 8 && abs(value.translation.height) < 8
+                        guard isTap else { return }
+                        handleSearchTap(at: value.startLocation)
+                    }
+            )
+        }
+        .onPreferenceChange(RootFeedSearchBarFrameKey.self) { frame in
+            searchBarFrame = frame
+        }
+        .onPreferenceChange(ScheduledTaskHomeSearchResultsFrameKey.self) { frame in
+            searchResultsFrame = frame
+        }
+        .onChange(of: searchExpanded) { _, expanded in
+            onRootControlsVisibleChange(!expanded)
+            if expanded {
+                searchFieldFocused = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                    if searchExpanded {
+                        searchFieldFocused = true
+                    }
+                }
+            } else {
+                searchFieldFocused = false
+                searchResultsFrame = .zero
+            }
+        }
+        .onChange(of: createTaskRequestID) { _, requestID in
+            handleCreateTaskRequest(requestID)
+        }
+        .onChange(of: viewModel.todayTodos.map(\.id)) { _, ids in
+            guard let openSwipeTaskID, !ids.contains(openSwipeTaskID) else { return }
+            self.openSwipeTaskID = nil
+        }
+        .onAppear {
+            onRootControlsVisibleChange(!searchExpanded)
+            onRootDockCollapsedChange(shouldCollapseRootDock)
+        }
+        .onDisappear {
+            onRootControlsVisibleChange(true)
+            // Returning to a screen must never show an armed Delete pill — see
+            // `TodoListScreen`'s `.onDisappear` for why this is also iOS's answer to back.
+            openSwipeTaskID = nil
+        }
+        .onChange(of: showingCreateTask) { _, showing in
+            if !showing {
+                onCreateTaskSheetClosed()
+            }
+        }
+        .createTaskSheet(isPresented: $showingCreateTask) {
+            CreateTaskSheet(
+                lists: viewModel.summary.lists,
+                titleText: L("New task"),
+                submitText: L("Create"),
+                initialPayload: createTaskPrefill,
+                onParseTaskTitleNlp: { title, dueRef in
+                    await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
+                },
+                onSuggestRepeat: { title in
+                    await viewModel.suggestRepeatRrule(title: title)
+                },
+                onDismiss: { showingCreateTask = false },
+                onSubmit: { payload in
+                    await viewModel.createTask(payload)
+                }
+            )
+        }
+        .tdayBottomSheetPresentation(isPresented: $showingCreateList) {
+            CreateListSheet { name, color, iconKey, _, defaultPriority in
+                Task {
+                    await viewModel.createList(name: name, color: color, iconKey: iconKey, defaultPriority: defaultPriority)
+                }
+            }
+        }
+        .sheet(isPresented: $showingSummary) {
+            summarySheetContent
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.hidden)
+        }
+        .createTaskSheet(item: $editingTodo) { todo in
+            CreateTaskSheet(
+                lists: viewModel.lists,
+                titleText: L("Edit task"),
+                submitText: L("Save"),
+                initialPayload: CreateTaskPayload(title: todo.title, description: todo.description, priority: todo.priority, due: todo.due, rrule: todo.rrule, listId: todo.listId),
+                isEditingExistingTask: true,
+                onParseTaskTitleNlp: { title, dueRef in
+                    await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
+                },
+                onDismiss: { editingTodo = nil },
+                onSubmit: { payload in
+                    await viewModel.updateTask(todo, payload: payload)
+                }
+            )
+        }
+        .navigationBackButtonBehavior()
+    }
+
+    private func closeSearch() {
+        searchFieldFocused = false
+        withAnimation(TdayMotion.snappy) {
+            searchExpanded = false
+        }
+        searchQuery = ""
+        searchResultsFrame = .zero
+    }
+
+    private func handleCreateTaskRequest(_ requestID: Int) {
+        guard requestID > 0, requestID > lastHandledCreateTaskRequestID else {
+            return
+        }
+        lastHandledCreateTaskRequestID = requestID
+        closeSearch()
+        showingCreateTask = true
+    }
+
+    @ViewBuilder
+    private func scheduledTaskHomeTodayTaskRow(_ todo: TodoItem) -> some View {
+        ScheduledTaskHomeTodayTaskRow(
+            todo: todo,
+            lists: viewModel.lists,
+            onComplete: { await viewModel.complete(todo) },
+            onDelete: { Task { await viewModel.delete(todo) } },
+            onEdit: { editingTodo = todo },
+            onCopy: { viewModel.copyToClipboard(todo) },
+            openSwipeTaskID: $openSwipeTaskID
+        )
+    }
+
+    private func openSearchResult(_ todo: TodoItem) {
+        guard openingSearchResultID == nil else {
+            return
+        }
+        openingSearchResultID = todo.id
+        closeSearch()
+        onNavigate(.allTodos(highlightTodoId: todo.id))
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            openingSearchResultID = nil
+        }
+    }
+
+    private func handleSearchTap(at location: CGPoint) {
+        guard searchExpanded else { return }
+        // The whole pinned toolbar row belongs to the header — the field, its
+        // cancel button, and the tap that opened the field in the first place
+        // all land inside it. Testing the row's fixed geometry rather than the
+        // published capsule frame keeps this race-free: the frame arrives a
+        // layout pass after `searchExpanded` flips, and for that one pass a
+        // frame-based guard would treat the opening tap as an outside tap and
+        // shut the field again.
+        guard location.y > RootFeedHeroHeaderMetrics.barHeight else { return }
+        guard !showSearchResultsOverlay || !searchResultsFrame.contains(location) else { return }
+        closeSearch()
+    }
+
+    private func displayName(for value: String) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let first = trimmed.first else {
+            return value
+        }
+        return first.uppercased() + String(trimmed.dropFirst())
+    }
+
+    private var summarySheetContent: some View {
+        VStack(spacing: 0) {
+            TdaySheetHeader(
+                title: L("Summary"),
+                closeAccessibilityLabel: L("Close"),
+                confirmSystemName: nil,
+                onClose: { showingSummary = false }
+            )
+
+            ScrollView {
+                TdaySheetCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        if !summaryAvailable {
+                            Text("No summary available while offline.")
+                                .foregroundStyle(colors.error)
+                        } else if viewModel.isSummarizing {
+                            ProgressView()
+                        } else if let summaryText = viewModel.summaryText {
+                            Text(summaryText)
+                                .font(.tdayRounded(.body, weight: .bold))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                            if let source = viewModel.summarySource {
+                                Text(source == "ai" ? L("Server model") : L("Local model"))
+                                    .font(.tdayRounded(size: 11, weight: .heavy))
+                                    .foregroundStyle(colors.onSurface.opacity(0.5))
+                                    .textCase(.uppercase)
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                    .padding(.top, 4)
+                            }
+                        } else if let summaryError = viewModel.summaryError {
+                            Text(summaryError)
+                                .foregroundStyle(colors.error)
+                        } else {
+                            Text("No summary available.")
+                        }
+                    }
+                    .padding(18)
+                }
+                .padding(.horizontal, 18)
+                .padding(.top, 14)
+                .padding(.bottom, 24)
+            }
+        }
+    }
+
+    private func presentSummary() {
+        showingSummary = true
+        Task {
+            await viewModel.summarizeToday()
+        }
+    }
+}
+
+private enum ScheduledTaskHomeTodayTaskCompletionPhase {
+    case active
+    case checked
+    case struck
+    case fading
+}
+
+private struct ScheduledTaskHomeTodayTaskRow: View {
+    let todo: TodoItem
+    let lists: [ListSummary]
+    let onComplete: () async -> Void
+    let onDelete: () -> Void
+    let onEdit: () -> Void
+    let onCopy: () -> Void
+    @Binding var openSwipeTaskID: String?
+
+    @Environment(\.tdayColors) private var colors
+    @Environment(\.tdayAnimation) private var tdayAnimation
+
+    @State private var completionPhase = ScheduledTaskHomeTodayTaskCompletionPhase.active
+
+    private var listMeta: ListSummary? {
+        todo.listId.flatMap { id in lists.first { $0.id == id } }
+    }
+
+    private var priorityIcon: String? { priorityIndicatorSymbolName(todo.priority) }
+    private var isOverdue: Bool { !todo.completed && (todo.due ?? .distantFuture) < Date() }
+    private var dueText: String? { todo.due?.formatted(.dateTime.hour().minute().locale(AppLocale.current)) }
+    private var subtitleText: String? {
+        guard let dueText else { return nil }
+        return isOverdue ? "Overdue, \(dueText)" : "Due \(dueText)"
+    }
+    private var subtitleColor: Color { isOverdue ? colors.error : colors.onSurfaceVariant.opacity(0.8) }
+    private var isCompleting: Bool { completionPhase != .active }
+    private var isFading: Bool { completionPhase == .fading }
+    private var showCheckmark: Bool { completionPhase != .active || todo.completed }
+    private var showStrikethrough: Bool { completionPhase == .struck || completionPhase == .fading || todo.completed }
+    private var titleColor: Color {
+        showStrikethrough ? colors.onSurface.opacity(0.78) : colors.onSurface
+    }
+
+    var body: some View {
+        rowContent
+            .todoTrailingSwipeActions(
+                rowID: todo.id,
+                openRowID: $openSwipeTaskID,
+                enabled: !isCompleting,
+                onEdit: onEdit,
+                onCopy: onCopy,
+                onDelete: onDelete
+            )
+        .opacity(isFading ? 0 : 1)
+        .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
+        .offset(y: isFading ? -10 : 0)
+        .animation(tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)), value: isFading)
+        .allowsHitTesting(!isCompleting)
+    }
+
+    private var rowContent: some View {
+        // Today's row, stacked the way every other task row in the app is stacked —
+        // off the title's first baseline. This one's title is capped at a single line,
+        // but its subtitle and its notes are not, so a centred toggle sat a full line
+        // below the title on any task that carried both.
+        HStack(alignment: .firstTextBaseline, spacing: TdayTaskRowMetrics.contentSpacing) {
+            Button(action: startCompletion) {
+                Image(systemName: showCheckmark ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: TdayTaskRowMetrics.checkGlyph, weight: .regular))
+                    .foregroundStyle(showCheckmark ? Color.green : colors.onSurfaceVariant.opacity(0.78))
+                    .frame(width: TdayTaskRowMetrics.checkSlot, height: TdayTaskRowMetrics.checkSlot)
+            }
+            .buttonStyle(TdayPressButtonStyle(shadowColor: .black, pressedShadowOpacity: 0, normalShadowOpacity: 0))
+            .disabled(isCompleting)
+            // A button reports no text baseline of its own; the guide hands back its
+            // centre, nudged onto the title's.
+            .alignmentGuide(.firstTextBaseline) { dimension in
+                dimension[VerticalAlignment.center] + TdayTaskRowMetrics.checkBaselineNudge
+            }
+
+            VStack(alignment: .leading, spacing: TdayTaskRowMetrics.textSpacing) {
+                ScheduledTaskHomeTodayTaskTitle(
+                    text: todo.title,
+                    isCompleted: showStrikethrough,
+                    titleColor: titleColor,
+                    strikeColor: colors.onSurface.opacity(0.65)
+                )
+
+                if let subtitleText {
+                    Text(subtitleText)
+                        .font(.tdayRounded(size: TdayTaskRowMetrics.subtitleFontSize, weight: .semibold))
+                        .foregroundStyle(subtitleColor)
+                }
+
+                let flattenedDescription = flattenNotesToPlainText(todo.description)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                if !flattenedDescription.isEmpty {
+                    Text(flattenedDescription)
+                        .font(.tdayRounded(size: TdayTaskRowMetrics.notesFontSize, weight: .semibold))
+                        .foregroundStyle(colors.onSurfaceVariant)
+                        // Struck alongside the title so the whole task reads as
+                        // done during the completion animation. Uses the real
+                        // per-line strikethrough (not the title's animated
+                        // sweep) because notes wrap to several lines.
+                        .strikethrough(showStrikethrough, color: colors.onSurfaceVariant)
+                        .animation(tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis)), value: showStrikethrough)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            if listMeta != nil || priorityIcon != nil {
+                HStack(spacing: TdayTaskRowMetrics.metaSpacing) {
+                    if let listMeta {
+                        TdayListIcon(iconKey: listMeta.iconKey, listName: listMeta.name, size: TdayTaskRowMetrics.metaIcon)
+                            .foregroundStyle(scheduledTaskHomeListAccentColor(for: listMeta.color))
+                    }
+                    if let priorityIcon {
+                        Image(systemName: priorityIcon)
+                            .font(.system(size: TdayTaskRowMetrics.metaIcon, weight: .semibold))
+                            .foregroundStyle(priorityColor(todo.priority))
+                    }
+                }
+                .padding(.trailing, TdayTaskRowMetrics.metaTrailingPadding)
+                // Keep the trailing indicators on the first line too.
+                .alignmentGuide(.firstTextBaseline) { dimension in
+                    dimension[VerticalAlignment.center] + TdayTaskRowMetrics.checkBaselineNudge
+                }
+            }
+        }
+        .padding(.vertical, TdayTaskRowMetrics.verticalPadding)
+        .padding(.horizontal, TdayTaskRowMetrics.horizontalPadding)
+        .contentShape(Rectangle())
+    }
+
+    private func startCompletion() {
+        guard completionPhase == .active else { return }
+        // Any completion clears the slot, not only this row's: the toggle is a `Button` inside
+        // the row's content, so it eats the touch and the reveal's own `.onTapGesture` never
+        // runs. See `TodoListScreen.completeTodoWithoutReflow` for the full argument.
+        openSwipeTaskID = nil
+
+        HapticManager.completion()
+        SoundManager.taskCompleted()
+        withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)) {
+            completionPhase = .checked
+        }
+
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 160_000_000)
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis)) {
+                completionPhase = .struck
+            }
+            try? await Task.sleep(nanoseconds: 360_000_000)
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)) {
+                completionPhase = .fading
+            }
+            try? await Task.sleep(nanoseconds: 260_000_000)
+            await onComplete()
+            if completionPhase == .fading {
+                // Putting the row back is an exit undoing nothing anybody watched:
+                // Quick, which is also where the tick that started this came in.
+                withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)) {
+                    completionPhase = .active
+                }
+            }
+        }
+    }
+}
+
+private struct ScheduledTaskHomeTodayTaskTitle: View {
+    let text: String
+    let isCompleted: Bool
+    let titleColor: Color
+    let strikeColor: Color
+
+    @Environment(\.tdayAnimation) private var tdayAnimation
+
+    private var strikeProgress: CGFloat {
+        isCompleted ? 1 : 0
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.tdayRounded(size: TdayTaskRowMetrics.titleFontSize, weight: .bold))
+            .foregroundStyle(titleColor)
+            .lineLimit(1)
+            .overlay {
+                GeometryReader { proxy in
+                    Rectangle()
+                        .fill(strikeColor)
+                        .frame(width: proxy.size.width * strikeProgress, height: 1.4)
+                        .position(
+                            x: (proxy.size.width * strikeProgress) / 2,
+                            y: proxy.size.height * 0.55
+                        )
+                }
+                .allowsHitTesting(false)
+            }
+            .animation(tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis)), value: isCompleted)
+    }
+}
+
+private struct ScheduledTaskHomeTodayCard: View {
+    let count: Int
+    /// The route this card pushes, carried alongside the closure that pushes it.
+    ///
+    /// Same reason as `ScheduledTaskHomeCategoryTile` below: the closure is an opaque
+    /// `() -> Void`, so it cannot be asked where it goes, and the zoom needs an id both
+    /// ends agree on. Stored rather than derived from `dateLabel` or `count` — neither
+    /// is the thing `AppRootView` keys its destination on.
+    let zoomRoute: AppRoute
+    let action: () -> Void
+
+    @Environment(\.tdayAnimation) private var tdayAnimation
+
+    private var dateLabel: String {
+        Date.now.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().locale(AppLocale.current))
+    }
+
+    var body: some View {
+        let color = Color(hex: 0x6EA8E1)
+        let shape = RoundedRectangle(cornerRadius: ScheduledTaskHomeMetrics.tileCornerRadius, style: .continuous)
+
+        Button(action: action) {
+            ZStack {
+                shape.fill(color)
+                shape.fill(
+                    RadialGradient(
+                        colors: [Color.white.opacity(0.1), Color.white.opacity(0.03), .clear],
+                        center: UnitPoint(x: 0.22, y: 0.2),
+                        startRadius: 0,
+                        endRadius: 200
+                    )
+                )
+
+                HStack {
+                    Text(dateLabel)
+                        .font(.tdayRounded(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+
+                    Spacer()
+
+                    // The count rolls its digits instead of hard-swapping them, and it
+                    // rolls on `Change` rather than `Enter` or `Emphasis`. Rule 2 of
+                    // `docs/motion.md` decides that boundary by geometry: 7 → 6 after
+                    // the user ticks a task is their own edit replayed back to them in
+                    // place, with the label not moving and not changing size, which is
+                    // exactly what `Change` is for. The roll is also what earns 260 —
+                    // cross-dissolving a whole string for that long reads as a smear,
+                    // while digits travelling read as a number counting down.
+                    // No `#available` guard: `.numericText(value:)` is iOS 17 and the
+                    // deployment target is 17.0, so a guard here would be dead code.
+                    Text("\(count)")
+                        .font(.tdayRounded(size: 34, weight: .black))
+                        .foregroundStyle(.white)
+                        .contentTransition(.numericText(value: Double(count)))
+                        .animation(
+                            tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)),
+                            value: count
+                        )
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: ScheduledTaskHomeMetrics.todayCardHeight)
+            .clipShape(shape)
+            .contentShape(shape)
+        }
+        .buttonStyle(ScheduledTaskHomeTileButtonStyle())
+        // The rectangle the pushed screen grows out of — the same chain position as the
+        // category tiles below, and for the same reason. On iOS 17, under Reduce Motion,
+        // or for a route with no source id this resolves to nothing and the push is the
+        // stock slide; see `ZoomNavigation.swift`.
+        .tdayZoomSource(zoomRoute)
+    }
+}
+
+private struct ScheduledTaskHomeCategoryBoard: View {
+    let overdueCount: Int
+    let scheduledCount: Int
+    let allCount: Int
+    let priorityCount: Int
+    let completedCount: Int
+    let calendarCount: Int
+    let onOpenOverdue: () -> Void
+    let onOpenScheduled: () -> Void
+    let onOpenAll: () -> Void
+    let onOpenPriority: () -> Void
+    let onOpenCompleted: () -> Void
+    let onOpenCalendar: () -> Void
+
+    var body: some View {
+        VStack(spacing: ScheduledTaskHomeMetrics.tileGap) {
+            HStack(spacing: ScheduledTaskHomeMetrics.tileGap) {
+                ScheduledTaskHomeCategoryTile(
+                    color: Color(hex: 0xD98F4B),
+                    icon: "TileScheduled",
+                    watermark: "TileScheduled",
+                    title: L("Scheduled"),
+                    count: scheduledCount,
+                    zoomRoute: .scheduledTodos,
+                    action: onOpenScheduled
+                )
+
+                ScheduledTaskHomeCategoryTile(
+                    color: Color(hex: 0xC97880),
+                    icon: "TilePriority",
+                    watermark: "TilePriority",
+                    title: L("Priority"),
+                    count: priorityCount,
+                    zoomRoute: .priorityTodos,
+                    action: onOpenPriority
+                )
+            }
+
+            HStack(spacing: ScheduledTaskHomeMetrics.tileGap) {
+                ScheduledTaskHomeCategoryTile(
+                    color: Color(hex: 0xE06F66),
+                    icon: "TileOverdue",
+                    watermark: "TileOverdue",
+                    title: L("Overdue"),
+                    count: overdueCount,
+                    zoomRoute: .overdueTodos,
+                    action: onOpenOverdue
+                )
+
+                ScheduledTaskHomeCategoryTile(
+                    color: Color(hex: 0x68717A),
+                    icon: "TileAll",
+                    watermark: "TileAll",
+                    title: L("All"),
+                    count: allCount,
+                    zoomRoute: .allTodos(highlightTodoId: nil),
+                    action: onOpenAll
+                )
+            }
+
+            HStack(spacing: ScheduledTaskHomeMetrics.tileGap) {
+                ScheduledTaskHomeCategoryTile(
+                    color: Color(hex: 0x719F84),
+                    icon: "TileComplete",
+                    watermark: "TileComplete",
+                    title: L("Completed"),
+                    count: completedCount,
+                    zoomRoute: .completed(origin: .scheduledBoard),
+                    action: onOpenCompleted
+                )
+
+                ScheduledTaskHomeCategoryTile(
+                    color: Color(hex: 0x9A89D2),
+                    icon: "TileCalendar",
+                    watermark: "TileCalendar",
+                    title: L("Calendar"),
+                    count: calendarCount,
+                    zoomRoute: .calendar,
+                    action: onOpenCalendar
+                )
+            }
+        }
+    }
+}
+
+private struct ScheduledTaskHomeCategoryTile: View {
+    let color: Color
+    /// Asset-catalog name of the lucide glyph (template-rendered), shared with web.
+    let icon: String
+    let watermark: String?
+    let title: String
+    let count: Int
+    /// The route this tile pushes, carried alongside the closure that pushes it.
+    ///
+    /// The closure is opaque — a `() -> Void` the board was handed — so it cannot be
+    /// asked where it goes, and the zoom needs an id both ends agree on. Stored rather
+    /// than derived from `icon` or `title`: the title is localised and the icon is an
+    /// asset name, and neither is the thing `AppRootView` keys its destination on.
+    let zoomRoute: AppRoute
+    let action: () -> Void
+
+    @Environment(\.tdayAnimation) private var tdayAnimation
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: ScheduledTaskHomeMetrics.tileCornerRadius, style: .continuous)
+
+        Button(action: action) {
+            ZStack {
+                shape
+                    .fill(color)
+
+                shape
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                Color.white.opacity(0.1),
+                                Color.white.opacity(0.03),
+                                .clear,
+                            ],
+                            center: .topLeading,
+                            startRadius: 8,
+                            endRadius: 140
+                        )
+                    )
+
+                shape
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.12),
+                                Color(hex: 0xE7F3FF).opacity(0.1),
+                                Color(hex: 0xFFF2FA).opacity(0.08),
+                                .clear,
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                if let watermark {
+                    Image(watermark)
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: ScheduledTaskHomeMetrics.tileWatermarkSize, height: ScheduledTaskHomeMetrics.tileWatermarkSize)
+                        .foregroundStyle(color.blended(with: .white, amount: 0.28).opacity(0.4))
+                        .offset(x: ScheduledTaskHomeMetrics.tileWatermarkTrailingInset, y: 12)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                        .allowsHitTesting(false)
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .center) {
+                        Image(icon)
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 24, height: 24)
+                            .foregroundStyle(.white)
+                        Spacer()
+                        // Same roll, same rung — see `ScheduledTaskHomeTodayCard`.
+                        Text("\(count)")
+                            .font(.tdayRounded(size: 26, weight: .black))
+                            .foregroundStyle(.white)
+                            .contentTransition(.numericText(value: Double(count)))
+                            .animation(
+                                tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)),
+                                value: count
+                            )
+                    }
+
+                    Text(title)
+                        .font(.tdayRounded(size: 20, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+                .padding(ScheduledTaskHomeMetrics.tileInnerPadding)
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .frame(height: ScheduledTaskHomeMetrics.tileHeight)
+            .clipShape(shape)
+            .contentShape(shape)
+            // No flattening step belongs between this clip and the shadow the button
+            // style below adds, and one was tried here and taken back out. The style
+            // puts the depth on this whole label, and the label's own last drawing step
+            // is the clip above, so the silhouette that shadow is taken from is already
+            // the rounded corner — the arrangement the FAB, the empty-state badge, the
+            // sheet chrome and a colour swatch all wear with nothing in between, and
+            // none of them is among the surfaces this report names. A group there buys
+            // no demonstrable change and costs a re-rasterisation of this tile on every
+            // frame of the count roll above. It is the FAB that reopens the question,
+            // not this line: a square shadow behind that 56pt circle would mean the
+            // mechanism is real and app-wide, and the fix would belong in
+            // `TdayPressEffectModifier` rather than on the ten surfaces the report names.
+        }
+        .buttonStyle(ScheduledTaskHomeTileButtonStyle())
+        // The rectangle the pushed screen grows out of. On iOS 17, under Reduce Motion,
+        // or for any route with no source id this resolves to nothing at all and the push
+        // is the stock slide — see `ZoomNavigation.swift`.
+        .tdayZoomSource(zoomRoute)
+    }
+}
+
+private struct ScheduledTaskHomeListsHeader: View {
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Text("My Lists")
+            .font(.tdayRounded(size: 28, weight: .bold))
+            .foregroundStyle(colors.onSurface)
+            .padding(.top, 2)
+    }
+}
+
+private struct ScheduledTaskHomeListsSection: View {
+    let lists: [ListSummary]
+    let displayName: (String) -> String
+    let onOpenList: (ListSummary, String) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: ScheduledTaskHomeMetrics.sectionSpacing) {
+            ScheduledTaskHomeListsHeader()
+
+            ForEach(lists) { list in
+                let name = displayName(list.name)
+                ScheduledTaskHomeListRow(
+                    name: name,
+                    colorKey: list.color,
+                    iconKey: list.iconKey,
+                    count: list.todoCount,
+                    // Built here rather than inside the row because `list.id` is not one
+                    // of the row's parameters, and the id has to be per-list: several of
+                    // these rows are on screen at once, so one shared id would match the
+                    // wrong rectangle. It is the same route `onOpenList` pushes.
+                    zoomRoute: .listTodos(listId: list.id, listName: name, origin: .scheduledBoard)
+                ) {
+                    onOpenList(list, name)
+                }
+            }
+        }
+    }
+}
+
+private struct ScheduledTaskHomeListRow: View {
+    let name: String
+    let colorKey: String?
+    let iconKey: String?
+    let count: Int
+    /// The route this row pushes, carried alongside the closure that pushes it.
+    ///
+    /// As with the two tiles above, the closure is opaque — and here it is the trailing
+    /// one, handed up to `ScheduledTaskHomeListsSection`, which builds this route from the
+    /// same `list` and name it passes to `onOpenList`. The two have to agree by value or
+    /// the row publishes an id no destination asks for.
+    let zoomRoute: AppRoute
+    let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+    @Environment(\.tdayAnimation) private var tdayAnimation
+
+    private var accent: Color {
+        scheduledTaskHomeListAccentColor(for: colorKey)
+    }
+
+    private var symbolName: String {
+        scheduledTaskHomeListSymbolName(for: iconKey)
+    }
+
+    private var containerColor: Color {
+        colors.surfaceVariant.blended(with: accent, amount: ScheduledTaskHomeMetrics.listContainerColorWeight)
+    }
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: ScheduledTaskHomeMetrics.tileCornerRadius, style: .continuous)
+
+        Button(action: action) {
+            ZStack {
+                shape
+                    .fill(containerColor)
+
+                shape
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                Color.white.opacity(0.1),
+                                Color.white.opacity(0.03),
+                                .clear,
+                            ],
+                            center: .topLeading,
+                            startRadius: 8,
+                            endRadius: 120
+                        )
+                    )
+
+                shape
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.12),
+                                Color(hex: 0xE7F3FF).opacity(0.1),
+                                Color(hex: 0xFFF2FA).opacity(0.08),
+                                .clear,
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                TdayListIcon(iconKey: iconKey, listName: name, size: 60)
+                    .foregroundStyle(containerColor.blended(with: .white, amount: 0.34).opacity(0.42))
+                    .offset(x: 18, y: 8)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                    .allowsHitTesting(false)
+
+                HStack {
+                    HStack(spacing: 10) {
+                        TdayListIcon(iconKey: iconKey, listName: name, size: 22)
+                            .foregroundStyle(.white)
+                            .frame(width: 32, height: 32)
+
+                        Text(name)
+                            .font(.tdayRounded(size: 22, weight: .bold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    // Same roll, same rung — see `ScheduledTaskHomeTodayCard`.
+                    Text("\(count)")
+                        .font(.tdayRounded(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
+                        .contentTransition(.numericText(value: Double(count)))
+                        .animation(
+                            tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)),
+                            value: count
+                        )
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+            .frame(maxWidth: .infinity, minHeight: ScheduledTaskHomeMetrics.listRowHeight, maxHeight: ScheduledTaskHomeMetrics.listRowHeight)
+            .clipShape(shape)
+            .contentShape(shape)
+        }
+        .buttonStyle(ScheduledTaskHomeListButtonStyle())
+        // Own chain, immediately after its own button style — this row uses a different
+        // style from the tiles above, so it is asserted separately for the same reason.
+        .tdayZoomSource(zoomRoute)
+    }
+}
+
+private struct ScheduledTaskHomeSearchResultsOverlay: View {
+    let todos: [TodoItem]
+    let listsByID: [String: ListSummary]
+    let onOpenTodo: (TodoItem) -> Void
+
+    @Environment(\.tdayColors) private var colors
+    private let maxResultsHeight: CGFloat = 320
+    private let resultRowHeight: CGFloat = 66
+    private let resultVerticalPadding: CGFloat = 8
+    private let resultSeparatorHeight: CGFloat = 1
+
+    private var resultSeparatorCount: Int {
+        todos.indices.filter { shouldShowDateDivider(after: $0) }.count
+    }
+
+    private var resultsHeight: CGFloat {
+        let contentHeight = (CGFloat(todos.count) * resultRowHeight) +
+            (CGFloat(resultSeparatorCount) * resultSeparatorHeight) +
+            resultVerticalPadding
+        return min(contentHeight, maxResultsHeight)
+    }
+
+    private var dueFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("EEE jmm")
+        return formatter
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if todos.isEmpty {
+                Text("No matching tasks")
+                    .font(.tdayRounded(size: 14, weight: .bold))
+                    .foregroundStyle(colors.onSurfaceVariant)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+            } else {
+                ScrollView(showsIndicators: true) {
+                    VStack(spacing: 0) {
+                        ForEach(Array(todos.enumerated()), id: \.element.id) { index, todo in
+                            let list = todo.listId.flatMap { listsByID[$0] }
+                            let tint = scheduledTaskHomeListAccentColor(for: list?.color)
+
+                            HStack(spacing: 10) {
+                                TdayListIcon(iconKey: list?.iconKey, listName: list?.name, size: 17)
+                                    .foregroundStyle(tint.opacity(0.92))
+                                    .frame(width: 18)
+
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(todo.title)
+                                        .font(.tdayRounded(size: 15, weight: .bold))
+                                        .foregroundStyle(colors.onSurface)
+                                        .lineLimit(1)
+
+                                    Text(todo.due.map(dueFormatter.string(from:)) ?? "")
+                                        .font(.tdayRounded(size: 12, weight: .bold))
+                                        .foregroundStyle(colors.onSurfaceVariant)
+                                        .lineLimit(1)
+                                }
+
+                                Spacer(minLength: 0)
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                onOpenTodo(todo)
+                            }
+                            .accessibilityElement(children: .combine)
+                            .accessibilityAddTraits(.isButton)
+
+                            if shouldShowDateDivider(after: index) {
+                                Rectangle()
+                                    .fill(colors.onSurface.opacity(0.08))
+                                    .frame(height: 1)
+                                    .padding(.horizontal, 12)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                .frame(height: resultsHeight)
+                .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+            }
+        }
+        .background(colors.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(colors.onSurface.opacity(0.2), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.14), radius: 10, x: 0, y: 8)
+    }
+
+    private func shouldShowDateDivider(after index: Int) -> Bool {
+        guard todos.indices.contains(index),
+              todos.indices.contains(index + 1) else {
+            return false
+        }
+        guard let currentDue = todos[index].due,
+              let nextDue = todos[index + 1].due else {
+            return false
+        }
+        return !Calendar.current.isDate(currentDue, inSameDayAs: nextDue)
+    }
+}
+
+private struct ScheduledTaskHomeTileButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .tdayPressEffect(
+                isPressed: configuration.isPressed,
+                shadowColor: Color.black,
+                pressedShadowOpacity: 0.08,
+                normalShadowOpacity: 0.14
+            )
+    }
+}
+
+private struct ScheduledTaskHomeListButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .tdayPressEffect(
+                isPressed: configuration.isPressed,
+                shadowColor: Color.black,
+                pressedShadowOpacity: 0.08,
+                normalShadowOpacity: 0.13
+            )
+    }
+}
+
+struct CreateListSheet: View {
+    /// True only where the list being created is a floater list, which is the
+    /// only kind that can be reused: web's create sheet hosts the Reusable switch,
+    /// and a scheduled list has no Reset to reveal.
+    ///
+    /// Declared before `onSubmit` on purpose — the call sites pass `onSubmit` as a
+    /// trailing closure, and a trailing closure binds to the LAST memberwise
+    /// parameter.
+    var showsReusable: Bool = false
+    let onSubmit: (String, String?, String?, Bool?, String?) -> Void
+
+    /// Seeds the colour per feed — SLATE for a scheduled list, GOLD for a floater one — which a
+    /// property initialiser cannot do, so the memberwise init is written out. The parameter
+    /// order is the one it replaces: `onSubmit` stays last so call sites keep their trailing
+    /// closure.
+    init(
+        showsReusable: Bool = false,
+        onSubmit: @escaping (String, String?, String?, Bool?, String?) -> Void
+    ) {
+        self.showsReusable = showsReusable
+        self.onSubmit = onSubmit
+        _color = State(initialValue: tdayDefaultListAccentColorKey(isFloater: showsReusable))
+    }
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.tdayColors) private var colors
+
+    @State private var name = ""
+    @State private var color: String
+    @State private var iconKey = "inbox"
+    @State private var reusable = false
+    /// Nil means "no default". Always sent on create — there is no saved list
+    /// to diff against yet, so there is no touched/untouched distinction here.
+    @State private var defaultPriority: String? = nil
+    /// Whether the picker holds a CHOICE or only a PREVIEW.
+    ///
+    /// This sheet seeded the picker with the default and then posted it, so every list any
+    /// client ever created stored `iconKey = "inbox"` and no value was left that could mean
+    /// "never chose". That, rather than the matcher, was what blocked name-derived icons:
+    /// there was nothing for them to fill. The picker still shows a glyph the whole time;
+    /// what changed is that an untouched PREVIEW is no longer posted as a CHOICE.
+    @State private var iconTouched = false
+    @State private var isSubmitting = false
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var canCreate: Bool {
+        !trimmedName.isEmpty && !isSubmitting
+    }
+
+    private var accentColor: Color {
+        scheduledTaskHomeListAccentColor(for: color)
+    }
+
+    private var maximumSheetHeight: CGFloat {
+        max(1, UIScreen.main.bounds.height * CreateListSheetMetrics.maximumHeightFraction)
+    }
+
+    private var stableSheetHeight: CGFloat {
+        min(max(CreateListSheetMetrics.sheetHeight, 1), maximumSheetHeight)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            TdaySheetHeader(
+                title: L("New list"),
+                closeAccessibilityLabel: L("Close"),
+                confirmAccessibilityLabel: L("Create list"),
+                isConfirmEnabled: canCreate,
+                onClose: { dismiss() },
+                onConfirm: {
+                    // Re-entrancy guard: the sheet stays mounted and interactive
+                    // through its exit animation (TdayBottomSheetMotion.exitDuration),
+                    // so a fast second tap can otherwise reach this same closure
+                    // before `.disabled` visually applies and fire a second create.
+                    guard canCreate else { return }
+                    // The landing, not the press, earns `completion()` — the header
+                    // button itself only gives the control tap every button gives.
+                    // Creating a list is the same class of event as creating a task
+                    // (`CreateTaskSheet.submit`), so it gets the same pulse.
+                    HapticManager.completion()
+                    isSubmitting = true
+                    onSubmit(trimmedName, color, iconTouched ? iconKey : nil, showsReusable ? reusable : nil, defaultPriority)
+                    dismiss()
+                }
+            )
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 14) {
+                    TdaySheetCard {
+                        VStack(spacing: 18) {
+                            ZStack {
+                                Circle()
+                                    .fill(accentColor)
+                                    .frame(width: 86, height: 86)
+
+                                TdayListIcon(iconKey: iconKey, size: 38)
+                                    .foregroundStyle(.white)
+                            }
+
+                            TextField(
+                                "",
+                                text: $name,
+                                prompt: Text("List name")
+                                    .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
+                            )
+                            .textInputAutocapitalization(.words)
+                            .autocorrectionDisabled()
+                            .multilineTextAlignment(.center)
+                            // The preview follows the name until the user overrules it.
+                            // Showing the guess in the picker is what makes it a suggestion
+                            // rather than something that happens to the list after they
+                            // leave: they can see it, and the next tap replaces it.
+                            // Untouched still SAVES as nil — this moves the preview, never
+                            // the stored choice.
+                            .onChange(of: name) { _, newName in
+                                guard !iconTouched else { return }
+                                iconKey = tdayInferredListIconKey(forListName: newName) ?? "inbox"
+                            }
+                            .font(.tdayRounded(size: 22, weight: .bold))
+                            .foregroundStyle(accentColor)
+                            .padding(.horizontal, 14)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 62)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(colors.bottomSheetControlSurface)
+                            )
+                        }
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 18)
+                    }
+
+                    TdaySheetSectionTitle(text: "Color")
+                    TdaySheetCard {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(scheduledTaskHomeListColorOptions, id: \.key) { option in
+                                    let isSelected = option.key == color
+                                    Button {
+                                        color = option.key
+                                    } label: {
+                                        Circle()
+                                            .fill(option.color)
+                                            .frame(width: 48, height: 48)
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(
+                                                        isSelected ? colors.onSurface.opacity(0.3) : .clear,
+                                                        lineWidth: 3
+                                                    )
+                                            )
+                                    }
+                                    .buttonStyle(
+                                        TdayPressButtonStyle(
+                                            shadowColor: Color.black,
+                                            pressedShadowOpacity: 0.04,
+                                            normalShadowOpacity: 0.08
+                                        )
+                                    )
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
+                        }
+                    }
+
+                    TdaySheetSectionTitle(text: "Icon")
+                    TdaySheetCard {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                ForEach(scheduledTaskHomeListIconOptions, id: \.key) { option in
+                                    let isSelected = option.key == iconKey
+                                    Button {
+                                        iconKey = option.key
+                                        iconTouched = true
+                                    } label: {
+                                        Circle()
+                                            .fill(isSelected ? accentColor.opacity(0.2) : colors.bottomSheetControlSurface)
+                                            .frame(width: 48, height: 48)
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(
+                                                        isSelected ? accentColor.opacity(0.55) : .clear,
+                                                        lineWidth: 2
+                                                    )
+                                            )
+                                            .overlay {
+                                                TdayListIcon(iconKey: option.key, size: 22)
+                                                    .foregroundStyle(isSelected ? accentColor : colors.onSurfaceVariant)
+                                            }
+                                    }
+                                    .buttonStyle(
+                                        TdayPressButtonStyle(
+                                            shadowColor: Color.black,
+                                            pressedShadowOpacity: 0.04,
+                                            normalShadowOpacity: 0.08
+                                        )
+                                    )
+                                    .accessibilityLabel(formattedOptionName(option.key))
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
+                        }
+                    }
+
+                    TdaySheetSectionTitle(text: L("Default priority"))
+                    TdaySheetCard {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                CreateListSheetPriorityChip(
+                                    label: L("No default"),
+                                    swatchColor: colors.onSurfaceVariant.opacity(0.35),
+                                    isSelected: defaultPriority == nil
+                                ) {
+                                    defaultPriority = nil
+                                }
+                                ForEach(Array(TaskPriorityDisplay.options.enumerated()), id: \.element.value) { _, option in
+                                    CreateListSheetPriorityChip(
+                                        label: option.label,
+                                        swatchColor: priorityColor(option.value),
+                                        isSelected: defaultPriority == option.value
+                                    ) {
+                                        defaultPriority = option.value
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
+                        }
+                    }
+
+                    if showsReusable {
+                        // Web's create sheet hosts the same switch, in the same
+                        // place: after the icon picker, before the footer.
+                        TdaySheetCard {
+                            Toggle(isOn: $reusable) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(L("Reusable list"))
+                                        .font(.tdayRounded(size: 17, weight: .heavy))
+                                        .foregroundStyle(colors.onSurface)
+                                    Text(L("Show a Reset to un-check everything and run it again"))
+                                        .font(.tdayRounded(size: 12, weight: .bold))
+                                        .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            .tint(accentColor)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 14)
+                        }
+                    }
+                }
+                .padding(.horizontal, 18)
+                .padding(.top, 14)
+                .padding(.bottom, CreateListSheetMetrics.bottomContentPadding)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .disableVerticalScrollBounce()
+        }
+        .frame(maxWidth: .infinity, minHeight: stableSheetHeight, maxHeight: stableSheetHeight, alignment: .top)
+        .background(colors.bottomSheetBackground)
+        .clipShape(
+            UnevenRoundedRectangle(
+                topLeadingRadius: TdaySheetMetrics.sheetCornerRadius,
+                bottomLeadingRadius: 0,
+                bottomTrailingRadius: 0,
+                topTrailingRadius: TdaySheetMetrics.sheetCornerRadius,
+                style: .continuous
+            )
+        )
+    }
+
+    private func formattedOptionName(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: ".", with: " ")
+            .split(separator: " ")
+            .map { $0.capitalized }
+            .joined(separator: " ")
+    }
+}
+
+/// One option in the create-list sheet's "Default priority" row — mirrors
+/// `ListSettingsPriorityChip` (TodoListScreen.swift's edit-list sheet), kept as a
+/// separate type since that one is private to its own file.
+private struct CreateListSheetPriorityChip: View {
+    let label: String
+    let swatchColor: Color
+    let isSelected: Bool
+    let onSelect: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(swatchColor)
+                    .frame(width: 12, height: 12)
+
+                Text(label)
+                    .font(.tdayRounded(size: 14, weight: .bold))
+                    .foregroundStyle(colors.onSurface)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                Capsule()
+                    .fill(isSelected ? swatchColor.opacity(0.16) : colors.bottomSheetControlSurface)
+            )
+            .overlay {
+                Capsule()
+                    .stroke(isSelected ? swatchColor.opacity(0.55) : .clear, lineWidth: 2)
+            }
+        }
+        .buttonStyle(
+            TdayPressButtonStyle(
+                shadowColor: Color.black,
+                pressedShadowOpacity: 0.04,
+                normalShadowOpacity: 0.08
+            )
+        )
+        .accessibilityLabel(label)
+    }
+}
+
+/// The swatches the list editor offers, in the palette's own order.
+///
+/// Built from `tdayListAccentColorKeys` rather than transcribed, so a colour added to the shared
+/// table appears here without anyone remembering to add it twice — and so a swatch can never show
+/// a shade the list itself will not be drawn in.
+private let scheduledTaskHomeListColorOptions: [ScheduledTaskHomeListColorOption] =
+    tdayListAccentColorKeys.map {
+        ScheduledTaskHomeListColorOption(key: $0, color: tdayListAccentColor(colorKey: $0))
+    }
+
+private let scheduledTaskHomeListIconOptions: [ScheduledTaskHomeListIconOption] = [
+    ScheduledTaskHomeListIconOption(key: "inbox", symbolName: "tray.fill"),
+    ScheduledTaskHomeListIconOption(key: "sun", symbolName: "sun.max.fill"),
+    ScheduledTaskHomeListIconOption(key: "calendar", symbolName: "calendar"),
+    ScheduledTaskHomeListIconOption(key: "schedule", symbolName: "clock"),
+    ScheduledTaskHomeListIconOption(key: "flag", symbolName: "flag.fill"),
+    ScheduledTaskHomeListIconOption(key: "check", symbolName: "checkmark"),
+    ScheduledTaskHomeListIconOption(key: "smile", symbolName: "face.smiling"),
+    ScheduledTaskHomeListIconOption(key: "list", symbolName: "list.bullet"),
+    ScheduledTaskHomeListIconOption(key: "bookmark", symbolName: "bookmark.fill"),
+    ScheduledTaskHomeListIconOption(key: "key", symbolName: "key.fill"),
+    ScheduledTaskHomeListIconOption(key: "gift", symbolName: "gift.fill"),
+    ScheduledTaskHomeListIconOption(key: "cake", symbolName: "birthday.cake.fill"),
+    ScheduledTaskHomeListIconOption(key: "school", symbolName: "graduationcap.fill"),
+    ScheduledTaskHomeListIconOption(key: "bag", symbolName: "backpack.fill"),
+    ScheduledTaskHomeListIconOption(key: "edit", symbolName: "pencil"),
+    ScheduledTaskHomeListIconOption(key: "document", symbolName: "doc.text.fill"),
+    ScheduledTaskHomeListIconOption(key: "book", symbolName: "book.closed.fill"),
+    ScheduledTaskHomeListIconOption(key: "work", symbolName: "briefcase.fill"),
+    ScheduledTaskHomeListIconOption(key: "wallet", symbolName: "wallet.pass.fill"),
+    ScheduledTaskHomeListIconOption(key: "money", symbolName: "dollarsign.circle.fill"),
+    ScheduledTaskHomeListIconOption(key: "fitness", symbolName: "dumbbell.fill"),
+    ScheduledTaskHomeListIconOption(key: "run", symbolName: "figure.run"),
+    ScheduledTaskHomeListIconOption(key: "food", symbolName: "fork.knife"),
+    ScheduledTaskHomeListIconOption(key: "drink", symbolName: "wineglass.fill"),
+    ScheduledTaskHomeListIconOption(key: "health", symbolName: "cross.case.fill"),
+    ScheduledTaskHomeListIconOption(key: "monitor", symbolName: "display"),
+    ScheduledTaskHomeListIconOption(key: "music", symbolName: "music.note"),
+    ScheduledTaskHomeListIconOption(key: "computer", symbolName: "desktopcomputer"),
+    ScheduledTaskHomeListIconOption(key: "game", symbolName: "gamecontroller.fill"),
+    ScheduledTaskHomeListIconOption(key: "headphones", symbolName: "headphones"),
+    ScheduledTaskHomeListIconOption(key: "eco", symbolName: "leaf.fill"),
+    ScheduledTaskHomeListIconOption(key: "pets", symbolName: "pawprint.fill"),
+    ScheduledTaskHomeListIconOption(key: "child", symbolName: "figure.2.and.child.holdinghands"),
+    ScheduledTaskHomeListIconOption(key: "family", symbolName: "person.3.fill"),
+    ScheduledTaskHomeListIconOption(key: "basket", symbolName: "basket.fill"),
+    ScheduledTaskHomeListIconOption(key: "cart", symbolName: "cart.fill"),
+    ScheduledTaskHomeListIconOption(key: "mall", symbolName: "bag.fill"),
+    ScheduledTaskHomeListIconOption(key: "inventory", symbolName: "archivebox.fill"),
+    ScheduledTaskHomeListIconOption(key: "soccer", symbolName: "soccerball"),
+    ScheduledTaskHomeListIconOption(key: "baseball", symbolName: "baseball.fill"),
+    ScheduledTaskHomeListIconOption(key: "basketball", symbolName: "basketball.fill"),
+    ScheduledTaskHomeListIconOption(key: "football", symbolName: "football.fill"),
+    ScheduledTaskHomeListIconOption(key: "tennis", symbolName: "tennis.racket"),
+    ScheduledTaskHomeListIconOption(key: "train", symbolName: "tram.fill"),
+    ScheduledTaskHomeListIconOption(key: "flight", symbolName: "airplane"),
+    ScheduledTaskHomeListIconOption(key: "boat", symbolName: "ferry.fill"),
+    ScheduledTaskHomeListIconOption(key: "car", symbolName: "car.fill"),
+    ScheduledTaskHomeListIconOption(key: "umbrella", symbolName: "umbrella.fill"),
+    ScheduledTaskHomeListIconOption(key: "drop", symbolName: "drop.fill"),
+    ScheduledTaskHomeListIconOption(key: "snow", symbolName: "snowflake"),
+    ScheduledTaskHomeListIconOption(key: "fire", symbolName: "flame.fill"),
+    ScheduledTaskHomeListIconOption(key: "tools", symbolName: "hammer.fill"),
+    ScheduledTaskHomeListIconOption(key: "scissors", symbolName: "scissors"),
+    ScheduledTaskHomeListIconOption(key: "architecture", symbolName: "building.columns.fill"),
+    ScheduledTaskHomeListIconOption(key: "code", symbolName: "chevron.left.forwardslash.chevron.right"),
+    ScheduledTaskHomeListIconOption(key: "idea", symbolName: "lightbulb.fill"),
+    ScheduledTaskHomeListIconOption(key: "chat", symbolName: "bubble.left.fill"),
+    ScheduledTaskHomeListIconOption(key: "alert", symbolName: "exclamationmark.triangle.fill"),
+    ScheduledTaskHomeListIconOption(key: "star", symbolName: "star.fill"),
+    ScheduledTaskHomeListIconOption(key: "heart", symbolName: "heart.fill"),
+    ScheduledTaskHomeListIconOption(key: "circle", symbolName: "circle.fill"),
+    ScheduledTaskHomeListIconOption(key: "square", symbolName: "square.fill"),
+    ScheduledTaskHomeListIconOption(key: "triangle", symbolName: "triangle.fill"),
+    ScheduledTaskHomeListIconOption(key: "home", symbolName: "house.fill"),
+    ScheduledTaskHomeListIconOption(key: "city", symbolName: "building.2.fill"),
+    ScheduledTaskHomeListIconOption(key: "bank", symbolName: "building.columns.fill"),
+    ScheduledTaskHomeListIconOption(key: "camera", symbolName: "camera.fill"),
+    ScheduledTaskHomeListIconOption(key: "palette", symbolName: "paintpalette.fill"),
+]
+
+private func scheduledTaskHomeListAccentColor(for key: String?) -> Color {
+    let normalizedKey: String?
+    switch key {
+    case "GREEN":
+        normalizedKey = "LIME"
+    case "GRAY":
+        normalizedKey = "SLATE"
+    default:
+        normalizedKey = key
+    }
+    return scheduledTaskHomeListColorOptions.first(where: { $0.key == normalizedKey })?.color ?? tdayListAccentColor(colorKey: nil)
+}
+
+private func scheduledTaskHomeListSymbolName(for key: String?) -> String {
+    scheduledTaskHomeListIconOptions.first(where: { $0.key == key })?.symbolName ?? "tray.fill"
+}
+
+private extension Color {
+    init(hex: UInt, alpha: Double = 1) {
+        self.init(
+            .sRGB,
+            red: Double((hex >> 16) & 0xFF) / 255,
+            green: Double((hex >> 8) & 0xFF) / 255,
+            blue: Double(hex & 0xFF) / 255,
+            opacity: alpha
+        )
+    }
+
+    func blended(with other: Color, amount: CGFloat) -> Color {
+        let lhs = UIColor(self)
+        let rhs = UIColor(other)
+        var lhsRed: CGFloat = 0
+        var lhsGreen: CGFloat = 0
+        var lhsBlue: CGFloat = 0
+        var lhsAlpha: CGFloat = 0
+        var rhsRed: CGFloat = 0
+        var rhsGreen: CGFloat = 0
+        var rhsBlue: CGFloat = 0
+        var rhsAlpha: CGFloat = 0
+
+        lhs.getRed(&lhsRed, green: &lhsGreen, blue: &lhsBlue, alpha: &lhsAlpha)
+        rhs.getRed(&rhsRed, green: &rhsGreen, blue: &rhsBlue, alpha: &rhsAlpha)
+
+        let mix = amount.clamped(to: 0...1)
+        return Color(
+            uiColor: UIColor(
+                red: lhsRed + ((rhsRed - lhsRed) * mix),
+                green: lhsGreen + ((rhsGreen - lhsGreen) * mix),
+                blue: lhsBlue + ((rhsBlue - lhsBlue) * mix),
+                alpha: lhsAlpha + ((rhsAlpha - lhsAlpha) * mix)
+            )
+        )
+    }
+
+}
+
+private extension CGFloat {
+    func clamped(to range: ClosedRange<CGFloat>) -> CGFloat {
+        Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
+    }
+}

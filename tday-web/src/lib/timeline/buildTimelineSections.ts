@@ -1,0 +1,326 @@
+import { TodoItemType } from "@/types";
+import { getTodoDayKey } from "@/lib/todoToastNavigation";
+import { compareTodos, priorityRank, type TaskSortKey } from "@/lib/taskSort";
+
+/**
+ * Builds the vertically ordered, date-bucketed task timeline that mirrors the
+ * native iOS/Android apps. The bucket scheme (see `buildFutureTimelineSections`
+ * in the iOS `TodoListScreen.swift` and `timelineRescheduleTargetDate` in
+ * `DomainModels.swift`) is:
+ *
+ *   Earlier (collapsible) → Today → Tomorrow → next 5 days (+2..+6) →
+ *   "Rest of [current month]" → future month sections (through at least the end
+ *   of the current year, plus any later month that actually holds a task).
+ *
+ * A bucket with no tasks exists only to be a drop target, so it is built only
+ * while a drag is live (`includeEmptyDropTargets`); at rest the scaffold is just
+ * the buckets that hold tasks, otherwise a list with three overdue tasks reads
+ * as one section of rows under twelve bare headers. Each section carries a
+ * `targetDayKey` (YYYY-MM-DD) compatible with `moveTodoToDay`, or `null` when it
+ * is not a valid drop target (e.g. a past day, or "Rest of month" once the +7
+ * horizon has rolled into next month).
+ *
+ * All day math is calendar arithmetic on the user's timezone-local day keys, so
+ * it is independent of the JS runtime timezone.
+ */
+
+export type TimelineSectionKind = "earlier" | "day" | "rest" | "month";
+
+export type TimelineSection = {
+  /**
+   * Stable key. Day buckets use their `YYYY-MM-DD` day key (so existing
+   * focus/scroll + `getTodoDateSectionId` keep working); aggregate buckets use
+   * `earlier` / `rest-<monthIndex>` / `month-<monthIndex>`.
+   */
+  key: string;
+  label: string;
+  kind: TimelineSectionKind;
+  /** YYYY-MM-DD drop target for `moveTodoToDay`, or null when not droppable. */
+  targetDayKey: string | null;
+  /** Only the (non-empty) Earlier bucket is collapsible. */
+  collapsible: boolean;
+  /** Offset in days from today for day buckets (0 = today); null otherwise. */
+  dayDiff: number | null;
+  todos: TodoItemType[];
+};
+
+const pad = (value: number) => String(value).padStart(2, "0");
+
+const formatUtcDayKey = (date: Date) =>
+  `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+
+const monthIndexFromDayKey = (dayKey: string) => {
+  const [year, month] = dayKey.split("-").map(Number);
+  return year * 12 + month;
+};
+
+// "Fri Jun 5" — weekday/month/day with the separating commas dropped to match
+// the native header style.
+const dayLabel = (dayKey: string, locale: string) =>
+  new Intl.DateTimeFormat(locale, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  })
+    .formatToParts(new Date(`${dayKey}T12:00:00Z`))
+    .filter((part) => !(part.type === "literal" && /,/.test(part.value)))
+    .map((part) => (part.type === "literal" ? part.value.replace(/,/g, "") : part.value))
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const monthLabel = (year: number, month: number, currentYear: number, locale: string) => {
+  const date = new Date(`${year}-${pad(month)}-01T12:00:00Z`);
+  return new Intl.DateTimeFormat(locale, {
+    month: "long",
+    ...(year === currentYear ? {} : { year: "numeric" }),
+    timeZone: "UTC",
+  }).format(date);
+};
+
+const toEpochMs = (date: Date | null | undefined): number | null => {
+  const ms = date?.getTime();
+  return ms == null || Number.isNaN(ms) ? null : ms;
+};
+
+const todoSortKey = (todo: TodoItemType): TaskSortKey => ({
+  id: todo.id,
+  pinned: todo.pinned,
+  dueEpochMs: toEpochMs(todo.due),
+  priorityRank: priorityRank(todo.priority),
+  // Modified time is the tiebreak; todos carry `updatedAt` from the API and fall
+  // back to `createdAt` when it is absent.
+  updatedAtEpochMs: toEpochMs(todo.updatedAt ?? todo.createdAt),
+});
+
+// The FIXED within-day todo order (see src/lib/taskSort.ts / the shared Kotlin
+// TaskSortEngine): pinned first, due asc (undated last), priority High→Low,
+// modified desc, id. The day-bucket grouping itself is unchanged.
+export const compareTodosWithinDay = (a: TodoItemType, b: TodoItemType): number =>
+  compareTodos(todoSortKey(a), todoSortKey(b));
+
+const hasValidDue = (todo: TodoItemType) =>
+  todo.due instanceof Date && !Number.isNaN(todo.due.getTime());
+
+export type BuildTimelineSectionsArgs = {
+  todos: TodoItemType[];
+  locale: string;
+  timeZone?: string;
+  /** When true (Scheduled), omit the Earlier bucket and never look at the past. */
+  futureOnly: boolean;
+  /** Render Earlier above Today (true for All/Priority/List). */
+  placesEarlierBeforeToday: boolean;
+  /**
+   * True only while a drag is in flight: keeps the empty buckets so there is
+   * somewhere to drop a task onto a day that has nothing in it yet.
+   */
+  includeEmptyDropTargets: boolean;
+  todayLabel: string;
+  tomorrowLabel: string;
+  /** Display label for the collapsible Earlier bucket (already localized). */
+  earlierLabel: string;
+};
+
+export function buildTimelineSections({
+  todos,
+  locale,
+  timeZone,
+  futureOnly,
+  placesEarlierBeforeToday,
+  includeEmptyDropTargets,
+  todayLabel,
+  tomorrowLabel,
+  earlierLabel,
+}: BuildTimelineSectionsArgs): TimelineSection[] {
+  const dated = todos.filter(hasValidDue);
+
+  const todayKey = getTodoDayKey(new Date(), timeZone);
+  const [ty, tm, td] = todayKey.split("-").map(Number); // tm is 1-based
+
+  // Calendar arithmetic via UTC so it never depends on the JS runtime timezone.
+  const offsetDayKey = (offset: number) =>
+    formatUtcDayKey(new Date(Date.UTC(ty, tm - 1, td + offset, 12)));
+
+  const horizonKey = offsetDayKey(7);
+  const currentMonthIndex = ty * 12 + tm;
+  const horizonInCurrentMonth = monthIndexFromDayKey(horizonKey) === currentMonthIndex;
+
+  // Bucket every dated todo by its timezone-local day key.
+  const byDayKey = new Map<string, TodoItemType[]>();
+  for (const todo of dated) {
+    const key = getTodoDayKey(todo.due, timeZone);
+    const bucket = byDayKey.get(key);
+    if (bucket) bucket.push(todo);
+    else byDayKey.set(key, [todo]);
+  }
+
+  const dayBucket = (key: string) => (byDayKey.get(key) ?? []).slice().sort(compareTodosWithinDay);
+
+  // Items across multiple days, ordered oldest → newest, then within-day order.
+  const sortAcrossDays = (items: TodoItemType[]) =>
+    items.slice().sort((a, b) => {
+      const ka = getTodoDayKey(a.due, timeZone);
+      const kb = getTodoDayKey(b.due, timeZone);
+      if (ka !== kb) return ka < kb ? -1 : 1;
+      return compareTodosWithinDay(a, b);
+    });
+
+  const sections: TimelineSection[] = [];
+
+  // The single rule every bucket answers to: it earns its place by holding
+  // tasks, and an empty one is worth a header only while a drag needs somewhere
+  // to land. Earlier is built only when it has tasks, so it never comes back on
+  // a drag; "Rest of month" loses its target once the +7 horizon rolls into next
+  // month, and an untargetable bucket is not a drop target either.
+  const pushSection = (section: TimelineSection) => {
+    if (section.todos.length > 0 || (includeEmptyDropTargets && section.targetDayKey != null)) {
+      sections.push(section);
+    }
+  };
+
+  // 1. Earlier — only when not future-only and there are past tasks.
+  const earlierTodos = futureOnly
+    ? []
+    : sortAcrossDays(dated.filter((t) => getTodoDayKey(t.due, timeZone) < todayKey));
+  const earlierSection: TimelineSection | null =
+    earlierTodos.length > 0
+      ? {
+          key: "earlier",
+          label: earlierLabel,
+          kind: "earlier",
+          targetDayKey: offsetDayKey(-1),
+          collapsible: true,
+          dayDiff: null,
+          todos: earlierTodos,
+        }
+      : null;
+
+  if (earlierSection && placesEarlierBeforeToday) pushSection(earlierSection);
+
+  // 2. Today
+  pushSection({
+    key: todayKey,
+    label: todayLabel,
+    kind: "day",
+    targetDayKey: todayKey,
+    collapsible: false,
+    dayDiff: 0,
+    todos: dayBucket(todayKey),
+  });
+
+  if (earlierSection && !placesEarlierBeforeToday) pushSection(earlierSection);
+
+  // 3. Tomorrow + 4. next 5 days (+2..+6)
+  for (let offset = 1; offset <= 6; offset += 1) {
+    const key = offsetDayKey(offset);
+    pushSection({
+      key,
+      label: offset === 1 ? tomorrowLabel : dayLabel(key, locale),
+      kind: "day",
+      targetDayKey: key,
+      collapsible: false,
+      dayDiff: offset,
+      todos: dayBucket(key),
+    });
+  }
+
+  // 5. Rest of [current month] — days from the +7 horizon through month end.
+  const restTodos = sortAcrossDays(
+    dated.filter((t) => {
+      const key = getTodoDayKey(t.due, timeZone);
+      return key >= horizonKey && monthIndexFromDayKey(key) === currentMonthIndex;
+    }),
+  );
+  pushSection({
+    key: `rest-${currentMonthIndex}`,
+    label: `Rest of ${monthLabel(ty, tm, ty, locale)}`,
+    kind: "rest",
+    targetDayKey: horizonInCurrentMonth ? horizonKey : null,
+    collapsible: false,
+    dayDiff: null,
+    todos: restTodos,
+  });
+
+  // 6. Future months — next month through at least December of the current
+  //    year, plus any later month that has a task beyond the horizon.
+  const futureMonthIndexes = dated
+    .map((t) => getTodoDayKey(t.due, timeZone))
+    .filter((key) => key >= horizonKey)
+    .map(monthIndexFromDayKey);
+  const minimumFinalMonthIndex = ty * 12 + 12; // December of the current year
+  const finalMonthIndex = Math.max(minimumFinalMonthIndex, ...futureMonthIndexes, currentMonthIndex);
+
+  for (let idx = currentMonthIndex + 1; idx <= finalMonthIndex; idx += 1) {
+    const month = ((idx - 1) % 12) + 1;
+    const year = (idx - month) / 12;
+    const monthItems = sortAcrossDays(
+      dated.filter((t) => {
+        const key = getTodoDayKey(t.due, timeZone);
+        return key >= horizonKey && monthIndexFromDayKey(key) === idx;
+      }),
+    );
+    pushSection({
+      key: `month-${idx}`,
+      label: monthLabel(year, month, ty, locale),
+      kind: "month",
+      targetDayKey: `${year}-${pad(month)}-01`,
+      collapsible: false,
+      dayDiff: null,
+      todos: monthItems,
+    });
+  }
+
+  return sections;
+}
+
+/**
+ * Whether `todos` has at least one item outside its own Earlier bucket (the
+ * same `dayKey < todayKey` split `buildTimelineSections` buckets a task into
+ * `kind: "earlier"` by), without the caller needing the full section list
+ * back.
+ *
+ * `ListContainer` uses this over the RAW, unsearched `listTodos` to build a
+ * search-independent "current tasks remain" signal for its remote-completion
+ * celebration input (`useCelebrateEmptyTransition`). That hook is a plain
+ * previous-vs-current ref comparison with no notion of *why* its input
+ * changed, so feeding it a search-filtered count is a real bug, not a
+ * cosmetic one: type a query that happens to match none of the current
+ * tasks and the filtered count drops to zero from typing alone, consuming
+ * the false→true edge the ref watches for. If the last current task is then
+ * genuinely completed remotely while that same non-matching search is still
+ * active, the filtered count stays zero→zero — no new edge — so the ref
+ * never learns about the real completion, and the confetti it should have
+ * played on search-clear is silently dropped. Every other consumer of the
+ * Earlier/current split (the visible illustration/timeline gating) correctly
+ * keeps reacting to the search query; only this celebration input needs to
+ * be immune to it, matching this screen's own pre-existing behavior.
+ */
+export function hasNonEarlierTimelineTodos(args: BuildTimelineSectionsArgs): boolean {
+  const earlierCount =
+    buildTimelineSections(args).find((section) => section.kind === "earlier")?.todos.length ?? 0;
+  return args.todos.length - earlierCount > 0;
+}
+
+/**
+ * Maps a focus day key (e.g. from the `focusDate`/`focusTask` query params) to
+ * the key of the section that actually contains that day, so we can scroll to
+ * the right bucket even when the day lives inside an aggregate (Earlier / Rest /
+ * month) section.
+ */
+export function findSectionKeyForDayKey(
+  sections: TimelineSection[],
+  dayKey: string,
+  timeZone?: string,
+): string | null {
+  // Day buckets share their day key, so a direct match wins immediately.
+  const direct = sections.find((section) => section.key === dayKey);
+  if (direct) return direct.key;
+
+  // Otherwise the day lives inside an aggregate bucket (Earlier / Rest / month);
+  // find the one whose todos include that calendar day.
+  const containing = sections.find((section) =>
+    section.todos.some((todo) => getTodoDayKey(todo.due, timeZone) === dayKey),
+  );
+  return containing?.key ?? null;
+}

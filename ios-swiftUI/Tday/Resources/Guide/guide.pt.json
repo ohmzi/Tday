@@ -1,0 +1,1808 @@
+{
+  "currentVersion": "0.8.5",
+  "ui": {
+    "title": "Como fazer e dicas",
+    "subtitle": "Tudo o que o T'Day sabe fazer — o óbvio e o escondido.",
+    "searchPlaceholder": "Pesquisar funcionalidades…",
+    "searchAria": "Pesquisar no guia",
+    "whatsNew": "Novidades",
+    "tryIt": "Experimentar",
+    "clearSearch": "Limpar",
+    "noResults": "Sem correspondências. Tente outra palavra.",
+    "results": "{{count}} resultados",
+    "badges.hiddenGem": "Joia escondida",
+    "badges.proTip": "Dica de profissional",
+    "badges.new": "Novo",
+    "badges.server": "Modo servidor",
+    "sections.gettingStarted": "Primeiros passos",
+    "sections.captureAndDates": "Captura e datas",
+    "sections.gestures": "Gestos",
+    "sections.organizing": "Organizar",
+    "sections.recurrenceAndReminders": "Recorrência e lembretes",
+    "sections.widgetsAndSurfaces": "Widgets e ecrãs",
+    "sections.modesAndSync": "Modos e sincronização",
+    "sections.integrations": "Integrações",
+    "sections.keyboardShortcuts": "Atalhos de teclado"
+  },
+  "sections": [
+    {
+      "id": "GETTING_STARTED",
+      "title": "Primeiros passos",
+      "order": 0
+    },
+    {
+      "id": "CAPTURE_AND_DATES",
+      "title": "Captura e datas",
+      "order": 1
+    },
+    {
+      "id": "GESTURES",
+      "title": "Gestos",
+      "order": 2
+    },
+    {
+      "id": "ORGANIZING",
+      "title": "Organizar",
+      "order": 3
+    },
+    {
+      "id": "RECURRENCE_AND_REMINDERS",
+      "title": "Recorrência e lembretes",
+      "order": 4
+    },
+    {
+      "id": "WIDGETS_AND_SURFACES",
+      "title": "Widgets e ecrãs",
+      "order": 5
+    },
+    {
+      "id": "MODES_AND_SYNC",
+      "title": "Modos e sincronização",
+      "order": 6
+    },
+    {
+      "id": "INTEGRATIONS",
+      "title": "Integrações",
+      "order": 7
+    },
+    {
+      "id": "KEYBOARD_SHORTCUTS",
+      "title": "Atalhos de teclado",
+      "order": 8
+    }
+  ],
+  "topics": [
+    {
+      "id": "root-feeds",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "layout-dashboard",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Agendado e Qualquer altura",
+      "summary": "Dois feeds principais e serenos entre os quais alterna a partir da barra.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "O T'Day tem dois feeds irmãos. O Agendado contém as suas tarefas com data para hoje e para os dias seguintes. O Qualquer altura contém os Flutuantes — tarefas sem data. Alterne entre eles pela barra ao fundo e crie uma tarefa a partir de qualquer um."
+          ]
+        }
+      ],
+      "searchTitle": "agendado e qualquer altura",
+      "searchKeywords": "agendado, qualquer altura, feed, barra, raiz, navegar, separadores",
+      "searchBody": "dois feeds principais e serenos entre os quais alterna a partir da barra. o t'day tem dois feeds irmaos. o agendado contem as suas tarefas com data para hoje e para os dias seguintes. o qualquer altura contem os flutuantes — tarefas sem data. alterne entre eles pela barra ao fundo e crie uma tarefa a partir de qualquer um."
+    },
+    {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Tela inicial padrão",
+      "summary": "Escolha se o T'Day abre em Agendado ou Qualquer altura.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "As Configurações têm uma secção Comportamento onde escolhe qual feed abre primeiro — Agendado ou Qualquer altura. Isto define apenas o que vê ao abrir a aplicação; a barra continua a permitir alternar entre os dois a qualquer momento."
+          ]
+        }
+      ],
+      "searchTitle": "tela inicial padrao",
+      "searchKeywords": "padrao, tela inicial, ecra inicial, lancamento, agendado, qualquer altura, comportamento, configuracoes",
+      "searchBody": "escolha se o t'day abre em agendado ou qualquer altura. as configuracoes tem uma seccao comportamento onde escolhe qual feed abre primeiro — agendado ou qualquer altura. isto define apenas o que ve ao abrir a aplicacao; a barra continua a permitir alternar entre os dois a qualquer momento."
+    },
+    {
+      "id": "create-task",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "plus",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Criar uma tarefa",
+      "summary": "Adicione uma tarefa agendada ou um Flutuante sem data em poucos toques.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Toque no botão de criar para adicionar uma tarefa. Dê-lhe um título e, se tiver data, uma hora de conclusão. Deixe a data em branco e ela torna-se um Flutuante no seu feed Qualquer altura."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Comece a escrever uma data no próprio título — o T'Day lê-a por si. Veja “Escrever a data”."
+          ]
+        }
+      ],
+      "searchTitle": "criar uma tarefa",
+      "searchKeywords": "criar, adicionar, nova, tarefa, mais, botao, compor",
+      "searchBody": "adicione uma tarefa agendada ou um flutuante sem data em poucos toques. toque no botao de criar para adicionar uma tarefa. de-lhe um titulo e, se tiver data, uma hora de conclusao. deixe a data em branco e ela torna-se um flutuante no seu feed qualquer altura. comece a escrever uma data no proprio titulo — o t'day le-a por si. veja “escrever a data”."
+    },
+    {
+      "id": "nlp-date-syntax",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "nlp-title-input"
+      ],
+      "title": "Escrever a data",
+      "summary": "Escreva a data no título e o T'Day agenda-a por si.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Sem seletores. Digite uma data (\"amanhã 15h\"), uma repetição (\"every day\", \"weekly\", \"every weekday\") ou uma prioridade (\"!\", \"!!\" ou \"high\"/\"low\" no fim) direto no título. O T'Day analisa no dispositivo — sem conta nem rede —, destaca a data entendida e preenche horário, recorrência e prioridade."
+          ]
+        },
+        {
+          "type": "EXAMPLE",
+          "texts": [
+            "dentista terça 15h every weekday !!"
+          ]
+        }
+      ],
+      "searchTitle": "escrever a data",
+      "searchKeywords": "linguagem natural, data, amanha, proxima semana, interpretar, rapido, inteligente, nlp, no dispositivo",
+      "searchBody": "escreva a data no titulo e o t'day agenda-a por si. sem seletores. digite uma data (\"amanha 15h\"), uma repeticao (\"every day\", \"weekly\", \"every weekday\") ou uma prioridade (\"!\", \"!!\" ou \"high\"/\"low\" no fim) direto no titulo. o t'day analisa no dispositivo — sem conta nem rede —, destaca a data entendida e preenche horario, recorrencia e prioridade. dentista terca 15h every weekday !!"
+    },
+    {
+      "id": "calendar-views",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "calendar",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": "calendar",
+        "android": "calendar",
+        "ios": "calendar"
+      },
+      "helpAnchors": [],
+      "title": "Vistas de calendário",
+      "summary": "Veja as suas tarefas agendadas por mês, semana ou dia.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Abra o calendário para ver as tarefas agendadas dispostas por mês, semana ou dia. Deslize ou use as setas para mudar de período; o botão no canto superior direito leva-o de volta a hoje sem alterar a vista."
+          ]
+        }
+      ],
+      "searchTitle": "vistas de calendario",
+      "searchKeywords": "calendario, mes, semana, dia, agenda, vista, datas",
+      "searchBody": "veja as suas tarefas agendadas por mes, semana ou dia. abra o calendario para ver as tarefas agendadas dispostas por mes, semana ou dia. deslize ou use as setas para mudar de periodo; o botao no canto superior direito leva-o de volta a hoje sem alterar a vista."
+    },
+    {
+      "id": "priorities",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "flag",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Prioridades",
+      "summary": "Assinale o que importa com Baixa, Média ou Alta.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Atribua uma prioridade a uma tarefa para indicar a sua importância. A prioridade aparece como um pequeno ponto de destaque na tarefa e ajuda a ordenar o que merece atenção primeiro."
+          ]
+        }
+      ],
+      "searchTitle": "prioridades",
+      "searchKeywords": "prioridade, alta, media, baixa, importante, urgente, marcar",
+      "searchBody": "assinale o que importa com baixa, media ou alta. atribua uma prioridade a uma tarefa para indicar a sua importancia. a prioridade aparece como um pequeno ponto de destaque na tarefa e ajuda a ordenar o que merece atencao primeiro."
+    },
+    {
+      "id": "pin-task",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "pin",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Fixar uma tarefa",
+      "summary": "Mantenha uma tarefa importante no topo da sua lista.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Fixe uma tarefa para a manter no topo do seu feed, acima da ordem normal. Desafixe-a para a deixar voltar ao seu lugar."
+          ]
+        }
+      ],
+      "searchTitle": "fixar uma tarefa",
+      "searchKeywords": "fixar, fixada, prender, topo, importante, manter",
+      "searchBody": "mantenha uma tarefa importante no topo da sua lista. fixe uma tarefa para a manter no topo do seu feed, acima da ordem normal. desafixe-a para a deixar voltar ao seu lugar."
+    },
+    {
+      "id": "swipe-actions",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "pointer",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": null,
+        "android": "todos/today",
+        "ios": "today"
+      },
+      "helpAnchors": [],
+      "title": "Ações de deslize",
+      "summary": "Deslize a linha de uma tarefa para ações rápidas sem a abrir.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Deslize a linha de uma tarefa para revelar ações rápidas — concluí-la ou removê-la — sem sequer a abrir."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Uma tarefa concluída mostra uma notificação para anular durante alguns segundos, por isso um deslize por engano nunca é definitivo."
+          ]
+        }
+      ],
+      "searchTitle": "acoes de deslize",
+      "searchKeywords": "deslizar, gesto, arrastar, concluir, eliminar, rapido, linha",
+      "searchBody": "deslize a linha de uma tarefa para acoes rapidas sem a abrir. deslize a linha de uma tarefa para revelar acoes rapidas — conclui-la ou remove-la — sem sequer a abrir. uma tarefa concluida mostra uma notificacao para anular durante alguns segundos, por isso um deslize por engano nunca e definitivo."
+    },
+    {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.8",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Copiar detalhes da tarefa",
+      "summary": "Copie o título, as notas, a data de vencimento e a prioridade de uma tarefa como texto.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Deslize uma tarefa e toque em Copiar — ou use o botão Copiar no desktop — para copiar seu título, notas, data de vencimento e prioridade como texto simples, pronto para colar em qualquer lugar."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Útil para colar uma tarefa em uma mensagem, e-mail ou outro aplicativo sem precisar redigitá-la."
+          ]
+        }
+      ],
+      "searchTitle": "copiar detalhes da tarefa",
+      "searchKeywords": "copiar, area de transferencia, compartilhar, texto, deslizar",
+      "searchBody": "copie o titulo, as notas, a data de vencimento e a prioridade de uma tarefa como texto. deslize uma tarefa e toque em copiar — ou use o botao copiar no desktop — para copiar seu titulo, notas, data de vencimento e prioridade como texto simples, pronto para colar em qualquer lugar. util para colar uma tarefa em uma mensagem, e-mail ou outro aplicativo sem precisar redigita-la."
+    },
+    {
+      "id": "long-press-actions",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "hand",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Premir uma tarefa sem largar",
+      "summary": "Prima sem largar para mais opções e para começar a reordenar.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Prima sem largar uma tarefa para abrir as suas opções ou para a levantar e arrastar para uma nova posição na lista."
+          ]
+        }
+      ],
+      "searchTitle": "premir uma tarefa sem largar",
+      "searchKeywords": "premir sem largar, manter premido, menu de contexto, opcoes, reordenar, arrastar",
+      "searchBody": "prima sem largar para mais opcoes e para comecar a reordenar. prima sem largar uma tarefa para abrir as suas opcoes ou para a levantar e arrastar para uma nova posicao na lista."
+    },
+    {
+      "id": "drag-reorder",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Reordenar arrastando",
+      "summary": "Arraste as tarefas para a ordem que quiser.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "As suas listas mantêm a ordem que lhes dá. Arraste uma tarefa para cima ou para baixo para organizar o seu dia tal como pensa nele."
+          ]
+        }
+      ],
+      "searchTitle": "reordenar arrastando",
+      "searchKeywords": "arrastar, reordenar, mover, ordenar, ordem, organizar",
+      "searchBody": "arraste as tarefas para a ordem que quiser. as suas listas mantem a ordem que lhes da. arraste uma tarefa para cima ou para baixo para organizar o seu dia tal como pensa nele."
+    },
+    {
+      "id": "swipe-sheet-away",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.23",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Arraste a folha para baixo para fechar",
+      "summary": "Puxe a folha de nova tarefa para baixo para fechá-la.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "A pequena barra no topo da folha de nova tarefa indica que o cartão pode ser puxado para baixo. Arraste e ele acompanha o seu dedo; solte depois de cerca de um quarto do caminho e ele fecha, exatamente como se você tocasse na área escurecida atrás dele. Um impulso rápido também conta — o que vale é para onde você estava indo, não onde soltou — e um puxo do qual você desiste volta ao lugar."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Se o conteúdo de uma folha rola, arraste-a pelo topo: o meio do cartão pertence à lista."
+          ]
+        }
+      ],
+      "searchTitle": "arraste a folha para baixo para fechar",
+      "searchKeywords": "deslizar, arrastar, puxar, fechar, descartar, folha, cartao, alca, gesto, para baixo",
+      "searchBody": "puxe a folha de nova tarefa para baixo para fecha-la. a pequena barra no topo da folha de nova tarefa indica que o cartao pode ser puxado para baixo. arraste e ele acompanha o seu dedo; solte depois de cerca de um quarto do caminho e ele fecha, exatamente como se voce tocasse na area escurecida atras dele. um impulso rapido tambem conta — o que vale e para onde voce estava indo, nao onde soltou — e um puxo do qual voce desiste volta ao lugar. se o conteudo de uma folha rola, arraste-a pelo topo: o meio do cartao pertence a lista."
+    },
+    {
+      "id": "floaters-vs-todos",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Flutuantes vs tarefas agendadas",
+      "summary": "As tarefas sem data ficam em Qualquer altura; as tarefas com data ficam no feed Agendado.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Uma tarefa com data de conclusão aparece no feed Agendado e no calendário. Um Flutuante não tem data — espera calmamente no seu feed Qualquer altura até estar pronto. Use os Flutuantes para trabalho de “um dia destes” que não deve atravancar o hoje."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Os Flutuantes nunca aparecem no calendário — esse espaço é apenas para trabalho com data."
+          ]
+        }
+      ],
+      "searchTitle": "flutuantes vs tarefas agendadas",
+      "searchKeywords": "flutuante, qualquer altura, nao agendada, sem data, tarefa, agendada, diferenca",
+      "searchBody": "as tarefas sem data ficam em qualquer altura; as tarefas com data ficam no feed agendado. uma tarefa com data de conclusao aparece no feed agendado e no calendario. um flutuante nao tem data — espera calmamente no seu feed qualquer altura ate estar pronto. use os flutuantes para trabalho de “um dia destes” que nao deve atravancar o hoje. os flutuantes nunca aparecem no calendario — esse espaco e apenas para trabalho com data."
+    },
+    {
+      "id": "resting-floaters",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Flutuantes em repouso",
+      "summary": "Tarefas Anytime intocadas desaparecem e descansam, mantendo a lista calma.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tarefas Anytime que você não toca há um mês desbotam suavemente e, após três meses, se juntam num calmo grupo \"Em repouso\" no fim. Nada é apagado: elas só deixam de pedir atenção."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "É apenas uma dica visual; um toque acorda um flutuante na hora."
+          ]
+        }
+      ],
+      "searchTitle": "flutuantes em repouso",
+      "searchKeywords": "repouso, flutuante, anytime, desbotar, envelhecer, inativo, antigo, calma",
+      "searchBody": "tarefas anytime intocadas desaparecem e descansam, mantendo a lista calma. tarefas anytime que voce nao toca ha um mes desbotam suavemente e, apos tres meses, se juntam num calmo grupo \"em repouso\" no fim. nada e apagado: elas so deixam de pedir atencao. e apenas uma dica visual; um toque acorda um flutuante na hora."
+    },
+    {
+      "id": "promote-and-float",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Promover e deixar flutuar",
+      "summary": "Agende um flutuante como tarefa real, ou deixe flutuar uma tarefa parada.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quando um flutuante estiver pronto para virar trabalho de verdade, use a ação Agendar: escolha um horário e ele passa para o feed Agendado como tarefa com data. O caminho inverso também funciona — uma tarefa atrasada que você vive adiando pode flutuar em silêncio: rebaixe-a e ela volta para Qualquer momento sem data, mantendo título, notas e prioridade."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tarefas recorrentes não podem flutuar — encerre a série primeiro se quiser deixá-la sem data."
+          ]
+        }
+      ],
+      "searchTitle": "promover e deixar flutuar",
+      "searchKeywords": "promover, agendar flutuante, rebaixar, deixar flutuar, converter, a qualquer momento, mover, atrasada",
+      "searchBody": "agende um flutuante como tarefa real, ou deixe flutuar uma tarefa parada. quando um flutuante estiver pronto para virar trabalho de verdade, use a acao agendar: escolha um horario e ele passa para o feed agendado como tarefa com data. o caminho inverso tambem funciona — uma tarefa atrasada que voce vive adiando pode flutuar em silencio: rebaixe-a e ela volta para qualquer momento sem data, mantendo titulo, notas e prioridade. tarefas recorrentes nao podem flutuar — encerre a serie primeiro se quiser deixa-la sem data."
+    },
+    {
+      "id": "quick-defer",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Adiamento rápido",
+      "summary": "Um toque move uma tarefa para mais tarde hoje, hoje à noite, amanhã ou a próxima semana.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quando uma tarefa precisa se mover, mas não para longe, pule o seletor de data: a ação Adiar oferece Mais tarde hoje (+3 horas), Hoje à noite (19:00), Amanhã de manhã (09:00) e Na próxima semana (segunda 09:00) com um toque. É a mesma mudança que a folha de edição faria — só que mais rápida."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tarefas recorrentes são adiadas por ocorrência na folha de edição, então o menu de um toque não atrapalha."
+          ]
+        }
+      ],
+      "searchTitle": "adiamento rapido",
+      "searchKeywords": "adiar, postergar, mais tarde, hoje a noite, amanha, proxima semana, reagendar",
+      "searchBody": "um toque move uma tarefa para mais tarde hoje, hoje a noite, amanha ou a proxima semana. quando uma tarefa precisa se mover, mas nao para longe, pule o seletor de data: a acao adiar oferece mais tarde hoje (+3 horas), hoje a noite (19:00), amanha de manha (09:00) e na proxima semana (segunda 09:00) com um toque. e a mesma mudanca que a folha de edicao faria — so que mais rapida. tarefas recorrentes sao adiadas por ocorrencia na folha de edicao, entao o menu de um toque nao atrapalha."
+    },
+    {
+      "id": "day-done",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Dia concluído",
+      "summary": "Termine tudo de hoje e a tela Hoje celebra em silêncio.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quando todas as tarefas agendadas para hoje estão concluídas — e não apenas ausentes — a tela Hoje troca a mensagem \"Sem tarefas\" por um estado tranquilo: um duplo check suave, as palavras \"Tudo feito por hoje\" e a data. Sem sequências, sem pontuações; apenas a pequena recompensa de um dia realmente terminado."
+          ]
+        }
+      ],
+      "searchTitle": "dia concluido",
+      "searchKeywords": "dia concluido, tudo feito, terminado, tudo completado, hoje vazio",
+      "searchBody": "termine tudo de hoje e a tela hoje celebra em silencio. quando todas as tarefas agendadas para hoje estao concluidas — e nao apenas ausentes — a tela hoje troca a mensagem \"sem tarefas\" por um estado tranquilo: um duplo check suave, as palavras \"tudo feito por hoje\" e a data. sem sequencias, sem pontuacoes; apenas a pequena recompensa de um dia realmente terminado."
+    },
+    {
+      "id": "floater-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "list",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Listas de Flutuantes",
+      "summary": "Agrupe as suas tarefas de Qualquer altura em listas próprias.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Organize os Flutuantes em listas separadas — compras, mala, ideias — cada uma com o seu nome e cor, e o seu próprio histórico de concluídas."
+          ]
+        }
+      ],
+      "searchTitle": "listas de flutuantes",
+      "searchKeywords": "lista de flutuantes, qualquer altura, agrupar, lista, categoria, compras, mala",
+      "searchBody": "agrupe as suas tarefas de qualquer altura em listas proprias. organize os flutuantes em listas separadas — compras, mala, ideias — cada uma com o seu nome e cor, e o seu proprio historico de concluidas."
+    },
+    {
+      "id": "reusable-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Listas reutilizáveis",
+      "summary": "Reinicie uma lista para usá-la de novo: mala, tarefas, compras.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Marque uma lista Anytime como reutilizável e um Reiniciar aparece. Um toque desmarca todos os itens para refazer a mesma lista, sem recriá-la."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Abra uma lista flutuante e ative \"Reutilizável\" nas configurações.",
+            "Vá marcando os itens como de costume.",
+            "Quando precisar de novo, toque em Reiniciar para desmarcar tudo."
+          ]
+        }
+      ],
+      "searchTitle": "listas reutilizaveis",
+      "searchKeywords": "reutilizavel, reiniciar, lista, flutuante, repetir, modelo",
+      "searchBody": "reinicie uma lista para usa-la de novo: mala, tarefas, compras. marque uma lista anytime como reutilizavel e um reiniciar aparece. um toque desmarca todos os itens para refazer a mesma lista, sem recria-la. abra uma lista flutuante e ative \"reutilizavel\" nas configuracoes. va marcando os itens como de costume. quando precisar de novo, toque em reiniciar para desmarcar tudo."
+    },
+    {
+      "id": "scheduled-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "list-todo",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Listas para tarefas agendadas",
+      "summary": "Organize as tarefas com data em listas com nome e cor.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Atribua uma lista às tarefas agendadas para manter o trabalho relacionado junto. As listas têm nome e cor e podem ser filtradas."
+          ]
+        }
+      ],
+      "searchTitle": "listas para tarefas agendadas",
+      "searchKeywords": "lista, projeto, agrupar, cor, agendada, categoria",
+      "searchBody": "organize as tarefas com data em listas com nome e cor. atribua uma lista as tarefas agendadas para manter o trabalho relacionado junto. as listas tem nome e cor e podem ser filtradas."
+    },
+    {
+      "id": "list-icons",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.28",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Ícones de lista automáticos",
+      "summary": "Uma lista sem ícone próprio ganha um que combina com o seu nome.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Chame uma lista de Groceries e ela usa um carrinho de compras; Gym recebe um haltere e Work uma pasta. O T'Day só adivinha quando você não escolheu um ícone, e mantém o ícone padrão sempre que o nome não é claro o bastante. Por enquanto os nomes são reconhecidos em inglês."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Escolha um ícone nas definições da lista quando quiser: depois de escolhido ele é mantido e nunca é substituído por um palpite."
+          ]
+        }
+      ],
+      "searchTitle": "icones de lista automaticos",
+      "searchKeywords": "icone de lista, automatico, sugerido, glifo, nome, compras, ginasio, trabalho",
+      "searchBody": "uma lista sem icone proprio ganha um que combina com o seu nome. chame uma lista de groceries e ela usa um carrinho de compras; gym recebe um haltere e work uma pasta. o t'day so adivinha quando voce nao escolheu um icone, e mantem o icone padrao sempre que o nome nao e claro o bastante. por enquanto os nomes sao reconhecidos em ingles. escolha um icone nas definicoes da lista quando quiser: depois de escolhido ele e mantido e nunca e substituido por um palpite."
+    },
+    {
+      "id": "completed-history",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Histórico de concluídas",
+      "summary": "Tudo o que terminou, guardado para poder revisitar.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "As tarefas terminadas não são descartadas — passam para o seu histórico de concluídas, agrupadas por dia, para poder ver o que realmente fez."
+          ]
+        }
+      ],
+      "searchTitle": "historico de concluidas",
+      "searchKeywords": "concluidas, feito, historico, terminadas, arquivo, passado",
+      "searchBody": "tudo o que terminou, guardado para poder revisitar. as tarefas terminadas nao sao descartadas — passam para o seu historico de concluidas, agrupadas por dia, para poder ver o que realmente fez."
+    },
+    {
+      "id": "overdue-view",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": "overdue",
+        "android": "todos/overdue",
+        "ios": "overdueTodos"
+      },
+      "helpAnchors": [],
+      "title": "Em atraso",
+      "summary": "Um espaço dedicado às tarefas cujo prazo já passou.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "As tarefas cuja hora de conclusão já passou juntam-se na vista Em atraso para que nada escape em silêncio. Reagende-as quando estiver pronto."
+          ]
+        }
+      ],
+      "searchTitle": "em atraso",
+      "searchKeywords": "em atraso, atrasada, prazo passado, falhada, transitada, acumuladas",
+      "searchBody": "um espaco dedicado as tarefas cujo prazo ja passou. as tarefas cuja hora de conclusao ja passou juntam-se na vista em atraso para que nada escape em silencio. reagende-as quando estiver pronto."
+    },
+    {
+      "id": "morning-sweep",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "hand",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": {
+        "web": "overdue",
+        "android": "morning-sweep",
+        "ios": "morning-sweep"
+      },
+      "helpAnchors": [],
+      "title": "Varredura matinal",
+      "summary": "Faça a triagem das tarefas acumuladas um cartão de cada vez.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Ficar para trás deixa de doer: o botão Varrer na tela de Atrasadas percorre suas tarefas acumuladas um cartão de cada vez — Hoje, Amanhã, Escolher uma data, Tornar flutuante ou Deixar ir. Com pressa? Varrer tudo para hoje move tudo de uma vez, com um único desfazer."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tarefas recorrentes ficam fora da varredura; suas ocorrências são reagendadas pela folha de edição para manter a série intacta."
+          ]
+        }
+      ],
+      "searchTitle": "varredura matinal",
+      "searchKeywords": "varredura, atrasadas, triagem, acumuladas, colocar em dia, pendencias, manha",
+      "searchBody": "faca a triagem das tarefas acumuladas um cartao de cada vez. ficar para tras deixa de doer: o botao varrer na tela de atrasadas percorre suas tarefas acumuladas um cartao de cada vez — hoje, amanha, escolher uma data, tornar flutuante ou deixar ir. com pressa? varrer tudo para hoje move tudo de uma vez, com um unico desfazer. tarefas recorrentes ficam fora da varredura; suas ocorrencias sao reagendadas pela folha de edicao para manter a serie intacta."
+    },
+    {
+      "id": "bulk-actions",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "circle-check-big",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.4",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Ações em massa",
+      "summary": "Selecione várias tarefas de uma vez e trate todas juntas.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Toque em Selecionar no cabeçalho de uma lista de tarefas para entrar no modo de seleção. Escolha tarefas uma a uma ou toque em Selecionar tudo e aplique uma única ação ao conjunto inteiro: marcá-las como concluídas, mudar a prioridade, movê-las para outra lista ou excluí-las."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Abra uma lista de tarefas e toque em Selecionar no cabeçalho.",
+            "Toque nas tarefas para escolhê-las ou use Selecionar tudo para as que estão na tela.",
+            "Escolha Concluir, Prioridade, Mover ou Excluir na barra inferior."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Excluir pede que você confirme o número exato e ainda deixa um aviso para desfazer. Tarefas repetidas ficam totalmente de fora das ações em massa, para que uma série inteira nunca mude sem querer — abra uma de cada vez para concluir, mover ou excluir."
+          ]
+        }
+      ],
+      "searchTitle": "acoes em massa",
+      "searchKeywords": "massa, selecao multipla, selecionar tudo, lote, varias, concluir, excluir, prioridade, mover, selecao",
+      "searchBody": "selecione varias tarefas de uma vez e trate todas juntas. toque em selecionar no cabecalho de uma lista de tarefas para entrar no modo de selecao. escolha tarefas uma a uma ou toque em selecionar tudo e aplique uma unica acao ao conjunto inteiro: marca-las como concluidas, mudar a prioridade, move-las para outra lista ou exclui-las. abra uma lista de tarefas e toque em selecionar no cabecalho. toque nas tarefas para escolhe-las ou use selecionar tudo para as que estao na tela. escolha concluir, prioridade, mover ou excluir na barra inferior. excluir pede que voce confirme o numero exato e ainda deixa um aviso para desfazer. tarefas repetidas ficam totalmente de fora das acoes em massa, para que uma serie inteira nunca mude sem querer — abra uma de cada vez para concluir, mover ou excluir."
+    },
+    {
+      "id": "search-tasks",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "search",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Pesquisar as suas tarefas",
+      "summary": "Encontre qualquer tarefa por título, nota ou nome da lista.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Use o campo de pesquisa para filtrar as suas tarefas de imediato por título, descrição ou nome da lista — sem precisar de percorrer tudo."
+          ]
+        }
+      ],
+      "searchTitle": "pesquisar as suas tarefas",
+      "searchKeywords": "pesquisar, encontrar, filtrar, procurar, consulta",
+      "searchBody": "encontre qualquer tarefa por titulo, nota ou nome da lista. use o campo de pesquisa para filtrar as suas tarefas de imediato por titulo, descricao ou nome da lista — sem precisar de percorrer tudo."
+    },
+    {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Notificações",
+      "summary": "Um único interruptor decide se o T'Day pode interromper você.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "As Configurações têm um único interruptor de Notificações, e tudo o que chega até você passa por ele — os lembretes de tarefas e o resumo do dia seguinte. Desligá-lo esvazia a fila em vez de silenciá-la, então nada chega atrasado quando você liga de novo. A permissão do sistema também é necessária: enquanto as notificações estiverem bloqueadas para o T'Day no seu aparelho, o interruptor continua desligado e oferece abrir as configurações do sistema."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "As duas metades precisam estar ligadas. Sem a permissão do sistema, o interruptor aparece desligado, não importa como você o deixou aqui."
+          ]
+        }
+      ],
+      "searchTitle": "notificacoes",
+      "searchKeywords": "notificacoes, permissao, interruptor, permitir, silenciar, lembrete, resumo, configuracoes do sistema",
+      "searchBody": "um unico interruptor decide se o t'day pode interromper voce. as configuracoes tem um unico interruptor de notificacoes, e tudo o que chega ate voce passa por ele — os lembretes de tarefas e o resumo do dia seguinte. desliga-lo esvazia a fila em vez de silencia-la, entao nada chega atrasado quando voce liga de novo. a permissao do sistema tambem e necessaria: enquanto as notificacoes estiverem bloqueadas para o t'day no seu aparelho, o interruptor continua desligado e oferece abrir as configuracoes do sistema. as duas metades precisam estar ligadas. sem a permissao do sistema, o interruptor aparece desligado, nao importa como voce o deixou aqui."
+    },
+    {
+      "id": "recurrence-presets",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "recurrence-picker"
+      ],
+      "title": "Tarefas repetidas",
+      "summary": "Faça uma tarefa repetir-se diariamente, semanalmente e mais.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Defina uma tarefa para se repetir e ela volta na sua própria cadência. Escolha entre as predefinições — todos os dias, dias úteis, semana ou mês — e concluir uma ocorrência deixa o resto da série intacto."
+          ]
+        },
+        {
+          "type": "EXAMPLE",
+          "texts": [
+            "Regar as plantas · todas as semanas"
+          ]
+        }
+      ],
+      "searchTitle": "tarefas repetidas",
+      "searchKeywords": "repetir, recorrente, recorrencia, todos os dias, semanal, mensal, rrule, agenda",
+      "searchBody": "faca uma tarefa repetir-se diariamente, semanalmente e mais. defina uma tarefa para se repetir e ela volta na sua propria cadencia. escolha entre as predefinicoes — todos os dias, dias uteis, semana ou mes — e concluir uma ocorrencia deixa o resto da serie intacto. regar as plantas · todas as semanas"
+    },
+    {
+      "id": "repeat-suggestions",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Sugestões de repetição",
+      "summary": "O T'Day nota tarefas concluídas num ritmo e sugere repeti-las.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quando você conclui a mesma tarefa num ritmo constante — regar as plantas toda semana, pagar o aluguel todo mês — o T'Day percebe e oferece um chip de um toque para repeti-la. Ele lê apenas seu histórico concluído no dispositivo; nada sai dele."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Não tem interesse? Toque no ✕ e esse título não perguntará de novo."
+          ]
+        }
+      ],
+      "searchTitle": "sugestoes de repeticao",
+      "searchKeywords": "repetir, sugestao, recorrente, ritmo, habito, padrao, automatico",
+      "searchBody": "o t'day nota tarefas concluidas num ritmo e sugere repeti-las. quando voce conclui a mesma tarefa num ritmo constante — regar as plantas toda semana, pagar o aluguel todo mes — o t'day percebe e oferece um chip de um toque para repeti-la. ele le apenas seu historico concluido no dispositivo; nada sai dele. nao tem interesse? toque no ✕ e esse titulo nao perguntara de novo."
+    },
+    {
+      "id": "reminders",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Lembretes",
+      "summary": "Receba uma notificação antes de uma tarefa vencer.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Adicione um lembrete a uma tarefa agendada e o seu dispositivo notifica-o à hora certa. Os lembretes são agendados no seu dispositivo, por isso funcionam mesmo em Modo local."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "As opções de antecedência do lembrete variam ligeiramente por tarefa — escolha a que lhe dá aviso suficiente."
+          ]
+        }
+      ],
+      "searchTitle": "lembretes",
+      "searchKeywords": "lembrete, notificacao, alerta, alarme, avisar, antes",
+      "searchBody": "receba uma notificacao antes de uma tarefa vencer. adicione um lembrete a uma tarefa agendada e o seu dispositivo notifica-o a hora certa. os lembretes sao agendados no seu dispositivo, por isso funcionam mesmo em modo local. as opcoes de antecedencia do lembrete variam ligeiramente por tarefa — escolha a que lhe da aviso suficiente."
+    },
+    {
+      "id": "reminder-snooze",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Adiar um lembrete",
+      "summary": "As notificações de lembrete trazem as ações Adiar 1 h e Hoje à noite.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quando um lembrete chega em má hora, não é preciso abrir o app: Adiar 1 h entrega o mesmo lembrete uma hora depois, e Hoje à noite move a tarefa para as 19:00 de hoje. Hoje à noite funciona para tarefas avulsas — ocorrências recorrentes são reagendadas no app para manter a série intacta."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Adiar só atrasa a notificação; a tarefa mantém o horário original até você movê-la."
+          ]
+        }
+      ],
+      "searchTitle": "adiar um lembrete",
+      "searchKeywords": "adiar, lembrete, notificacao, mais tarde, hoje a noite, soneca",
+      "searchBody": "as notificacoes de lembrete trazem as acoes adiar 1 h e hoje a noite. quando um lembrete chega em ma hora, nao e preciso abrir o app: adiar 1 h entrega o mesmo lembrete uma hora depois, e hoje a noite move a tarefa para as 19:00 de hoje. hoje a noite funciona para tarefas avulsas — ocorrencias recorrentes sao reagendadas no app para manter a serie intacta. adiar so atrasa a notificacao; a tarefa mantem o horario original ate voce move-la."
+    },
+    {
+      "id": "quiet-hours",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-notifications"
+      ],
+      "title": "Horas de silêncio",
+      "summary": "Segure os lembretes à noite para nada tocar enquanto você dorme.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Defina uma janela — por exemplo 22:00 às 07:00 — e qualquer lembrete que tocaria dentro dela fica retido até o fim. Só no dispositivo; os lembretes locais esperam a manhã."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "A janela pode cruzar a meia-noite (22:00 → 07:00); o cálculo cuida disso."
+          ]
+        }
+      ],
+      "searchTitle": "horas de silencio",
+      "searchKeywords": "silencio, horas, nao perturbe, noite, sono, lembretes, horario",
+      "searchBody": "segure os lembretes a noite para nada tocar enquanto voce dorme. defina uma janela — por exemplo 22:00 as 07:00 — e qualquer lembrete que tocaria dentro dela fica retido ate o fim. so no dispositivo; os lembretes locais esperam a manha. a janela pode cruzar a meia-noite (22:00 → 07:00); o calculo cuida disso."
+    },
+    {
+      "id": "day-ahead",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell-ring",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Resumo do dia",
+      "summary": "Uma notificação matinal discreta com os números de hoje.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Ative nos Ajustes e escolha um horário: toda manhã uma notificação mostra como está o dia — \"4 tarefas hoje, 2 acumuladas\" — e abre o Hoje, ou vai direto para a Varredura matinal quando há tarefas acumuladas. Totalmente no dispositivo: nada sai do seu telefone."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "O resumo fica em silêncio nos dias sem tarefas — sem notícias, boas notícias."
+          ]
+        }
+      ],
+      "searchTitle": "resumo do dia",
+      "searchKeywords": "resumo, dia pela frente, manha, notificacao diaria, visao geral",
+      "searchBody": "uma notificacao matinal discreta com os numeros de hoje. ative nos ajustes e escolha um horario: toda manha uma notificacao mostra como esta o dia — \"4 tarefas hoje, 2 acumuladas\" — e abre o hoje, ou vai direto para a varredura matinal quando ha tarefas acumuladas. totalmente no dispositivo: nada sai do seu telefone. o resumo fica em silencio nos dias sem tarefas — sem noticias, boas noticias."
+    },
+    {
+      "id": "home-widget",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Widget no ecrã principal",
+      "summary": "Veja as tarefas de hoje sem abrir a aplicação.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Adicione o widget do T'Day ao seu ecrã principal para dar uma olhada às tarefas de hoje. Tocar no widget abre a aplicação no sítio certo."
+          ]
+        }
+      ],
+      "searchTitle": "widget no ecra principal",
+      "searchKeywords": "widget, ecra principal, relance, hoje, ecra de bloqueio",
+      "searchBody": "veja as tarefas de hoje sem abrir a aplicacao. adicione o widget do t'day ao seu ecra principal para dar uma olhada as tarefas de hoje. tocar no widget abre a aplicacao no sitio certo."
+    },
+    {
+      "id": "widget-list-selection",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "list-todo",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Escolha uma lista para o seu widget",
+      "summary": "Faça um widget apontar para uma lista específica em vez de todo o feed.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Mantenha premido um widget do T'Day e escolha Editar Widget para definir exatamente que lista ele mostra — qualquer uma das suas listas agendadas ou listas de flutuantes. Uma lista agendada mostra horas de vencimento e assinala o que está atrasado; uma lista de flutuantes mostra uma lista aberta sem horas de vencimento. Se não escolher nada, o widget continua a mostrar o feed completo de Hoje ou de Flutuantes."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Adicione vários widgets, cada um apontando para uma lista diferente, para os ver todos ao mesmo tempo no seu ecrã principal."
+          ]
+        }
+      ],
+      "searchTitle": "escolha uma lista para o seu widget",
+      "searchKeywords": "widget, lista, configurar, editar widget, por lista, ecra principal, ios",
+      "searchBody": "faca um widget apontar para uma lista especifica em vez de todo o feed. mantenha premido um widget do t'day e escolha editar widget para definir exatamente que lista ele mostra — qualquer uma das suas listas agendadas ou listas de flutuantes. uma lista agendada mostra horas de vencimento e assinala o que esta atrasado; uma lista de flutuantes mostra uma lista aberta sem horas de vencimento. se nao escolher nada, o widget continua a mostrar o feed completo de hoje ou de flutuantes. adicione varios widgets, cada um apontando para uma lista diferente, para os ver todos ao mesmo tempo no seu ecra principal."
+    },
+    {
+      "id": "list-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.45",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Widget de lista",
+      "summary": "Um terceiro widget, para uma vista integrada ou a lista que escolher.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Ao lado de Hoje e Flutuantes há um widget de lista. Coloque-o e ele pergunta o que mostrar — as vistas integradas Agendadas e Atrasadas, ou qualquer lista agendada ou de tarefas flutuantes. A partir daí mostra só essa escolha, e o seu + adiciona uma tarefa: dentro da lista quando escolheu uma. Coloque outro para outra vista ou lista; cada um mantém a sua."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Para trocar um widget de lista para outra lista, toque e segure nele e escolha Editar (Editar widget no iPhone)."
+          ]
+        }
+      ],
+      "searchTitle": "widget de lista",
+      "searchKeywords": "widget, tela inicial, lista, configurar, seletor, flutuante, agendada, adicionar",
+      "searchBody": "um terceiro widget, para uma vista integrada ou a lista que escolher. ao lado de hoje e flutuantes ha um widget de lista. coloque-o e ele pergunta o que mostrar — as vistas integradas agendadas e atrasadas, ou qualquer lista agendada ou de tarefas flutuantes. a partir dai mostra so essa escolha, e o seu + adiciona uma tarefa: dentro da lista quando escolheu uma. coloque outro para outra vista ou lista; cada um mantem a sua. para trocar um widget de lista para outra lista, toque e segure nele e escolha editar (editar widget no iphone)."
+    },
+    {
+      "id": "widget-quick-add",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "square-plus",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Adição rápida pelo widget",
+      "summary": "Comece uma nova tarefa diretamente a partir do widget.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "O widget tem um botão de criar, por isso pode registar uma tarefa a partir do ecrã principal sem abrir primeiro a aplicação — e funciona também em Modo local."
+          ]
+        }
+      ],
+      "searchTitle": "adicao rapida pelo widget",
+      "searchKeywords": "widget, adicao rapida, criar, atalho, ecra principal",
+      "searchBody": "comece uma nova tarefa diretamente a partir do widget. o widget tem um botao de criar, por isso pode registar uma tarefa a partir do ecra principal sem abrir primeiro a aplicacao — e funciona tambem em modo local."
+    },
+    {
+      "id": "interactive-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "check-check",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Concluir a partir do widget",
+      "summary": "Marque tarefas diretamente no widget do ecrã principal.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Os widgets de Hoje e Flutuantes agora respondem ao toque: toque no anel no início de qualquer linha para concluir essa tarefa sem abrir a aplicação. A linha desaparece de imediato e a conclusão sincroniza como qualquer outra — os toques feitos offline ficam em fila e aplicam-se assim que voltar a estar online."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tocou sem querer? Abra o histórico de concluídas na aplicação e restaure a tarefa a partir daí."
+          ]
+        }
+      ],
+      "searchTitle": "concluir a partir do widget",
+      "searchKeywords": "widget, concluir, marcar, ecra principal, interativo, toque",
+      "searchBody": "marque tarefas diretamente no widget do ecra principal. os widgets de hoje e flutuantes agora respondem ao toque: toque no anel no inicio de qualquer linha para concluir essa tarefa sem abrir a aplicacao. a linha desaparece de imediato e a conclusao sincroniza como qualquer outra — os toques feitos offline ficam em fila e aplicam-se assim que voltar a estar online. tocou sem querer? abra o historico de concluidas na aplicacao e restaure a tarefa a partir dai."
+    },
+    {
+      "id": "today-widget-progress",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "circle-check-big",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.44",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "O widget Hoje num relance",
+      "summary": "Veja quanto do dia já fez, o que está atrasado e o que vem a seguir.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "O widget Hoje começa com a data e um anel de progresso: quantas das tarefas de hoje estão concluídas, do total. O que está atrasado fica numa seção própria abaixo das tarefas de hoje, com o dia em que vencia. Quando não há nada para hoje, o widget mostra o que vem no próximo dia com tarefas. Ao marcar uma tarefa, ela fica marcada e riscada por um instante antes de sair."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "O anel só conta as tarefas de hoje. Concluir algo de outro dia não o preenche."
+          ]
+        }
+      ],
+      "searchTitle": "o widget hoje num relance",
+      "searchKeywords": "widget, hoje, progresso, anel, concluida, atrasada, amanha, data, tela inicial",
+      "searchBody": "veja quanto do dia ja fez, o que esta atrasado e o que vem a seguir. o widget hoje comeca com a data e um anel de progresso: quantas das tarefas de hoje estao concluidas, do total. o que esta atrasado fica numa secao propria abaixo das tarefas de hoje, com o dia em que vencia. quando nao ha nada para hoje, o widget mostra o que vem no proximo dia com tarefas. ao marcar uma tarefa, ela fica marcada e riscada por um instante antes de sair. o anel so conta as tarefas de hoje. concluir algo de outro dia nao o preenche."
+    },
+    {
+      "id": "share-into-tday",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "share-2",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Partilhar para o T'Day",
+      "summary": "Envie texto de qualquer aplicação diretamente para uma nova tarefa.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Encontrou algo noutra aplicação? Abra a folha de partilha do sistema e escolha o T'Day. O texto partilhado entra num formulário de nova tarefa — ao partilhar uma página, o título torna-se o nome da tarefa e a ligação fica nas notas. No Android e na aplicação web o formulário abre no momento; no iOS a captura é guardada de imediato e o formulário pré-preenchido aparece na próxima vez que abrir a aplicação."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Partilhe um texto com uma data lá dentro e o analisador define o prazo por si."
+          ]
+        }
+      ],
+      "searchTitle": "partilhar para o t'day",
+      "searchKeywords": "partilhar, folha de partilha, enviar para, capturar, importar, de outra aplicacao",
+      "searchBody": "envie texto de qualquer aplicacao diretamente para uma nova tarefa. encontrou algo noutra aplicacao? abra a folha de partilha do sistema e escolha o t'day. o texto partilhado entra num formulario de nova tarefa — ao partilhar uma pagina, o titulo torna-se o nome da tarefa e a ligacao fica nas notas. no android e na aplicacao web o formulario abre no momento; no ios a captura e guardada de imediato e o formulario pre-preenchido aparece na proxima vez que abrir a aplicacao. partilhe um texto com uma data la dentro e o analisador define o prazo por si."
+    },
+    {
+      "id": "carplay",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "car",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "O T'Day no CarPlay",
+      "summary": "Veja e registe tarefas em segurança enquanto conduz.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "No CarPlay, o T'Day mostra uma lista focada e fácil de ver, feita para o carro, para que possa ver o que vem a seguir ou adicionar uma tarefa por voz sem pegar no telemóvel."
+          ]
+        }
+      ],
+      "searchTitle": "o t'day no carplay",
+      "searchKeywords": "carplay, carro, conducao, voz, apple, maos livres",
+      "searchBody": "veja e registe tarefas em seguranca enquanto conduz. no carplay, o t'day mostra uma lista focada e facil de ver, feita para o carro, para que possa ver o que vem a seguir ou adicionar uma tarefa por voz sem pegar no telemovel."
+    },
+    {
+      "id": "focus-filters",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Filtros de foco",
+      "summary": "Deixe um Foco do iOS decidir que listas aparecem no seu feed de Hoje.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "O T'Day integra-se com o Foco do iOS. Escolha um Foco como Trabalho ou Pessoal, selecione que listas ele deve mostrar e, enquanto esse Foco estiver ativo, o seu feed de Hoje e o widget do ecrã principal ocultam discretamente tudo o resto. Desative o Foco e todas as tarefas voltam — nada é eliminado."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Abra Definições ▸ Foco no iPhone e escolha um Foco.",
+            "Adicione um Filtro de Foco e escolha o T'Day, depois selecione as suas listas.",
+            "Ative o Foco — Hoje e o widget mostram agora apenas essas listas."
+          ]
+        }
+      ],
+      "searchTitle": "filtros de foco",
+      "searchKeywords": "foco, filtro, ios, trabalho, pessoal, nao incomodar, listas, ocultar, concentrar",
+      "searchBody": "deixe um foco do ios decidir que listas aparecem no seu feed de hoje. o t'day integra-se com o foco do ios. escolha um foco como trabalho ou pessoal, selecione que listas ele deve mostrar e, enquanto esse foco estiver ativo, o seu feed de hoje e o widget do ecra principal ocultam discretamente tudo o resto. desative o foco e todas as tarefas voltam — nada e eliminado. abra definicoes ▸ foco no iphone e escolha um foco. adicione um filtro de foco e escolha o t'day, depois selecione as suas listas. ative o foco — hoje e o widget mostram agora apenas essas listas."
+    },
+    {
+      "id": "apple-watch",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "alarm-clock",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Apple Watch",
+      "summary": "As suas tarefas de Hoje no pulso, espelhadas em direto a partir do seu iPhone.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Instale o T'Day no Apple Watch e as tarefas de hoje seguem consigo no pulso. O Watch espelha a mesma lista de Hoje que o seu iPhone cria — sem início de sessão separado — e uma complicação no mostrador indica quantas tarefas faltam, para que dê uma vista de olhos sem abrir a app. Atualiza-se sempre que o seu iPhone sincroniza."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Abra a app Watch no iPhone e instale o T'Day.",
+            "Adicione a complicação do T'Day ao seu mostrador.",
+            "Dê uma vista de olhos ao número, ou abra a app para ver a lista completa."
+          ]
+        }
+      ],
+      "searchTitle": "apple watch",
+      "searchKeywords": "apple watch, relogio, pulso, complicacao, watchos, hoje, relance, espelhar",
+      "searchBody": "as suas tarefas de hoje no pulso, espelhadas em direto a partir do seu iphone. instale o t'day no apple watch e as tarefas de hoje seguem consigo no pulso. o watch espelha a mesma lista de hoje que o seu iphone cria — sem inicio de sessao separado — e uma complicacao no mostrador indica quantas tarefas faltam, para que de uma vista de olhos sem abrir a app. atualiza-se sempre que o seu iphone sincroniza. abra a app watch no iphone e instale o t'day. adicione a complicacao do t'day ao seu mostrador. de uma vista de olhos ao numero, ou abra a app para ver a lista completa."
+    },
+    {
+      "id": "local-mode",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "wifi-off",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Modo local",
+      "summary": "Use o T'Day totalmente offline, sem servidor nem conta.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "O Modo local mantém tudo no seu dispositivo — sem início de sessão, sem servidor, sem envios. É uma forma de primeira classe de usar o T'Day em privado, e os seus dados locais nunca são enviados para lado nenhum por conta própria. Num navegador vive no armazenamento desse navegador, por isso limpar os cookies e os dados do site limpa também o espaço de trabalho — exporte-o antes se quiser mantê-lo. Se você ativar os relatórios de falhas, apenas um breve relatório técnico é enviado quando algo falha, nunca as suas tarefas ou listas."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "As funcionalidades exclusivas do servidor aparecem aqui com um selo “Modo servidor” para saber o que muda se iniciar sessão."
+          ]
+        }
+      ],
+      "searchTitle": "modo local",
+      "searchKeywords": "modo local, offline, privado, sem conta, sem servidor, no dispositivo",
+      "searchBody": "use o t'day totalmente offline, sem servidor nem conta. o modo local mantem tudo no seu dispositivo — sem inicio de sessao, sem servidor, sem envios. e uma forma de primeira classe de usar o t'day em privado, e os seus dados locais nunca sao enviados para lado nenhum por conta propria. num navegador vive no armazenamento desse navegador, por isso limpar os cookies e os dados do site limpa tambem o espaco de trabalho — exporte-o antes se quiser mante-lo. se voce ativar os relatorios de falhas, apenas um breve relatorio tecnico e enviado quando algo falha, nunca as suas tarefas ou listas. as funcionalidades exclusivas do servidor aparecem aqui com um selo “modo servidor” para saber o que muda se iniciar sessao."
+    },
+    {
+      "id": "server-mode",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "cloud",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Modo servidor",
+      "summary": "Sincronize entre dispositivos através do seu próprio servidor privado.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Inicie sessão no seu servidor autoalojado para sincronizar tarefas entre dispositivos em tempo real. As alterações acontecem de imediato no seu dispositivo e são reproduzidas no servidor, por isso a aplicação mantém-se rápida mesmo com uma ligação instável."
+          ]
+        }
+      ],
+      "searchTitle": "modo servidor",
+      "searchKeywords": "modo servidor, sincronizacao, autoalojado, conta, iniciar sessao, dispositivos, tempo real",
+      "searchBody": "sincronize entre dispositivos atraves do seu proprio servidor privado. inicie sessao no seu servidor autoalojado para sincronizar tarefas entre dispositivos em tempo real. as alteracoes acontecem de imediato no seu dispositivo e sao reproduzidas no servidor, por isso a aplicacao mantem-se rapida mesmo com uma ligacao instavel."
+    },
+    {
+      "id": "offline-sync",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "refresh-cw",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Sincronização offline",
+      "summary": "Continue a trabalhar offline; as alterações são reproduzidas ao reconectar.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Em Modo servidor, as suas alterações são guardadas primeiro localmente e colocadas em fila quando está offline. Assim que reconectar, o T'Day reproduz-nas no servidor por ordem."
+          ]
+        }
+      ],
+      "searchTitle": "sincronizacao offline",
+      "searchKeywords": "offline, sincronizacao, pendente, fila, reproduzir, ligacao, conflito",
+      "searchBody": "continue a trabalhar offline; as alteracoes sao reproduzidas ao reconectar. em modo servidor, as suas alteracoes sao guardadas primeiro localmente e colocadas em fila quando esta offline. assim que reconectar, o t'day reproduz-nas no servidor por ordem."
+    },
+    {
+      "id": "export-your-data",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "download",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Exporte os seus dados",
+      "summary": "Descarregue tudo num ficheiro portátil — e traga-o de volta quando quiser.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Nas Definições pode descarregar toda a sua conta — tarefas, listas, histórico de concluídas e preferências — como um único ficheiro JSON. Importe-o para outro T'Day (um servidor ou um dispositivo em Modo local) e tudo entra como itens novos: a importação adiciona sempre e nunca substitui, por isso não perde nada do que já tem. Num servidor, as descrições são desencriptadas no ficheiro para que continue legível mesmo que mude para um servidor com outra chave."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "O ficheiro é JSON simples e legível — guarde uma cópia como cópia de segurança pessoal."
+          ]
+        }
+      ],
+      "searchTitle": "exporte os seus dados",
+      "searchKeywords": "exportar, importar, descarregar, copia de seguranca, os meus dados, portatil, restaurar, migrar",
+      "searchBody": "descarregue tudo num ficheiro portatil — e traga-o de volta quando quiser. nas definicoes pode descarregar toda a sua conta — tarefas, listas, historico de concluidas e preferencias — como um unico ficheiro json. importe-o para outro t'day (um servidor ou um dispositivo em modo local) e tudo entra como itens novos: a importacao adiciona sempre e nunca substitui, por isso nao perde nada do que ja tem. num servidor, as descricoes sao desencriptadas no ficheiro para que continue legivel mesmo que mude para um servidor com outra chave. o ficheiro e json simples e legivel — guarde uma copia como copia de seguranca pessoal."
+    },
+    {
+      "id": "local-to-server-migration",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "cloud",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Passar deste dispositivo para um servidor",
+      "summary": "Leve as tarefas do dispositivo consigo ao mudar para o Modo servidor.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Começou no Modo local e depois configurou um servidor? Nada é carregado por conta própria. Para mover os seus dados: exporte-os primeiro nas Definições, inicie sessão no seu servidor e importe aí o ficheiro. Tarefas, listas e histórico transferem-se num passo deliberado — escolhe o momento, e os dados no dispositivo ficam intactos até lá."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Depois de importar, guarde o ficheiro exportado até confirmar que tudo chegou — assim também serve de cópia de segurança."
+          ]
+        }
+      ],
+      "searchTitle": "passar deste dispositivo para um servidor",
+      "searchKeywords": "migracao, local para servidor, mover dados, mudar de modo, carregar, iniciar sessao, transferir",
+      "searchBody": "leve as tarefas do dispositivo consigo ao mudar para o modo servidor. comecou no modo local e depois configurou um servidor? nada e carregado por conta propria. para mover os seus dados: exporte-os primeiro nas definicoes, inicie sessao no seu servidor e importe ai o ficheiro. tarefas, listas e historico transferem-se num passo deliberado — escolhe o momento, e os dados no dispositivo ficam intactos ate la. depois de importar, guarde o ficheiro exportado ate confirmar que tudo chegou — assim tambem serve de copia de seguranca."
+    },
+    {
+      "id": "crash-reports",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "activity",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.8.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-privacy"
+      ],
+      "title": "Relatórios de falhas e problemas",
+      "summary": "Desativado por padrão. Quem decide depende da plataforma.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Os relatórios de falhas e problemas são opcionais e vêm desativados por padrão. Quem decide muda conforme a plataforma: na aplicação web, uma única resposta de um administrador cobre todo o servidor — o site, os erros do próprio servidor e todas as pessoas que o usam — e nenhum utilizador individual é questionado. No Android e no iOS, cada pessoa é questionada no fluxo de início de sessão, por isso a resposta é por dispositivo e a pergunta volta a cada início de sessão. Funciona como o Crashlytics: existe para corrigir bugs, não para medir como usa a aplicação. Enquanto tudo funciona normalmente, não há análise de uso, rastreamento de sessões nem monitorização de desempenho no seu dispositivo."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Um relatório contém a versão do app, o modelo do seu dispositivo e a versão do sistema operacional (ou o navegador e a versão), o erro e o ponto do código onde ele ocorreu, algumas etapas rotuladas que antecederam o erro, nomes de telas ou de rotas da API sem nenhum ID, códigos de status e, nos dispositivos móveis, condições aproximadas do dispositivo, como memória livre, nível de bateria e se você estava online. Também inclui a diferença do seu fuso horário (por exemplo, UTC+2) e o idioma, porque as datas são essenciais em um planejador de tarefas."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "O relatório nunca contém: seu nome, nome de usuário, e-mail ou qualquer dado da conta; seu endereço IP ou localização; o endereço do seu servidor; títulos e conteúdos de tarefas, listas ou notas; o conteúdo do seu banco de dados; senhas, cookies ou tokens; capturas de tela ou gravações. As mensagens de erro têm endereços, identificadores e texto entre aspas removidos no seu dispositivo antes do envio, da melhor forma possível. Os relatórios não carregam ID de usuário, por isso não podem ser rastreados até você nem excluídos por pessoa."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Os relatórios só são enviados quando algo falha, e apenas se estiverem ativados para essa plataforma: na aplicação web, depois de um administrador os ativar para o servidor; no telemóvel, depois de dizer sim no dispositivo. Se algo falhar com os relatórios desativados, nada é guardado nem colocado em fila, e ativá-los mais tarde não envia falhas anteriores. O que conta como falha depende da plataforma: o Android relata fechamentos inesperados, travamentos e falhas por falta de memória; o iOS relata fechamentos inesperados, travamentos e o sistema encerrar a aplicação por uso excessivo de memória; a aplicação web relata apenas erros inesperados. O T'Day não deteta fugas de memória."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Os relatórios vão para o mantenedor do T'Day através do Sentry, um serviço de relatórios de falhas. Ficam guardados 30 dias e são usados apenas para corrigir bugs, nunca vendidos nem partilhados para publicidade. São enviados diretamente ao Sentry, não pelo seu servidor. O Sentry vê o endereço de rede de qualquer ligação, como qualquer serviço online, mas está configurado para não o armazenar, e a aplicação web também informa ao Sentry de que site veio o relatório. Se tem o seu próprio servidor, a mesma resposta do administrador cobre também os relatórios de erro do próprio servidor, além de tempos de uma pequena amostra de pedidos; isso nunca inclui as suas tarefas. Versões sem um ponto de envio de relatórios, como as que compila você mesmo, não mostram esta definição."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Abra as Configurações.",
+            "Na aplicação web, um administrador desativa «Relatórios de erro do servidor» em Privacidade; no telemóvel, é você que desativa «Relatórios de falhas e problemas».",
+            "Os relatórios param imediatamente, e tudo o que estava aguardando envio é excluído."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Dizer não não custa nada. A resposta pode ser alterada a qualquer momento em Definições → Privacidade — por um administrador na web, por você no telemóvel. Detalhes técnicos: docs/TELEMETRY.md no repositório do T'Day."
+          ]
+        }
+      ],
+      "searchTitle": "relatorios de falhas e problemas",
+      "searchKeywords": "falha, fechamento inesperado, travamento, erro, relatorio, privacidade, diagnostico, telemetria, memoria, analise de uso, crash, sentry, anr, error, report, privacy, diagnostics, telemetry, hang, memory, analytics",
+      "searchBody": "desativado por padrao. quem decide depende da plataforma. os relatorios de falhas e problemas sao opcionais e vem desativados por padrao. quem decide muda conforme a plataforma: na aplicacao web, uma unica resposta de um administrador cobre todo o servidor — o site, os erros do proprio servidor e todas as pessoas que o usam — e nenhum utilizador individual e questionado. no android e no ios, cada pessoa e questionada no fluxo de inicio de sessao, por isso a resposta e por dispositivo e a pergunta volta a cada inicio de sessao. funciona como o crashlytics: existe para corrigir bugs, nao para medir como usa a aplicacao. enquanto tudo funciona normalmente, nao ha analise de uso, rastreamento de sessoes nem monitorizacao de desempenho no seu dispositivo. um relatorio contem a versao do app, o modelo do seu dispositivo e a versao do sistema operacional (ou o navegador e a versao), o erro e o ponto do codigo onde ele ocorreu, algumas etapas rotuladas que antecederam o erro, nomes de telas ou de rotas da api sem nenhum id, codigos de status e, nos dispositivos moveis, condicoes aproximadas do dispositivo, como memoria livre, nivel de bateria e se voce estava online. tambem inclui a diferenca do seu fuso horario (por exemplo, utc+2) e o idioma, porque as datas sao essenciais em um planejador de tarefas. o relatorio nunca contem: seu nome, nome de usuario, e-mail ou qualquer dado da conta; seu endereco ip ou localizacao; o endereco do seu servidor; titulos e conteudos de tarefas, listas ou notas; o conteudo do seu banco de dados; senhas, cookies ou tokens; capturas de tela ou gravacoes. as mensagens de erro tem enderecos, identificadores e texto entre aspas removidos no seu dispositivo antes do envio, da melhor forma possivel. os relatorios nao carregam id de usuario, por isso nao podem ser rastreados ate voce nem excluidos por pessoa. os relatorios so sao enviados quando algo falha, e apenas se estiverem ativados para essa plataforma: na aplicacao web, depois de um administrador os ativar para o servidor; no telemovel, depois de dizer sim no dispositivo. se algo falhar com os relatorios desativados, nada e guardado nem colocado em fila, e ativa-los mais tarde nao envia falhas anteriores. o que conta como falha depende da plataforma: o android relata fechamentos inesperados, travamentos e falhas por falta de memoria; o ios relata fechamentos inesperados, travamentos e o sistema encerrar a aplicacao por uso excessivo de memoria; a aplicacao web relata apenas erros inesperados. o t'day nao deteta fugas de memoria. os relatorios vao para o mantenedor do t'day atraves do sentry, um servico de relatorios de falhas. ficam guardados 30 dias e sao usados apenas para corrigir bugs, nunca vendidos nem partilhados para publicidade. sao enviados diretamente ao sentry, nao pelo seu servidor. o sentry ve o endereco de rede de qualquer ligacao, como qualquer servico online, mas esta configurado para nao o armazenar, e a aplicacao web tambem informa ao sentry de que site veio o relatorio. se tem o seu proprio servidor, a mesma resposta do administrador cobre tambem os relatorios de erro do proprio servidor, alem de tempos de uma pequena amostra de pedidos; isso nunca inclui as suas tarefas. versoes sem um ponto de envio de relatorios, como as que compila voce mesmo, nao mostram esta definicao. abra as configuracoes. na aplicacao web, um administrador desativa «relatorios de erro do servidor» em privacidade; no telemovel, e voce que desativa «relatorios de falhas e problemas». os relatorios param imediatamente, e tudo o que estava aguardando envio e excluido. dizer nao nao custa nada. a resposta pode ser alterada a qualquer momento em definicoes → privacidade — por um administrador na web, por voce no telemovel. detalhes tecnicos: docs/telemetry.md no repositorio do t'day."
+    },
+    {
+      "id": "ai-summary",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": true,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Resumos de tarefas",
+      "summary": "Uma leitura breve e serena do seu dia — com IA local opcional.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "O T'Day pode resumir o seu dia numa frase ou duas. Com um modelo Ollama local, a leitura é natural; sem ele, recorre a um resumo caloroso e determinístico — de qualquer forma, nada sai do seu servidor."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "O resumo nunca depende de um serviço de IA na nuvem — é local ou nada."
+          ]
+        }
+      ],
+      "searchTitle": "resumos de tarefas",
+      "searchKeywords": "resumo, ia, ollama, panorama, sintese, local, privado",
+      "searchBody": "uma leitura breve e serena do seu dia — com ia local opcional. o t'day pode resumir o seu dia numa frase ou duas. com um modelo ollama local, a leitura e natural; sem ele, recorre a um resumo caloroso e deterministico — de qualquer forma, nada sai do seu servidor. o resumo nunca depende de um servico de ia na nuvem — e local ou nada."
+    },
+    {
+      "id": "device-calendar-sync",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "calendar",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Tarefas no calendário do aparelho",
+      "summary": "Copie suas tarefas com data para um calendário T'Day no seu celular.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Ao ativar, toda tarefa com data é copiada para um calendário chamado T'Day no seu celular, junto dos seus outros calendários. Tarefas Anytime ficam de fora, porque não têm data. É de mão única: o T'Day escreve nesse calendário, então edições feitas por lá são substituídas na próxima vez que suas tarefas mudarem."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Em Configurações, ative “Adicionar tarefas agendadas ao meu calendário”.",
+            "Permita o acesso ao calendário quando o celular pedir.",
+            "Abra seu app de calendário — suas tarefas com data estão no calendário T'Day."
+          ]
+        }
+      ],
+      "searchTitle": "tarefas no calendario do aparelho",
+      "searchKeywords": "calendario, calendario do aparelho, sincronizacao, google agenda, calendario apple, eventkit, calendario do celular, copia",
+      "searchBody": "copie suas tarefas com data para um calendario t'day no seu celular. ao ativar, toda tarefa com data e copiada para um calendario chamado t'day no seu celular, junto dos seus outros calendarios. tarefas anytime ficam de fora, porque nao tem data. e de mao unica: o t'day escreve nesse calendario, entao edicoes feitas por la sao substituidas na proxima vez que suas tarefas mudarem. em configuracoes, ative “adicionar tarefas agendadas ao meu calendario”. permita o acesso ao calendario quando o celular pedir. abra seu app de calendario — suas tarefas com data estao no calendario t'day."
+    }
+  ]
+}

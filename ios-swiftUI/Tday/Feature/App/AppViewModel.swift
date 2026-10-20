@@ -1,0 +1,1421 @@
+import Foundation
+import Network
+import Observation
+import UserNotifications
+
+struct GitHubRelease: Codable, Equatable, Identifiable {
+    let tagName: String
+    let name: String?
+    let body: String?
+    let publishedAt: String?
+    let htmlUrl: String
+
+    var id: String { tagName }
+
+    var version: String {
+        tagName.hasPrefix("v") ? String(tagName.dropFirst()) : tagName
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case tagName = "tag_name"
+        case name
+        case body
+        case publishedAt = "published_at"
+        case htmlUrl = "html_url"
+    }
+}
+
+/// Outcome of an inline account edit (display name / password change) so the
+/// Settings editors can show a localized error without owning the API call.
+enum ProfileEditResult: Equatable {
+    case success
+    case failure(String)
+}
+
+/// A server certificate the device could not verify, held while the user decides whether to trust
+/// it. Nothing is pinned until they confirm this exact fingerprint.
+struct PendingCertificateApproval: Equatable, Identifiable {
+    let rawURL: String
+    let host: String
+    let fingerprint: String
+
+    var id: String { "\(host)|\(fingerprint)" }
+
+    /// Fingerprint in short groups, so it can actually be compared against the server by eye.
+    var displayFingerprint: String {
+        stride(from: 0, to: fingerprint.count, by: 8).map { offset in
+            let start = fingerprint.index(fingerprint.startIndex, offsetBy: offset)
+            let end = fingerprint.index(start, offsetBy: min(8, fingerprint.count - offset))
+            return String(fingerprint[start..<end])
+        }.joined(separator: " ")
+    }
+}
+
+@MainActor
+@Observable
+final class AppViewModel {
+    let container: AppContainer
+
+    var loading = true
+    var hasCompletedInitialBootstrap = false
+    var authenticated = false
+    var requiresServerSetup = false
+    var requiresLogin = false
+    /// Drives the persistent "waiting for admin approval" holding screen. True when a
+    /// registered/attempted account is still PENDING; survives relaunch via the secure
+    /// pending marker and clears once the account is approved (or the user signs out).
+    var pendingApproval = false
+    var pendingApprovalUsername: String?
+    var isCheckingApproval = false
+    var serverURL: String?
+    var dataMode: AppDataMode = .unset
+    var themeMode: AppThemeMode
+    /// Stored language choice: a supported code or LanguageStore.systemValue.
+    var appLanguage: String
+    /// Bumped on every language change to force SwiftUI to re-resolve strings.
+    var localizationGeneration: Int = 0
+    var user: SessionUser?
+    var error: String?
+    var canResetServerTrust = false
+    /// Set when a server presented a certificate we refused; drives the confirm prompt.
+    var pendingCertificateApproval: PendingCertificateApproval?
+    var pendingApprovalMessage: String?
+    var isManualSyncing = false
+    /// The user's own AI-summary on/off preference (default ON). Per-user now — the
+    /// old global admin toggle is gone.
+    var aiSummaryEnabled = true
+    var isAiSummarySaving = false
+    /// Which root feed (Scheduled or Floaters) opens on a fresh cold launch. `AppRootView`
+    /// seeds its own `rootFeedTab` from `SettingsRepository.defaultHomeScreenSnapshot()`
+    /// directly at `init`, ahead of this property loading — this one only drives the Settings
+    /// row and stays in sync with it afterwards.
+    var defaultHomeScreen: RootFeedTab = .scheduledTaskHome
+    var selectedReminder: ReminderOption
+    var dayAheadOption: DayAheadOption
+    var isOffline = false
+    var pendingMutationCount = 0
+    var lastSuccessfulSyncEpochMs: Int64 = 0
+    var lastSyncAttemptEpochMs: Int64 = 0
+    var offlineNoticeID = 0
+    /// Which message the offline notice should render — a genuine no-network state vs the
+    /// backend answering with a 5xx (server/database down). Set alongside every notice bump.
+    var offlineNoticeKind: OfflineNoticeKind = .offline
+    var navigationPath: [AppRoute] = []
+    var latestVersionName: String?
+    var latestRelease: GitHubRelease?
+    var currentRelease: GitHubRelease?
+    var isReleaseLoading = false
+    var releaseError: String?
+    var versionCheckResult: VersionCheckResult = .compatible
+    var backendVersion: String?
+    /// What iOS last told us about the notification permission. Held here rather than in the
+    /// Settings screen because the permission is changed in the *system* Settings app, while
+    /// T'Day is suspended — so noticing the change has to be an app-level job, not something
+    /// that waits for the user to happen to open our own Settings screen again.
+    var notificationAuthorizationStatus: UNAuthorizationStatus?
+
+    var currentVersionName: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
+    }
+
+    var iosUpdateURL: URL? {
+        Self.bundleUpdateURL()
+    }
+
+    var isLocalMode: Bool {
+        dataMode == .local
+    }
+
+    var isWorkspaceAvailable: Bool {
+        authenticated || isLocalMode
+    }
+
+    var syncStatus: MobileSyncStatus {
+        MobileSyncStatus(
+            dataMode: dataMode,
+            isOffline: isOffline,
+            isManualSyncing: isManualSyncing,
+            pendingMutationCount: pendingMutationCount,
+            lastSuccessfulSyncEpochMs: lastSuccessfulSyncEpochMs,
+            lastSyncAttemptEpochMs: lastSyncAttemptEpochMs
+        )
+    }
+
+    var hasUpdate: Bool {
+        guard let remote = latestVersionName else { return false }
+        return Self.compareVersions(remote, currentVersionName) > 0
+    }
+
+    @ObservationIgnored nonisolated(unsafe) private var cacheObservationTask: Task<Void, Never>?
+    @ObservationIgnored nonisolated(unsafe) private var syncLoopTask: Task<Void, Never>?
+    @ObservationIgnored nonisolated(unsafe) private var realtimeSyncDebounceTask: Task<Void, Never>?
+    @ObservationIgnored nonisolated(unsafe) private var offlineSyncFailureTask: Task<Void, Never>?
+    @ObservationIgnored nonisolated(unsafe) private var offlineSyncSuccessTask: Task<Void, Never>?
+    @ObservationIgnored nonisolated(unsafe) private var userInitiatedSyncFailureTask: Task<Void, Never>?
+    @ObservationIgnored nonisolated(unsafe) private var networkMonitor: NWPathMonitor?
+    @ObservationIgnored private let networkMonitorQueue = DispatchQueue(label: "tday.network-monitor")
+    @ObservationIgnored private var isForegroundReconnectInFlight = false
+    @ObservationIgnored private var lastOfflineNoticeShownAt: Date?
+
+    private static let offlineNoticeCooldownSeconds: TimeInterval = 10 * 60
+
+    init(container: AppContainer) {
+        self.container = container
+        themeMode = container.themeStore.load()
+        appLanguage = container.languageStore.load()
+        selectedReminder = container.reminderPreferenceStore.getDefaultReminder()
+        dayAheadOption = container.dayAheadStore.getOption()
+        observeCacheChanges()
+        observeOfflineSyncFailures()
+        observeUserInitiatedSyncFailures()
+        observeOfflineSyncSuccesses()
+        startNetworkMonitor()
+    }
+
+    deinit {
+        cacheObservationTask?.cancel()
+        syncLoopTask?.cancel()
+        realtimeSyncDebounceTask?.cancel()
+        offlineSyncFailureTask?.cancel()
+        userInitiatedSyncFailureTask?.cancel()
+        offlineSyncSuccessTask?.cancel()
+        networkMonitor?.cancel()
+    }
+
+    func bootstrap() async {
+        loading = true
+        error = nil
+        isManualSyncing = false
+
+        if container.serverConfigRepository.appDataMode() == .local {
+            await enterLocalWorkspace()
+            return
+        }
+
+        if !container.serverConfigRepository.hasServerConfigured() {
+            // Not for a workspace that was *left*. Its rows are still on disk on the strength
+            // of a row that said they would be, and "no mode, no server" is the state both
+            // leaving and signing out land on — this marker is the only thing that tells the
+            // two apart.
+            if !container.serverConfigRepository.hasRetainedLocalWorkspace {
+                container.authRepository.clearAllLocalUserDataForUnauthenticatedState()
+            }
+            authenticated = false
+            requiresServerSetup = true
+            requiresLogin = false
+            serverURL = nil
+            dataMode = .unset
+            user = nil
+            error = nil
+            canResetServerTrust = false
+            pendingApprovalMessage = nil
+            isAiSummarySaving = false
+            pendingMutationCount = 0
+            lastSuccessfulSyncEpochMs = 0
+            lastSyncAttemptEpochMs = 0
+            isOffline = false
+            finishBootstrap()
+            stopRealtime()
+            stopSyncLoop()
+            return
+        }
+
+        serverURL = container.serverConfigRepository.getServerURL()?.absoluteString
+        dataMode = .server
+        let sessionResult = await container.bootstrapSession()
+        if let sessionResult, sessionResult.user.id != nil {
+            let session = sessionResult.user
+            let versionResult = await container.serverConfigRepository.recheckVersion()
+            versionCheckResult = versionResult.versionCheck
+            backendVersion = versionResult.backendVersion ?? backendVersion
+            switch versionResult.versionCheck {
+            case .appUpdateRequired(let version):
+                backendVersion = version
+            case .serverUpdateRequired(let version):
+                backendVersion = version
+            case .compatible:
+                break
+            }
+            authenticated = true
+            requiresServerSetup = false
+            requiresLogin = false
+            // Approval came through: drop the holding-screen state in the same render
+            // pass that flips `authenticated`, so we never flash the login screen.
+            pendingApproval = false
+            pendingApprovalUsername = nil
+            dataMode = .server
+            user = session
+            error = nil
+            pendingApprovalMessage = nil
+            canResetServerTrust = true
+            isOffline = sessionResult.isOffline
+            if sessionResult.isOffline {
+                offlineNoticeKind = sessionResult.serverDown ? .serverDown : .offline
+                if shouldShowOfflineNotice() {
+                    offlineNoticeID += 1
+                }
+            }
+            // The account's "Default home screen", read from the cache the sync above just
+            // refreshed — `bootstrapSession()` runs `syncCachedData`, and that mirrors the
+            // account value into the cache. Set BEFORE `finishBootstrap()` flips
+            // `hasCompletedInitialBootstrap`, because that is the moment `AppRootView`
+            // reconciles its launch feed against this property; see
+            // `AppRootView.applyAccountRootFeedTabIfUnchosen`.
+            defaultHomeScreen = rootFeedTabFromDefaultHomeScreenApiValue(
+                container.settingsRepository.defaultHomeScreenSnapshot()
+            )
+            finishBootstrap()
+            await refreshAiSummarySetting()
+            refreshSyncStatusFromCache()
+            startRealtime()
+            startSyncLoop()
+            await container.reminderScheduler.requestAuthorization()
+            await rescheduleReminders()
+            // Reuses the authorization just requested above; no-op unless this session is an
+            // approved admin. Runs after `finishBootstrap()`, so it never delays first paint.
+            await container.securityAlertPoller.pollForNewAlerts()
+            await refreshVersionInfo()
+            return
+        }
+
+        container.authRepository.clearSessionOnly()
+
+        // No active session. If a pending-approval marker exists, show the persistent
+        // holding screen. We only SILENTLY re-attempt login on the very first launch —
+        // never on a later bootstrap (e.g. the one logout triggers), so an explicit
+        // logout can never be undone by a lingering marker.
+        if let creds = container.authRepository.loadPendingApproval() {
+            if !hasCompletedInitialBootstrap {
+                let result = await container.authRepository.login(username: creds.username, password: creds.password)
+                if case .success = result {
+                    container.authRepository.clearPendingApproval()
+                    // Keep the holding screen up through the re-bootstrap; the authenticated
+                    // branch clears it the instant the session is restored — no login flash.
+                    pendingApproval = true
+                    pendingApprovalUsername = creds.username
+                    await bootstrap()
+                    return
+                }
+            }
+            authenticated = false
+            requiresServerSetup = false
+            requiresLogin = false
+            pendingApproval = true
+            pendingApprovalUsername = creds.username
+            dataMode = .server
+            user = nil
+            error = nil
+            pendingApprovalMessage = nil
+            canResetServerTrust = true
+            isAiSummarySaving = false
+            refreshSyncStatusFromCache()
+            finishBootstrap()
+            stopRealtime()
+            stopSyncLoop()
+            return
+        }
+
+        authenticated = false
+        requiresServerSetup = false
+        requiresLogin = true
+        pendingApproval = false
+        dataMode = .server
+        user = nil
+        error = nil
+        pendingApprovalMessage = nil
+        canResetServerTrust = true
+        isAiSummarySaving = false
+        refreshSyncStatusFromCache()
+        finishBootstrap()
+        stopRealtime()
+        stopSyncLoop()
+    }
+
+    // MARK: - Pending admin approval (holding screen)
+
+    /// Persist the pending marker and switch to the holding screen after a register/login
+    /// that returned "pending approval".
+    func enterPendingApproval(username: String, password: String) {
+        container.authRepository.savePendingApproval(username: username, password: password)
+        pendingApprovalUsername = username
+        pendingApproval = true
+        authenticated = false
+        requiresLogin = false
+    }
+
+    /// Re-attempt login with the stored pending credentials. Returns true once the account
+    /// is approved (and routes to the scheduled task home screen via a fresh bootstrap); false while still pending.
+    @discardableResult
+    func checkPendingApproval() async -> Bool {
+        guard !isCheckingApproval else { return false }
+        guard let creds = container.authRepository.loadPendingApproval() else {
+            pendingApproval = false
+            return false
+        }
+        isCheckingApproval = true
+        let result = await container.authRepository.login(username: creds.username, password: creds.password)
+        if case .success = result {
+            container.authRepository.clearPendingApproval()
+            // Stay on the holding screen through the re-bootstrap; the authenticated
+            // branch flips straight to the scheduled task home screen without flashing the login screen.
+            await bootstrap()
+            isCheckingApproval = false
+            return true
+        }
+        isCheckingApproval = false
+        return false
+    }
+
+    /// Abandon the pending account and return to the sign-in / onboarding flow.
+    func cancelPendingApproval() {
+        container.authRepository.clearPendingApproval()
+        pendingApproval = false
+        pendingApprovalUsername = nil
+        requiresLogin = true
+    }
+
+    func refreshSession() async {
+        await bootstrap()
+    }
+
+    func useLocalMode() async {
+        TdayTelemetry.addBreadcrumb("local_mode.enter")
+        // Returning to a workspace that was left, not deleted, hands it back exactly as it
+        // was — that is what Leave promised. Every other route in here is a new workspace,
+        // and starts empty.
+        if container.serverConfigRepository.hasRetainedLocalWorkspace {
+            container.serverConfigRepository.clearRetainedLocalWorkspace()
+        } else {
+            container.authRepository.clearAllLocalUserDataForUnauthenticatedState()
+        }
+        container.serverConfigRepository.enableLocalMode()
+        await enterLocalWorkspace()
+    }
+
+    /// Choosing a server abandons a local workspace that was merely left behind. From the
+    /// moment a server URL is saved `bootstrap()` stops taking the branch that would have
+    /// cleared it, so its rows would otherwise surface inside a server feed. Only the cache
+    /// goes — the configuration just written stays.
+    private func discardRetainedLocalWorkspace() {
+        guard container.serverConfigRepository.hasRetainedLocalWorkspace else {
+            return
+        }
+        container.serverConfigRepository.clearRetainedLocalWorkspace()
+        container.cacheManager.clearAllLocalData()
+    }
+
+    /// Leaves a local workspace WITHOUT destroying it — the way out Local Mode has instead of
+    /// Sign out, matching Android and web.
+    ///
+    /// Deliberately not routed through `logout()`/`bootstrap()`: both end at
+    /// `clearAllLocalUserDataForUnauthenticatedState()`, so a row labelled Leave would wipe
+    /// every task on the device with no confirmation, while Delete — the row that is supposed
+    /// to do exactly that — asks first. This drops the session's hold and returns to mode
+    /// selection, nothing more.
+    func leaveLocalWorkspace() async {
+        TdayTelemetry.addBreadcrumb("local_mode.leave")
+        stopRealtime()
+        stopSyncLoop()
+        container.reminderScheduler.cancelAll()
+        container.serverConfigRepository.leaveLocalMode()
+        navigationPath = []
+        authenticated = false
+        requiresServerSetup = true
+        requiresLogin = false
+        serverURL = nil
+        dataMode = .unset
+        user = nil
+        error = nil
+        canResetServerTrust = false
+        pendingApprovalMessage = nil
+        isManualSyncing = false
+        isAiSummarySaving = false
+        isOffline = false
+        pendingMutationCount = 0
+        lastSuccessfulSyncEpochMs = 0
+        lastSyncAttemptEpochMs = 0
+        versionCheckResult = .compatible
+        backendVersion = nil
+        loading = false
+    }
+
+    private func enterLocalWorkspace() async {
+        stopRealtime()
+        stopSyncLoop()
+        _ = try? await container.cacheManager.updateOfflineState { state in
+            var nextState = state
+            nextState.lastSuccessfulSyncEpochMs = 0
+            nextState.lastSyncAttemptEpochMs = 0
+            nextState.pendingMutations = []
+            return nextState
+        }
+        authenticated = false
+        requiresServerSetup = false
+        requiresLogin = false
+        serverURL = nil
+        dataMode = .local
+        user = nil
+        error = nil
+        canResetServerTrust = false
+        pendingApprovalMessage = nil
+        isManualSyncing = false
+        isAiSummarySaving = false
+        isOffline = false
+        pendingMutationCount = 0
+        lastSuccessfulSyncEpochMs = 0
+        lastSyncAttemptEpochMs = 0
+        versionCheckResult = .compatible
+        backendVersion = nil
+        // Same rule as the server branch of `bootstrap()`: Local Mode has no account to ask, so
+        // the cache it writes through directly IS the answer — and `AppRootView` reconciles the
+        // launch feed against this property, so leaving it at its `scheduledTaskHome` default
+        // would move a Local-Mode user who chose Floaters back onto Scheduled.
+        defaultHomeScreen = rootFeedTabFromDefaultHomeScreenApiValue(
+            container.settingsRepository.defaultHomeScreenSnapshot()
+        )
+        await container.reminderScheduler.requestAuthorization()
+        await rescheduleReminders()
+        finishBootstrap()
+    }
+
+    func connectServer(rawURL: String) async -> Result<Void, MessageError> {
+        do {
+            TdayTelemetry.addBreadcrumb("server.probe", data: ["phase": "start"])
+            let probeResult = try await container.serverConfigRepository.probeAndSave(rawURL)
+            TdayTelemetry.addBreadcrumb(
+                "server.probe",
+                data: ["phase": "success", "version": String(describing: probeResult.versionCheck)]
+            )
+            serverURL = probeResult.serverURL
+            dataMode = .server
+            versionCheckResult = probeResult.versionCheck
+            backendVersion = probeResult.backendVersion
+            let isBlocking = probeResult.versionCheck != .compatible
+            requiresServerSetup = false
+            requiresLogin = !isBlocking
+            error = nil
+            canResetServerTrust = true
+            discardRetainedLocalWorkspace()
+            return .success(())
+        } catch {
+            TdayTelemetry.addBreadcrumb(
+                "server.probe",
+                level: .warning,
+                data: ["phase": "failure", "error": String(describing: type(of: error))]
+            )
+            // An unrecognised certificate is not a plain failure: the user has to see the
+            // fingerprint and approve it before anything is pinned.
+            if case let ServerProbeError.untrustedCertificate(host, fingerprint) = error,
+               let fingerprint {
+                pendingCertificateApproval = PendingCertificateApproval(
+                    rawURL: rawURL,
+                    host: host,
+                    fingerprint: fingerprint
+                )
+            }
+            let msg = serverConnectionMessage(for: error)
+            self.error = msg
+            canResetServerTrust = shouldOfferServerTrustReset(for: error)
+            return .failure(MessageError(message: msg))
+        }
+    }
+
+    /// Pins the fingerprint the user just confirmed, then completes the connection.
+    func approveServerCertificate() async -> Result<Void, MessageError> {
+        guard let pending = pendingCertificateApproval else {
+            return .failure(MessageError(message: "No certificate is awaiting approval"))
+        }
+        pendingCertificateApproval = nil
+        do {
+            _ = try await container.serverConfigRepository.approveCertificate(
+                rawURL: pending.rawURL,
+                host: pending.host,
+                fingerprint: pending.fingerprint
+            )
+            serverURL = container.serverConfigRepository.getServerURL()?.absoluteString ?? pending.rawURL
+            dataMode = .server
+            requiresServerSetup = false
+            requiresLogin = true
+            error = nil
+            canResetServerTrust = true
+            discardRetainedLocalWorkspace()
+            return .success(())
+        } catch {
+            let msg = serverConnectionMessage(for: error)
+            self.error = msg
+            return .failure(MessageError(message: msg))
+        }
+    }
+
+    func dismissCertificateApproval() {
+        pendingCertificateApproval = nil
+    }
+
+    func recheckVersion() async {
+        guard !isLocalMode else {
+            return
+        }
+        let result = await container.serverConfigRepository.recheckVersion()
+        versionCheckResult = result.versionCheck
+        backendVersion = result.backendVersion ?? backendVersion
+        switch result.versionCheck {
+        case .appUpdateRequired(let version):
+            backendVersion = version
+        case .serverUpdateRequired(let version):
+            backendVersion = version
+        case .compatible:
+            break
+        }
+    }
+
+    func resetTrustedServer(rawURL: String) async -> Result<Void, MessageError> {
+        do {
+            _ = try await container.serverConfigRepository.resetTrustedServer(rawURL: rawURL)
+            let savedServerURL = container.serverConfigRepository.getServerURL()?.absoluteString ?? rawURL
+            serverURL = savedServerURL
+            dataMode = .server
+            requiresServerSetup = false
+            requiresLogin = true
+            error = nil
+            return .success(())
+        } catch {
+            let msg = serverConnectionMessage(for: error)
+            self.error = msg
+            canResetServerTrust = shouldOfferServerTrustReset(for: error)
+            return .failure(MessageError(message: msg))
+        }
+    }
+
+    func clearPendingApprovalNotice() {
+        pendingApprovalMessage = nil
+    }
+
+    /// Loads the user's own AI-summary preference (cache first, then server).
+    func refreshAiSummarySetting() async {
+        guard !isLocalMode else { return }
+        aiSummaryEnabled = container.settingsRepository.isAiSummaryEnabledSnapshot()
+        aiSummaryEnabled = await container.settingsRepository.refreshAiSummaryEnabled()
+    }
+
+    /// Toggles the user's own AI-summary preference (optimistic, reverts on failure).
+    func setAiSummaryEnabled(_ enabled: Bool) async {
+        guard !isLocalMode, !isAiSummarySaving else { return }
+        let previous = aiSummaryEnabled
+        aiSummaryEnabled = enabled
+        isAiSummarySaving = true
+        do {
+            aiSummaryEnabled = try await container.settingsRepository.setAiSummaryEnabled(enabled)
+        } catch {
+            aiSummaryEnabled = previous
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not update your settings."),
+                kind: .error
+            )
+        }
+        isAiSummarySaving = false
+    }
+
+    /// Loads the default-home-screen preference (cache first, then server). Unlike
+    /// `refreshAiSummarySetting`, this is NOT skipped in Local Mode: the preference is
+    /// user-configurable there too, and `SettingsRepository.refreshDefaultHomeScreen()`
+    /// already resolves to a cache-only read in that mode.
+    func refreshDefaultHomeScreen() async {
+        defaultHomeScreen = rootFeedTabFromDefaultHomeScreenApiValue(
+            container.settingsRepository.defaultHomeScreenSnapshot()
+        )
+        defaultHomeScreen = rootFeedTabFromDefaultHomeScreenApiValue(
+            await container.settingsRepository.refreshDefaultHomeScreen()
+        )
+    }
+
+    /// Sets the default-home-screen preference (optimistic, reverts on failure) — mirrors
+    /// `setAiSummaryEnabled`.
+    func setDefaultHomeScreen(_ tab: RootFeedTab) async {
+        let previous = defaultHomeScreen
+        guard previous != tab else { return }
+        defaultHomeScreen = tab
+        do {
+            let saved = try await container.settingsRepository.setDefaultHomeScreen(
+                tab.defaultHomeScreenApiValue
+            )
+            defaultHomeScreen = rootFeedTabFromDefaultHomeScreenApiValue(saved)
+        } catch {
+            defaultHomeScreen = previous
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not update your settings."),
+                kind: .error
+            )
+        }
+    }
+
+    // MARK: - Account (profile name + password)
+
+    /// Lightweight session re-fetch: re-pulls the user from the server and
+    /// re-caches it, without the heavy full `bootstrap()` resync. Updating
+    /// `user` propagates the new display name everywhere it's shown.
+    func refreshSessionUser() async {
+        if let refreshed = await container.authRepository.restoreSession() {
+            user = refreshed
+        }
+    }
+
+    /// Saves a new display name, then re-fetches the session so the change is
+    /// confirmed by the server and reflected app-wide.
+    func updateDisplayName(_ newName: String) async -> ProfileEditResult {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !isLocalMode, authenticated else {
+            return .failure(L("You're not signed in."))
+        }
+        guard !trimmed.isEmpty else {
+            return .failure(L("Name cannot be empty."))
+        }
+        do {
+            _ = try await container.apiService.patchUserProfile(payload: .init(name: trimmed))
+            await refreshSessionUser()
+            return .success
+        } catch {
+            return .failure(userFacingMessage(for: error, fallback: "Could not update your name."))
+        }
+    }
+
+    /// Changes the password (server enforces the strength rules), then re-fetches
+    /// the session — the backend rotates the cookie on the same response.
+    func changePassword(currentPassword: String, newPassword: String) async -> ProfileEditResult {
+        guard !isLocalMode, authenticated else {
+            return .failure(L("You're not signed in."))
+        }
+        do {
+            _ = try await container.apiService.changePassword(
+                payload: .init(currentPassword: currentPassword, newPassword: newPassword)
+            )
+            await refreshSessionUser()
+            return .success
+        } catch {
+            return .failure(userFacingMessage(for: error, fallback: "Could not change your password."))
+        }
+    }
+
+    /// The signed-in user's security-question status (chosen ids + whether they still
+    /// need to be set), or nil when unavailable / not in server mode.
+    func securityQuestionStatus() async -> SecurityQuestionStatusResponse? {
+        guard !isLocalMode, authenticated else { return nil }
+        return try? await container.apiService.getUserSecurityQuestions()
+    }
+
+    /// The full catalogue of security questions for the settings pickers.
+    func loadAllSecurityQuestions() async -> [SecurityQuestion] {
+        (try? await container.apiService.getAllSecurityQuestions().questions) ?? []
+    }
+
+    /// Replaces the user's security questions. Already-configured accounts must supply
+    /// the current password (the server validates it); a blank password is sent as nil
+    /// so the first-time path still works.
+    func updateSecurityQuestions(currentPassword: String, answers: [SecurityAnswerInput]) async -> ProfileEditResult {
+        guard !isLocalMode, authenticated else {
+            return .failure(L("You're not signed in."))
+        }
+        let trimmed = currentPassword.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            _ = try await container.apiService.setUserSecurityQuestions(
+                payload: SetSecurityQuestionsRequest(
+                    answers: answers,
+                    currentPassword: trimmed.isEmpty ? nil : trimmed
+                )
+            )
+            return .success
+        } catch {
+            return .failure(userFacingMessage(for: error, fallback: "Could not update your security questions."))
+        }
+    }
+
+    func setThemeMode(_ mode: AppThemeMode) {
+        themeMode = mode
+        container.themeStore.save(mode)
+    }
+
+    /// The in-app Reduce Motion preference, proxied rather than mirrored.
+    ///
+    /// `themeMode` above is a stored property written back through its store, because
+    /// `ThemeStore` is a plain `load()`/`save()` pair with nothing to observe — the view model has
+    /// to hold the live value itself or the theme would not follow the picker. `MotionPreferenceStore`
+    /// is `@Observable`, so this reads straight through instead: one source of truth, and a view
+    /// that reads it in its `body` is registered on the store, which is what makes the Settings
+    /// switch move the animations rather than a value read once at launch. A stored copy here
+    /// would be a second thing to keep in step for no gain.
+    ///
+    /// Composed with the system setting inside `TdayMotionEnvironment`, not here: this property is
+    /// only ever *this app's* half of the answer, and the Settings row needs them apart so it can
+    /// say which one decided.
+    var reduceMotion: Bool {
+        get { container.motionPreference.isEnabled }
+        set {
+            container.motionPreference.isEnabled = newValue
+            // This is the store's one writer, and persisting is its caller's job rather than the
+            // property's — see `MotionPreferenceStore` for why that is not a `didSet`. A second
+            // writer anywhere would need this line too.
+            container.motionPreference.persist()
+        }
+    }
+
+    /// Concrete locale identifier to apply (resolves "system" to the device language).
+    var resolvedLocaleIdentifier: String {
+        container.languageStore.resolvedCode()
+    }
+
+    func setAppLanguage(_ value: String) {
+        appLanguage = value
+        container.languageStore.save(value)
+        // nil = follow system (clears the bundle override).
+        LanguageBundle.setLanguage(value == LanguageStore.systemValue ? nil : value)
+        localizationGeneration += 1
+    }
+
+    func setDayAhead(_ option: DayAheadOption) {
+        dayAheadOption = option
+        container.dayAheadStore.setOption(option)
+        Task { await rescheduleReminders() }
+    }
+
+    func setDefaultReminder(_ option: ReminderOption) {
+        selectedReminder = option
+        container.reminderPreferenceStore.setDefaultReminder(option)
+        Task {
+            await self.rescheduleReminders()
+        }
+    }
+
+    func manualSync() async {
+        guard !isLocalMode else {
+            return
+        }
+        TdayTelemetry.addBreadcrumb("sync.manual", data: ["phase": "start"])
+        isManualSyncing = true
+        let result = await container.syncAndRefresh(
+            force: true,
+            replayPendingMutations: true,
+            notifyOfflineFailure: false,
+            connectionProbeTimeoutSeconds: SyncAndRefreshUseCase.userRefreshConnectionTimeoutSeconds
+        )
+        isManualSyncing = false
+        // A user tapped "Sync now" — always surface the result, bypassing the anti-spam cooldown.
+        applySyncResult(result, showOfflineNotice: true, bypassCooldown: true)
+        await rescheduleReminders()
+    }
+
+    func reconnectAfterForeground() async {
+        guard authenticated, !isLocalMode, !isForegroundReconnectInFlight else {
+            return
+        }
+
+        isForegroundReconnectInFlight = true
+        await reconnectWithServer(showOfflineNotice: true)
+        // Foreground half of the security-alert delivery (the other is the background refresh).
+        await container.securityAlertPoller.pollForNewAlerts()
+        isForegroundReconnectInFlight = false
+    }
+
+    func logout() async {
+        await container.authRepository.logout()
+        // Hard-reset auth + holding-screen state so a stale marker or pending flag can
+        // never resurrect the session or leave a touch-blocking overlay on the login screen.
+        container.authRepository.clearPendingApproval()
+        pendingApproval = false
+        pendingApprovalUsername = nil
+        isCheckingApproval = false
+        authenticated = false
+        navigationPath = []
+        await bootstrap()
+    }
+
+    /// Forcibly ends a session whose authentication has expired and returns the user to
+    /// login (the onboarding overlay shows once `authenticated` is false). Reuses the
+    /// logout flow, then surfaces a toast explaining why. No-op if a session is no longer
+    /// active, which dedupes a burst of 401s into a single expiry.
+    func expireSession() async {
+        guard authenticated else { return }
+        await logout()
+        container.snackbarManager.show(
+            "Your session expired — please sign in again.",
+            kind: .error
+        )
+    }
+
+    func navigate(to route: AppRoute) {
+        switch route {
+        case .scheduledTaskHome, .floaterTaskHome:
+            navigationPath = []
+        default:
+            navigationPath.append(route)
+        }
+    }
+
+    func goBack() {
+        guard !navigationPath.isEmpty else {
+            return
+        }
+        navigationPath.removeLast()
+    }
+
+    func handleDeepLink(_ url: URL) {
+        guard let route = AppRoute.from(url: url) else {
+            return
+        }
+        navigate(to: route)
+    }
+
+    // `[weak self]` is load-bearing here, not style — see the identical note
+    // on `TodoListViewModel.observeCacheChanges()`. `AppRootView.init` (see
+    // `_appViewModel = State(initialValue: AppViewModel(...))`) constructs this
+    // view model the same way, so without a weak capture a discarded instance
+    // could never deinit, and `cacheObservationTask?.cancel()` would never run.
+    private func observeCacheChanges() {
+        cacheObservationTask = Task { [weak self] in
+            for await _ in NotificationCenter.default.notifications(named: .offlineCacheDidChange) {
+                guard let self else { return }
+                await MainActor.run {
+                    self.refreshSyncStatusFromCache()
+                }
+            }
+        }
+    }
+
+    func refreshSyncStatusFromCache() {
+        guard !isLocalMode else {
+            pendingMutationCount = 0
+            lastSuccessfulSyncEpochMs = 0
+            lastSyncAttemptEpochMs = 0
+            return
+        }
+        // Off the in-memory mirror, not `loadOfflineState()`: this runs on every
+        // `.offlineCacheDidChange`, i.e. right behind every check-off's hydrate while the row
+        // is collapsing, and it only wants a count and two stamps. `lastState` carries all three on
+        // both save paths — see `OfflineCacheManager.cachedState`.
+        let state = container.cacheManager.cachedState
+        pendingMutationCount = state.pendingMutations.count
+        lastSuccessfulSyncEpochMs = state.lastSuccessfulSyncEpochMs
+        lastSyncAttemptEpochMs = state.lastSyncAttemptEpochMs
+    }
+
+    // Found alongside the four observer tasks above, during the same fix: an
+    // identical strong-self cycle, and arguably the worse one — a leaked
+    // instance would not just react to cache writes forever but run its own
+    // independent 5-minute full-sync timer forever. `[weak self]` here is
+    // required for the same reason as the others: any single strong-self Task
+    // on this object is enough to keep the whole thing (and every other task
+    // it owns) permanently uncollectable.
+    private func startSyncLoop() {
+        guard syncLoopTask == nil else {
+            return
+        }
+        syncLoopTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(300))
+                guard let self else { return }
+                guard await MainActor.run(body: { self.authenticated }) else {
+                    continue
+                }
+                let result = await self.container.syncAndRefresh(
+                    force: false,
+                    replayPendingMutations: true,
+                    notifyOfflineFailure: false
+                )
+                let recoveredResult = await self.recoverSessionAndRetrySyncIfNeeded(
+                    after: result,
+                    connectionProbeTimeoutSeconds: nil
+                )
+                await MainActor.run {
+                    self.applySyncResult(recoveredResult, suppressAuthenticationExpired: true)
+                }
+                await self.rescheduleReminders()
+            }
+        }
+    }
+
+    private func stopSyncLoop() {
+        syncLoopTask?.cancel()
+        syncLoopTask = nil
+    }
+
+    private func startRealtime() {
+        Task { [weak self] in
+            guard let self else {
+                return
+            }
+            await self.container.realtimeClient.start { [weak self] event in
+                guard event.requiresRefresh, let self else {
+                    return
+                }
+                await self.scheduleRealtimeSync()
+            }
+        }
+    }
+
+    // A burst of remote events (e.g. someone bulk-completing tasks on another device) used to
+    // trigger one full force-sync PER event: `RealtimeClient` awaits this handler before reading
+    // its next WebSocket message, so a burst was processed as N serial full sync cycles, each
+    // fetching the complete current server state — the same freeze this fix targets on the
+    // reconnect path, but triggered mid-session by someone else's activity instead. Debounce
+    // into a single trailing sync: each new qualifying event pushes the timer back, so only the
+    // last event in a burst actually runs `syncAndRefresh` — and because each sync fetches the
+    // full current server state (not a delta), that one call picks up everything the whole
+    // burst produced. A single isolated event still syncs, just after this short delay instead
+    // of instantly — imperceptible for a background refresh.
+    private static let realtimeSyncDebounceDelay: Duration = .milliseconds(400)
+
+    private func scheduleRealtimeSync() {
+        realtimeSyncDebounceTask?.cancel()
+        realtimeSyncDebounceTask = Task { [weak self] in
+            try? await Task.sleep(for: Self.realtimeSyncDebounceDelay)
+            guard !Task.isCancelled, let self else {
+                return
+            }
+            await self.performRealtimeSync()
+        }
+    }
+
+    private func performRealtimeSync() async {
+        let result = await self.container.syncAndRefresh(
+            force: true,
+            replayPendingMutations: true,
+            notifyOfflineFailure: false
+        )
+        let recoveredResult = await self.recoverSessionAndRetrySyncIfNeeded(
+            after: result,
+            connectionProbeTimeoutSeconds: nil
+        )
+        await MainActor.run {
+            self.applySyncResult(recoveredResult, suppressAuthenticationExpired: true)
+        }
+        await self.rescheduleReminders()
+    }
+
+    private func stopRealtime() {
+        realtimeSyncDebounceTask?.cancel()
+        realtimeSyncDebounceTask = nil
+        let realtimeClient = container.realtimeClient
+        Task {
+            await realtimeClient.stop()
+        }
+    }
+
+    enum OfflineNoticeKind {
+        /// No network / can't reach the server at all (transport error, no HTTP status).
+        case offline
+        /// The backend answered with a 5xx — server container or database is down.
+        case serverDown
+    }
+
+    /// Bump the offline notice with the right message kind. `forceShow` bypasses the
+    /// anti-spam cooldown (used for user-initiated syncs); background paths pass false.
+    private func presentOfflineNotice(for error: Error, forceShow: Bool) {
+        offlineNoticeKind = isBackendUnavailableError(error) ? .serverDown : .offline
+        if forceShow || shouldShowOfflineNotice() {
+            offlineNoticeID += 1
+        }
+    }
+
+    private func applySyncResult(
+        _ result: Result<Void, Error>,
+        showOfflineNotice: Bool = false,
+        suppressAuthenticationExpired: Bool = false,
+        bypassCooldown: Bool = false
+    ) {
+        switch result {
+        case .success:
+            isOffline = false
+            refreshSyncStatusFromCache()
+        case let .failure(error):
+            if isVersionGateError(error) {
+                isOffline = false
+                refreshSyncStatusFromCache()
+                Task { await self.recheckVersion() }
+                return
+            }
+            let wasOffline = isOffline
+            isOffline = isLikelyConnectivityIssue(error) ||
+                (suppressAuthenticationExpired && isSessionAuthenticationIssue(error))
+            if isOffline {
+                // Announce on a FRESH offline transition from ANY path — including the
+                // silent background sync loop — so a backend/DB outage (5xx while the
+                // network is fine) surfaces the toast without the user having to trigger a
+                // refresh. `showOfflineNotice` additionally re-announces while already
+                // offline (foreground reconnect / manual sync). Cooldown-gated unless a
+                // user-initiated sync forces it.
+                let transitionedToOffline = !wasOffline
+                if transitionedToOffline || showOfflineNotice {
+                    presentOfflineNotice(for: error, forceShow: bypassCooldown)
+                }
+            } else {
+                container.snackbarManager.show(message: userFacingMessage(for: error))
+            }
+            refreshSyncStatusFromCache()
+        }
+    }
+
+    private func isVersionGateError(_ error: Error) -> Bool {
+        guard let apiError = error as? APIError else {
+            return false
+        }
+        return apiError.statusCode == 426 ||
+            apiError.reason == "app_update_required" ||
+            apiError.reason == "server_update_required"
+    }
+
+    private func shouldShowOfflineNotice(now: Date = Date()) -> Bool {
+        if let lastOfflineNoticeShownAt,
+           now.timeIntervalSince(lastOfflineNoticeShownAt) < Self.offlineNoticeCooldownSeconds {
+            return false
+        }
+
+        lastOfflineNoticeShownAt = now
+        return true
+    }
+
+    // `[weak self]` matters on all four observer tasks in this file, not just
+    // this one: any single strong-self cycle among them is enough to keep this
+    // whole view model uncollectable, which would keep every one of the other
+    // three alive right along with it regardless of their own capture lists.
+    private func observeOfflineSyncFailures() {
+        offlineSyncFailureTask = Task { [weak self] in
+            for await _ in NotificationCenter.default.notifications(named: .offlineSyncAttemptFailed) {
+                guard let self else { return }
+                await self.confirmOfflineSyncFailure()
+            }
+        }
+    }
+
+    private func confirmOfflineSyncFailure() async {
+        guard authenticated else {
+            return
+        }
+
+        await reconnectWithServer(showOfflineNotice: true)
+    }
+
+    /// Pull-to-refresh hit a connectivity/backend failure — always surface the toast
+    /// (bypasses the cooldown), with the right message kind. No second sync: the user's
+    /// refresh already synced; we only need to report the outcome.
+    private func observeUserInitiatedSyncFailures() {
+        userInitiatedSyncFailureTask = Task { [weak self] in
+            for await notification in NotificationCenter.default.notifications(named: .userInitiatedSyncFailedOffline) {
+                guard let self else { return }
+                let serverDown = (notification.userInfo?["serverDown"] as? Bool) ?? false
+                await MainActor.run {
+                    guard self.authenticated, !self.isLocalMode else { return }
+                    self.isOffline = true
+                    self.offlineNoticeKind = serverDown ? .serverDown : .offline
+                    self.offlineNoticeID += 1
+                    self.refreshSyncStatusFromCache()
+                }
+            }
+        }
+    }
+
+    private func observeOfflineSyncSuccesses() {
+        offlineSyncSuccessTask = Task { [weak self] in
+            for await _ in NotificationCenter.default.notifications(named: .offlineSyncAttemptSucceeded) {
+                guard let self else { return }
+                await MainActor.run {
+                    guard self.authenticated else {
+                        return
+                    }
+                    self.isOffline = false
+                    self.refreshSyncStatusFromCache()
+                }
+            }
+        }
+    }
+
+    private func startNetworkMonitor() {
+        guard networkMonitor == nil else {
+            return
+        }
+
+        let monitor = NWPathMonitor()
+        monitor.pathUpdateHandler = { [weak self] path in
+            Task { @MainActor in
+                guard let self, self.authenticated else {
+                    return
+                }
+
+                if path.status == .satisfied {
+                    guard self.isOffline else {
+                        return
+                    }
+                    await self.reconnectWithServer(showOfflineNotice: false)
+                } else {
+                    // Connection lost. React the instant the OS tells us, instead of
+                    // waiting for a sync to fail and an 8s server probe
+                    // (userRefreshConnectionTimeoutSeconds) to time out before we
+                    // discover we're offline — that delay reads to the user as a
+                    // 5-10s freeze with no feedback.
+                    self.markOfflineFromConnectivityLoss()
+                }
+            }
+        }
+        monitor.start(queue: networkMonitorQueue)
+        networkMonitor = monitor
+    }
+
+    /// Flips the app into the offline state immediately when `NWPathMonitor` reports
+    /// the link is down, and surfaces the offline toast (subject to the same cooldown
+    /// as a probe-detected outage). The pending probe/sync still runs and is harmless:
+    /// on failure it re-confirms `isOffline` (deduped by the cooldown), and a later
+    /// `.satisfied` path triggers `reconnectWithServer`, which clears the state and
+    /// shows the "back online" toast.
+    private func markOfflineFromConnectivityLoss() {
+        guard !isLocalMode, !isOffline else {
+            return
+        }
+        isOffline = true
+        // OS-level link loss is always a genuine no-network state, never a backend 5xx.
+        offlineNoticeKind = .offline
+        if shouldShowOfflineNotice() {
+            offlineNoticeID += 1
+        }
+    }
+
+    private func reconnectWithServer(showOfflineNotice: Bool) async {
+        let result = await container.syncAndRefresh(
+            force: true,
+            replayPendingMutations: true,
+            notifyOfflineFailure: false,
+            connectionProbeTimeoutSeconds: SyncAndRefreshUseCase.userRefreshConnectionTimeoutSeconds
+        )
+        let recoveredResult = await recoverSessionAndRetrySyncIfNeeded(
+            after: result,
+            connectionProbeTimeoutSeconds: SyncAndRefreshUseCase.userRefreshConnectionTimeoutSeconds
+        )
+        applySyncResult(
+            recoveredResult,
+            showOfflineNotice: showOfflineNotice,
+            suppressAuthenticationExpired: true
+        )
+        if case .success = recoveredResult {
+            startRealtime()
+            await rescheduleReminders()
+        }
+    }
+
+    private func recoverSessionAndRetrySyncIfNeeded(
+        after result: Result<Void, Error>,
+        connectionProbeTimeoutSeconds: TimeInterval?
+    ) async -> Result<Void, Error> {
+        guard case let .failure(error) = result, isSessionAuthenticationIssue(error) else {
+            return result
+        }
+
+        guard let restoredSession = await container.authRepository.restoreSessionForBootstrap() else {
+            // A confirmed 401 that silent recovery could not heal, and not a mere
+            // connectivity blip, means the session is truly gone — expire it and send
+            // the user back to login. Connectivity issues stay in offline mode.
+            if !isLikelyConnectivityIssue(error) && !isLocalMode {
+                await expireSession()
+            }
+            return result
+        }
+
+        user = restoredSession.user
+        authenticated = true
+        isOffline = restoredSession.usedCachedSession
+
+        guard !restoredSession.usedCachedSession else {
+            return .failure(APIError(message: "Unable to refresh session while offline", statusCode: nil))
+        }
+
+        return await container.syncAndRefresh(
+            force: true,
+            replayPendingMutations: true,
+            notifyOfflineFailure: false,
+            connectionProbeTimeoutSeconds: connectionProbeTimeoutSeconds
+        )
+    }
+
+
+    private func serverConnectionMessage(for error: Error) -> String {
+        if let probeError = error as? ServerProbeError {
+            switch probeError {
+            case .invalidURL:
+                return "Enter a valid server URL, like https://tday.example.com."
+            case .insecureTransport:
+                return "Use an HTTPS server URL. HTTP is only allowed for local servers."
+            case .notTdayServer:
+                return "That server responded, but it does not look like a T'Day server."
+            case .certificateChanged:
+                return "This server's certificate changed. Reset saved server trust only if you recognize this server."
+            case .untrustedCertificate:
+                return "This server uses a certificate your device can't verify. Check the fingerprint before trusting it."
+            case .untrustedPublicCertificate:
+                return "This server's certificate can't be verified, and it isn't on your local network. Someone may be intercepting this connection, so T'Day won't offer to trust it. Use a server with a valid certificate."
+            }
+        }
+
+        if let apiError = error as? APIError {
+            if apiError.statusCode == nil {
+                return serverConnectionMessage(from: apiError.message)
+            }
+            return userFacingMessage(for: apiError, fallback: "Could not connect to that T'Day server.")
+        }
+
+        return serverConnectionMessage(from: error.localizedDescription)
+    }
+
+    private func serverConnectionMessage(from rawMessage: String) -> String {
+        let message = rawMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lower = message.lowercased()
+
+        if lower.contains("unsupported url") || lower.contains("bad url") || lower.contains("invalid url") {
+            return "Enter a valid server URL, like https://tday.example.com."
+        }
+        if lower.contains("timed out") || lower.contains("cannot connect") ||
+           lower.contains("could not connect") || lower.contains("network connection was lost") {
+            return "Could not reach that server. Check the URL and make sure the T'Day server is online."
+        }
+        if lower.contains("a server with the specified hostname could not be found") ||
+           lower.contains("cannot find host") || lower.contains("dns") {
+            return "That server name could not be found. Check the URL for typos."
+        }
+        if lower.contains("not connected to the internet") {
+            return "No internet connection. Connect to the network and try again."
+        }
+        if lower.contains("ssl") || lower.contains("certificate") || lower.contains("secure connection") {
+            return "Could not verify this server's secure connection. Reset saved server trust only if you recognize this server."
+        }
+        if lower == "cancelled" || lower == "canceled" || lower.contains("cancelled") || lower.contains("canceled") {
+            return "The connection was interrupted before it finished. Check the URL and try again."
+        }
+
+        return message.isEmpty ? "Could not reach that server. Check the URL and try again." : message
+    }
+
+    private func shouldOfferServerTrustReset(for error: Error) -> Bool {
+        if case .certificateChanged? = error as? ServerProbeError {
+            return true
+        }
+        // Nothing is pinned for a refused public host, so "reset saved server trust" has nothing
+        // to clear — it would just look like a way to push past the refusal. Match the message
+        // fallback below explicitly rather than letting the word "certificate" trip it.
+        if case .untrustedPublicCertificate? = error as? ServerProbeError {
+            return false
+        }
+
+        let message = (error as? APIError)?.message ?? error.localizedDescription
+        let lower = message.lowercased()
+        return lower.contains("ssl") || lower.contains("certificate") || lower.contains("secure connection")
+    }
+
+    private func finishBootstrap() {
+        loading = false
+        hasCompletedInitialBootstrap = true
+    }
+
+    /// The app-level notification switch moved (Settings), or the OS permission it depends on
+    /// came back while the app was away. Either way the queue has to be rebuilt right now:
+    /// nothing else revisits pending requests until the next task edit, so an off switch would
+    /// keep firing what was already scheduled and an on switch would stay silent until then.
+    func setNotificationsEnabled(_ enabled: Bool) async {
+        NotificationPreferenceStore().isEnabled = enabled
+        await rescheduleReminders()
+    }
+
+    /// Re-read the OS notification permission and rebuild the queue if it just came back.
+    ///
+    /// Called from `AppRootView` on every foreground return, not from the Settings screen:
+    /// the permission is granted in the *system* Settings app, and the user's next stop after
+    /// that is whatever screen they left — usually the task list. Every `add` was refused
+    /// while the permission was missing, so the queue is empty, and nothing else revisits
+    /// pending requests until the next task edit. Without this, "OS on + switch on" would
+    /// deliver nothing until the user happened to open T'Day's own Settings again.
+    ///
+    /// A cold launch needs no comparison: `bootstrap()` reschedules unconditionally on both
+    /// its branches, so `previous == nil` is already covered and only a change *under* a live
+    /// process is interesting here.
+    @discardableResult
+    func refreshNotificationAuthorization() async -> UNAuthorizationStatus {
+        let previous = notificationAuthorizationStatus
+        let status = await container.reminderScheduler.authorizationStatus()
+        notificationAuthorizationStatus = status
+        guard let previous,
+              !previous.allowsNotificationDelivery,
+              status.allowsNotificationDelivery,
+              NotificationPreferenceStore().isEnabled
+        else {
+            return status
+        }
+        await rescheduleReminders()
+        return status
+    }
+
+    private func rescheduleReminders() async {
+        let tasks = container.todoRepository.fetchTodosSnapshot(mode: .all)
+        await container.reminderScheduler.reschedule(tasks: tasks, defaultReminder: selectedReminder)
+        await container.dayAheadScheduler.reschedule(tasks: tasks)
+        // Same snapshot, same cadence as the reminder pass. Opt-in and permission-gated inside, so
+        // this is a no-op until the user turns the device-calendar mirror on.
+        await container.calendarSyncManager.sync(tasks: tasks)
+    }
+
+    func refreshVersionInfo() async {
+        TdayTelemetry.addBreadcrumb("update.check", data: ["scope": "all"])
+        if !isLocalMode {
+            await recheckVersion()
+        }
+        await refreshGitHubReleases()
+    }
+
+    private func refreshGitHubReleases() async {
+        isReleaseLoading = latestRelease == nil && currentRelease == nil
+        releaseError = nil
+        async let latestResult = fetchGitHubRelease(urlString: "https://api.github.com/repos/ohmzi/Tday/releases/latest")
+        async let currentResult = fetchGitHubRelease(urlString: "https://api.github.com/repos/ohmzi/Tday/releases/tags/v\(currentVersionName)")
+        let latest = await latestResult
+        let current = await currentResult
+
+        latestRelease = latest.release
+        currentRelease = current.release
+        latestVersionName = latest.release?.version
+        releaseError = latest.error?.localizedDescription
+        isReleaseLoading = false
+    }
+
+    private func fetchGitHubRelease(urlString: String) async -> (release: GitHubRelease?, error: Error?) {
+        guard let url = URL(string: urlString) else {
+            return (nil, nil)
+        }
+        var request = URLRequest(url: url)
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            if let httpResponse = response as? HTTPURLResponse,
+               !(200..<300).contains(httpResponse.statusCode) {
+                return (nil, nil)
+            }
+            return (try JSONDecoder().decode(GitHubRelease.self, from: data), nil)
+        } catch {
+            return (nil, error)
+        }
+    }
+
+    nonisolated static func compareVersions(_ a: String, _ b: String) -> Int {
+        let aParts = a.split(separator: ".").map { Int($0) ?? 0 }
+        let bParts = b.split(separator: ".").map { Int($0) ?? 0 }
+        let maxLen = max(aParts.count, bParts.count)
+        for i in 0..<maxLen {
+            let av = i < aParts.count ? aParts[i] : 0
+            let bv = i < bParts.count ? bParts[i] : 0
+            if av != bv { return av < bv ? -1 : 1 }
+        }
+        return 0
+    }
+
+    nonisolated static func bundleUpdateURL() -> URL? {
+        guard let raw = Bundle.main.object(forInfoDictionaryKey: "TdayUpdateURL") as? String else {
+            return nil
+        }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.hasPrefix("$(") else {
+            return nil
+        }
+        return URL(string: trimmed)
+    }
+}

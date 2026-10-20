@@ -1,0 +1,159 @@
+package com.ohmz.tday.compose.core.data.settings
+
+import com.ohmz.tday.compose.core.data.SecureConfigStore
+import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.requireApiBody
+import com.ohmz.tday.compose.core.model.PreferencesDto
+import com.ohmz.tday.compose.core.network.TdayApiService
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class SettingsRepository @Inject constructor(
+    private val api: TdayApiService,
+    private val cacheManager: OfflineCacheManager,
+    private val secureConfigStore: SecureConfigStore,
+) {
+    /**
+     * Per-user preference (default ON) that hides the AI-summary feature entirely.
+     * In local mode the deterministic engine still runs on-device, so it stays on.
+     */
+    fun isAiSummaryEnabledSnapshot(): Boolean {
+        if (secureConfigStore.isLocalMode()) return true
+        return cacheManager.loadOfflineStateBlocking().aiSummaryEnabled
+    }
+
+    /** Whether the backend has an AI model configured (drives the source label). */
+    fun aiSummaryConfiguredSnapshot(): Boolean = secureConfigStore.getAiSummaryConfigured()
+
+    /** Whether the configured AI model is currently healthy. */
+    fun aiSummaryHealthySnapshot(): Boolean = secureConfigStore.getAiSummaryHealthy()
+
+    /**
+     * The "scheduled" or "floater" root feed a fresh cold launch should open on. Unlike
+     * [isAiSummaryEnabledSnapshot], this preference IS user-configurable in Local Mode too —
+     * there is no server fallback to hardcode, so the cache (which Local Mode also writes
+     * through) is read directly in both modes. Uses the single-row `sync_metadata` read
+     * instead of the full [OfflineCacheManager.loadOfflineStateBlocking] cache aggregate:
+     * this snapshot runs synchronously from a Compose initializer on cold launch (see
+     * `TdayApp.kt`), so it must stay cheap rather than pulling every todo/floater/list/
+     * completed/mutation row through the encrypted DB on the main thread.
+     */
+    fun defaultHomeScreenSnapshot(): String =
+        cacheManager.defaultHomeScreenSnapshotBlocking()
+
+    /**
+     * Updates the default-home-screen preference via `/api/preferences` (server mode) or the
+     * offline cache directly (Local Mode), mirroring [setAiSummaryEnabled]'s split.
+     */
+    suspend fun setDefaultHomeScreen(value: String) {
+        if (secureConfigStore.isLocalMode()) {
+            cacheManager.updateOfflineState { state ->
+                if (state.defaultHomeScreen == value) state else state.copy(defaultHomeScreen = value)
+            }
+            return
+        }
+
+        requireApiBody(
+            api.patchPreferences(PreferencesDto(defaultHomeScreen = value)),
+            "Could not update preferences",
+        )
+        // Mirror the value the server ACCEPTED, not a field read back out of the response.
+        // `PreferencesResponse.defaultHomeScreen` is a non-null String defaulting to
+        // "scheduled" and the JSON layer ignores unknown keys, so a response carrying no
+        // preferences at all (the route answered `{"message": "preferences updated"}`) still
+        // deserialises — to "scheduled" — and reading it back wrote Scheduled into the launch
+        // cache after every successful change, so the next cold start opened the wrong root
+        // feed while the account row correctly said "floater". A 200 means the value passed
+        // validation and was written, so the request is the authority here; iOS keeps its
+        // cache the same way (`response.defaultHomeScreen ?? value`).
+        cacheManager.updateOfflineState { state ->
+            if (state.defaultHomeScreen == value) state else state.copy(defaultHomeScreen = value)
+        }
+    }
+
+    /**
+     * Fetches `/api/preferences` and mirrors the default-home-screen preference into the
+     * offline cache. On failure (or in Local Mode, where there is nothing to fetch), the
+     * cached value is returned untouched.
+     */
+    suspend fun refreshDefaultHomeScreen(): String {
+        if (secureConfigStore.isLocalMode()) return cacheManager.loadOfflineState().defaultHomeScreen
+
+        return runCatching {
+            val value = requireApiBody(
+                api.getPreferences(),
+                "Could not load preferences",
+            ).defaultHomeScreen
+            cacheManager.updateOfflineState { state ->
+                if (state.defaultHomeScreen == value) state else state.copy(defaultHomeScreen = value)
+            }
+            value
+        }.getOrElse {
+            cacheManager.loadOfflineState().defaultHomeScreen
+        }
+    }
+
+    /**
+     * Fetches `/app-settings` and persists the AI capability (configured/healthy) into
+     * [SecureConfigStore]. On failure the previously-stored values are left untouched.
+     */
+    suspend fun refreshAiCapability() {
+        if (secureConfigStore.isLocalMode()) return
+
+        runCatching {
+            requireApiBody(
+                api.getAppSettings(),
+                "Could not load app settings",
+            )
+        }.onSuccess { settings ->
+            secureConfigStore.setAiSummaryConfigured(settings.aiSummaryConfigured)
+            secureConfigStore.setAiSummaryHealthy(settings.aiSummaryHealthy)
+        }
+    }
+
+    /**
+     * Updates the per-user preference via `/api/preferences` and mirrors it into the
+     * offline cache so the gating snapshot reflects the change immediately.
+     */
+    suspend fun setAiSummaryEnabled(enabled: Boolean) {
+        if (secureConfigStore.isLocalMode()) {
+            cacheManager.updateOfflineState { state ->
+                if (state.aiSummaryEnabled == enabled) state else state.copy(aiSummaryEnabled = enabled)
+            }
+            return
+        }
+
+        requireApiBody(
+            api.patchPreferences(PreferencesDto(aiSummaryEnabled = enabled)),
+            "Could not update preferences",
+        )
+        // Same rule as [setDefaultHomeScreen]: mirror what was accepted rather than a response
+        // field that defaults to `true` when the body carries no preferences, which turned the
+        // gate back on behind a user who had just switched it off.
+        cacheManager.updateOfflineState { state ->
+            if (state.aiSummaryEnabled == enabled) state else state.copy(aiSummaryEnabled = enabled)
+        }
+    }
+
+    /**
+     * Fetches `/api/preferences` and mirrors the per-user AI-summary preference into the
+     * offline cache. On failure the cached value is left untouched.
+     */
+    suspend fun refreshAiSummaryPreference(): Boolean {
+        if (secureConfigStore.isLocalMode()) return true
+
+        return runCatching {
+            val enabled = requireApiBody(
+                api.getPreferences(),
+                "Could not load preferences",
+            ).aiSummaryEnabled
+            cacheManager.updateOfflineState { state ->
+                if (state.aiSummaryEnabled == enabled) state else state.copy(aiSummaryEnabled = enabled)
+            }
+            enabled
+        }.getOrElse {
+            cacheManager.loadOfflineState().aiSummaryEnabled
+        }
+    }
+}

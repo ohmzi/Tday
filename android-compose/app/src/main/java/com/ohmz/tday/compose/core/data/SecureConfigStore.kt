@@ -1,0 +1,372 @@
+package com.ohmz.tday.compose.core.data
+
+import android.content.Context
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
+import com.ohmz.tday.compose.BuildConfig
+import com.ohmz.tday.compose.core.network.isPrivateNetworkHost
+import dagger.hilt.android.qualifiers.ApplicationContext
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import org.json.JSONObject
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class SecureConfigStore @Inject constructor(
+    @ApplicationContext context: Context,
+) {
+    @Volatile
+    private var runtimeServerUrl: String? = null
+
+    private val masterKey = MasterKey.Builder(context)
+        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+        .build()
+
+    private val prefs = EncryptedSharedPreferences.create(
+        context,
+        PREF_NAME,
+        masterKey,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+    )
+
+    init {
+        pruneSeededListIconShadowOnce()
+    }
+
+    /**
+     * Clears the pre-v0.7.28 seeded `"inbox"` entries out of the icon shadow, exactly once.
+     *
+     * The argument for doing it at all is [prunedSeededListIconShadow]'s; the argument for
+     * doing it HERE is ordering. `SyncManager` reads this shadow as `iconFallback` on every
+     * list fetch, and a `@Singleton` constructed by Hilt is built before anything can hold a
+     * reference to ask it for one — so running in `init` means no fetch can ever observe the
+     * un-pruned map. A prune hung off the first sync instead would race the first paint and
+     * show the old glyph for however long that took, once, on exactly the update where the
+     * user was told the icons would change.
+     *
+     * The flag is what makes it one-shot rather than a policy. After this runs, `"inbox"` in
+     * the shadow means a deliberate tap on Inbox — the sheets stopped submitting the default
+     * in v0.7.28 — and a prune that kept firing would delete those choices on every launch,
+     * which is the one thing the whole feature promises not to do.
+     */
+    private fun pruneSeededListIconShadowOnce() {
+        if (prefs.getBoolean(KEY_LIST_ICON_SHADOW_PRUNED, false)) return
+
+        val pruned = prunedSeededListIconShadow(prefs.getString(KEY_LIST_ICON_MAP, null))
+        prefs.edit()
+            .apply { if (pruned != null) putString(KEY_LIST_ICON_MAP, pruned) }
+            // Set even when nothing was pruned: the flag records that this install has been
+            // through the cutover, not that it had work to do. Leaving it unset on a device
+            // with an empty shadow would re-arm the prune for icons chosen after the update.
+            .putBoolean(KEY_LIST_ICON_SHADOW_PRUNED, true)
+            .apply()
+    }
+
+    fun hasServerUrl(): Boolean = !getServerUrl().isNullOrBlank()
+
+    fun getAppDataMode(): AppDataMode {
+        val persisted = prefs.getString(KEY_APP_DATA_MODE, null)
+            ?.let { raw ->
+                runCatching { AppDataMode.valueOf(raw) }.getOrNull()
+            }
+        if (persisted != null) return persisted
+        return if (!getServerUrl().isNullOrBlank()) AppDataMode.SERVER else AppDataMode.UNSET
+    }
+
+    fun isLocalMode(): Boolean = getAppDataMode() == AppDataMode.LOCAL
+
+    fun setAppDataMode(mode: AppDataMode) {
+        prefs.edit().putString(KEY_APP_DATA_MODE, mode.name).apply()
+    }
+
+    /**
+     * Whether a local workspace was *left* rather than deleted, and is therefore still on
+     * disk.
+     *
+     * The mode alone cannot tell the two apart: leaving and signing out both land on
+     * [AppDataMode.UNSET] with no server configured, and that is exactly the state
+     * `AppViewModel.bootstrap()` reads as "fresh install or signed out" and clears the cache
+     * for. Without this marker the row labelled Leave would destroy the workspace it promised
+     * to keep — on the next cold launch instead of immediately, which is only a slower way to
+     * lose the same data. Cleared as soon as a mode is chosen again.
+     */
+    fun hasRetainedLocalWorkspace(): Boolean = prefs.getBoolean(KEY_RETAINED_LOCAL_WORKSPACE, false)
+
+    fun setRetainedLocalWorkspace(retained: Boolean) {
+        if (retained) {
+            prefs.edit().putBoolean(KEY_RETAINED_LOCAL_WORKSPACE, true).apply()
+        } else {
+            prefs.edit().remove(KEY_RETAINED_LOCAL_WORKSPACE).apply()
+        }
+    }
+
+    fun getServerUrl(): String? {
+        val inMemory = runtimeServerUrl?.takeIf { it.isNotBlank() }
+        if (inMemory != null) return inMemory
+
+        val persisted = prefs.getString(KEY_SERVER_URL, null)
+            ?.takeIf { it.isNotBlank() }
+        if (persisted != null) {
+            runtimeServerUrl = persisted
+        }
+        return persisted
+    }
+
+    fun saveServerUrl(
+        rawUrl: String,
+        persist: Boolean = false,
+    ): Result<String> {
+        val normalized = normalizeServerUrl(rawUrl)
+            ?: return Result.failure(IllegalArgumentException("Invalid server URL"))
+
+        runtimeServerUrl = normalized
+        if (persist) {
+            prefs.edit()
+                .putString(KEY_SERVER_URL, normalized)
+                .putString(KEY_APP_DATA_MODE, AppDataMode.SERVER.name)
+                .apply()
+        } else {
+            prefs.edit().remove(KEY_SERVER_URL).apply()
+        }
+        return Result.success(normalized)
+    }
+
+    fun persistRuntimeServerUrl(): Result<String> {
+        val current = getServerUrl()
+            ?: return Result.failure(IllegalStateException("Server URL is not configured"))
+
+        runtimeServerUrl = current
+        prefs.edit()
+            .putString(KEY_SERVER_URL, current)
+            .putString(KEY_APP_DATA_MODE, AppDataMode.SERVER.name)
+            .apply()
+        return Result.success(current)
+    }
+
+    fun clearServerUrl() {
+        runtimeServerUrl = null
+        prefs.edit().remove(KEY_SERVER_URL).apply()
+    }
+
+    fun clearAllLocalData() {
+        runtimeServerUrl = null
+        prefs.edit().clear().apply()
+    }
+
+    fun normalizeServerUrl(raw: String): String? {
+        val trimmed = raw.trim()
+        if (trimmed.isBlank()) return null
+
+        val parsed = when {
+            trimmed.startsWith("https://", ignoreCase = true) -> {
+                trimmed.toHttpUrlOrNull() ?: return null
+            }
+            trimmed.startsWith("http://", ignoreCase = true) -> {
+                val httpCandidate = trimmed.toHttpUrlOrNull() ?: return null
+                if (canUseLocalHttp(httpCandidate.host)) {
+                    httpCandidate
+                } else {
+                    return null
+                }
+            }
+            else -> {
+                val httpsCandidate = "https://$trimmed".toHttpUrlOrNull() ?: return null
+                if (canUseLocalHttp(httpsCandidate.host)) {
+                    "http://$trimmed".toHttpUrlOrNull() ?: return null
+                } else {
+                    httpsCandidate
+                }
+            }
+        }
+
+        val pathless = parsed.newBuilder()
+            .encodedPath("/")
+            .query(null)
+            .fragment(null)
+            .build()
+            .toString()
+
+        return pathless.removeSuffix("/")
+    }
+
+    fun getOrCreateDeviceId(): String {
+        val existing = prefs.getString(KEY_DEVICE_ID, null)
+        if (!existing.isNullOrBlank()) return existing
+
+        val created = UUID.randomUUID().toString()
+        prefs.edit().putString(KEY_DEVICE_ID, created).apply()
+        return created
+    }
+
+    fun serverTrustKeyForUrl(rawUrl: String): String? {
+        val normalized = normalizeServerUrl(rawUrl) ?: return null
+        val parsed = normalized.toHttpUrlOrNull() ?: return null
+        val usesDefaultPort = (parsed.scheme == "https" && parsed.port == 443) ||
+            (parsed.scheme == "http" && parsed.port == 80)
+        val authority = if (usesDefaultPort) parsed.host else "${parsed.host}:${parsed.port}"
+        return "${parsed.scheme}://$authority"
+    }
+
+    fun getTrustedServerFingerprint(serverTrustKey: String): String? {
+        return prefs.getString(fingerprintPrefKey(serverTrustKey), null)
+    }
+
+    fun saveTrustedServerFingerprint(
+        serverTrustKey: String,
+        fingerprint: String,
+    ) {
+        prefs.edit()
+            .putString(fingerprintPrefKey(serverTrustKey), fingerprint)
+            .apply()
+    }
+
+    fun clearTrustedServerFingerprintForUrl(rawUrl: String): Result<Unit> {
+        val serverTrustKey = serverTrustKeyForUrl(rawUrl)
+            ?: return Result.failure(IllegalArgumentException("Invalid server URL"))
+
+        clearTrustedServerFingerprintForServerKey(serverTrustKey)
+        return Result.success(Unit)
+    }
+
+    fun clearTrustedServerFingerprintForServerKey(serverTrustKey: String) {
+        prefs.edit()
+            .remove(fingerprintPrefKey(serverTrustKey))
+            .apply()
+    }
+
+    fun getLastUsername(): String? =
+        prefs.getString(KEY_USERNAME, null)?.takeIf { it.isNotBlank() }
+
+    fun saveLastUsername(username: String) {
+        prefs.edit()
+            .putString(KEY_USERNAME, username)
+            .remove("password")
+            .apply()
+    }
+
+    fun clearLastUsername() {
+        prefs.edit()
+            .remove(KEY_USERNAME)
+            .remove("password")
+            .apply()
+    }
+
+    fun getCachedSessionUserRaw(): String? =
+        prefs.getString(KEY_CACHED_SESSION_USER, null)?.takeIf { it.isNotBlank() }
+
+    fun saveCachedSessionUserRaw(raw: String) {
+        prefs.edit().putString(KEY_CACHED_SESSION_USER, raw).apply()
+    }
+
+    fun clearCachedSessionUser() {
+        prefs.edit().remove(KEY_CACHED_SESSION_USER).apply()
+    }
+
+    /**
+     * Credentials kept after a registration/login awaiting admin approval, so the holding
+     * screen survives relaunch and can silently re-attempt login until approved. App data
+     * (including this) is wiped on uninstall, satisfying "cleared on reinstall".
+     */
+    fun savePendingApproval(username: String, password: String) {
+        prefs.edit()
+            .putString(KEY_PENDING_APPROVAL_USERNAME, username)
+            .putString(KEY_PENDING_APPROVAL_PASSWORD, password)
+            .apply()
+    }
+
+    fun getPendingApproval(): Pair<String, String>? {
+        val username =
+            prefs.getString(KEY_PENDING_APPROVAL_USERNAME, null)?.takeIf { it.isNotBlank() }
+        val password =
+            prefs.getString(KEY_PENDING_APPROVAL_PASSWORD, null)?.takeIf { it.isNotBlank() }
+        return if (username != null && password != null) username to password else null
+    }
+
+    fun clearPendingApproval() {
+        prefs.edit()
+            .remove(KEY_PENDING_APPROVAL_USERNAME)
+            .remove(KEY_PENDING_APPROVAL_PASSWORD)
+            .apply()
+    }
+
+    fun getListIcon(listId: String): String? {
+        if (listId.isBlank()) return null
+        val raw = prefs.getString(KEY_LIST_ICON_MAP, null).orEmpty()
+        if (raw.isBlank()) return null
+        return runCatching {
+            JSONObject(raw).optString(listId).ifBlank { null }
+        }.getOrNull()
+    }
+
+    fun saveListIcon(listId: String, iconKey: String) {
+        if (listId.isBlank() || iconKey.isBlank()) return
+
+        val current = runCatching {
+            JSONObject(prefs.getString(KEY_LIST_ICON_MAP, null).orEmpty())
+        }.getOrElse { JSONObject() }
+
+        current.put(listId, iconKey)
+        prefs.edit().putString(KEY_LIST_ICON_MAP, current.toString()).apply()
+    }
+
+    fun buildAbsoluteAppUrl(path: String): String? {
+        val base = getServerUrl() ?: return null
+        val normalizedPath = if (path.startsWith('/')) path else "/$path"
+        return "$base$normalizedPath"
+    }
+
+    fun getAiSummaryConfigured(): Boolean {
+        return prefs.getBoolean(KEY_AI_SUMMARY_CONFIGURED, false)
+    }
+
+    fun setAiSummaryConfigured(configured: Boolean) {
+        prefs.edit().putBoolean(KEY_AI_SUMMARY_CONFIGURED, configured).apply()
+    }
+
+    fun getAiSummaryHealthy(): Boolean {
+        return prefs.getBoolean(KEY_AI_SUMMARY_HEALTHY, false)
+    }
+
+    fun setAiSummaryHealthy(healthy: Boolean) {
+        prefs.edit().putBoolean(KEY_AI_SUMMARY_HEALTHY, healthy).apply()
+    }
+
+    fun getOfflineSyncStateRaw(): String? {
+        return prefs.getString(KEY_OFFLINE_SYNC_STATE, null)
+    }
+
+    fun clearOfflineSyncState() {
+        prefs.edit().remove(KEY_OFFLINE_SYNC_STATE).apply()
+    }
+
+    private fun fingerprintPrefKey(serverTrustKey: String): String {
+        return "$KEY_CERT_FINGERPRINT_PREFIX$serverTrustKey"
+    }
+
+    // Shares isPrivateNetworkHost with the trust manager on purpose: "is this host reachable only
+    // from the LAN?" now gates both cleartext and certificate enrollment, and a second copy of the
+    // rule is how the two drift apart.
+    private fun canUseLocalHttp(host: String): Boolean {
+        return BuildConfig.DEBUG && isPrivateNetworkHost(host)
+    }
+
+    private companion object {
+        const val PREF_NAME = "tday_secure_config"
+        const val KEY_SERVER_URL = "server_url"
+        const val KEY_USERNAME = "username"
+        const val KEY_DEVICE_ID = "device_id"
+        const val KEY_CERT_FINGERPRINT_PREFIX = "cert_fp_"
+        const val KEY_LIST_ICON_MAP = "list_icon_map"
+        const val KEY_OFFLINE_SYNC_STATE = "offline_sync_state_v1"
+        const val KEY_CACHED_SESSION_USER = "cached_session_user_v1"
+        const val KEY_PENDING_APPROVAL_USERNAME = "pending_approval_username_v1"
+        const val KEY_PENDING_APPROVAL_PASSWORD = "pending_approval_password_v1"
+        const val KEY_APP_DATA_MODE = "app_data_mode_v1"
+        const val KEY_RETAINED_LOCAL_WORKSPACE = "retained_local_workspace_v1"
+        const val KEY_AI_SUMMARY_CONFIGURED = "ai_summary_configured_v1"
+        const val KEY_AI_SUMMARY_HEALTHY = "ai_summary_healthy_v1"
+        const val KEY_LIST_ICON_SHADOW_PRUNED = "list_icon_shadow_pruned_v1"
+    }
+}

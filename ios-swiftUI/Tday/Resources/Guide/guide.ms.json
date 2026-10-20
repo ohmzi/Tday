@@ -1,0 +1,1808 @@
+{
+  "currentVersion": "0.8.5",
+  "ui": {
+    "title": "Panduan & Petua",
+    "subtitle": "Segala yang T'Day mampu lakukan — yang jelas dan yang tersembunyi.",
+    "searchPlaceholder": "Cari ciri…",
+    "searchAria": "Cari dalam panduan",
+    "whatsNew": "Apa yang baharu",
+    "tryIt": "Cuba",
+    "clearSearch": "Kosongkan",
+    "noResults": "Tiada padanan. Cuba perkataan lain.",
+    "results": "{{count}} hasil",
+    "badges.hiddenGem": "Permata tersembunyi",
+    "badges.proTip": "Petua pro",
+    "badges.new": "Baharu",
+    "badges.server": "Mod pelayan",
+    "sections.gettingStarted": "Bermula",
+    "sections.captureAndDates": "Catat & tarikh",
+    "sections.gestures": "Gerak isyarat",
+    "sections.organizing": "Menyusun",
+    "sections.recurrenceAndReminders": "Ulangan & peringatan",
+    "sections.widgetsAndSurfaces": "Widget & paparan",
+    "sections.modesAndSync": "Mod & penyegerakan",
+    "sections.integrations": "Integrasi",
+    "sections.keyboardShortcuts": "Pintasan papan kekunci"
+  },
+  "sections": [
+    {
+      "id": "GETTING_STARTED",
+      "title": "Bermula",
+      "order": 0
+    },
+    {
+      "id": "CAPTURE_AND_DATES",
+      "title": "Catat & tarikh",
+      "order": 1
+    },
+    {
+      "id": "GESTURES",
+      "title": "Gerak isyarat",
+      "order": 2
+    },
+    {
+      "id": "ORGANIZING",
+      "title": "Menyusun",
+      "order": 3
+    },
+    {
+      "id": "RECURRENCE_AND_REMINDERS",
+      "title": "Ulangan & peringatan",
+      "order": 4
+    },
+    {
+      "id": "WIDGETS_AND_SURFACES",
+      "title": "Widget & paparan",
+      "order": 5
+    },
+    {
+      "id": "MODES_AND_SYNC",
+      "title": "Mod & penyegerakan",
+      "order": 6
+    },
+    {
+      "id": "INTEGRATIONS",
+      "title": "Integrasi",
+      "order": 7
+    },
+    {
+      "id": "KEYBOARD_SHORTCUTS",
+      "title": "Pintasan papan kekunci",
+      "order": 8
+    }
+  ],
+  "topics": [
+    {
+      "id": "root-feeds",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "layout-dashboard",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Dijadualkan dan Bila-bila",
+      "summary": "Dua suapan utama yang tenang, boleh ditukar dari dok.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day mempunyai dua suapan seiring. Tugasan bertarikh anda untuk hari ini dan seterusnya tersimpan dalam suapan Dijadualkan. Bila-bila menyimpan Floater — tugasan tanpa tarikh. Tukar antara keduanya dari dok di bahagian bawah, dan cipta tugasan dari mana-mana satu."
+          ]
+        }
+      ],
+      "searchTitle": "dijadualkan dan bila-bila",
+      "searchKeywords": "dijadualkan, bila-bila, suapan, dok, akar, navigasi, tab",
+      "searchBody": "dua suapan utama yang tenang, boleh ditukar dari dok. t'day mempunyai dua suapan seiring. tugasan bertarikh anda untuk hari ini dan seterusnya tersimpan dalam suapan dijadualkan. bila-bila menyimpan floater — tugasan tanpa tarikh. tukar antara keduanya dari dok di bahagian bawah, dan cipta tugasan dari mana-mana satu."
+    },
+    {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Skrin utama lalai",
+      "summary": "Pilih sama ada T'Day dibuka pada Dijadualkan atau Bila-bila.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tetapan mempunyai bahagian Tingkah laku di mana anda memilih suapan mana yang dibuka dahulu — Dijadualkan atau Bila-bila. Ia hanya menetapkan apa yang anda lihat semasa pelancaran; dok masih membenarkan anda menukar antara kedua-duanya pada bila-bila masa."
+          ]
+        }
+      ],
+      "searchTitle": "skrin utama lalai",
+      "searchKeywords": "lalai, skrin utama, pelancaran, permulaan, dijadualkan, bila-bila, tingkah laku, tetapan",
+      "searchBody": "pilih sama ada t'day dibuka pada dijadualkan atau bila-bila. tetapan mempunyai bahagian tingkah laku di mana anda memilih suapan mana yang dibuka dahulu — dijadualkan atau bila-bila. ia hanya menetapkan apa yang anda lihat semasa pelancaran; dok masih membenarkan anda menukar antara kedua-duanya pada bila-bila masa."
+    },
+    {
+      "id": "create-task",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "plus",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Cipta tugasan",
+      "summary": "Tambah tugasan berjadual atau Floater tanpa tarikh dengan beberapa ketikan.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Ketik butang cipta untuk menambah tugasan. Beri tajuk dan, jika ia bertarikh, masa tamat tempoh. Biarkan tarikh kosong dan ia menjadi Floater dalam suapan Bila-bila anda."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Mula taip tarikh terus dalam tajuk — T'Day membacanya untuk anda. Lihat “Taip tarikh”."
+          ]
+        }
+      ],
+      "searchTitle": "cipta tugasan",
+      "searchKeywords": "cipta, tambah, baharu, tugasan, tambah, fab, karang",
+      "searchBody": "tambah tugasan berjadual atau floater tanpa tarikh dengan beberapa ketikan. ketik butang cipta untuk menambah tugasan. beri tajuk dan, jika ia bertarikh, masa tamat tempoh. biarkan tarikh kosong dan ia menjadi floater dalam suapan bila-bila anda. mula taip tarikh terus dalam tajuk — t'day membacanya untuk anda. lihat “taip tarikh”."
+    },
+    {
+      "id": "nlp-date-syntax",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "nlp-title-input"
+      ],
+      "title": "Taip tarikh",
+      "summary": "Tulis tarikh dalam tajuk dan T'Day menjadualkannya untuk anda.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tanpa pemilih. Taip tarikh (\"tomorrow 3pm\"), ulangan (\"every day\", \"weekly\", \"every weekday\"), atau keutamaan (\"!\", \"!!\", atau \"high\"/\"low\" di hujung) terus dalam tajuk. T'Day menghuraikannya pada peranti — tanpa akaun atau rangkaian —, menyerlahkan tarikh yang difahami, dan mengisi jadual, ulangan dan keutamaan."
+          ]
+        },
+        {
+          "type": "EXAMPLE",
+          "texts": [
+            "doktor gigi tuesday 3pm every weekday !!"
+          ]
+        }
+      ],
+      "searchTitle": "taip tarikh",
+      "searchKeywords": "bahasa semula jadi, tarikh, esok, minggu depan, hurai, pantas, pintar, nlp, pada peranti",
+      "searchBody": "tulis tarikh dalam tajuk dan t'day menjadualkannya untuk anda. tanpa pemilih. taip tarikh (\"tomorrow 3pm\"), ulangan (\"every day\", \"weekly\", \"every weekday\"), atau keutamaan (\"!\", \"!!\", atau \"high\"/\"low\" di hujung) terus dalam tajuk. t'day menghuraikannya pada peranti — tanpa akaun atau rangkaian —, menyerlahkan tarikh yang difahami, dan mengisi jadual, ulangan dan keutamaan. doktor gigi tuesday 3pm every weekday !!"
+    },
+    {
+      "id": "calendar-views",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "calendar",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": "calendar",
+        "android": "calendar",
+        "ios": "calendar"
+      },
+      "helpAnchors": [],
+      "title": "Paparan kalendar",
+      "summary": "Lihat tugasan berjadual anda mengikut bulan, minggu, atau hari.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Buka kalendar untuk melihat tugasan berjadual disusun mengikut bulan, minggu, atau hari. Leret atau guna anak panah untuk beralih antara tempoh; butang di kanan atas membawa anda kembali ke hari ini tanpa menukar paparan."
+          ]
+        }
+      ],
+      "searchTitle": "paparan kalendar",
+      "searchKeywords": "kalendar, bulan, minggu, hari, agenda, paparan, tarikh",
+      "searchBody": "lihat tugasan berjadual anda mengikut bulan, minggu, atau hari. buka kalendar untuk melihat tugasan berjadual disusun mengikut bulan, minggu, atau hari. leret atau guna anak panah untuk beralih antara tempoh; butang di kanan atas membawa anda kembali ke hari ini tanpa menukar paparan."
+    },
+    {
+      "id": "priorities",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "flag",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Keutamaan",
+      "summary": "Tandakan yang penting dengan Rendah, Sederhana, atau Tinggi.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Beri tugasan satu keutamaan untuk menanda betapa pentingnya ia. Keutamaan dipaparkan sebagai titik aksen kecil pada tugasan dan membantu menyusun perkara yang patut diberi perhatian dahulu."
+          ]
+        }
+      ],
+      "searchTitle": "keutamaan",
+      "searchKeywords": "keutamaan, tinggi, sederhana, rendah, penting, mustahak, tanda",
+      "searchBody": "tandakan yang penting dengan rendah, sederhana, atau tinggi. beri tugasan satu keutamaan untuk menanda betapa pentingnya ia. keutamaan dipaparkan sebagai titik aksen kecil pada tugasan dan membantu menyusun perkara yang patut diberi perhatian dahulu."
+    },
+    {
+      "id": "pin-task",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "pin",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Semat tugasan",
+      "summary": "Kekalkan tugasan penting di bahagian atas senarainya.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Semat tugasan untuk menahannya di bahagian atas suapannya, di atas susunan biasa. Nyahsemat untuk membiarkannya kembali ke tempatnya."
+          ]
+        }
+      ],
+      "searchTitle": "semat tugasan",
+      "searchKeywords": "semat, disemat, lekat, atas, penting, kekal",
+      "searchBody": "kekalkan tugasan penting di bahagian atas senarainya. semat tugasan untuk menahannya di bahagian atas suapannya, di atas susunan biasa. nyahsemat untuk membiarkannya kembali ke tempatnya."
+    },
+    {
+      "id": "swipe-actions",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "pointer",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": null,
+        "android": "todos/today",
+        "ios": "today"
+      },
+      "helpAnchors": [],
+      "title": "Tindakan leret",
+      "summary": "Leret baris tugasan untuk tindakan pantas tanpa membukanya.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Leret baris tugasan untuk mendedahkan tindakan pantas — selesaikannya, atau buang — tanpa membuka tugasan langsung."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tugasan yang selesai memaparkan toast buat asal selama beberapa saat, jadi leret tersilap tidak pernah muktamad."
+          ]
+        }
+      ],
+      "searchTitle": "tindakan leret",
+      "searchKeywords": "leret, gerak isyarat, sapu, selesai, padam, pantas, baris",
+      "searchBody": "leret baris tugasan untuk tindakan pantas tanpa membukanya. leret baris tugasan untuk mendedahkan tindakan pantas — selesaikannya, atau buang — tanpa membuka tugasan langsung. tugasan yang selesai memaparkan toast buat asal selama beberapa saat, jadi leret tersilap tidak pernah muktamad."
+    },
+    {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.8",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Salin butiran tugasan",
+      "summary": "Salin tajuk, nota, tarikh akhir, dan keutamaan tugasan sebagai teks.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Leret tugasan dan ketik Salin — atau guna butang Salin pada desktop — untuk menyalin tajuk, nota, tarikh akhir, dan keutamaannya sebagai teks biasa, sedia untuk ditampal di mana-mana."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Berguna untuk menampal tugasan ke dalam mesej, e-mel, atau aplikasi lain tanpa menaipnya semula."
+          ]
+        }
+      ],
+      "searchTitle": "salin butiran tugasan",
+      "searchKeywords": "salin, papan keratan, kongsi, teks, leret",
+      "searchBody": "salin tajuk, nota, tarikh akhir, dan keutamaan tugasan sebagai teks. leret tugasan dan ketik salin — atau guna butang salin pada desktop — untuk menyalin tajuk, nota, tarikh akhir, dan keutamaannya sebagai teks biasa, sedia untuk ditampal di mana-mana. berguna untuk menampal tugasan ke dalam mesej, e-mel, atau aplikasi lain tanpa menaipnya semula."
+    },
+    {
+      "id": "long-press-actions",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "hand",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Tekan lama tugasan",
+      "summary": "Tekan dan tahan untuk lebih banyak pilihan dan untuk mula menyusun semula.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tekan dan tahan tugasan untuk membuka pilihannya, atau untuk mengangkatnya dan menyeretnya ke kedudukan baharu dalam senarai."
+          ]
+        }
+      ],
+      "searchTitle": "tekan lama tugasan",
+      "searchKeywords": "tekan lama, tahan, menu konteks, pilihan, susun semula, seret",
+      "searchBody": "tekan dan tahan untuk lebih banyak pilihan dan untuk mula menyusun semula. tekan dan tahan tugasan untuk membuka pilihannya, atau untuk mengangkatnya dan menyeretnya ke kedudukan baharu dalam senarai."
+    },
+    {
+      "id": "drag-reorder",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Susun semula dengan menyeret",
+      "summary": "Seret tugasan ke susunan yang anda mahu.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Senarai anda mengekalkan susunan yang anda berikan. Seret tugasan ke atas atau ke bawah untuk mengatur hari anda mengikut cara anda memikirkannya."
+          ]
+        }
+      ],
+      "searchTitle": "susun semula dengan menyeret",
+      "searchKeywords": "seret, susun semula, alih, isih, susunan, atur",
+      "searchBody": "seret tugasan ke susunan yang anda mahu. senarai anda mengekalkan susunan yang anda berikan. seret tugasan ke atas atau ke bawah untuk mengatur hari anda mengikut cara anda memikirkannya."
+    },
+    {
+      "id": "swipe-sheet-away",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.23",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Leret helaian untuk menutupnya",
+      "summary": "Tarik helaian tugas baharu ke bawah untuk menutupnya.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Bar kecil di bahagian atas helaian tugas baharu bermaksud kad itu boleh ditarik ke bawah. Seret dan ia mengikut jari anda; lepaskan selepas kira-kira satu perempat perjalanan dan ia ditutup, sama seperti anda mengetik kawasan gelap di belakangnya. Lambaian pantas juga dikira — yang penting ke mana anda menuju, bukan di mana anda melepaskannya — dan tarikan yang anda ubah fikiran akan melantun kembali ke tempatnya."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Jika kandungan sesebuah helaian boleh ditatal, seret dari bahagian atas kad: bahagian tengahnya milik senarai."
+          ]
+        }
+      ],
+      "searchTitle": "leret helaian untuk menutupnya",
+      "searchKeywords": "leret, seret, tarik, tutup, buang, helaian, kad, pemegang, gerak isyarat, ke bawah",
+      "searchBody": "tarik helaian tugas baharu ke bawah untuk menutupnya. bar kecil di bahagian atas helaian tugas baharu bermaksud kad itu boleh ditarik ke bawah. seret dan ia mengikut jari anda; lepaskan selepas kira-kira satu perempat perjalanan dan ia ditutup, sama seperti anda mengetik kawasan gelap di belakangnya. lambaian pantas juga dikira — yang penting ke mana anda menuju, bukan di mana anda melepaskannya — dan tarikan yang anda ubah fikiran akan melantun kembali ke tempatnya. jika kandungan sesebuah helaian boleh ditatal, seret dari bahagian atas kad: bahagian tengahnya milik senarai."
+    },
+    {
+      "id": "floaters-vs-todos",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Floater vs tugasan berjadual",
+      "summary": "Tugasan tanpa tarikh tinggal dalam suapan Bila-bila; tugasan bertarikh tinggal dalam suapan Dijadualkan.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tugasan yang mempunyai tarikh tamat tempoh muncul dalam suapan Dijadualkan serta kalendar. Floater tiada tarikh — ia menunggu dengan tenang dalam suapan Bila-bila anda sehingga anda bersedia. Guna Floater untuk kerja “suatu hari nanti” yang tidak sepatutnya menyesakkan hari ini."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Floater tidak pernah muncul pada kalendar — ruang itu hanya untuk kerja bertarikh."
+          ]
+        }
+      ],
+      "searchTitle": "floater vs tugasan berjadual",
+      "searchKeywords": "floater, bila-bila, tak berjadual, tanpa tarikh, tugasan, dijadualkan, perbezaan",
+      "searchBody": "tugasan tanpa tarikh tinggal dalam suapan bila-bila; tugasan bertarikh tinggal dalam suapan dijadualkan. tugasan yang mempunyai tarikh tamat tempoh muncul dalam suapan dijadualkan serta kalendar. floater tiada tarikh — ia menunggu dengan tenang dalam suapan bila-bila anda sehingga anda bersedia. guna floater untuk kerja “suatu hari nanti” yang tidak sepatutnya menyesakkan hari ini. floater tidak pernah muncul pada kalendar — ruang itu hanya untuk kerja bertarikh."
+    },
+    {
+      "id": "resting-floaters",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Floater berehat",
+      "summary": "Tugasan Anytime yang tidak disentuh pudar dan berehat, memastikan senarai tenang.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tugasan Anytime yang tidak anda sentuh selama sebulan akan pudar perlahan, dan selepas tiga bulan ia berkumpul dalam kumpulan tenang \"Berehat\" di bawah. Tiada yang dipadam — ia cuma berhenti menuntut perhatian sehingga anda kembali."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Ia hanya isyarat paparan; satu ketik menghidupkan semula floater."
+          ]
+        }
+      ],
+      "searchTitle": "floater berehat",
+      "searchKeywords": "rehat, floater, anytime, pudar, malap, penuaan, tidak aktif, lama, tenang",
+      "searchBody": "tugasan anytime yang tidak disentuh pudar dan berehat, memastikan senarai tenang. tugasan anytime yang tidak anda sentuh selama sebulan akan pudar perlahan, dan selepas tiga bulan ia berkumpul dalam kumpulan tenang \"berehat\" di bawah. tiada yang dipadam — ia cuma berhenti menuntut perhatian sehingga anda kembali. ia hanya isyarat paparan; satu ketik menghidupkan semula floater."
+    },
+    {
+      "id": "promote-and-float",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Naik taraf & biar terapung",
+      "summary": "Jadualkan tugasan terapung sebagai tugasan sebenar, atau biarkan tugasan tersekat terapung.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Apabila tugasan terapung sedia menjadi kerja sebenar, gunakan tindakan Jadualkan: pilih masa dan ia berpindah ke suapan Dijadualkan sebagai tugasan bertarikh. Arah sebaliknya juga boleh — tugasan tertunggak yang asyik ditangguhkan boleh terapung secara senyap: turunkan tarafnya dan ia kembali ke Bila-bila masa tanpa tarikh, dengan tajuk, nota dan keutamaan dikekalkan."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tugasan berulang tidak boleh terapung — tamatkan siri itu dahulu jika mahu ia tanpa tarikh."
+          ]
+        }
+      ],
+      "searchTitle": "naik taraf & biar terapung",
+      "searchKeywords": "naik taraf, jadualkan terapung, turun taraf, biar terapung, tukar, bila-bila masa, alih, tertunggak",
+      "searchBody": "jadualkan tugasan terapung sebagai tugasan sebenar, atau biarkan tugasan tersekat terapung. apabila tugasan terapung sedia menjadi kerja sebenar, gunakan tindakan jadualkan: pilih masa dan ia berpindah ke suapan dijadualkan sebagai tugasan bertarikh. arah sebaliknya juga boleh — tugasan tertunggak yang asyik ditangguhkan boleh terapung secara senyap: turunkan tarafnya dan ia kembali ke bila-bila masa tanpa tarikh, dengan tajuk, nota dan keutamaan dikekalkan. tugasan berulang tidak boleh terapung — tamatkan siri itu dahulu jika mahu ia tanpa tarikh."
+    },
+    {
+      "id": "quick-defer",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Tangguh pantas",
+      "summary": "Satu ketikan memindahkan tugasan ke kemudian hari ini, malam ini, esok atau minggu depan.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Apabila tugasan perlu dialihkan tetapi tidak jauh, langkau pemilih tarikh: tindakan Tangguh menawarkan Kemudian hari ini (+3 jam), Malam ini (19:00), Esok pagi (09:00) dan Minggu depan (Isnin 09:00) dengan satu ketikan. Ia perubahan yang sama seperti helaian edit — cuma lebih pantas."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tugasan berulang ditangguh mengikut kejadian melalui helaian edit, jadi menu satu ketikan tidak mengganggunya."
+          ]
+        }
+      ],
+      "searchTitle": "tangguh pantas",
+      "searchKeywords": "tangguh, tunda, kemudian, malam ini, esok, minggu depan, jadual semula",
+      "searchBody": "satu ketikan memindahkan tugasan ke kemudian hari ini, malam ini, esok atau minggu depan. apabila tugasan perlu dialihkan tetapi tidak jauh, langkau pemilih tarikh: tindakan tangguh menawarkan kemudian hari ini (+3 jam), malam ini (19:00), esok pagi (09:00) dan minggu depan (isnin 09:00) dengan satu ketikan. ia perubahan yang sama seperti helaian edit — cuma lebih pantas. tugasan berulang ditangguh mengikut kejadian melalui helaian edit, jadi menu satu ketikan tidak mengganggunya."
+    },
+    {
+      "id": "day-done",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Hari selesai",
+      "summary": "Selesaikan semua untuk hari ini dan skrin Hari Ini meraikannya secara senyap.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Apabila setiap tugasan yang dijadualkan untuk hari ini selesai — bukan sekadar tiada — skrin Hari Ini menukar mesej \"Tiada tugasan\" kepada keadaan tenang hari selesai: tanda semak berganda yang lembut, perkataan \"Semua selesai untuk hari ini\" dan tarikh. Tiada rentetan, tiada mata; hanya ganjaran kecil untuk hari yang benar-benar selesai."
+          ]
+        }
+      ],
+      "searchTitle": "hari selesai",
+      "searchKeywords": "hari selesai, semua siap, selesai, semua lengkap, hari ini kosong",
+      "searchBody": "selesaikan semua untuk hari ini dan skrin hari ini meraikannya secara senyap. apabila setiap tugasan yang dijadualkan untuk hari ini selesai — bukan sekadar tiada — skrin hari ini menukar mesej \"tiada tugasan\" kepada keadaan tenang hari selesai: tanda semak berganda yang lembut, perkataan \"semua selesai untuk hari ini\" dan tarikh. tiada rentetan, tiada mata; hanya ganjaran kecil untuk hari yang benar-benar selesai."
+    },
+    {
+      "id": "floater-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "list",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Senarai Floater",
+      "summary": "Kumpulkan tugasan Bila-bila anda ke dalam senarai tersendiri.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Susun Floater ke dalam senarai berasingan — barang runcit, mengemas beg, idea — setiap satu dengan nama dan warna tersendiri, serta sejarah selesai tersendiri."
+          ]
+        }
+      ],
+      "searchTitle": "senarai floater",
+      "searchKeywords": "senarai floater, bila-bila, kumpul, senarai, kategori, barang runcit, mengemas",
+      "searchBody": "kumpulkan tugasan bila-bila anda ke dalam senarai tersendiri. susun floater ke dalam senarai berasingan — barang runcit, mengemas beg, idea — setiap satu dengan nama dan warna tersendiri, serta sejarah selesai tersendiri."
+    },
+    {
+      "id": "reusable-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Senarai boleh guna semula",
+      "summary": "Set semula senarai untuk guna lagi — mengemas, kerja rumah, barangan.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tandai senarai Anytime sebagai boleh guna semula dan butang Set Semula muncul. Satu ketik menyahtanda semua item supaya anda boleh guna senarai yang sama sekali lagi — tanpa mencipta semula."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Buka senarai floater dan hidupkan \"Boleh guna semula\" dalam tetapannya.",
+            "Teruskan menanda item seperti biasa.",
+            "Bila perlu lagi, ketik Set Semula untuk nyahtanda semua."
+          ]
+        }
+      ],
+      "searchTitle": "senarai boleh guna semula",
+      "searchKeywords": "boleh guna semula, set semula, senarai, floater, ulang, templat",
+      "searchBody": "set semula senarai untuk guna lagi — mengemas, kerja rumah, barangan. tandai senarai anytime sebagai boleh guna semula dan butang set semula muncul. satu ketik menyahtanda semua item supaya anda boleh guna senarai yang sama sekali lagi — tanpa mencipta semula. buka senarai floater dan hidupkan \"boleh guna semula\" dalam tetapannya. teruskan menanda item seperti biasa. bila perlu lagi, ketik set semula untuk nyahtanda semua."
+    },
+    {
+      "id": "scheduled-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "list-todo",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Senarai untuk tugasan berjadual",
+      "summary": "Isih tugasan bertarikh ke dalam senarai bernama dan berwarna.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Beri tugasan berjadual satu senarai supaya kerja berkaitan kekal bersama. Senarai membawa nama dan warna serta boleh ditapis."
+          ]
+        }
+      ],
+      "searchTitle": "senarai untuk tugasan berjadual",
+      "searchKeywords": "senarai, projek, kumpul, warna, berjadual, kategori",
+      "searchBody": "isih tugasan bertarikh ke dalam senarai bernama dan berwarna. beri tugasan berjadual satu senarai supaya kerja berkaitan kekal bersama. senarai membawa nama dan warna serta boleh ditapis."
+    },
+    {
+      "id": "list-icons",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.28",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Ikon senarai automatik",
+      "summary": "Senarai tanpa ikon pilihannya sendiri mendapat ikon yang sepadan dengan namanya.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Namakan senarai sebagai Groceries dan ia akan memakai troli beli-belah; Gym mendapat dumbel, Work mendapat beg bimbit. T'Day hanya meneka apabila anda sendiri belum memilih ikon, dan mengekalkan ikon lalai apabila nama itu tidak cukup jelas. Buat masa ini nama dipadankan dalam bahasa Inggeris."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Pilih ikon dalam tetapan senarai bila-bila masa — setelah dipilih, ia dikekalkan dan tidak sekali-kali diteka semula."
+          ]
+        }
+      ],
+      "searchTitle": "ikon senarai automatik",
+      "searchKeywords": "ikon senarai, automatik, cadangan, glif, nama, barangan runcit, gim, kerja",
+      "searchBody": "senarai tanpa ikon pilihannya sendiri mendapat ikon yang sepadan dengan namanya. namakan senarai sebagai groceries dan ia akan memakai troli beli-belah; gym mendapat dumbel, work mendapat beg bimbit. t'day hanya meneka apabila anda sendiri belum memilih ikon, dan mengekalkan ikon lalai apabila nama itu tidak cukup jelas. buat masa ini nama dipadankan dalam bahasa inggeris. pilih ikon dalam tetapan senarai bila-bila masa — setelah dipilih, ia dikekalkan dan tidak sekali-kali diteka semula."
+    },
+    {
+      "id": "completed-history",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Sejarah selesai",
+      "summary": "Segala yang anda siapkan, disimpan untuk anda imbas kembali.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tugasan yang siap tidak dibuang — ia berpindah ke sejarah selesai anda, dikumpulkan mengikut hari, supaya anda dapat melihat apa yang benar-benar anda siapkan."
+          ]
+        }
+      ],
+      "searchTitle": "sejarah selesai",
+      "searchKeywords": "selesai, siap, sejarah, tamat, arkib, lepas",
+      "searchBody": "segala yang anda siapkan, disimpan untuk anda imbas kembali. tugasan yang siap tidak dibuang — ia berpindah ke sejarah selesai anda, dikumpulkan mengikut hari, supaya anda dapat melihat apa yang benar-benar anda siapkan."
+    },
+    {
+      "id": "overdue-view",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": "overdue",
+        "android": "todos/overdue",
+        "ios": "overdueTodos"
+      },
+      "helpAnchors": [],
+      "title": "Tertunggak",
+      "summary": "Tempat khusus untuk tugasan yang masanya telah berlalu.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tugasan yang masa tamat tempohnya telah berlalu terkumpul dalam paparan Tertunggak supaya tiada yang terlepas secara senyap. Jadualkan semula bila anda bersedia."
+          ]
+        }
+      ],
+      "searchTitle": "tertunggak",
+      "searchKeywords": "tertunggak, lewat, lepas tempoh, terlepas, dibawa ke hadapan, tunggakan",
+      "searchBody": "tempat khusus untuk tugasan yang masanya telah berlalu. tugasan yang masa tamat tempohnya telah berlalu terkumpul dalam paparan tertunggak supaya tiada yang terlepas secara senyap. jadualkan semula bila anda bersedia."
+    },
+    {
+      "id": "morning-sweep",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "hand",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": {
+        "web": "overdue",
+        "android": "morning-sweep",
+        "ios": "morning-sweep"
+      },
+      "helpAnchors": [],
+      "title": "Sapuan pagi",
+      "summary": "Uruskan tugasan tertunggak satu kad pada satu masa.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Ketinggalan tidak lagi menyakitkan: butang Sapu pada skrin Tertunggak membawa anda melalui tugasan terbawa satu kad pada satu masa — Hari ini, Esok, Pilih tarikh, Jadikan terapung atau Lepaskan. Tergesa-gesa? Sapu semua ke hari ini memindahkan semuanya sekali gus, dengan satu buat asal."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tugasan berulang tidak termasuk dalam sapuan; kejadiannya dijadualkan semula melalui helaian edit supaya sirinya kekal."
+          ]
+        }
+      ],
+      "searchTitle": "sapuan pagi",
+      "searchKeywords": "sapuan, tertunggak, triaj, terbawa, kejar semula, tunggakan, pagi",
+      "searchBody": "uruskan tugasan tertunggak satu kad pada satu masa. ketinggalan tidak lagi menyakitkan: butang sapu pada skrin tertunggak membawa anda melalui tugasan terbawa satu kad pada satu masa — hari ini, esok, pilih tarikh, jadikan terapung atau lepaskan. tergesa-gesa? sapu semua ke hari ini memindahkan semuanya sekali gus, dengan satu buat asal. tugasan berulang tidak termasuk dalam sapuan; kejadiannya dijadualkan semula melalui helaian edit supaya sirinya kekal."
+    },
+    {
+      "id": "bulk-actions",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "circle-check-big",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.4",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Tindakan pukal",
+      "summary": "Pilih beberapa tugasan sekali gus, kemudian uruskan semuanya serentak.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Ketik Pilih pada pengepala senarai tugasan untuk masuk ke mod pilihan. Pilih tugasan satu per satu atau ketik Pilih semua, kemudian gunakan satu tindakan pada keseluruhan set — tandakan selesai, tukar keutamaan, pindahkan ke senarai lain, atau padamkannya."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Buka senarai tugasan dan ketik Pilih pada pengepala.",
+            "Ketik tugasan untuk memilihnya, atau guna Pilih semua untuk semua yang ada di skrin.",
+            "Pilih Selesai, Keutamaan, Pindah atau Padam pada bar di bawah."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Pemadaman meminta anda mengesahkan jumlah tepat dahulu, dan masih meninggalkan pemberitahuan buat asal. Tugasan berulang dikecualikan sepenuhnya daripada tindakan pukal supaya keseluruhan siri tidak pernah berubah secara tidak sengaja — buka satu persatu untuk menyelesaikan, memindah atau memadamnya."
+          ]
+        }
+      ],
+      "searchTitle": "tindakan pukal",
+      "searchKeywords": "pukal, pilihan berbilang, pilih semua, kelompok, beberapa, selesai, padam, keutamaan, pindah, pilihan",
+      "searchBody": "pilih beberapa tugasan sekali gus, kemudian uruskan semuanya serentak. ketik pilih pada pengepala senarai tugasan untuk masuk ke mod pilihan. pilih tugasan satu per satu atau ketik pilih semua, kemudian gunakan satu tindakan pada keseluruhan set — tandakan selesai, tukar keutamaan, pindahkan ke senarai lain, atau padamkannya. buka senarai tugasan dan ketik pilih pada pengepala. ketik tugasan untuk memilihnya, atau guna pilih semua untuk semua yang ada di skrin. pilih selesai, keutamaan, pindah atau padam pada bar di bawah. pemadaman meminta anda mengesahkan jumlah tepat dahulu, dan masih meninggalkan pemberitahuan buat asal. tugasan berulang dikecualikan sepenuhnya daripada tindakan pukal supaya keseluruhan siri tidak pernah berubah secara tidak sengaja — buka satu persatu untuk menyelesaikan, memindah atau memadamnya."
+    },
+    {
+      "id": "search-tasks",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "search",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Cari tugasan anda",
+      "summary": "Cari sebarang tugasan mengikut tajuk, nota, atau nama senarai.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Guna medan carian untuk menapis tugasan anda serta-merta mengikut tajuk, huraian, atau nama senarai — tanpa perlu menatal."
+          ]
+        }
+      ],
+      "searchTitle": "cari tugasan anda",
+      "searchKeywords": "cari, jumpa, tapis, semak, pertanyaan",
+      "searchBody": "cari sebarang tugasan mengikut tajuk, nota, atau nama senarai. guna medan carian untuk menapis tugasan anda serta-merta mengikut tajuk, huraian, atau nama senarai — tanpa perlu menatal."
+    },
+    {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Pemberitahuan",
+      "summary": "Satu suis menentukan sama ada T'Day boleh mengganggu anda.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tetapan mempunyai satu suis Pemberitahuan, dan segala yang sampai kepada anda melaluinya — peringatan tugasan dan ringkasan hari esok. Mematikannya mengosongkan baris gilir, bukan sekadar menyenyapkannya, jadi tiada apa yang tiba lewat apabila anda hidupkannya semula. Kebenaran sistem juga diperlukan: selagi pemberitahuan disekat untuk T'Day pada peranti anda, suis itu kekal mati dan menawarkan untuk membuka tetapan sistem."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Kedua-dua bahagian mesti hidup. Tanpa kebenaran sistem, suis dipaparkan mati walau apa pun yang anda tetapkan di sini."
+          ]
+        }
+      ],
+      "searchTitle": "pemberitahuan",
+      "searchKeywords": "pemberitahuan, kebenaran, suis, benarkan, senyap, peringatan, ringkasan, tetapan sistem",
+      "searchBody": "satu suis menentukan sama ada t'day boleh mengganggu anda. tetapan mempunyai satu suis pemberitahuan, dan segala yang sampai kepada anda melaluinya — peringatan tugasan dan ringkasan hari esok. mematikannya mengosongkan baris gilir, bukan sekadar menyenyapkannya, jadi tiada apa yang tiba lewat apabila anda hidupkannya semula. kebenaran sistem juga diperlukan: selagi pemberitahuan disekat untuk t'day pada peranti anda, suis itu kekal mati dan menawarkan untuk membuka tetapan sistem. kedua-dua bahagian mesti hidup. tanpa kebenaran sistem, suis dipaparkan mati walau apa pun yang anda tetapkan di sini."
+    },
+    {
+      "id": "recurrence-presets",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "recurrence-picker"
+      ],
+      "title": "Tugasan berulang",
+      "summary": "Jadikan tugasan berulang setiap hari, mingguan, dan banyak lagi.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tetapkan tugasan untuk berulang dan ia kembali mengikut jadualnya sendiri. Pilih daripada praset — setiap hari, hari bekerja, minggu, atau bulan — dan menyelesaikan satu kejadian membiarkan selebihnya siri itu utuh."
+          ]
+        },
+        {
+          "type": "EXAMPLE",
+          "texts": [
+            "Siram pokok · setiap minggu"
+          ]
+        }
+      ],
+      "searchTitle": "tugasan berulang",
+      "searchKeywords": "ulang, berulang, ulangan, setiap hari, mingguan, bulanan, rrule, jadual",
+      "searchBody": "jadikan tugasan berulang setiap hari, mingguan, dan banyak lagi. tetapkan tugasan untuk berulang dan ia kembali mengikut jadualnya sendiri. pilih daripada praset — setiap hari, hari bekerja, minggu, atau bulan — dan menyelesaikan satu kejadian membiarkan selebihnya siri itu utuh. siram pokok · setiap minggu"
+    },
+    {
+      "id": "repeat-suggestions",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Cadangan ulangan",
+      "summary": "T'Day mengesan tugasan yang anda selesaikan berirama dan menawarkan ulangan.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Apabila anda terus menyelesaikan tugasan yang sama secara berirama — menyiram pokok setiap minggu, membayar sewa setiap bulan — T'Day perasan dan menawarkan cip satu ketuk untuk mengulanginya. Ia hanya membaca sejarah selesai pada peranti; tiada apa yang keluar dari peranti."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tak berminat? Ketik ✕ dan tajuk itu tidak akan bertanya lagi."
+          ]
+        }
+      ],
+      "searchTitle": "cadangan ulangan",
+      "searchKeywords": "ulang, cadangan, berulang, irama, tabiat, corak, automatik",
+      "searchBody": "t'day mengesan tugasan yang anda selesaikan berirama dan menawarkan ulangan. apabila anda terus menyelesaikan tugasan yang sama secara berirama — menyiram pokok setiap minggu, membayar sewa setiap bulan — t'day perasan dan menawarkan cip satu ketuk untuk mengulanginya. ia hanya membaca sejarah selesai pada peranti; tiada apa yang keluar dari peranti. tak berminat? ketik ✕ dan tajuk itu tidak akan bertanya lagi."
+    },
+    {
+      "id": "reminders",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Peringatan",
+      "summary": "Dapatkan pemberitahuan sebelum tugasan tamat tempoh.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tambah peringatan pada tugasan berjadual dan peranti anda memberitahu anda pada masa yang tepat. Peringatan dijadualkan pada peranti anda, jadi ia berfungsi walaupun dalam Mod Tempatan."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Pilihan tempoh awal peringatan berbeza sedikit mengikut tugasan — pilih yang memberi anda amaran yang cukup awal."
+          ]
+        }
+      ],
+      "searchTitle": "peringatan",
+      "searchKeywords": "peringatan, pemberitahuan, amaran, penggera, maklum, sebelum",
+      "searchBody": "dapatkan pemberitahuan sebelum tugasan tamat tempoh. tambah peringatan pada tugasan berjadual dan peranti anda memberitahu anda pada masa yang tepat. peringatan dijadualkan pada peranti anda, jadi ia berfungsi walaupun dalam mod tempatan. pilihan tempoh awal peringatan berbeza sedikit mengikut tugasan — pilih yang memberi anda amaran yang cukup awal."
+    },
+    {
+      "id": "reminder-snooze",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Tunda peringatan",
+      "summary": "Pemberitahuan peringatan ada tindakan Tunda 1 jam dan Malam ini.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Apabila peringatan muncul pada masa yang tidak sesuai, tidak perlu buka aplikasi: Tunda 1 jam menghantar semula peringatan yang sama sejam kemudian, dan Malam ini memindahkan tugasan itu ke 19:00 hari ini. Malam ini untuk tugasan sekali sahaja — kejadian berulang dijadualkan semula dalam aplikasi supaya sirinya kekal."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Menunda hanya melewatkan pemberitahuan; tugasan mengekalkan masa asalnya sehingga anda memindahkannya."
+          ]
+        }
+      ],
+      "searchTitle": "tunda peringatan",
+      "searchKeywords": "tunda, peringatan, pemberitahuan, kemudian, malam ini, snooze",
+      "searchBody": "pemberitahuan peringatan ada tindakan tunda 1 jam dan malam ini. apabila peringatan muncul pada masa yang tidak sesuai, tidak perlu buka aplikasi: tunda 1 jam menghantar semula peringatan yang sama sejam kemudian, dan malam ini memindahkan tugasan itu ke 19:00 hari ini. malam ini untuk tugasan sekali sahaja — kejadian berulang dijadualkan semula dalam aplikasi supaya sirinya kekal. menunda hanya melewatkan pemberitahuan; tugasan mengekalkan masa asalnya sehingga anda memindahkannya."
+    },
+    {
+      "id": "quiet-hours",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-notifications"
+      ],
+      "title": "Waktu senyap",
+      "summary": "Tahan peringatan pada waktu malam supaya tiada bunyi semasa anda tidur.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tetapkan tetingkap — contohnya 22:00 hingga 07:00 — dan mana-mana peringatan yang akan berbunyi di dalamnya ditahan sehingga tamat. Pada peranti sahaja; peringatan tempatan menunggu pagi."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tetingkap boleh melepasi tengah malam (22:00 → 07:00); pengiraan menanganinya."
+          ]
+        }
+      ],
+      "searchTitle": "waktu senyap",
+      "searchKeywords": "senyap, waktu, jangan ganggu, malam, tidur, peringatan, jadual",
+      "searchBody": "tahan peringatan pada waktu malam supaya tiada bunyi semasa anda tidur. tetapkan tetingkap — contohnya 22:00 hingga 07:00 — dan mana-mana peringatan yang akan berbunyi di dalamnya ditahan sehingga tamat. pada peranti sahaja; peringatan tempatan menunggu pagi. tetingkap boleh melepasi tengah malam (22:00 → 07:00); pengiraan menanganinya."
+    },
+    {
+      "id": "day-ahead",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell-ring",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Ringkasan hari",
+      "summary": "Satu pemberitahuan pagi yang senyap dengan kiraan hari ini.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Aktifkan dalam Tetapan dan pilih waktu: setiap pagi satu pemberitahuan memberitahu keadaan hari itu — \"4 tugasan hari ini, 2 terbawa\" — dan membuka Hari Ini, atau terus ke Sapuan pagi apabila ada yang terbawa. Sepenuhnya pada peranti: tiada apa yang meninggalkan telefon anda."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Ringkasan senyap pada hari tanpa tugasan — tiada berita ialah berita baik."
+          ]
+        }
+      ],
+      "searchTitle": "ringkasan hari",
+      "searchKeywords": "ringkasan, hari anda, pagi, pemberitahuan harian, gambaran",
+      "searchBody": "satu pemberitahuan pagi yang senyap dengan kiraan hari ini. aktifkan dalam tetapan dan pilih waktu: setiap pagi satu pemberitahuan memberitahu keadaan hari itu — \"4 tugasan hari ini, 2 terbawa\" — dan membuka hari ini, atau terus ke sapuan pagi apabila ada yang terbawa. sepenuhnya pada peranti: tiada apa yang meninggalkan telefon anda. ringkasan senyap pada hari tanpa tugasan — tiada berita ialah berita baik."
+    },
+    {
+      "id": "home-widget",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Widget skrin utama",
+      "summary": "Lihat tugasan hari ini tanpa membuka aplikasi.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tambah widget T'Day ke skrin utama anda untuk mengimbas tugasan hari ini. Mengetik widget membuka aplikasi di tempat yang betul."
+          ]
+        }
+      ],
+      "searchTitle": "widget skrin utama",
+      "searchKeywords": "widget, skrin utama, imbas, hari ini, skrin kunci",
+      "searchBody": "lihat tugasan hari ini tanpa membuka aplikasi. tambah widget t'day ke skrin utama anda untuk mengimbas tugasan hari ini. mengetik widget membuka aplikasi di tempat yang betul."
+    },
+    {
+      "id": "widget-list-selection",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "list-todo",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Pilih senarai untuk widget anda",
+      "summary": "Jadikan mana-mana widget menunjuk pada satu senarai tertentu, bukan seluruh suapan.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tekan lama widget T'Day dan pilih Edit Widget untuk menetapkan senarai yang dipaparkan — mana-mana senarai berjadual atau senarai floater anda. Senarai berjadual memaparkan waktu tarikh akhir dan menandakan tugasan tertunggak; senarai floater memaparkan senarai terbuka tanpa waktu tarikh akhir. Jika tidak ditetapkan, widget terus memaparkan suapan penuh Hari Ini atau Floater."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tambah beberapa widget, masing-masing menunjuk ke senarai berbeza, untuk melihat semuanya sekali gus pada skrin utama anda."
+          ]
+        }
+      ],
+      "searchTitle": "pilih senarai untuk widget anda",
+      "searchKeywords": "widget, senarai, konfigurasi, edit widget, mengikut senarai, skrin utama, ios",
+      "searchBody": "jadikan mana-mana widget menunjuk pada satu senarai tertentu, bukan seluruh suapan. tekan lama widget t'day dan pilih edit widget untuk menetapkan senarai yang dipaparkan — mana-mana senarai berjadual atau senarai floater anda. senarai berjadual memaparkan waktu tarikh akhir dan menandakan tugasan tertunggak; senarai floater memaparkan senarai terbuka tanpa waktu tarikh akhir. jika tidak ditetapkan, widget terus memaparkan suapan penuh hari ini atau floater. tambah beberapa widget, masing-masing menunjuk ke senarai berbeza, untuk melihat semuanya sekali gus pada skrin utama anda."
+    },
+    {
+      "id": "list-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.45",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Widget senarai",
+      "summary": "Widget ketiga, untuk satu paparan terbina dalam atau senarai pilihan anda.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Selain Hari Ini dan Terapung, ada widget senarai. Letakkannya dan ia akan bertanya apa yang hendak dipaparkan — paparan terbina dalam Dijadualkan dan Tertunggak, atau mana-mana senarai berjadual atau senarai terapung. Selepas itu ia hanya memaparkan pilihan itu, dan butang + menambah tugasan: ke dalam senarai jika anda memilih satu. Letakkan satu lagi untuk paparan atau senarai lain; setiap satu mengekalkan pilihannya sendiri."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Untuk menukar widget senarai kepada senarai lain, tekan lama widget itu dan pilih Edit (Edit Widget pada iPhone)."
+          ]
+        }
+      ],
+      "searchTitle": "widget senarai",
+      "searchKeywords": "widget, skrin utama, senarai, persediaan, pemilih, terapung, berjadual, tambah",
+      "searchBody": "widget ketiga, untuk satu paparan terbina dalam atau senarai pilihan anda. selain hari ini dan terapung, ada widget senarai. letakkannya dan ia akan bertanya apa yang hendak dipaparkan — paparan terbina dalam dijadualkan dan tertunggak, atau mana-mana senarai berjadual atau senarai terapung. selepas itu ia hanya memaparkan pilihan itu, dan butang + menambah tugasan: ke dalam senarai jika anda memilih satu. letakkan satu lagi untuk paparan atau senarai lain; setiap satu mengekalkan pilihannya sendiri. untuk menukar widget senarai kepada senarai lain, tekan lama widget itu dan pilih edit (edit widget pada iphone)."
+    },
+    {
+      "id": "widget-quick-add",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "square-plus",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Tambah pantas dari widget",
+      "summary": "Mula tugasan baharu terus dari widget.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Widget mempunyai butang cipta, jadi anda boleh mencatat tugasan dari skrin utama tanpa perlu membuka aplikasi dahulu — dan ia berfungsi dalam Mod Tempatan juga."
+          ]
+        }
+      ],
+      "searchTitle": "tambah pantas dari widget",
+      "searchKeywords": "widget, tambah pantas, cipta, pintasan, skrin utama",
+      "searchBody": "mula tugasan baharu terus dari widget. widget mempunyai butang cipta, jadi anda boleh mencatat tugasan dari skrin utama tanpa perlu membuka aplikasi dahulu — dan ia berfungsi dalam mod tempatan juga."
+    },
+    {
+      "id": "interactive-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "check-check",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Selesaikan terus dari widget",
+      "summary": "Tanda tugasan terus pada widget skrin utama.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Widget Today dan Floater kini menerima ketikan: ketik gelang di awal mana-mana baris untuk menyelesaikan tugasan itu tanpa membuka aplikasi. Baris itu hilang serta-merta dan penyelesaian disegerakkan seperti biasa — ketikan semasa luar talian menunggu dalam barisan dan digunakan sebaik sahaja anda kembali dalam talian."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tersilap ketik? Buka sejarah selesai dalam aplikasi dan pulihkan tugasan dari situ."
+          ]
+        }
+      ],
+      "searchTitle": "selesaikan terus dari widget",
+      "searchKeywords": "widget, selesai, tanda, skrin utama, interaktif, ketik",
+      "searchBody": "tanda tugasan terus pada widget skrin utama. widget today dan floater kini menerima ketikan: ketik gelang di awal mana-mana baris untuk menyelesaikan tugasan itu tanpa membuka aplikasi. baris itu hilang serta-merta dan penyelesaian disegerakkan seperti biasa — ketikan semasa luar talian menunggu dalam barisan dan digunakan sebaik sahaja anda kembali dalam talian. tersilap ketik? buka sejarah selesai dalam aplikasi dan pulihkan tugasan dari situ."
+    },
+    {
+      "id": "today-widget-progress",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "circle-check-big",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.44",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Widget Hari Ini sepintas lalu",
+      "summary": "Lihat sejauh mana hari anda, apa yang tertunggak dan apa yang seterusnya.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Widget Hari Ini bermula dengan tarikh dan gelang kemajuan: berapa banyak tugasan yang perlu siap hari ini sudah selesai, daripada semuanya. Apa-apa yang tertunggak diletakkan dalam bahagian tersendiri di bawah tugasan hari ini, bersama hari ia sepatutnya siap. Apabila tiada apa-apa untuk hari ini, widget menunjukkan apa yang akan datang pada hari seterusnya yang ada tugasan. Tugasan yang ditanda kekal bertanda dan bergaris seketika sebelum hilang."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Gelang hanya mengira tugasan yang perlu siap hari ini. Menyelesaikan tugasan hari lain tidak mengisinya."
+          ]
+        }
+      ],
+      "searchTitle": "widget hari ini sepintas lalu",
+      "searchKeywords": "widget, hari ini, kemajuan, gelang, selesai, tertunggak, esok, tarikh, skrin utama",
+      "searchBody": "lihat sejauh mana hari anda, apa yang tertunggak dan apa yang seterusnya. widget hari ini bermula dengan tarikh dan gelang kemajuan: berapa banyak tugasan yang perlu siap hari ini sudah selesai, daripada semuanya. apa-apa yang tertunggak diletakkan dalam bahagian tersendiri di bawah tugasan hari ini, bersama hari ia sepatutnya siap. apabila tiada apa-apa untuk hari ini, widget menunjukkan apa yang akan datang pada hari seterusnya yang ada tugasan. tugasan yang ditanda kekal bertanda dan bergaris seketika sebelum hilang. gelang hanya mengira tugasan yang perlu siap hari ini. menyelesaikan tugasan hari lain tidak mengisinya."
+    },
+    {
+      "id": "share-into-tday",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "share-2",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Kongsi ke T'Day",
+      "summary": "Hantar teks dari mana-mana aplikasi terus menjadi tugasan baharu.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Terjumpa sesuatu dalam aplikasi lain? Buka helaian kongsi sistem dan pilih T'Day. Teks yang dikongsi masuk ke borang tugasan baharu — halaman yang dikongsi mengekalkan tajuknya sebagai nama tugasan dengan pautan disimpan dalam nota. Pada Android dan aplikasi web, borang terbuka serta-merta; pada iOS, tangkapan disimpan serta-merta dan borang praisi menyambut anda pada kali seterusnya anda membuka aplikasi."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Kongsi teks yang mengandungi frasa tarikh dan penghurai akan menetapkan tarikh akhir untuk anda."
+          ]
+        }
+      ],
+      "searchTitle": "kongsi ke t'day",
+      "searchKeywords": "kongsi, helaian kongsi, hantar ke, tangkap, import, dari aplikasi lain",
+      "searchBody": "hantar teks dari mana-mana aplikasi terus menjadi tugasan baharu. terjumpa sesuatu dalam aplikasi lain? buka helaian kongsi sistem dan pilih t'day. teks yang dikongsi masuk ke borang tugasan baharu — halaman yang dikongsi mengekalkan tajuknya sebagai nama tugasan dengan pautan disimpan dalam nota. pada android dan aplikasi web, borang terbuka serta-merta; pada ios, tangkapan disimpan serta-merta dan borang praisi menyambut anda pada kali seterusnya anda membuka aplikasi. kongsi teks yang mengandungi frasa tarikh dan penghurai akan menetapkan tarikh akhir untuk anda."
+    },
+    {
+      "id": "carplay",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "car",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "T'Day pada CarPlay",
+      "summary": "Imbas dan catat tugasan dengan selamat semasa anda memandu.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Pada CarPlay, T'Day memaparkan senarai yang fokus dan mudah diimbas, dibina untuk kereta, supaya anda boleh menyemak apa yang seterusnya atau menambah tugasan melalui suara tanpa perlu mencapai telefon anda."
+          ]
+        }
+      ],
+      "searchTitle": "t'day pada carplay",
+      "searchKeywords": "carplay, kereta, memandu, suara, apple, bebas tangan",
+      "searchBody": "imbas dan catat tugasan dengan selamat semasa anda memandu. pada carplay, t'day memaparkan senarai yang fokus dan mudah diimbas, dibina untuk kereta, supaya anda boleh menyemak apa yang seterusnya atau menambah tugasan melalui suara tanpa perlu mencapai telefon anda."
+    },
+    {
+      "id": "focus-filters",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Penapis Fokus",
+      "summary": "Biar Fokus iOS menentukan senarai mana yang muncul dalam suapan Hari Ini anda.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day disepadukan dengan Fokus iOS. Pilih Fokus seperti Kerja atau Peribadi, tentukan senarai mana yang patut ditunjukkan, dan semasa Fokus itu aktif, suapan Hari Ini dan widget skrin utama anda menyembunyikan yang lain secara senyap. Matikan Fokus dan setiap tugasan kembali — tiada apa-apa yang dipadam."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Buka Tetapan ▸ Fokus pada iPhone dan pilih satu Fokus.",
+            "Tambah Penapis Fokus dan pilih T'Day, kemudian pilih senarai anda.",
+            "Aktifkan Fokus — Hari Ini dan widget kini hanya menunjukkan senarai tersebut."
+          ]
+        }
+      ],
+      "searchTitle": "penapis fokus",
+      "searchKeywords": "fokus, penapis, ios, kerja, peribadi, jangan ganggu, senarai, sembunyi, tumpuan, focus",
+      "searchBody": "biar fokus ios menentukan senarai mana yang muncul dalam suapan hari ini anda. t'day disepadukan dengan fokus ios. pilih fokus seperti kerja atau peribadi, tentukan senarai mana yang patut ditunjukkan, dan semasa fokus itu aktif, suapan hari ini dan widget skrin utama anda menyembunyikan yang lain secara senyap. matikan fokus dan setiap tugasan kembali — tiada apa-apa yang dipadam. buka tetapan ▸ fokus pada iphone dan pilih satu fokus. tambah penapis fokus dan pilih t'day, kemudian pilih senarai anda. aktifkan fokus — hari ini dan widget kini hanya menunjukkan senarai tersebut."
+    },
+    {
+      "id": "apple-watch",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "alarm-clock",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Apple Watch",
+      "summary": "Tugasan Hari Ini anda di pergelangan tangan, dicerminkan secara langsung dari iPhone anda.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Pasang T'Day pada Apple Watch dan tugasan hari ini turut hadir di pergelangan tangan anda. Watch mencerminkan senarai Hari Ini yang sama seperti yang dibina iPhone anda — tanpa log masuk berasingan — dan komplikasi pada muka jam menunjukkan berapa banyak tugasan yang berbaki, jadi anda boleh memandangnya tanpa membuka apl. Ia dikemas kini setiap kali iPhone anda menyegerak."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Buka apl Watch pada iPhone dan pasang T'Day.",
+            "Tambah komplikasi T'Day pada muka jam anda.",
+            "Pandang jumlahnya, atau buka apl untuk senarai penuh."
+          ]
+        }
+      ],
+      "searchTitle": "apple watch",
+      "searchKeywords": "apple watch, jam, pergelangan tangan, komplikasi, watchos, hari ini, pandang, cermin",
+      "searchBody": "tugasan hari ini anda di pergelangan tangan, dicerminkan secara langsung dari iphone anda. pasang t'day pada apple watch dan tugasan hari ini turut hadir di pergelangan tangan anda. watch mencerminkan senarai hari ini yang sama seperti yang dibina iphone anda — tanpa log masuk berasingan — dan komplikasi pada muka jam menunjukkan berapa banyak tugasan yang berbaki, jadi anda boleh memandangnya tanpa membuka apl. ia dikemas kini setiap kali iphone anda menyegerak. buka apl watch pada iphone dan pasang t'day. tambah komplikasi t'day pada muka jam anda. pandang jumlahnya, atau buka apl untuk senarai penuh."
+    },
+    {
+      "id": "local-mode",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "wifi-off",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Mod Tempatan",
+      "summary": "Guna T'Day sepenuhnya luar talian, tanpa pelayan atau akaun.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Mod Tempatan menyimpan segalanya pada peranti anda — tiada log masuk, tiada pelayan, tiada muat naik. Ia cara utama untuk menggunakan T'Day secara peribadi, dan data tempatan anda tidak pernah dihantar ke mana-mana dengan sendirinya. Dalam pelayar ia disimpan dalam storan pelayar itu sendiri, jadi membersihkan kuki dan data tapak turut membuang ruang kerja itu — eksport dahulu jika mahu menyimpannya. Jika anda memilih untuk menyertai laporan ranap, hanya laporan teknikal ringkas dihantar apabila sesuatu gagal, tidak pernah tugasan atau senarai anda."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Ciri khusus pelayan dipaparkan di sini dengan lencana “Mod pelayan” supaya anda tahu apa yang berubah jika anda log masuk."
+          ]
+        }
+      ],
+      "searchTitle": "mod tempatan",
+      "searchKeywords": "mod tempatan, luar talian, peribadi, tanpa akaun, tanpa pelayan, pada peranti",
+      "searchBody": "guna t'day sepenuhnya luar talian, tanpa pelayan atau akaun. mod tempatan menyimpan segalanya pada peranti anda — tiada log masuk, tiada pelayan, tiada muat naik. ia cara utama untuk menggunakan t'day secara peribadi, dan data tempatan anda tidak pernah dihantar ke mana-mana dengan sendirinya. dalam pelayar ia disimpan dalam storan pelayar itu sendiri, jadi membersihkan kuki dan data tapak turut membuang ruang kerja itu — eksport dahulu jika mahu menyimpannya. jika anda memilih untuk menyertai laporan ranap, hanya laporan teknikal ringkas dihantar apabila sesuatu gagal, tidak pernah tugasan atau senarai anda. ciri khusus pelayan dipaparkan di sini dengan lencana “mod pelayan” supaya anda tahu apa yang berubah jika anda log masuk."
+    },
+    {
+      "id": "server-mode",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "cloud",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Mod Pelayan",
+      "summary": "Segerakkan merentas peranti melalui pelayan peribadi anda sendiri.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Log masuk ke pelayan hos sendiri anda untuk menyegerakkan tugasan merentas peranti dalam masa nyata. Tulisan berlaku serta-merta pada peranti anda dan dimainkan semula ke pelayan, jadi aplikasi kekal pantas walaupun pada sambungan yang tidak stabil."
+          ]
+        }
+      ],
+      "searchTitle": "mod pelayan",
+      "searchKeywords": "mod pelayan, segerak, hos sendiri, akaun, log masuk, peranti, masa nyata",
+      "searchBody": "segerakkan merentas peranti melalui pelayan peribadi anda sendiri. log masuk ke pelayan hos sendiri anda untuk menyegerakkan tugasan merentas peranti dalam masa nyata. tulisan berlaku serta-merta pada peranti anda dan dimainkan semula ke pelayan, jadi aplikasi kekal pantas walaupun pada sambungan yang tidak stabil."
+    },
+    {
+      "id": "offline-sync",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "refresh-cw",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Penyegerakan luar talian",
+      "summary": "Terus bekerja luar talian; perubahan dimainkan semula apabila anda bersambung semula.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Dalam Mod Pelayan perubahan anda disimpan secara tempatan dahulu dan dibariskan apabila anda luar talian. Sebaik sahaja anda bersambung semula, T'Day memainkannya semula ke pelayan mengikut urutan."
+          ]
+        }
+      ],
+      "searchTitle": "penyegerakan luar talian",
+      "searchKeywords": "luar talian, segerak, tertunggak, baris gilir, main semula, sambungan, konflik",
+      "searchBody": "terus bekerja luar talian; perubahan dimainkan semula apabila anda bersambung semula. dalam mod pelayan perubahan anda disimpan secara tempatan dahulu dan dibariskan apabila anda luar talian. sebaik sahaja anda bersambung semula, t'day memainkannya semula ke pelayan mengikut urutan."
+    },
+    {
+      "id": "export-your-data",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "download",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Eksport data anda",
+      "summary": "Muat turun semuanya sebagai satu fail mudah alih — dan bawa balik bila-bila masa.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Daripada Tetapan anda boleh memuat turun keseluruhan akaun — tugasan, senarai, sejarah selesai dan keutamaan — sebagai satu fail JSON. Import ke T'Day lain (pelayan, atau peranti dalam Mod tempatan) dan semuanya masuk sebagai item baharu: import sentiasa menambah dan tidak pernah menimpa, jadi apa yang sedia ada tidak hilang. Pada pelayan, penerangan dinyahsulit ke dalam fail supaya kekal boleh dibaca walaupun anda berpindah ke pelayan dengan kunci berbeza."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Fail itu ialah JSON biasa yang boleh dibaca — simpan satu salinan sebagai sandaran peribadi."
+          ]
+        }
+      ],
+      "searchTitle": "eksport data anda",
+      "searchKeywords": "eksport, import, muat turun, sandaran, data saya, mudah alih, pulih, pindah",
+      "searchBody": "muat turun semuanya sebagai satu fail mudah alih — dan bawa balik bila-bila masa. daripada tetapan anda boleh memuat turun keseluruhan akaun — tugasan, senarai, sejarah selesai dan keutamaan — sebagai satu fail json. import ke t'day lain (pelayan, atau peranti dalam mod tempatan) dan semuanya masuk sebagai item baharu: import sentiasa menambah dan tidak pernah menimpa, jadi apa yang sedia ada tidak hilang. pada pelayan, penerangan dinyahsulit ke dalam fail supaya kekal boleh dibaca walaupun anda berpindah ke pelayan dengan kunci berbeza. fail itu ialah json biasa yang boleh dibaca — simpan satu salinan sebagai sandaran peribadi."
+    },
+    {
+      "id": "local-to-server-migration",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "cloud",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Pindah dari peranti ini ke pelayan",
+      "summary": "Bawa tugasan dalam peranti anda apabila beralih ke Mod pelayan.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Bermula dalam Mod tempatan dan kemudian menyediakan pelayan? Tiada apa-apa dimuat naik dengan sendirinya. Untuk memindahkan data anda: eksport dahulu daripada Tetapan, log masuk ke pelayan anda, kemudian import fail itu di sana. Tugasan, senarai dan sejarah berpindah dalam satu langkah yang disengajakan — anda pilih masanya, dan data dalam peranti kekal tidak tersentuh sehingga itu."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Selepas import, simpan fail yang dieksport sehingga anda sahkan semuanya tiba — ia juga berfungsi sebagai sandaran."
+          ]
+        }
+      ],
+      "searchTitle": "pindah dari peranti ini ke pelayan",
+      "searchKeywords": "pindah, tempatan ke pelayan, alih data, tukar mod, muat naik, log masuk, pindahkan",
+      "searchBody": "bawa tugasan dalam peranti anda apabila beralih ke mod pelayan. bermula dalam mod tempatan dan kemudian menyediakan pelayan? tiada apa-apa dimuat naik dengan sendirinya. untuk memindahkan data anda: eksport dahulu daripada tetapan, log masuk ke pelayan anda, kemudian import fail itu di sana. tugasan, senarai dan sejarah berpindah dalam satu langkah yang disengajakan — anda pilih masanya, dan data dalam peranti kekal tidak tersentuh sehingga itu. selepas import, simpan fail yang dieksport sehingga anda sahkan semuanya tiba — ia juga berfungsi sebagai sandaran."
+    },
+    {
+      "id": "crash-reports",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "activity",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.8.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-privacy"
+      ],
+      "title": "Laporan ranap & masalah",
+      "summary": "Dimatikan secara lalai. Siapa yang menentukan bergantung pada platform.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Laporan ranap & masalah bersifat pilihan dan dimatikan secara lalai. Siapa yang menentukan berbeza mengikut platform: dalam apl web, satu jawapan admin meliputi seluruh pelayan — laman ini, ralat pelayan itu sendiri dan semua yang menggunakannya — dan tiada pengguna individu ditanya. Pada Android dan iOS, setiap orang ditanya dalam aliran log masuk, jadi jawapannya adalah bagi setiap peranti dan soalan itu datang semula pada setiap log masuk. Ia berfungsi seperti Crashlytics: wujud untuk membaiki pepijat, bukan untuk mengukur cara anda menggunakan apl. Semasa semuanya berjalan seperti biasa, tiada analitik penggunaan, tiada penjejakan sesi dan tiada pemantauan prestasi pada peranti anda."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Laporan mengandungi versi apl, model peranti dan versi OS anda (atau pelayar dan versinya), ralat dan tempat dalam kod ia berlaku, beberapa langkah berlabel yang membawa kepadanya, nama skrin atau laluan API tanpa sebarang ID, kod status, dan pada mudah alih keadaan kasar peranti seperti memori kosong, tahap bateri dan sama ada anda berada dalam talian. Ia juga merangkumi ofset zon masa anda (contohnya UTC+2) dan bahasa, kerana tarikh adalah teras sebuah perancang tugasan."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Laporan tidak pernah mengandungi: nama, nama pengguna, e-mel atau sebarang butiran akaun anda; alamat IP atau lokasi anda; alamat pelayan anda; tajuk dan kandungan tugasan, senarai atau nota; kandungan pangkalan data anda; kata laluan, kuki atau token; tangkapan skrin atau rakaman. Mesej ralat dibersihkan daripada alamat, pengecam dan teks yang dipetik pada peranti anda sebelum dihantar, secara usaha terbaik. Laporan tidak membawa ID pengguna, jadi ia tidak boleh dikesan kembali kepada anda atau dipadam bagi setiap orang."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Laporan dihantar hanya apabila sesuatu gagal, dan hanya jika laporan dihidupkan untuk platform itu: dalam apl web, selepas admin menghidupkannya untuk pelayan; pada mudah alih, selepas anda bersetuju pada peranti. Jika sesuatu gagal semasa laporan dimatikan, tiada apa-apa disimpan atau dimasukkan ke baris gilir, dan menghidupkannya kemudian tidak menghantar kegagalan terdahulu. Apa yang dikira sebagai kegagalan bergantung pada platform: Android melaporkan ranap, beku dan ranap kehabisan memori; iOS melaporkan ranap, beku dan sistem menamatkan apl kerana menggunakan terlalu banyak memori; apl web hanya melaporkan ralat yang tidak dijangka. T'Day tidak mengesan kebocoran memori."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Laporan sampai kepada penyelenggara T'Day melalui Sentry, sebuah perkhidmatan pelaporan ranap. Laporan disimpan selama 30 hari dan digunakan hanya untuk membaiki pepijat, tidak pernah dijual atau dikongsi untuk pengiklanan. Ia dihantar terus ke Sentry, bukan melalui pelayan anda. Sentry dapat melihat alamat rangkaian bagi sebarang sambungan, seperti mana-mana perkhidmatan dalam talian, tetapi ia ditetapkan supaya tidak menyimpannya, dan apl web juga memberitahu Sentry laman web mana laporan itu datang. Jika anda menjalankan pelayan sendiri, jawapan admin yang sama juga meliputi laporan ralat pelayan itu sendiri, serta tempoh masa bagi sampel kecil permintaan; itu tidak pernah merangkumi tugasan anda. Binaan tanpa titik akhir pelaporan, seperti yang anda bina sendiri, tidak memaparkan tetapan ini."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Buka Tetapan.",
+            "Dalam apl web, admin mematikan \"Laporan ralat pelayan\" di Privasi; pada mudah alih, anda sendiri mematikan \"Laporan ranap & masalah\".",
+            "Laporan berhenti serta-merta, dan apa-apa yang menunggu untuk dihantar dipadam."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Menolak tidak mengenakan sebarang kos. Jawapan boleh diubah pada bila-bila masa dalam Tetapan → Privasi — oleh admin di web, oleh anda pada mudah alih. Butiran teknikal: docs/TELEMETRY.md dalam repositori T'Day."
+          ]
+        }
+      ],
+      "searchTitle": "laporan ranap & masalah",
+      "searchKeywords": "ranap, ralat, laporan, privasi, diagnostik, telemetri, beku, tergantung, memori, analitik, crash, error, report, sentry, privacy, diagnostics, telemetry, hang, anr, memory, analytics",
+      "searchBody": "dimatikan secara lalai. siapa yang menentukan bergantung pada platform. laporan ranap & masalah bersifat pilihan dan dimatikan secara lalai. siapa yang menentukan berbeza mengikut platform: dalam apl web, satu jawapan admin meliputi seluruh pelayan — laman ini, ralat pelayan itu sendiri dan semua yang menggunakannya — dan tiada pengguna individu ditanya. pada android dan ios, setiap orang ditanya dalam aliran log masuk, jadi jawapannya adalah bagi setiap peranti dan soalan itu datang semula pada setiap log masuk. ia berfungsi seperti crashlytics: wujud untuk membaiki pepijat, bukan untuk mengukur cara anda menggunakan apl. semasa semuanya berjalan seperti biasa, tiada analitik penggunaan, tiada penjejakan sesi dan tiada pemantauan prestasi pada peranti anda. laporan mengandungi versi apl, model peranti dan versi os anda (atau pelayar dan versinya), ralat dan tempat dalam kod ia berlaku, beberapa langkah berlabel yang membawa kepadanya, nama skrin atau laluan api tanpa sebarang id, kod status, dan pada mudah alih keadaan kasar peranti seperti memori kosong, tahap bateri dan sama ada anda berada dalam talian. ia juga merangkumi ofset zon masa anda (contohnya utc+2) dan bahasa, kerana tarikh adalah teras sebuah perancang tugasan. laporan tidak pernah mengandungi: nama, nama pengguna, e-mel atau sebarang butiran akaun anda; alamat ip atau lokasi anda; alamat pelayan anda; tajuk dan kandungan tugasan, senarai atau nota; kandungan pangkalan data anda; kata laluan, kuki atau token; tangkapan skrin atau rakaman. mesej ralat dibersihkan daripada alamat, pengecam dan teks yang dipetik pada peranti anda sebelum dihantar, secara usaha terbaik. laporan tidak membawa id pengguna, jadi ia tidak boleh dikesan kembali kepada anda atau dipadam bagi setiap orang. laporan dihantar hanya apabila sesuatu gagal, dan hanya jika laporan dihidupkan untuk platform itu: dalam apl web, selepas admin menghidupkannya untuk pelayan; pada mudah alih, selepas anda bersetuju pada peranti. jika sesuatu gagal semasa laporan dimatikan, tiada apa-apa disimpan atau dimasukkan ke baris gilir, dan menghidupkannya kemudian tidak menghantar kegagalan terdahulu. apa yang dikira sebagai kegagalan bergantung pada platform: android melaporkan ranap, beku dan ranap kehabisan memori; ios melaporkan ranap, beku dan sistem menamatkan apl kerana menggunakan terlalu banyak memori; apl web hanya melaporkan ralat yang tidak dijangka. t'day tidak mengesan kebocoran memori. laporan sampai kepada penyelenggara t'day melalui sentry, sebuah perkhidmatan pelaporan ranap. laporan disimpan selama 30 hari dan digunakan hanya untuk membaiki pepijat, tidak pernah dijual atau dikongsi untuk pengiklanan. ia dihantar terus ke sentry, bukan melalui pelayan anda. sentry dapat melihat alamat rangkaian bagi sebarang sambungan, seperti mana-mana perkhidmatan dalam talian, tetapi ia ditetapkan supaya tidak menyimpannya, dan apl web juga memberitahu sentry laman web mana laporan itu datang. jika anda menjalankan pelayan sendiri, jawapan admin yang sama juga meliputi laporan ralat pelayan itu sendiri, serta tempoh masa bagi sampel kecil permintaan; itu tidak pernah merangkumi tugasan anda. binaan tanpa titik akhir pelaporan, seperti yang anda bina sendiri, tidak memaparkan tetapan ini. buka tetapan. dalam apl web, admin mematikan \"laporan ralat pelayan\" di privasi; pada mudah alih, anda sendiri mematikan \"laporan ranap & masalah\". laporan berhenti serta-merta, dan apa-apa yang menunggu untuk dihantar dipadam. menolak tidak mengenakan sebarang kos. jawapan boleh diubah pada bila-bila masa dalam tetapan → privasi — oleh admin di web, oleh anda pada mudah alih. butiran teknikal: docs/telemetry.md dalam repositori t'day."
+    },
+    {
+      "id": "ai-summary",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": true,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Ringkasan tugasan",
+      "summary": "Bacaan ringkas dan tenang tentang hari anda — dengan AI tempatan pilihan.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day boleh meringkaskan hari anda dalam satu atau dua ayat. Dengan model Ollama tempatan ia berbunyi semula jadi; tanpanya ia beralih kepada ringkasan hangat yang boleh diramal — apa pun, tiada yang meninggalkan pelayan anda."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Ringkasan tidak pernah bergantung pada perkhidmatan AI awan — ia tempatan atau tiada langsung."
+          ]
+        }
+      ],
+      "searchTitle": "ringkasan tugasan",
+      "searchKeywords": "ringkasan, ai, ollama, gambaran, ringkas, tempatan, peribadi",
+      "searchBody": "bacaan ringkas dan tenang tentang hari anda — dengan ai tempatan pilihan. t'day boleh meringkaskan hari anda dalam satu atau dua ayat. dengan model ollama tempatan ia berbunyi semula jadi; tanpanya ia beralih kepada ringkasan hangat yang boleh diramal — apa pun, tiada yang meninggalkan pelayan anda. ringkasan tidak pernah bergantung pada perkhidmatan ai awan — ia tempatan atau tiada langsung."
+    },
+    {
+      "id": "device-calendar-sync",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "calendar",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Tugas dalam kalendar peranti",
+      "summary": "Salin tugas bertarikh anda ke kalendar T'Day pada telefon anda.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Apabila dihidupkan, setiap tugas yang bertarikh akan disalin ke kalendar bernama T'Day pada telefon anda, bersama kalendar anda yang lain. Tugas Anytime tidak disertakan kerana ia tiada tarikh. Ia sehala sahaja: T'Day menulis ke kalendar itu, jadi suntingan yang anda buat di sana akan diganti apabila tugas anda berubah."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Dalam Tetapan, hidupkan “Tambah tugas berjadual ke kalendar saya”.",
+            "Benarkan akses kalendar apabila telefon anda meminta.",
+            "Buka aplikasi kalendar anda — tugas bertarikh anda ada dalam kalendar T'Day."
+          ]
+        }
+      ],
+      "searchTitle": "tugas dalam kalendar peranti",
+      "searchKeywords": "kalendar, kalendar peranti, segerak, google calendar, apple calendar, eventkit, kalendar telefon, salin",
+      "searchBody": "salin tugas bertarikh anda ke kalendar t'day pada telefon anda. apabila dihidupkan, setiap tugas yang bertarikh akan disalin ke kalendar bernama t'day pada telefon anda, bersama kalendar anda yang lain. tugas anytime tidak disertakan kerana ia tiada tarikh. ia sehala sahaja: t'day menulis ke kalendar itu, jadi suntingan yang anda buat di sana akan diganti apabila tugas anda berubah. dalam tetapan, hidupkan “tambah tugas berjadual ke kalendar saya”. benarkan akses kalendar apabila telefon anda meminta. buka aplikasi kalendar anda — tugas bertarikh anda ada dalam kalendar t'day."
+    }
+  ]
+}

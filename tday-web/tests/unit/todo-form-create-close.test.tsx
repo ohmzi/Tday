@@ -1,0 +1,176 @@
+// @vitest-environment jsdom
+
+import React from "react";
+import { render, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+let createStatus: "idle" | "pending" | "success" | "error" = "idle";
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+  // TodoForm now renders GuideHelpLink, whose Link (@/lib/navigation) pulls in
+  // src/i18n.ts — the mock must cover the module's full surface.
+  initReactI18next: { type: "3rdParty", init: () => {} },
+}));
+
+vi.mock("@/providers/TodoFormProvider", () => ({
+  useTodoForm: () => ({
+    todoItem: undefined,
+    title: "Ship web fix",
+    setTitle: vi.fn(),
+    priority: "Low",
+    setPriority: vi.fn(),
+    priorityTouchedByUser: false,
+    desc: "",
+    setDesc: vi.fn(),
+    dateRange: {
+      from: new Date("2026-04-03T14:00:00.000Z"),
+      to: new Date("2026-04-03T14:30:00.000Z"),
+    },
+    setDateRange: vi.fn(),
+    listID: null,
+    setListID: vi.fn(),
+    rruleOptions: null,
+    dateRangeChecksum: "",
+    rruleChecksum: null,
+  }),
+}));
+
+vi.mock("@/components/todo/hooks/useTodoFormFocusAndAutosize", () => ({
+  useTodoFormFocusAndAutosize: () => ({
+    titleRef: { current: null },
+    textareaRef: { current: null },
+  }),
+}));
+
+vi.mock("@/components/todo/hooks/useKeyboardSubmitForm", () => ({
+  useKeyboardSubmitForm: vi.fn(),
+}));
+
+vi.mock("@/components/todo/hooks/useClearInput", () => ({
+  useClearInput: () => vi.fn(),
+}));
+
+vi.mock("@/hooks/use-toast", () => ({
+  useToast: () => ({
+    toast: vi.fn(),
+  }),
+}));
+
+vi.mock("@/providers/TodoMutationProvider", () => ({
+  useTodoMutation: () => ({
+    useEditTodo: () => ({
+      editTodoMutateFn: vi.fn(),
+    }),
+    useEditTodoInstance: () => ({
+      editTodoInstanceMutateFn: vi.fn(),
+    }),
+  }),
+}));
+
+vi.mock("@/features/todayTodos/query/create-todo", () => ({
+  useCreateTodo: () => ({
+    createMutateFn: vi.fn(),
+    createStatus,
+  }),
+}));
+
+// The sheet now also reaches for the todo→floater conversion, which needs a
+// QueryClient; this test renders the form bare, so the hook is stubbed out.
+vi.mock("@/features/todayTodos/query/convert-todo-to-floater", () => ({
+  useConvertTodoToFloater: () => ({
+    convertMutateFn: vi.fn(),
+    convertPending: false,
+  }),
+}));
+
+vi.mock("@/components/Sidebar/List/query/get-list-meta", () => ({
+  useListMetaData: () => ({
+    listMetaData: {},
+    listMetaLoading: false,
+    isFetching: false,
+    isPending: false,
+  }),
+}));
+
+vi.mock("@/features/floater/query/create-floater", () => ({
+  useCreateFloater: () => ({
+    createMutateFn: vi.fn(),
+    createStatus: "idle",
+  }),
+}));
+
+vi.mock("@/features/floaterList/query/get-floater-list-meta", () => ({
+  useFloaterListMetaData: () => ({
+    floaterListMetaData: {},
+    listMetaLoading: false,
+    isFetching: false,
+    isPending: false,
+  }),
+}));
+
+vi.mock("@/features/completed/query/get-completedTodo", () => ({
+  useCompletedTodo: () => ({
+    completedTodos: [],
+    todoLoading: false,
+  }),
+}));
+
+vi.mock("@/components/todo/component/TodoForm/NLPTitleInput", () => ({
+  default: () => <div data-testid="todo-title-input" />,
+}));
+
+vi.mock("@/features/guide/GuideHelpLink", () => ({
+  GuideHelpLink: () => <div data-testid="guide-help-link" />,
+}));
+
+vi.mock("@/components/ui/button", () => ({
+  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+    <button {...props}>{children}</button>
+  ),
+}));
+
+import TodoForm from "@/components/todo/component/TodoForm/TodoForm";
+
+describe("TodoForm create close behavior", () => {
+  afterEach(() => {
+    createStatus = "idle";
+  });
+
+  it("closes the create card after a successful create", async () => {
+    const setDisplayForm = vi.fn();
+    createStatus = "success";
+
+    render(
+      <TodoForm
+        displayForm
+        setDisplayForm={setDisplayForm}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(setDisplayForm).toHaveBeenCalledWith(false);
+    });
+  });
+
+  it("keeps persistent forms open after a successful create", async () => {
+    const setDisplayForm = vi.fn();
+    createStatus = "success";
+
+    render(
+      <TodoForm
+        displayForm
+        setDisplayForm={setDisplayForm}
+        persistent
+      />,
+    );
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+
+    expect(setDisplayForm).not.toHaveBeenCalled();
+  });
+});

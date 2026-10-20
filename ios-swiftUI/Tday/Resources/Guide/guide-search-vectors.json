@@ -1,0 +1,102 @@
+{
+  "vectors": {
+    "repeat": [
+      "recurrence-presets",
+      "repeat-suggestions",
+      "reusable-lists",
+      "nlp-date-syntax",
+      "bulk-actions"
+    ],
+    "swipe": [
+      "swipe-actions",
+      "swipe-sheet-away",
+      "copy-task-text",
+      "calendar-views"
+    ],
+    "widget": [
+      "home-widget",
+      "widget-list-selection",
+      "list-widgets",
+      "widget-quick-add",
+      "interactive-widgets",
+      "today-widget-progress",
+      "focus-filters"
+    ],
+    "offline": [
+      "offline-sync",
+      "local-mode",
+      "interactive-widgets"
+    ],
+    "date": [
+      "nlp-date-syntax",
+      "floaters-vs-todos",
+      "today-widget-progress",
+      "calendar-views",
+      "root-feeds",
+      "create-task",
+      "copy-task-text",
+      "promote-and-float",
+      "quick-defer",
+      "day-done",
+      "scheduled-lists",
+      "morning-sweep",
+      "share-into-tday",
+      "apple-watch",
+      "crash-reports",
+      "device-calendar-sync"
+    ],
+    "reminder": [
+      "reminders",
+      "reminder-snooze",
+      "notifications",
+      "quiet-hours"
+    ],
+    "api key": [],
+    "floater": [
+      "floaters-vs-todos",
+      "resting-floaters",
+      "floater-lists",
+      "default-home-screen",
+      "promote-and-float",
+      "reusable-lists",
+      "list-widgets",
+      "root-feeds",
+      "create-task",
+      "morning-sweep",
+      "widget-list-selection",
+      "interactive-widgets"
+    ],
+    "car": [
+      "carplay",
+      "morning-sweep",
+      "overdue-view",
+      "swipe-sheet-away",
+      "scheduled-lists",
+      "list-icons",
+      "completed-history",
+      "reminder-snooze",
+      "day-ahead",
+      "crash-reports"
+    ],
+    "search": [
+      "search-tasks"
+    ],
+    "priority": [
+      "priorities",
+      "bulk-actions",
+      "nlp-date-syntax",
+      "copy-task-text",
+      "promote-and-float"
+    ],
+    "pin": [
+      "pin-task",
+      "create-task",
+      "copy-task-text",
+      "promote-and-float",
+      "list-icons",
+      "home-widget"
+    ],
+    "keyboard": [],
+    "push": []
+  }
+}

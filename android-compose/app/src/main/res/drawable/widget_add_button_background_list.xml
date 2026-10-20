@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?><!-- The add button's pill on a per-list widget, whose colour is the one the user gave that list and
+     so cannot be named here. Opaque white although it is never drawn white: the render tints it
+     through View.setBackgroundTintList (API 31+ only — see TaskWidgetRemoteViews.applyAccent),
+     whose default SRC_IN blend takes BOTH the tint's colour and its alpha and keeps nothing of this
+     shape but its geometry. So the list colour arrives already translucent and composites over
+     whatever the host draws behind the widget, rather than over a surface this process guessed at.
+     White rather than either accent wash, so if the tint is ever dropped the button cannot fall
+     back to the Today or Floater identity. 14dp radius matches widget_add_button_background. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/tday_white" />
+    <corners android:radius="14dp" />
+</shape>

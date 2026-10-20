@@ -1,0 +1,313 @@
+# Contributing to T'Day
+
+> **Pull requests are not accepted at this time.** T'Day is open source (AGPL-3.0) and run as a
+> one-person project. PRs opened against this repository will be closed without review — please
+> don't spend your time on one. You're free to fork it under the license.
+>
+> **Issues are wanted.** Bug reports, security reports and feature ideas all help, and the
+> maintainer implements the fixes himself. Start at
+> [issues](https://github.com/ohmzi/Tday/issues); for anything security-sensitive follow
+> [SECURITY.md](SECURITY.md) instead of filing publicly.
+>
+> Everything below documents the maintainer's own development workflow. It is public because
+> it is useful context when reading the code or reproducing a build — not an invitation to
+> submit changes.
+
+This document covers everything a developer needs to know before writing code, opening a PR, or deploying changes.
+
+## Table of Contents
+
+- [Development Setup](#development-setup)
+- [Product Direction](#product-direction)
+- [Branch Strategy](#branch-strategy)
+- [Commit Messages](#commit-messages)
+- [Pull Request Process](#pull-request-process)
+- [Documentation Expectations](#documentation-expectations)
+- [Coding Conventions](#coding-conventions)
+- [Linting and Formatting](#linting-and-formatting)
+- [Testing](#testing)
+- [Before Merging Checklist](#before-merging-checklist)
+
+## Development Setup
+
+### Git Hooks (all platforms)
+
+```bash
+bash scripts/install-hooks.sh   # required, one-time after cloning
+```
+
+### Frontend (Vite SPA)
+
+```bash
+cd tday-web
+npm install
+npm run dev              # http://localhost:5173 (Vite HMR)
+```
+
+### Backend (Ktor)
+
+```bash
+./gradlew :tday-backend:run   # http://localhost:8080
+```
+
+The Ktor backend requires a running PostgreSQL instance and applies Flyway migrations automatically on startup. Configure the connection via environment variables (see `.env.example`).
+
+### Android (Compose)
+
+1. Open `android-compose/` in Android Studio.
+2. Ensure Android SDK 35 is installed.
+3. Choose Local Mode for offline-only testing, or set the server URL at first launch to point to your local or remote T'Day instance.
+4. Run on emulator or physical device.
+
+### iOS (SwiftUI)
+
+1. Open `ios-swiftUI/TdayApp.xcodeproj` in Xcode.
+2. Select the `Tday` scheme.
+3. Run on an iOS 17+ simulator or physical device.
+4. Choose Local Mode for offline-only testing, or connect to a self-hosted server.
+
+### Database
+
+PostgreSQL 15 is required. Use Docker or a local installation:
+
+```bash
+docker run -d --name tday_dev_db \
+  -e POSTGRES_USER=myuser -e POSTGRES_PASSWORD=mypass -e POSTGRES_DB=mydb \
+  -p 5432:5432 postgres:15
+```
+
+### Full Stack (Docker Compose)
+
+`docker-compose.yaml` runs the **released** backend image from GHCR, so a plain `up -d` never
+replaces a deployment with a working-tree build. For development you want the local build override:
+
+```bash
+docker compose -f docker-compose.yaml -f docker-compose.build.yaml up -d --build
+docker exec -it tday_ollama ollama pull qwen3.5:0.8b
+```
+
+Set `COMPOSE_FILE=docker-compose.yaml:docker-compose.build.yaml` in your shell if you'd rather type
+`docker compose up -d --build`. Deploying a release is a separate flow —
+`scripts/deploy-release.sh`, documented in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+## Product Direction
+
+Read [`docs/PRODUCT_DIRECTION.md`](docs/PRODUCT_DIRECTION.md) before changing product behavior. The short version:
+
+- T'Day is a quiet private planner with web, backend, Android, and iOS surfaces.
+- Mobile is local-first and cross-platform parity matters.
+- Scheduled `Todo` items and unscheduled `Floater` items are separate domain concepts.
+- Local Mode is a first-class Android/iOS workspace that does not require a server.
+- Server Mode writes optimistically to local cache and replays pending mutations to the backend.
+- Documentation should move with behavior, data shape, architecture, and verification changes.
+
+## Branch Strategy
+
+| Branch | Purpose | Deploys to |
+|--------|---------|------------|
+| `master` | Production-ready code | GHCR Docker image (auto) |
+| `develop` | Integration branch for features | — |
+| `feature/*` | New features | — |
+| `fix/*` | Bug fixes | — |
+| `chore/*` | Tooling, deps, docs | — |
+
+**Rules:**
+
+- All work branches are created from `develop`.
+- PRs to `master` are only accepted from `develop` (enforced by CI).
+- Never push directly to `master` or `develop`.
+
+### Branch Naming
+
+```
+feature/add-calendar-drag-drop
+fix/login-session-expiry-redirect
+chore/update-ktor-to-v3
+```
+
+Use lowercase, hyphens as separators, short but descriptive.
+
+## Commit Messages
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>(<scope>): <short summary>
+
+<optional body>
+```
+
+**Types:** `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `test`, `perf`, `ci`
+
+**Scopes (examples):** `web`, `android`, `api`, `auth`, `backend`, `ci`, `docker`
+
+**Examples:**
+
+```
+feat(api): add batch todo completion endpoint
+fix(android): handle expired session during background sync
+chore(deps): bump ktor to 3.1
+docs: add architecture decision record for offline sync
+```
+
+- First line: imperative mood, max 72 characters.
+- Body: explain *why*, not *what* (the diff shows what changed).
+- Reference issue numbers when applicable: `Closes #42`.
+
+## Pull Request Process
+
+1. Create a branch from `develop` following naming conventions.
+2. Make your changes following [coding standards](docs/CODING_STANDARDS.md).
+3. Ensure lint passes: `cd tday-web && npm run lint`.
+4. Ensure tests pass: `cd tday-web && npm run test` and `./gradlew :tday-backend:test`.
+5. For Android changes, run `cd android-compose && ./gradlew :app:compileDebugKotlin` and targeted tests when practical.
+6. For iOS changes, run the `Tday` scheme build/test in Xcode or the `xcodebuild` command from [`docs/TESTING.md`](docs/TESTING.md).
+7. Open a PR against `develop` using the [PR template](.github/PULL_REQUEST_TEMPLATE.md).
+8. Request review from at least one maintainer.
+9. Address all review comments.
+10. Squash-merge when approved.
+
+**CI enforcement:** PRs to `master` run lint and the full test suite automatically. PRs to `develop` run the Android unit tests when they touch Android-relevant files (`android.yml`). The Docker image will **not** be built or released unless all tests pass. See [Deployment > Test-Before-Build Policy](docs/DEPLOYMENT.md#test-before-build-policy).
+
+### PR Size Guidelines
+
+- Aim for < 400 lines changed per PR.
+- Split large features into incremental PRs.
+- Refactoring PRs should not include behavior changes.
+- Cross-platform mobile changes should stay behaviorally paired even when implementation differs.
+
+### Review Checklist (for reviewers)
+
+- [ ] Changes match the PR description.
+- [ ] No secrets, tokens, or credentials in the diff.
+- [ ] Error handling covers failure paths.
+- [ ] New API endpoints follow [API guidelines](docs/API_GUIDELINES.md).
+- [ ] Database changes include a Flyway migration and are backward-compatible.
+- [ ] Shared DTO, Android Room, iOS SwiftData, and sync mappers are updated if the data shape changed.
+- [ ] Tests cover the happy path and at least one error path.
+- [ ] No console.log / Log.d left from debugging.
+
+## Documentation Expectations
+
+Documentation is part of the change when a future contributor would otherwise have to rediscover the rule.
+
+| Change | Docs to update |
+|--------|----------------|
+| Product surface, navigation, Local Mode, or cross-platform UX rule | `README.md`, `docs/PRODUCT_DIRECTION.md`, platform READMEs |
+| Backend table, shared DTO, local cache record, mutation kind | `docs/DATA_MODEL.md`, `docs/ARCHITECTURE.md`, `docs/API_GUIDELINES.md` |
+| Route or response contract | `docs/API_GUIDELINES.md`, shared models, tests |
+| Coding pattern or guardrail | `docs/CODING_STANDARDS.md`, guardrail tests |
+| Verification workflow or CI expectation | `docs/TESTING.md`, `.github/PULL_REQUEST_TEMPLATE.md` |
+| Deployment, versioning, signing, ingress, telemetry, security | The matching doc under `docs/`, `SECURITY.md`, or platform README |
+
+Use [`docs/REPO_HOUSEKEEPING.md`](docs/REPO_HOUSEKEEPING.md) for generated-file rules, markdown maintenance, and cleanup expectations.
+
+## Coding Conventions
+
+See [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md) for the full rules. Key highlights:
+
+Across all codebases, prefer readable, narrow units with explicit names and clear dependency direction. UI renders state, ViewModels/controllers coordinate, repositories/services own data work, and transport/storage details stay behind injected collaborators.
+
+### TypeScript (Frontend)
+
+- Strict mode is enabled — no `any` unless absolutely unavoidable.
+- Use `interface` for object shapes, `type` for unions and mapped types.
+- Use `@/` path alias for imports (never relative paths that climb more than one level).
+
+### Kotlin (Backend + Android)
+
+- Follow [Kotlin coding conventions](https://kotlinlang.org/docs/coding-conventions.html).
+- Use `StateFlow` for UI state in Android, never `LiveData`.
+- Prefix private mutable state with `_` (e.g., `_uiState`).
+- All Android ViewModels use `@HiltViewModel` with constructor injection.
+- Use `runCatching` for operations that can fail.
+- Constants in `companion object` with `UPPER_SNAKE_CASE`.
+
+### Swift (iOS)
+
+- Use SwiftUI, Observation, SwiftData, URLSession, Keychain/cookie handling, and the existing `AppContainer` dependency graph.
+- Keep feature code in `ios-swiftUI/Tday/Feature/<Feature>/` and shared app logic in `Core/`.
+- Mirror product behavior with Android while keeping platform-native UI, gestures, and system integrations.
+- Update SwiftData entities and cache mappers whenever offline state changes.
+
+## Linting and Formatting
+
+### Frontend
+
+```bash
+cd tday-web && npm run lint    # ESLint
+```
+
+### Backend
+
+```bash
+./gradlew :tday-backend:test   # Kotlin JUnit 5 tests
+```
+
+### General
+
+- No trailing whitespace.
+- Files end with a single newline.
+- UTF-8 encoding everywhere.
+- 2-space indentation for TypeScript/JSON; 4-space for Kotlin.
+
+## Testing
+
+See [`docs/TESTING.md`](docs/TESTING.md) for the full strategy. Quick reference:
+
+### Frontend
+
+```bash
+cd tday-web
+npm run test                   # all Vitest suites
+```
+
+- Tests live in `tday-web/tests/`.
+- Use `tests/unit/` for behavior tests and `tests/guardrails/` for repository-wide standards.
+- Name files `*.test.ts` or `*.test.tsx`.
+- Security-critical code must have tests in the most relevant layer.
+
+### Backend
+
+```bash
+./gradlew :tday-backend:test   # all Kotlin JUnit 5 tests
+```
+
+- Tests live in `tday-backend/src/test/kotlin/`.
+- Security services (password, encryption, JWE session handling, credential envelope, proof) have dedicated test classes.
+
+### Android
+
+- Unit test dependencies are wired (`junit`, `espresso`, `compose-ui-test`).
+- Tests go in `app/src/test/` (unit) and `app/src/androidTest/` (instrumented).
+- Test naming: `should <expected behavior> when <condition>`.
+
+### iOS
+
+```bash
+xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.6'
+```
+
+- Tests live in `ios-swiftUI/Tests/`.
+- Prefer focused tests for repository/cache mapping, sync behavior, and core helpers.
+- For UI polish without tests, build the app and do a simulator/device spot check when practical.
+
+## Before Merging Checklist
+
+Every PR must satisfy these before merge:
+
+- [ ] `cd tday-web && npm run lint` passes with no warnings.
+- [ ] `cd tday-web && npm run test` passes with no failures (including guardrail tests).
+- [ ] `./gradlew :tday-backend:test` passes with no failures.
+- [ ] Android build/tests run for Android changes, or the skip reason is documented.
+- [ ] iOS build/tests run for iOS changes, or the skip reason is documented.
+- [ ] CI pipeline passes (lint + tests are enforced automatically on PRs to `master`).
+- [ ] No secrets or credentials in the diff.
+- [ ] Backward compatibility maintained (or migration provided).
+- [ ] Flyway migration SQL and corresponding Exposed table changes reviewed if schema changed.
+- [ ] Shared DTOs, Android Room, iOS SwiftData, and sync mappers reviewed if data shape changed.
+- [ ] Error handling and logging added where appropriate.
+- [ ] API changes documented in the PR description.
+- [ ] Android/iOS parity checked for mobile user-facing changes.
+
+**Note:** The release pipeline will not build or push a Docker image unless all tests pass. Broken tests block the entire release.

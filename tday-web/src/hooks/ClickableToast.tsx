@@ -1,0 +1,62 @@
+import type { ReactNode } from "react";
+
+type ClickableToastAction = {
+  /** Icon-based now — see use-undoable-delete.ts. Carries its own accessible
+   * name (an aria-labelled wrapper), so this button needs no separate label. */
+  label: ReactNode;
+  onClick: () => void;
+};
+
+type ClickableToastProps = {
+  title: string;
+  description?: string;
+  onClick: () => void;
+  variant?: "default" | "destructive";
+  action?: ClickableToastAction;
+};
+
+export default function ClickableToast({
+  title,
+  description,
+  onClick,
+  action,
+}: ClickableToastProps) {
+  // Content only — no box of its own. The surrounding sonner <li> supplies the
+  // frosted, fully-rounded pill (surface, border, padding, blur, the fixed
+  // 356px width) and the 15px base font size, so clickable toasts look
+  // identical to plain ones. The title uses the same font-extrabold weight and
+  // centered alignment as a regular toast's title, and the description the same
+  // 13px/medium/75%-currentColor treatment — the shared class list in
+  // `components/ui/sonner.tsx` forces both (custom toasts render
+  // data-styled="false", so nothing sonner sets applies to them, and every
+  // declaration competing with sonner's own sheet has to be `!important`). The
+  // optional action (e.g. Undo) is a sibling button so the tap-through body and
+  // the action stay separate targets.
+  return (
+    <div className="flex w-full min-w-0 items-center gap-3">
+      <button
+        type="button"
+        onClick={onClick}
+        className="block min-w-0 flex-1 text-center text-popover-foreground focus-visible:outline-none"
+      >
+        <span className="block font-extrabold leading-tight">{title}</span>
+        {description && (
+          <span className="mt-0.5 block text-[13px] font-medium leading-snug text-current/75">
+            {description}
+          </span>
+        )}
+      </button>
+      {action ? (
+        <button
+          type="button"
+          onClick={action.onClick}
+          // Matches the plain-toast action and iOS: bare (icon or text) on the
+          // snackbar accent, no filled pill.
+          className="shrink-0 font-extrabold text-[hsl(var(--toast-action))] focus-visible:outline-none"
+        >
+          {action.label}
+        </button>
+      ) : null}
+    </div>
+  );
+}

@@ -1,0 +1,225 @@
+# NOTE: this file does NOT generate TdayApp.xcodeproj.
+#
+# `TdayApp.xcodeproj/project.pbxproj` is the source of truth and is maintained by hand (and by
+# `scripts/version.mjs sync`). XcodeGen has never been run against this repository and must not
+# be: regenerating would discard the hand-maintained pbxproj and wipe `xcshareddata/`, including
+# the shared `Tday.xcscheme` that the TestFlight pipeline archives.
+#
+# It is kept because tooling reads it — `scripts/version.mjs` mirrors the version into it, the
+# package.json postversion hook stages it, and `tday-web/tests/guardrails/dependency-hygiene`
+# derives the expected pbxproj build-configuration count from its MARKETING_VERSION entries.
+# Treat it as a mirror of the pbxproj: when they disagree, the pbxproj wins, and this file
+# should be corrected to match.
+
+name: TdayApp
+
+options:
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "17.0"
+
+# Project-wide build settings.
+#
+# STRING_CATALOG_GENERATE_SYMBOLS: off. The catalogue keys ARE the English
+# sentences (`L("Delete local data")`), so nothing in this app references the
+# generated symbol API — and two keys that differ only by punctuation, such as
+# "Delete local data" and "Delete local data?", collapse to the same generated
+# symbol and fail the build outright. Generating symbols we never use is not
+# worth a build that breaks on a question mark.
+settings:
+  base:
+    STRING_CATALOG_GENERATE_SYMBOLS: NO
+
+packages:
+  sentry-cocoa:
+    url: https://github.com/getsentry/sentry-cocoa
+    from: 9.30.0
+
+targets:
+  Tday:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Tday
+        excludes:
+          - Info.plist
+    dependencies:
+      - package: sentry-cocoa
+        product: Sentry-Dynamic
+      - target: TdayWidget
+      # Embedded app extension. Ships inside the Tday archive and needs its own
+      # App ID (com.ohmz.tday.ios.TdayShareExtension) carrying the
+      # group.com.ohmz.tday App Groups capability. CI mints the profile via
+      # `-allowProvisioningUpdates`; see docs/DEPLOYMENT.md.
+      - target: TdayShareExtension
+      # Embedded watchOS companion (R6-4). Fed live from the phone over
+      # WatchConnectivity (see Tday/Core/Widget/WatchSessionManager.swift).
+      - target: TdayWatch
+        embed: true
+    settings:
+      base:
+        PRODUCT_NAME: Tday
+        PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios
+        DEVELOPMENT_TEAM: JUFACN2FS3
+        INFOPLIST_FILE: Tday/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Tday/Tday.entitlements
+        GENERATE_INFOPLIST_FILE: NO
+        SWIFT_VERSION: 5.0
+        CURRENT_PROJECT_VERSION: 67
+        MARKETING_VERSION: 0.8.5
+        SENTRY_DSN: ""
+        TARGETED_DEVICE_FAMILY: 1
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+  TdayWidget:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: TdayWidget
+        excludes:
+          - Info.plist
+      # App files the extension compiles as well: the day-window math, the List widget's setup
+      # picture (the app's setup sheet draws it too), the raw motion values (the WidgetCheckHold
+      # beat) and the list-accent resolvers — a list-scoped widget draws that list's own glyph
+      # and colour, which means resolving its icon key (including the name-derived guess, hence
+      # the inference rule and its generated table) and its colour key on this side. None of the
+      # five pulls in anything app-only.
+      - path: Tday/Core/Widget/TodayWidgetDayWindow.swift
+      - path: Tday/Core/Widget/ListWidgetSetupArt.swift
+      - path: Tday/UI/Theme/TdayMotionGenerated.swift
+      - path: Tday/UI/Theme/TdayListAccent.swift
+      - path: Tday/UI/Theme/TdayListIconInference.swift
+      - path: Tday/UI/Theme/TdayListIconInferenceGenerated.swift
+    resources:
+      # The app's asset catalogue, so the extension can draw the shared Lucide glyphs.
+      # Without it the widget target has NO resources phase at all and `Image("Lucide…")`
+      # resolves to nothing — which is why the custom-list watermark could not be drawn
+      # from the list's own icon until this was added.
+      - path: Tday/Assets.xcassets
+    settings:
+      base:
+        PRODUCT_NAME: TdayWidget
+        PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.TdayTasksWidget
+        DEVELOPMENT_TEAM: JUFACN2FS3
+        INFOPLIST_FILE: TdayWidget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: TdayWidget/TdayWidget.entitlements
+        GENERATE_INFOPLIST_FILE: NO
+        SWIFT_VERSION: 5.0
+        CURRENT_PROJECT_VERSION: 67
+        MARKETING_VERSION: 0.8.5
+        TARGETED_DEVICE_FAMILY: 1
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+  TdayShareExtension:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: TdayShareExtension
+        excludes:
+          - Info.plist
+    settings:
+      base:
+        PRODUCT_NAME: TdayShareExtension
+        PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.TdayShareExtension
+        DEVELOPMENT_TEAM: JUFACN2FS3
+        INFOPLIST_FILE: TdayShareExtension/Info.plist
+        CODE_SIGN_ENTITLEMENTS: TdayShareExtension/TdayShareExtension.entitlements
+        GENERATE_INFOPLIST_FILE: NO
+        SWIFT_VERSION: 5.0
+        CURRENT_PROJECT_VERSION: 67
+        MARKETING_VERSION: 0.8.5
+        TARGETED_DEVICE_FAMILY: 1
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+  # watchOS companion app (R6-4). A single-target watchOS app (watchOS 10+),
+  # embedded in the iOS Tday app. It mirrors the phone's Today snapshot over
+  # WatchConnectivity — no separate login, no direct server calls.
+  TdayWatch:
+    type: application
+    platform: watchOS
+    deploymentTarget: "10.0"
+    sources:
+      - path: TdayWatch
+        excludes:
+          - Info.plist
+    dependencies:
+      - target: TdayWatchWidget
+        embed: true
+    settings:
+      base:
+        PRODUCT_NAME: TdayWatch
+        PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.watchkitapp
+        DEVELOPMENT_TEAM: JUFACN2FS3
+        INFOPLIST_FILE: TdayWatch/Info.plist
+        CODE_SIGN_ENTITLEMENTS: TdayWatch/TdayWatch.entitlements
+        GENERATE_INFOPLIST_FILE: NO
+        SWIFT_VERSION: 5.0
+        CURRENT_PROJECT_VERSION: 67
+        MARKETING_VERSION: 0.8.5
+        TARGETED_DEVICE_FAMILY: 4
+        SKIP_INSTALL: YES
+  # watchOS complication showing the remaining-task count on the watch face.
+  # Reuses the same snapshot the phone widget uses (R6-4).
+  TdayWatchWidget:
+    type: app-extension
+    platform: watchOS
+    deploymentTarget: "10.0"
+    sources:
+      - path: TdayWatchWidget
+        excludes:
+          - Info.plist
+    settings:
+      base:
+        PRODUCT_NAME: TdayWatchWidget
+        PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.watchkitapp.widget
+        DEVELOPMENT_TEAM: JUFACN2FS3
+        INFOPLIST_FILE: TdayWatchWidget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: TdayWatchWidget/TdayWatchWidget.entitlements
+        GENERATE_INFOPLIST_FILE: NO
+        SWIFT_VERSION: 5.0
+        CURRENT_PROJECT_VERSION: 67
+        MARKETING_VERSION: 0.8.5
+        TARGETED_DEVICE_FAMILY: 4
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+  TdayTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Tests/TdayCoreTests
+    dependencies:
+      - target: Tday
+      # The telemetry tests build `Sentry.Options`, `Event` and `Breadcrumb` themselves, so the
+      # module has to be visible to the test target and not only to the app it is hosted in.
+      - package: sentry-cocoa
+        product: Sentry-Dynamic
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  Tday:
+    build:
+      targets:
+        Tday: all
+        TdayTests: [test]
+    test:
+      targets:
+        - TdayTests
+    run:
+      config: Debug
+    archive:
+      config: Release
+  TdayWatch:
+    build:
+      targets:
+        TdayWatch: all
+    run:
+      config: Debug
+    archive:
+      config: Release

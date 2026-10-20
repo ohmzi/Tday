@@ -1,0 +1,1185 @@
+import SwiftUI
+import UIKit
+
+/// Everything a caller needs to draw the refresh pill itself.
+struct TdayRefreshIndicatorState: Equatable {
+    var isRefreshing = false
+    var pullProgress: CGFloat = 0
+    /// 0…1 visibility, matching what the built-in indicator would show.
+    var reveal: CGFloat = 0
+}
+
+struct PullToRefreshContainer<Content: View>: View {
+    let isRefreshing: Bool
+    let isEnabled: Bool
+    /// Distance from the top of the content to the refresh pill. Screens with a
+    /// pinned header push it clear of the header's toolbar strip.
+    let indicatorTopPadding: CGFloat
+    /// Set false when the caller draws the pill itself — a screen with a pinned
+    /// header needs it above that header, which this container cannot reach.
+    let showsIndicator: Bool
+    let onIndicatorStateChange: ((TdayRefreshIndicatorState) -> Void)?
+    let action: @Sendable () async -> Void
+    private let content: Content
+
+    init(
+        isRefreshing: Bool,
+        isEnabled: Bool = true,
+        indicatorTopPadding: CGFloat = TdayRefreshIndicatorMetrics.defaultTopPadding,
+        showsIndicator: Bool = true,
+        onIndicatorStateChange: ((TdayRefreshIndicatorState) -> Void)? = nil,
+        action: @escaping @Sendable () async -> Void,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.isRefreshing = isRefreshing
+        self.isEnabled = isEnabled
+        self.indicatorTopPadding = indicatorTopPadding
+        self.showsIndicator = showsIndicator
+        self.onIndicatorStateChange = onIndicatorStateChange
+        self.action = action
+        self.content = content()
+    }
+
+    var body: some View {
+        if isEnabled {
+            RefreshContainerBody(
+                isRefreshing: isRefreshing,
+                indicatorTopPadding: indicatorTopPadding,
+                showsIndicator: showsIndicator,
+                onIndicatorStateChange: onIndicatorStateChange,
+                action: action
+            ) {
+                content
+            }
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    func tdayPullToRefresh(
+        isRefreshing: Bool,
+        isEnabled: Bool = true,
+        indicatorTopPadding: CGFloat = TdayRefreshIndicatorMetrics.defaultTopPadding,
+        showsIndicator: Bool = true,
+        onIndicatorStateChange: ((TdayRefreshIndicatorState) -> Void)? = nil,
+        action: @escaping @Sendable () async -> Void
+    ) -> some View {
+        PullToRefreshContainer(
+            isRefreshing: isRefreshing,
+            isEnabled: isEnabled,
+            indicatorTopPadding: indicatorTopPadding,
+            showsIndicator: showsIndicator,
+            onIndicatorStateChange: onIndicatorStateChange,
+            action: action
+        ) {
+            self
+        }
+    }
+}
+
+private struct RefreshContainerBody<Content: View>: View {
+    let isRefreshing: Bool
+    let indicatorTopPadding: CGFloat
+    let showsIndicator: Bool
+    let onIndicatorStateChange: ((TdayRefreshIndicatorState) -> Void)?
+    let action: @Sendable () async -> Void
+    private let content: Content
+
+    @State private var pullDistance: CGFloat = 0
+    @State private var localRefreshInFlight = false
+    @State private var observedExternalRefresh = false
+    @State private var refreshSequence = 0
+    @State private var refreshTask: Task<Void, Never>?
+
+    init(
+        isRefreshing: Bool,
+        indicatorTopPadding: CGFloat,
+        showsIndicator: Bool,
+        onIndicatorStateChange: ((TdayRefreshIndicatorState) -> Void)?,
+        action: @escaping @Sendable () async -> Void,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.isRefreshing = isRefreshing
+        self.indicatorTopPadding = indicatorTopPadding
+        self.showsIndicator = showsIndicator
+        self.onIndicatorStateChange = onIndicatorStateChange
+        self.action = action
+        self.content = content()
+    }
+
+    private var pullProgress: CGFloat {
+        min(max(pullDistance / TdayRefreshIndicatorMetrics.triggerDistance, 0), 1)
+    }
+
+    private var effectiveRefreshing: Bool {
+        isRefreshing || localRefreshInFlight
+    }
+
+    /// Mirrors TdayPullRefreshIndicator's own reveal, so a caller drawing the
+    /// pill itself stays in lockstep with it rather than guessing.
+    private var indicatorState: TdayRefreshIndicatorState {
+        let visible = effectiveRefreshing || pullProgress > 0.02
+        return TdayRefreshIndicatorState(
+            isRefreshing: effectiveRefreshing,
+            pullProgress: min(max(pullProgress, 0), 1),
+            reveal: visible ? (effectiveRefreshing ? 1 : min(max(pullProgress, 0), 1)) : 0
+        )
+    }
+
+    var body: some View {
+        content
+            .refreshable {
+                await performRefresh()
+            }
+            .background(
+                PullRefreshOffsetObserver { distance in
+                    updatePullDistance(distance)
+                }
+            )
+            .overlay(alignment: .top) {
+                if showsIndicator {
+                    TdayPullRefreshIndicator(
+                        isRefreshing: effectiveRefreshing,
+                        pullProgress: pullProgress
+                    )
+                    .padding(.top, indicatorTopPadding)
+                    .allowsHitTesting(false)
+                }
+            }
+            .onChange(of: indicatorState, initial: true) { _, state in
+                onIndicatorStateChange?(state)
+            }
+            .onChange(of: isRefreshing) { _, refreshing in
+                if refreshing {
+                    observedExternalRefresh = true
+                } else if observedExternalRefresh && localRefreshInFlight {
+                    localRefreshInFlight = false
+                }
+            }
+            .onDisappear {
+                refreshTask?.cancel()
+                refreshTask = nil
+                localRefreshInFlight = false
+                observedExternalRefresh = false
+                pullDistance = 0
+                onIndicatorStateChange?(TdayRefreshIndicatorState())
+            }
+    }
+
+    @MainActor
+    private func performRefresh() async {
+        guard refreshTask == nil, !localRefreshInFlight, !isRefreshing else { return }
+        refreshSequence += 1
+        let currentRefreshSequence = refreshSequence
+        observedExternalRefresh = false
+        localRefreshInFlight = true
+
+        refreshTask = Task { @MainActor in
+            await action()
+
+            if !observedExternalRefresh {
+                try? await Task.sleep(nanoseconds: TdayRefreshIndicatorMetrics.handoffHoldNanoseconds)
+            }
+
+            if refreshSequence == currentRefreshSequence {
+                localRefreshInFlight = false
+                observedExternalRefresh = false
+            }
+            refreshTask = nil
+        }
+
+        try? await Task.sleep(nanoseconds: TdayRefreshIndicatorMetrics.nativeRefreshReleaseNanoseconds)
+    }
+
+    private func updatePullDistance(_ distance: CGFloat) {
+        let nextDistance = max(distance, 0)
+        guard abs(pullDistance - nextDistance) > 0.5 ||
+            (nextDistance == 0 && pullDistance != 0) else {
+            return
+        }
+
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            pullDistance = nextDistance
+        }
+    }
+}
+
+enum TdayRefreshIndicatorMetrics {
+    static let defaultTopPadding: CGFloat = 10
+    /// The pill is deliberately not fully opaque.
+    static let pillOpacity: Double = 0.86
+    static let triggerDistance: CGFloat = 112
+    static let nativeRefreshReleaseNanoseconds: UInt64 = 250_000_000
+    static let handoffHoldNanoseconds: UInt64 = 1_500_000_000
+    static let containerWidth: CGFloat = 152
+    static let containerHeight: CGFloat = 58
+    static let barCount = 5
+    static let dotWidth: CGFloat = 9
+    static let dotMinHeight: CGFloat = 12
+    static let dotMaxHeight: CGFloat = 30
+    static let dotSpacing: CGFloat = 10
+    static let cornerRadius: CGFloat = 29
+    static let sweepInset: CGFloat = 11
+    static let sweepHeight: CGFloat = 40
+    static let refreshingOffset: CGFloat = 20
+}
+
+struct TdayPullRefreshIndicator: View {
+    let isRefreshing: Bool
+    let pullProgress: CGFloat
+
+    @Environment(\.tdayColors) private var colors
+
+    private var visible: Bool {
+        isRefreshing || pullProgress > 0.02
+    }
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !isRefreshing)) { context in
+            let clampedProgress = min(max(pullProgress, 0), 1)
+            let revealProgress = isRefreshing ? 1 : clampedProgress
+            let indicatorOffset = isRefreshing
+                ? TdayRefreshIndicatorMetrics.refreshingOffset
+                : -18 + (18 * revealProgress)
+            let cycle = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.05) / 1.05
+            let sweepTrackWidth = TdayRefreshIndicatorMetrics.containerWidth - (TdayRefreshIndicatorMetrics.sweepInset * 2)
+            let refreshAccent = Color.tdayTodayBlue
+
+            ZStack(alignment: .center) {
+                if visible {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.sweepHeight / 2, style: .continuous)
+                            .fill(refreshAccent.opacity(isRefreshing ? 0.18 : 0.08 + (Double(clampedProgress) * 0.10)))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.sweepHeight / 2, style: .continuous)
+                                    .stroke(refreshAccent.opacity(0.14 + (Double(clampedProgress) * 0.08)), lineWidth: 1)
+                            }
+
+                        HStack(spacing: TdayRefreshIndicatorMetrics.dotSpacing) {
+                            ForEach(0..<TdayRefreshIndicatorMetrics.barCount, id: \.self) { index in
+                                let metrics = barMetrics(
+                                    index: index,
+                                    pullProgress: clampedProgress,
+                                    cycle: cycle
+                                )
+
+                                RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.dotWidth / 2, style: .continuous)
+                                    .fill(refreshAccent.opacity(metrics.opacity))
+                                    .frame(
+                                        width: TdayRefreshIndicatorMetrics.dotWidth,
+                                        height: metrics.height
+                                    )
+                            }
+                        }
+                    }
+                    .frame(width: sweepTrackWidth, height: TdayRefreshIndicatorMetrics.sweepHeight)
+                    .clipShape(RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.sweepHeight / 2, style: .continuous))
+                }
+            }
+            .frame(
+                width: TdayRefreshIndicatorMetrics.containerWidth,
+                height: TdayRefreshIndicatorMetrics.containerHeight
+            )
+            // Slightly translucent, so what it flies over stays legible behind
+            // it rather than being punched out.
+            .background(
+                colors.surface.opacity(TdayRefreshIndicatorMetrics.pillOpacity),
+                in: RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous)
+                    .stroke(colors.onSurface.opacity(0.12), lineWidth: 1)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous))
+            .shadow(color: refreshAccent.opacity(0.12), radius: 12, x: 0, y: 0)
+            .shadow(color: Color.black.opacity(0.15), radius: 16, x: 0, y: 8)
+            .opacity(visible ? Double(revealProgress) : 0)
+            .offset(y: indicatorOffset)
+            .animation(.easeOut(duration: 0.22), value: visible)
+            .animation(.easeOut(duration: 0.22), value: isRefreshing)
+        }
+    }
+
+    private func barMetrics(index: Int, pullProgress: CGFloat, cycle: TimeInterval) -> (height: CGFloat, opacity: Double) {
+        if isRefreshing {
+            let phasedCycle = (cycle + (Double(index) * 0.11)).truncatingRemainder(dividingBy: 1)
+            let wave = (sin(phasedCycle * .pi * 2) + 1) / 2
+            let easedWave = CGFloat(wave * wave * (3 - (2 * wave)))
+            let height = TdayRefreshIndicatorMetrics.dotMinHeight +
+                ((TdayRefreshIndicatorMetrics.dotMaxHeight - TdayRefreshIndicatorMetrics.dotMinHeight) * easedWave)
+            return (
+                height: height,
+                opacity: 0.42 + (Double(easedWave) * 0.58)
+            )
+        }
+
+        let staggerStart = CGFloat(index) * 0.11
+        let progress = min(max((pullProgress - staggerStart) / 0.56, 0), 1)
+        let easedProgress = progress * progress * (3 - (2 * progress))
+        let height = TdayRefreshIndicatorMetrics.dotMinHeight +
+            ((TdayRefreshIndicatorMetrics.dotMaxHeight - TdayRefreshIndicatorMetrics.dotMinHeight) * easedProgress)
+        return (
+            height: height,
+            opacity: 0.32 + (Double(easedProgress) * 0.68)
+        )
+    }
+}
+
+private struct PullRefreshOffsetObserver: UIViewRepresentable {
+    let onChange: (CGFloat) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onChange: onChange)
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.onChange = onChange
+        context.coordinator.scheduleAttach(to: uiView)
+    }
+
+    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+        coordinator.detach()
+    }
+
+    final class Coordinator: NSObject {
+        var onChange: (CGFloat) -> Void
+        private weak var observedScrollView: UIScrollView?
+        private weak var pendingAttachView: UIView?
+        private var observation: NSKeyValueObservation?
+        private var isAttachScheduled = false
+        private var overscrollDistance: CGFloat = 0
+        private var gesturePullDistance: CGFloat = 0
+        private var pullStartTranslationY: CGFloat?
+
+        init(onChange: @escaping (CGFloat) -> Void) {
+            self.onChange = onChange
+        }
+
+        deinit {
+            detach()
+        }
+
+        func scheduleAttach(to view: UIView) {
+            if let scrollView = view.nearestScrollView(), observedScrollView === scrollView {
+                hideNativeRefreshControl(in: scrollView)
+                return
+            }
+
+            pendingAttachView = view
+            guard !isAttachScheduled else {
+                return
+            }
+
+            isAttachScheduled = true
+            DispatchQueue.main.async { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.isAttachScheduled = false
+                guard let pendingAttachView = self.pendingAttachView else {
+                    return
+                }
+                self.attach(to: pendingAttachView)
+            }
+        }
+
+        func attach(to view: UIView) {
+            guard let scrollView = view.nearestScrollView() else {
+                return
+            }
+
+            hideNativeRefreshControl(in: scrollView)
+
+            guard observedScrollView !== scrollView else {
+                return
+            }
+
+            observedScrollView?.panGestureRecognizer.removeTarget(self, action: #selector(handlePan(_:)))
+            observedScrollView = scrollView
+            scrollView.panGestureRecognizer.addTarget(self, action: #selector(handlePan(_:)))
+            observation = scrollView.observe(\.contentOffset, options: [.initial, .new]) { [weak self] scrollView, _ in
+                self?.hideNativeRefreshControl(in: scrollView)
+                let normalizedOffset = scrollView.contentOffset.y + scrollView.adjustedContentInset.top
+                self?.overscrollDistance = max(-normalizedOffset, 0)
+                self?.emitPullDistance()
+            }
+        }
+
+        func detach() {
+            observedScrollView?.panGestureRecognizer.removeTarget(self, action: #selector(handlePan(_:)))
+            observedScrollView = nil
+            pendingAttachView = nil
+            observation = nil
+            isAttachScheduled = false
+            overscrollDistance = 0
+            gesturePullDistance = 0
+            pullStartTranslationY = nil
+        }
+
+        @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+            guard let scrollView = observedScrollView else {
+                return
+            }
+
+            let normalizedOffset = scrollView.contentOffset.y + scrollView.adjustedContentInset.top
+            let translationY = gesture.translation(in: scrollView).y
+
+            switch gesture.state {
+            case .began:
+                pullStartTranslationY = nil
+                gesturePullDistance = 0
+            case .changed:
+                if normalizedOffset <= 1, translationY > 0 {
+                    if pullStartTranslationY == nil {
+                        pullStartTranslationY = translationY
+                    }
+                    gesturePullDistance = max(translationY - (pullStartTranslationY ?? translationY), 0)
+                } else if normalizedOffset > 1 || translationY <= 0 {
+                    pullStartTranslationY = nil
+                    gesturePullDistance = 0
+                }
+            case .ended, .cancelled, .failed:
+                pullStartTranslationY = nil
+                gesturePullDistance = 0
+            default:
+                break
+            }
+
+            emitPullDistance()
+        }
+
+        private func emitPullDistance() {
+            let pullDistance = max(overscrollDistance, gesturePullDistance)
+            if Thread.isMainThread {
+                onChange(pullDistance)
+            } else {
+                DispatchQueue.main.async {
+                    self.onChange(pullDistance)
+                }
+            }
+        }
+
+        private func hideNativeRefreshControl(in scrollView: UIScrollView) {
+            guard let refreshControl = scrollView.refreshControl else {
+                return
+            }
+            refreshControl.tintColor = .clear
+            refreshControl.backgroundColor = .clear
+            refreshControl.alpha = 0
+            refreshControl.subviews.forEach { $0.alpha = 0 }
+        }
+    }
+}
+
+extension View {
+    @ViewBuilder
+    func disableVerticalScrollBounce(_ isDisabled: Bool = true) -> some View {
+        if isDisabled {
+            background(VerticalScrollBounceDisabler())
+        } else {
+            self
+        }
+    }
+
+    func onVerticalScrollSnap(collapseDistance: CGFloat) -> some View {
+        background(VerticalScrollSnapObserver(collapseDistance: collapseDistance))
+    }
+
+    func onTopPartialScrollSnap(anchorDistance: CGFloat, isDisabled: Bool = false) -> some View {
+        background(TopPartialScrollSnapObserver(anchorDistance: anchorDistance, isDisabled: isDisabled))
+    }
+}
+
+private struct VerticalScrollBounceDisabler: UIViewRepresentable {
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        DispatchQueue.main.async {
+            context.coordinator.attach(to: uiView)
+        }
+    }
+
+    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+        coordinator.detach()
+    }
+
+    final class Coordinator: NSObject {
+        private struct BounceState {
+            var count: Int
+            let bounces: Bool
+            let alwaysBounceVertical: Bool
+        }
+
+        private static var bounceStates: [ObjectIdentifier: BounceState] = [:]
+
+        private weak var observedScrollView: UIScrollView?
+        private var offsetObservation: NSKeyValueObservation?
+        private var isClamping = false
+
+        deinit {
+            detach()
+        }
+
+        func attach(to view: UIView) {
+            guard let scrollView = view.nearestScrollView() else {
+                detach()
+                return
+            }
+            guard observedScrollView !== scrollView else { return }
+            detach()
+            observedScrollView = scrollView
+
+            let scrollViewID = ObjectIdentifier(scrollView)
+            if var state = Self.bounceStates[scrollViewID] {
+                state.count += 1
+                Self.bounceStates[scrollViewID] = state
+            } else {
+                Self.bounceStates[scrollViewID] = BounceState(
+                    count: 1,
+                    bounces: scrollView.bounces,
+                    alwaysBounceVertical: scrollView.alwaysBounceVertical
+                )
+            }
+
+            scrollView.bounces = false
+            scrollView.alwaysBounceVertical = false
+            clampTopOverscroll(scrollView)
+
+            scrollView.panGestureRecognizer.addTarget(self, action: #selector(handlePan(_:)))
+
+            offsetObservation = scrollView.observe(\.contentOffset, options: .new) { [weak self] sv, _ in
+                self?.clampTopOverscroll(sv)
+            }
+        }
+
+        func detach() {
+            guard let scrollView = observedScrollView else {
+                offsetObservation = nil
+                return
+            }
+
+            scrollView.panGestureRecognizer.removeTarget(self, action: #selector(handlePan(_:)))
+            offsetObservation = nil
+
+            let scrollViewID = ObjectIdentifier(scrollView)
+            if var state = Self.bounceStates[scrollViewID] {
+                state.count -= 1
+                if state.count <= 0 {
+                    scrollView.bounces = state.bounces
+                    scrollView.alwaysBounceVertical = state.alwaysBounceVertical
+                    Self.bounceStates.removeValue(forKey: scrollViewID)
+                } else {
+                    Self.bounceStates[scrollViewID] = state
+                }
+            }
+
+            observedScrollView = nil
+        }
+
+        @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+            guard let sv = observedScrollView else { return }
+            clampTopOverscroll(sv)
+        }
+
+        private func clampTopOverscroll(_ scrollView: UIScrollView) {
+            guard !isClamping else { return }
+            let minY = -scrollView.adjustedContentInset.top
+            if scrollView.contentOffset.y < minY {
+                isClamping = true
+                scrollView.contentOffset = CGPoint(x: scrollView.contentOffset.x, y: minY)
+                isClamping = false
+            }
+        }
+    }
+}
+
+private struct VerticalScrollSnapObserver: UIViewRepresentable {
+    let collapseDistance: CGFloat
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(collapseDistance: collapseDistance)
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.collapseDistance = collapseDistance
+        DispatchQueue.main.async {
+            context.coordinator.attach(to: uiView)
+        }
+    }
+
+    final class Coordinator: NSObject {
+        var collapseDistance: CGFloat
+        private weak var observedScrollView: UIScrollView?
+        private var dragStartOffset: CGFloat = 0
+        private var lastObservedOffset: CGFloat = 0
+        private var lastDragDelta: CGFloat = 0
+        private var releaseVelocityY: CGFloat = 0
+        private var settledTargetOffset: CGFloat = 0
+        private var snapTimer: Timer?
+        private var isSnapping = false
+        private let settle = ScrollOffsetSettle()
+        /// The offset `watchSettle`'s last poll read once the feed looked idle.
+        private var watchedOffsetY: CGFloat?
+        private let releaseVelocityThreshold: CGFloat = 90
+
+        init(collapseDistance: CGFloat) {
+            self.collapseDistance = collapseDistance
+        }
+
+        deinit {
+            snapTimer?.invalidate()
+            settle.stop()
+        }
+
+        func attach(to view: UIView) {
+            guard let scrollView = view.enclosingScrollView() else {
+                return
+            }
+
+            guard observedScrollView !== scrollView else {
+                return
+            }
+
+            observedScrollView = scrollView
+            scrollView.panGestureRecognizer.addTarget(self, action: #selector(handlePan(_:)))
+        }
+
+        @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+            guard let scrollView = observedScrollView else { return }
+            let offset = normalizedOffset(for: scrollView)
+
+            switch gesture.state {
+            case .began:
+                snapTimer?.invalidate()
+                isSnapping = false
+                scrollView.layer.removeAllAnimations()
+                settle.stop()
+                releaseVelocityY = 0
+                lastDragDelta = 0
+                dragStartOffset = offset
+                lastObservedOffset = offset
+            case .changed:
+                let delta = offset - lastObservedOffset
+                if abs(delta) > 0.05 {
+                    lastDragDelta = delta
+                }
+                lastObservedOffset = offset
+            case .ended, .cancelled, .failed:
+                releaseVelocityY = gesture.velocity(in: scrollView).y
+                scheduleSnapCheck()
+            default:
+                break
+            }
+        }
+
+        private func scheduleSnapCheck() {
+            snapTimer?.invalidate()
+            snapTimer = Timer.scheduledTimer(withTimeInterval: 0.03, repeats: true) { [weak self] timer in
+                guard let self else {
+                    timer.invalidate()
+                    return
+                }
+                guard let scrollView = self.observedScrollView else {
+                    timer.invalidate()
+                    return
+                }
+                if !scrollView.isTracking && !scrollView.isDragging && !scrollView.isDecelerating {
+                    timer.invalidate()
+                    self.maybeSnap(scrollView: scrollView)
+                }
+            }
+        }
+
+        private func maybeSnap(scrollView: UIScrollView) {
+            let distance = collapseDistance
+            guard distance > 0 else { return }
+            let currentOffset = normalizedOffset(for: scrollView)
+            guard maxScrollableOffset(for: scrollView) >= distance - 0.5 else {
+                guard currentOffset > 0.5 else {
+                    settledTargetOffset = 0
+                    return
+                }
+                animate(scrollView: scrollView, toNormalizedOffset: 0, target: 0)
+                return
+            }
+            guard currentOffset > 0.5 else {
+                settledTargetOffset = 0
+                return
+            }
+            guard currentOffset < distance - 0.5 else {
+                settledTargetOffset = distance
+                return
+            }
+
+            let target = targetOffset(for: currentOffset, distance: distance)
+            let newContentY = target - scrollView.adjustedContentInset.top
+            animate(scrollView: scrollView, to: CGPoint(x: scrollView.contentOffset.x, y: newContentY), target: target)
+        }
+
+        private func normalizedOffset(for scrollView: UIScrollView) -> CGFloat {
+            max(scrollView.contentOffset.y + scrollView.adjustedContentInset.top, 0)
+        }
+
+        private func maxScrollableOffset(for scrollView: UIScrollView) -> CGFloat {
+            max(
+                scrollView.contentSize.height + scrollView.adjustedContentInset.top + scrollView.adjustedContentInset.bottom - scrollView.bounds.height,
+                0
+            )
+        }
+
+        private func targetOffset(for currentOffset: CGFloat, distance: CGFloat) -> CGFloat {
+            if releaseVelocityY < -releaseVelocityThreshold {
+                return distance
+            }
+            if releaseVelocityY > releaseVelocityThreshold {
+                return 0
+            }
+
+            let dragDelta = currentOffset - dragStartOffset
+            if dragDelta > 2 || lastDragDelta > 0.2 {
+                return distance
+            }
+            if dragDelta < -2 || lastDragDelta < -0.2 {
+                return 0
+            }
+
+            let progress = currentOffset / distance
+            if abs(progress - 0.5) > 0.08 {
+                return progress >= 0.5 ? distance : 0
+            }
+
+            return settledTargetOffset
+        }
+
+        private func animate(scrollView: UIScrollView, toNormalizedOffset normalizedOffset: CGFloat, target: CGFloat) {
+            let newContentY = normalizedOffset - scrollView.adjustedContentInset.top
+            animate(scrollView: scrollView, to: CGPoint(x: scrollView.contentOffset.x, y: newContentY), target: target)
+        }
+
+        private func animate(scrollView: UIScrollView, to offset: CGPoint, target: CGFloat) {
+            guard !isSnapping else { return }
+            let boundedY = min(
+                max(offset.y, -scrollView.adjustedContentInset.top),
+                max(-scrollView.adjustedContentInset.top, scrollView.contentSize.height - scrollView.bounds.height + scrollView.adjustedContentInset.bottom)
+            )
+            let targetOffset = CGPoint(x: offset.x, y: boundedY)
+            guard abs(scrollView.contentOffset.y - targetOffset.y) > 0.5 else {
+                settledTargetOffset = target
+                return
+            }
+
+            // Stepped into `contentOffset` once per frame by `ScrollOffsetSettle`,
+            // not `setContentOffset(animated: false)` inside a `UIView.animate`
+            // block. That block wrote the model `contentOffset` to the target in one
+            // step and left Core Animation to move the pixels, so the offset KVO the
+            // collapsing bar reads fired once, with the final value: the title
+            // jumped to its end state while the rows were still gliding. Stepped per
+            // frame, the bar follows the settle the way it follows a drag, and a
+            // finger landing mid-settle stops the feed where it is instead of
+            // jumping it to the target.
+            //
+            // Only the driver changed; the spring keeps the block's numbers: 0.92
+            // damping, settling in 0.22 s plus 0.12 s times the share of the
+            // collapse still to travel, launched with the release velocity in
+            // UIKit's unit (whole trips per second, capped at 2.4). It is not
+            // UIKit's `setContentOffset(animated: true)`, which steps the offset too
+            // but on UIKit's own curve: one fixed length that ignores both the
+            // distance left and the speed of the flick.
+            //
+            // No callback reaches this coordinator when a tap stops the settle, so
+            // `settledTargetOffset` is recorded up front and `watchSettle` notices
+            // the end of the settle itself.
+            settledTargetOffset = target
+            isSnapping = true
+            let remainingDistance = abs(scrollView.contentOffset.y - targetOffset.y)
+            let progress = min(max(remainingDistance / max(collapseDistance, 1), 0), 1)
+            // not a token — see docs/motion.md. Android's `SettleSpring` in
+            // `TdayHeroTitleHeader.kt` names this spring as the one it is pinned to,
+            // and the deliberate non-tokens keep it off `Settle` for that reason.
+            // This half stays written out for the same one: moving either side onto
+            // the token would undo the match.
+            let settleDuration = TimeInterval(0.22 + (0.12 * progress))
+            let initialVelocity = Double(min(abs(releaseVelocityY) / max(collapseDistance, 1), 2.4))
+            settle.start(
+                scrollView,
+                toY: targetOffset.y,
+                duration: settleDuration,
+                curve: .spring(dampingRatio: 0.92, initialVelocity: initialVelocity)
+            )
+            watchSettle()
+        }
+
+        /// Polls the settle on `scheduleSnapCheck`'s interval. A tap stops the
+        /// settle (its step sees `isTracking`) with no callback and without a pan
+        /// `.began` or `.ended`, so nothing else would notice the bar stranded
+        /// part-way. Once the settle has stopped, no finger is on the feed, and two
+        /// polls in a row read the same offset, it is over, whether it landed or was
+        /// cut short: drop the latch and run `maybeSnap` again. It returns at either
+        /// end of the collapse and otherwise resumes the settle from where the tap
+        /// left it. A pan's `.began` invalidates this timer.
+        ///
+        /// The two matching polls are for an animated scroll this observer did not
+        /// start, which is not a finger and so passes the other checks. Snapping
+        /// while it still moves the feed would start a settle that fights it, and
+        /// whichever wrote last would decide where the feed stops.
+        private func watchSettle() {
+            snapTimer?.invalidate()
+            watchedOffsetY = nil
+            snapTimer = Timer.scheduledTimer(withTimeInterval: 0.03, repeats: true) { [weak self] timer in
+                guard let self else {
+                    timer.invalidate()
+                    return
+                }
+                guard let scrollView = self.observedScrollView else {
+                    timer.invalidate()
+                    self.isSnapping = false
+                    return
+                }
+                guard !self.settle.isRunning,
+                      !scrollView.isTracking, !scrollView.isDragging, !scrollView.isDecelerating
+                else {
+                    self.watchedOffsetY = nil
+                    return
+                }
+                let offsetY = scrollView.contentOffset.y
+                guard let previousY = self.watchedOffsetY, abs(offsetY - previousY) <= 0.5 else {
+                    self.watchedOffsetY = offsetY
+                    return
+                }
+                timer.invalidate()
+                self.isSnapping = false
+                self.maybeSnap(scrollView: scrollView)
+            }
+        }
+    }
+}
+
+private struct TopPartialScrollSnapObserver: UIViewRepresentable {
+    let anchorDistance: CGFloat
+    let isDisabled: Bool
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(anchorDistance: anchorDistance, isDisabled: isDisabled)
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.anchorDistance = anchorDistance
+        context.coordinator.isDisabled = isDisabled
+        DispatchQueue.main.async {
+            context.coordinator.attach(to: uiView)
+        }
+    }
+
+    final class Coordinator: NSObject {
+        var anchorDistance: CGFloat
+        var isDisabled: Bool
+        private weak var observedScrollView: UIScrollView?
+        private var snapTimer: Timer?
+        private let settle = ScrollOffsetSettle()
+        /// The offset `watchSettle`'s last poll read once the feed looked idle.
+        private var watchedOffsetY: CGFloat?
+
+        init(anchorDistance: CGFloat, isDisabled: Bool) {
+            self.anchorDistance = anchorDistance
+            self.isDisabled = isDisabled
+        }
+
+        deinit {
+            snapTimer?.invalidate()
+            settle.stop()
+        }
+
+        func attach(to view: UIView) {
+            guard let scrollView = view.enclosingScrollView() else {
+                return
+            }
+
+            guard observedScrollView !== scrollView else {
+                return
+            }
+
+            observedScrollView = scrollView
+            scrollView.panGestureRecognizer.addTarget(self, action: #selector(handlePan(_:)))
+        }
+
+        @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+            switch gesture.state {
+            case .ended, .cancelled, .failed:
+                scheduleSnapCheck()
+            default:
+                break
+            }
+        }
+
+        private func scheduleSnapCheck() {
+            guard !isDisabled else { return }
+            snapTimer?.invalidate()
+            snapTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] timer in
+                guard let self else {
+                    timer.invalidate()
+                    return
+                }
+                guard let scrollView = self.observedScrollView else {
+                    timer.invalidate()
+                    return
+                }
+                if !scrollView.isTracking && !scrollView.isDragging && !scrollView.isDecelerating {
+                    timer.invalidate()
+                    self.maybeSnap(scrollView: scrollView)
+                }
+            }
+        }
+
+        private func maybeSnap(scrollView: UIScrollView) {
+            guard !isDisabled, anchorDistance > 0 else { return }
+            let maxOffset = maxScrollableOffset(for: scrollView)
+            guard maxOffset > 0.5 else { return }
+
+            let currentOffset = normalizedOffset(for: scrollView)
+            guard currentOffset > 0.5 && currentOffset < anchorDistance - 0.5 else {
+                return
+            }
+
+            // Settle on whichever end of the header morph is nearer, so the hero
+            // header is never left frozen half-collapsed.
+            let target = currentOffset < (anchorDistance / 2) ? 0 : min(anchorDistance, maxOffset)
+            animate(scrollView: scrollView, toNormalizedOffset: target)
+        }
+
+        private func normalizedOffset(for scrollView: UIScrollView) -> CGFloat {
+            max(scrollView.contentOffset.y + scrollView.adjustedContentInset.top, 0)
+        }
+
+        private func maxScrollableOffset(for scrollView: UIScrollView) -> CGFloat {
+            max(scrollView.contentSize.height + scrollView.adjustedContentInset.bottom - scrollView.bounds.height, 0)
+        }
+
+        private func animate(scrollView: UIScrollView, toNormalizedOffset normalizedOffset: CGFloat) {
+            let targetY = normalizedOffset - scrollView.adjustedContentInset.top
+            guard abs(scrollView.contentOffset.y - targetY) > 0.5 else { return }
+
+            // Stepped into `contentOffset` once per frame by `ScrollOffsetSettle`,
+            // not `setContentOffset(animated: false)` inside a `UIView.animate`
+            // block. That block wrote the model `contentOffset` to the target in one
+            // step, so the offset KVO that `RootFeedHeaderScrollObserver` publishes
+            // fired once, with the final value, and the hero morph (sun, title,
+            // search fold) popped to its end state in one frame while the rows
+            // glided underneath. Stepped per frame, the morph tracks the settle
+            // through its stagger curves exactly as it does under a finger, and a
+            // finger landing mid-settle stops the feed where it is.
+            //
+            // No in-flight latch: `start` stops any settle already running before it
+            // begins, and `watchSettle` does not call back in until the settle has
+            // stopped.
+            //
+            // not a token — see docs/motion.md. Only the driver changed: this is
+            // still the block's 0.26 s ease-in-out. The number is `Change`'s, but a
+            // settle moves the feed, which the second idiom rule puts on `Emphasis`,
+            // so naming either rung here would be a mislabel or a retiming, and a
+            // retiming belongs in a PR that admits to it.
+            let settleDuration: TimeInterval = 0.26
+            settle.start(scrollView, toY: targetY, duration: settleDuration, curve: .easeInOut)
+            watchSettle()
+        }
+
+        /// Polls the settle on `scheduleSnapCheck`'s interval. A tap stops the
+        /// settle (its step sees `isTracking`) with no callback and without a pan
+        /// `.ended`, so nothing else would notice the hero header stranded
+        /// half-folded. Once the settle has stopped, no finger is on the feed, and
+        /// two polls in a row read the same offset, it is over, whether it landed or
+        /// was cut short: run `maybeSnap` again. It returns at either end of the
+        /// fold and otherwise resumes the settle from where the tap left it. A pan's
+        /// `.ended` replaces this timer through `scheduleSnapCheck`.
+        ///
+        /// The two matching polls are for an animated scroll this observer did not
+        /// start: a tap on the header title scrolls the feed to the top, and that
+        /// tap can come while a settle is still running. The scroll is not a finger
+        /// and passes the other checks. Snapping while it still moves the feed would
+        /// start a settle toward the nearer end, and one that outlasts the scroll
+        /// can leave the feed folded after a tap that asked for the top.
+        private func watchSettle() {
+            snapTimer?.invalidate()
+            watchedOffsetY = nil
+            snapTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] timer in
+                guard let self else {
+                    timer.invalidate()
+                    return
+                }
+                guard let scrollView = self.observedScrollView else {
+                    timer.invalidate()
+                    return
+                }
+                guard !self.settle.isRunning,
+                      !scrollView.isTracking, !scrollView.isDragging, !scrollView.isDecelerating
+                else {
+                    self.watchedOffsetY = nil
+                    return
+                }
+                let offsetY = scrollView.contentOffset.y
+                guard let previousY = self.watchedOffsetY, abs(offsetY - previousY) <= 0.5 else {
+                    self.watchedOffsetY = offsetY
+                    return
+                }
+                timer.invalidate()
+                self.maybeSnap(scrollView: scrollView)
+            }
+        }
+    }
+}
+
+/// Plays a snap observer's settle by writing the scroll view's `contentOffset`
+/// once per display frame, so everything that reads the offset (the collapsing
+/// bar's KVO, the root feed header's morph) sees every step of the settle and not
+/// only its end, the same as under a drag.
+///
+/// The curve is the caller's. Both observers keep the one their `UIView.animate`
+/// block used to play; see their call sites.
+///
+/// A finger on the feed ends the settle where it stands. The step checks
+/// `isTracking` before it writes, because a tap never becomes a pan and so reaches
+/// no `.began` handler that could stop it. The observers poll `isRunning` to learn
+/// that the settle is over, however it ended.
+///
+/// The display link retains this object, not the coordinator that owns it, so the
+/// coordinator can still go away mid-settle. Its `deinit` calls `stop()`, and the
+/// step stops itself once the scroll view is gone.
+private final class ScrollOffsetSettle: NSObject {
+    enum Curve {
+        /// The spring `UIView.animate(withDuration:delay:usingSpringWithDamping:
+        /// initialSpringVelocity:options:animations:completion:)` describes: a
+        /// damping ratio, settled within the duration, launched at
+        /// `initialVelocity` in that method's unit, whole trips per second toward
+        /// the target. Solved by SwiftUI's `Spring(settlingDuration:dampingRatio:)`,
+        /// which takes the same two numbers.
+        case spring(dampingRatio: Double, initialVelocity: Double)
+        /// `UIView.AnimationOptions.curveEaseInOut`, the (0.42, 0, 0.58, 1) bezier
+        /// that SwiftUI calls `UnitCurve.easeInOut`.
+        case easeInOut
+    }
+
+    private weak var scrollView: UIScrollView?
+    private var displayLink: CADisplayLink?
+    private var startY: CGFloat = 0
+    private var travel: CGFloat = 0
+    private var duration: TimeInterval = 0
+    private var startTime: CFTimeInterval = 0
+    /// The share of `travel` covered at a given time into the settle.
+    private var covered: (TimeInterval) -> Double = { _ in 1 }
+
+    var isRunning: Bool { displayLink != nil }
+
+    func start(_ scrollView: UIScrollView, toY targetY: CGFloat, duration: TimeInterval, curve: Curve) {
+        stop()
+        self.scrollView = scrollView
+        startY = scrollView.contentOffset.y
+        travel = targetY - startY
+        self.duration = duration
+        switch curve {
+        case let .spring(dampingRatio, initialVelocity):
+            // Solved over one whole trip, 0 to 1, which is the unit UIKit measures
+            // `initialSpringVelocity` in, so the velocity carries over unconverted.
+            let spring = Spring(settlingDuration: duration, dampingRatio: dampingRatio)
+            covered = { time in
+                spring.value(target: 1.0, initialVelocity: initialVelocity, time: time)
+            }
+        case .easeInOut:
+            covered = { time in
+                UnitCurve.easeInOut.value(at: time / duration)
+            }
+        }
+        startTime = CACurrentMediaTime()
+        let link = CADisplayLink(target: self, selector: #selector(step(_:)))
+        link.add(to: .main, forMode: .common)
+        displayLink = link
+    }
+
+    func stop() {
+        displayLink?.invalidate()
+        displayLink = nil
+    }
+
+    @objc private func step(_ link: CADisplayLink) {
+        guard let scrollView = scrollView, !scrollView.isTracking else {
+            stop()
+            return
+        }
+        let elapsed = max(link.targetTimestamp - startTime, 0)
+        guard elapsed < duration else {
+            scrollView.contentOffset = CGPoint(x: scrollView.contentOffset.x, y: startY + travel)
+            stop()
+            return
+        }
+        let y = startY + travel * CGFloat(covered(elapsed))
+        scrollView.contentOffset = CGPoint(x: scrollView.contentOffset.x, y: y)
+    }
+}
+
+private extension UIView {
+    func nearestScrollView() -> UIScrollView? {
+        if let enclosing = enclosingScrollView() {
+            return enclosing
+        }
+
+        var current = superview
+        while let view = current {
+            if let scrollView = view.firstDescendantScrollView() {
+                return scrollView
+            }
+            current = view.superview
+        }
+        return nil
+    }
+
+    func enclosingScrollView() -> UIScrollView? {
+        var current: UIView? = self
+        while let view = current {
+            if let scrollView = view as? UIScrollView {
+                return scrollView
+            }
+            current = view.superview
+        }
+        return nil
+    }
+
+    private func firstDescendantScrollView() -> UIScrollView? {
+        for subview in subviews {
+            if let scrollView = subview as? UIScrollView {
+                return scrollView
+            }
+            if let scrollView = subview.firstDescendantScrollView() {
+                return scrollView
+            }
+        }
+        return nil
+    }
+}

@@ -1,0 +1,475 @@
+package com.ohmz.tday.compose.core.ui
+
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.SpringSpec
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.spring
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.collectLatest
+
+private const val SWIPE_OPEN_VELOCITY_PX_PER_SECOND = -1450f
+private const val SWIPE_MAX_ELASTIC_FRACTION = 1.14f
+private const val SWIPE_HINT_MS = 150L
+private const val SWIPE_HINT_SETTLE_MS = 360L
+
+/**
+ * The two fractions of the reveal width that decide what a row's travel means:
+ * past [SWIPE_OPEN_THRESHOLD_FRACTION] a drag is a drag that opens, and
+ * [SWIPE_HINT_MAX_FRACTION] is the ceiling [rememberTaskSwipeRevealState] holds
+ * the tap-hint under.
+ *
+ * `internal` for the same reason [TaskSwipeRevealState.onReleaseFrame] is: the
+ * unit test reads them. The gap between the two is load-bearing and is nobody's
+ * single decision — a hint that reached the detent would make tapping a row to
+ * show there is something under it buzz — so the test that pins the inequality
+ * has to be able to name both ends of it. Retyping `0.24f < 0.32f` into the test
+ * proves a fact about the test.
+ */
+internal const val SWIPE_OPEN_THRESHOLD_FRACTION = 0.32f
+internal const val SWIPE_HINT_MAX_FRACTION = 0.24f
+
+/**
+ * The one spring the task row is allowed to use, and the one moment it is
+ * allowed to use it.
+ *
+ * A swipe row has two clocks in it, and only one of them belongs to the app. The
+ * finger's clock is the finger: while a pointer is down the row's offset is the
+ * pointer's translation and nothing else, because a row that is 1:1 with the
+ * thumb feels welded to it and a row that is anything else feels like it is on a
+ * string. The app's clock only starts when the finger lifts — the settle to
+ * open, the settle back to closed, the snap back from the elastic overdrag.
+ *
+ * [Release] is that second clock. It is iOS's release spec converted, from
+ * `SwipeActions.swift`'s `.interactiveSpring(response: 0.34, dampingFraction: 0.82)`:
+ * SwiftUI's `response` is the undamped period, so stiffness is `(2π / 0.34)² ≈ 341`,
+ * and `dampingFraction` is Compose's `dampingRatio` unchanged. Two clients
+ * releasing a row on the same curve is the whole point of writing the number
+ * down; `Spring.StiffnessMedium` would be 1500f, which is 4.4× this and is a
+ * Compose default rather than a decision anybody made.
+ */
+object TaskSwipeMotion {
+    const val ReleaseDampingRatio: Float = 0.82f
+    const val ReleaseStiffness: Float = 340f
+
+    val Release: SpringSpec<Float> = spring(
+        dampingRatio = ReleaseDampingRatio,
+        stiffness = ReleaseStiffness,
+    )
+}
+
+/**
+ * One release of the row: where the finger left it, where it is going, and how
+ * fast it was travelling when it was let go.
+ *
+ * Deliberately not a `data class`. Each release is a distinct event even when its
+ * numbers repeat — settling closed from zero twice running has to restart the
+ * animation both times — and identity equality is what makes `snapshotFlow`
+ * emit it again.
+ *
+ * The `skipcq` marker is that rationale, enforced. DeepSource reads a class with
+ * only `val`s as one that wants the `data` keyword, which is the usual case and
+ * is wrong here: generated `equals` would make two identical releases compare
+ * equal, `snapshotFlow` would drop the second, and a row settling closed from
+ * zero twice running would animate once.
+ */
+@Stable
+internal class TaskSwipeRelease(  // skipcq: KT-W1058
+    val fromPx: Float,
+    val toPx: Float,
+    val initialVelocityPxPerSecond: Float,
+)
+
+@Stable
+class TaskSwipeRevealState internal constructor(
+    private val revealWidthPx: Float,
+    private val hintOffsetPx: Float,
+    private val maxElasticDragPx: Float,
+) {
+    /**
+     * Where the row is actually drawn, in px. While [isDragging] this is the
+     * finger's translation exactly — no spring stands between the two.
+     */
+    var offsetX by mutableFloatStateOf(0f)
+        private set
+
+    var isDragging by mutableStateOf(false)
+        private set
+
+    var isHinting by mutableStateOf(false)
+        private set
+
+    /**
+     * Where the row comes to rest once no finger is on it: `0f` closed,
+     * `-revealWidthPx` open, `-hintOffsetPx` for the moment a hint holds it out.
+     */
+    var restOffsetX by mutableFloatStateOf(0f)
+        private set
+
+    /** Non-null while a release spring should be running. */
+    internal var release by mutableStateOf<TaskSwipeRelease?>(null)
+        private set
+
+    /**
+     * Bumped by every drag, and read by [playHint] either side of its hold.
+     *
+     * Asking `isDragging` after the fact only ever sees a finger that is *still*
+     * down. A flick is 60-100 ms of contact, so one can land, open the row and
+     * be gone again entirely inside the hint's 150 ms hold — at which point a
+     * live re-read says "no finger" and the hint slams the row the user just
+     * opened shut. A counter remembers the interference instead of sampling it.
+     */
+    private var dragGeneration = 0
+
+    /**
+     * Whether this open-cycle has already spent its reveal haptic.
+     *
+     * A plain var for the same reason [dragGeneration] is one: nothing draws it,
+     * and what it holds is the memory of an event rather than a value to be
+     * sampled afterwards. Sampling is exactly the failure — "is the row past the
+     * threshold?" answers yes on every frame a finger rests there, and a detent
+     * that repeats for as long as you hold still is a rattle rather than a
+     * detent.
+     *
+     * One boolean, and deliberately not a second threshold under the first.
+     * A hysteresis band exists to stop a single comparison strobing on its own
+     * boundary; this cannot re-arm inside an open-cycle *at all*, so a finger
+     * parked on the boundary cannot repeat and a drag that crosses, comes back
+     * and crosses again cannot fire twice. The band would be a number nobody can
+     * justify, solving a problem the flag has already solved.
+     *
+     * Set by whichever of the two arms fires and cleared by [armIfHome], which
+     * is to say: an open-cycle starts when the row leaves home and ends when it
+     * is back and staying there, not when a release decides it should be.
+     *
+     * Its lifetime is this composition's rather than the task's:
+     * [rememberTaskSwipeRevealState] keys on the id *and* on the px widths the
+     * density produces, so rotating the device with a row held open builds a new
+     * state and re-arms the flag. That is a rotation mid-gesture buying one buzz
+     * it does not strictly owe, and it is not worth a longer-lived cache to
+     * prevent.
+     */
+    private var hasFiredRevealDetent = false
+
+    /**
+     * Under a finger this asks about the finger; otherwise it asks where the row
+     * is headed, not where it currently is — a row settling closed has already
+     * given up its swipe slot.
+     */
+    val isOpenOrDragging: Boolean
+        get() = if (isDragging) offsetX != 0f else restOffsetX != 0f
+
+    /**
+     * Moves the row with the finger, and answers whether this is the update that
+     * committed it to opening — the detent.
+     *
+     * The decision is here and the buzz is not. This class holds no `View` and
+     * its test runs on a bare JVM with no Robolectric and no Compose harness, so
+     * it returns what happened and the composable performs it; `TdayToastHost`'s
+     * `settle` settled that shape two files over. It is also what lets the whole
+     * fire-once rule be proven without a device, which is the only way it can be
+     * proven at all — no gate in this repository can feel a haptic.
+     *
+     * Why the detent and not the settle. The row is asked for by sliding it
+     * left to show the buttons behind, and *that* is this moment: the actions
+     * catching under the thumb, not the app reporting an animation after the
+     * hand has already gone. It is the only moment this file believes in, too —
+     * the finger's clock is the finger, and a buzz that waits for the release is
+     * on the app's clock. The predicate is [settle]'s own `dragOpen` with the
+     * velocity term left out and no threshold of its own invented, so the buzz
+     * cannot lie: feeling it means "let go now and this row opens".
+     *
+     * The one honest cost, said out loud rather than left for a device to find:
+     * cross the detent, drag back, release closed, and you have felt a reveal
+     * that did not happen. That is what a detent on a physical control does. The
+     * alternative — silence until the row settles — costs the feature its point.
+     *
+     * @return `true` on the single update that takes the row from short of the
+     *   threshold to past it, at most once per open-cycle.
+     */
+    fun dragBy(deltaPx: Float): Boolean {
+        // A pointer outranks every animation: whatever was in flight — a settle,
+        // a close, the tail of a hint — stops here and the row continues from
+        // wherever that animation had got to.
+        isDragging = true
+        dragGeneration++
+        release = null
+        offsetX = (offsetX + deltaPx).coerceIn(-maxElasticDragPx, 0f)
+        // After the clamp, never before: the overdrag limit is part of where the
+        // finger actually put the row, and the detent is about where the row is.
+        val pastDetent = offsetX < -(revealWidthPx * SWIPE_OPEN_THRESHOLD_FRACTION)
+        if (!pastDetent || hasFiredRevealDetent) return false
+        hasFiredRevealDetent = true
+        return true
+    }
+
+    /**
+     * The finger has gone. Answers whether the row still owes a reveal haptic.
+     *
+     * The second arm of the same event, and without it the most deliberate swipe
+     * in the app would be the only silent one: a fling opens the row from well
+     * under the distance threshold, so a detent that never came round is still a
+     * reveal. It reports the decision this function was already making rather than
+     * recomputing one, and it answers `false` when [dragBy] has already fired,
+     * which is what keeps one open to one buzz.
+     *
+     * A settle that lands the row *closed* returns `false` and always will:
+     * closing puts back what was there, and every pill the reveal uncovers
+     * already fires its own haptic and then closes the row, so a close buzz
+     * would double each of them. A close is frequently not even something the
+     * user did to this row — one row open at a time means the previous row is
+     * shut from under a finger that is nowhere near it.
+     *
+     * @return `true` only when this release opens the row and the detent did not
+     *   fire during this open-cycle.
+     */
+    fun settle(velocityPxPerSecond: Float): Boolean {
+        val flingOpen = velocityPxPerSecond < SWIPE_OPEN_VELOCITY_PX_PER_SECOND
+        val dragOpen = offsetX < -(revealWidthPx * SWIPE_OPEN_THRESHOLD_FRACTION)
+        val opens = flingOpen || dragOpen
+        isDragging = false
+        val owesReveal = opens && !hasFiredRevealDetent
+        if (owesReveal) hasFiredRevealDetent = true
+        // The lift-off velocity is carried into the spring so the fling and the
+        // settle are one continuous movement rather than a throw and a restart.
+        settleTo(if (opens) -revealWidthPx else 0f, velocityPxPerSecond)
+        return owesReveal
+    }
+
+    fun close() {
+        isDragging = false
+        settleTo(0f, 0f)
+    }
+
+    /**
+     * Nudges the row open and lets it fall closed again, to show there is
+     * something under it.
+     *
+     * Takes the animator scale rather than reading it, because this class is not
+     * a composable and the springs it starts are run for it by
+     * [animateTaskSwipeOffsetAsState] — every caller is a composable that can
+     * ask [rememberTdayMotionScale] and hand the answer down. The two waits are
+     * gaps between those two springs and nothing else, so they are scaled with
+     * them.
+     *
+     * @param scale the animator duration scale, from [rememberTdayMotionScale].
+     */
+    suspend fun playHint(scale: Float) {
+        // The hint is a suggestion, and a suggestion never overrules a finger:
+        // it does not start under one, and it abandons its own second half if
+        // one arrives while it is running.
+        if (isHinting || isDragging) return
+        // With animations off there is no hint to give. The whole gesture is
+        // movement — a row that ends exactly where it started — so the finished
+        // state this would have to draw instead is the row as it already is.
+        // Playing it anyway would put the row 42 dp out and back inside a single
+        // frame, which is a flicker rather than a suggestion. Written as "not
+        // greater than zero" so that a NaN read off the setting lands here too.
+        if (!(scale > 0f)) return
+        isHinting = true
+        try {
+            val generation = dragGeneration
+            settleTo(-hintOffsetPx, 0f)
+            scaledDelay(SWIPE_HINT_MS, scale)
+            // A finger that came and went inside the hold counts as much as one
+            // that is still there: either way the row is no longer the hint's to
+            // move.
+            if (isDragging || dragGeneration != generation) return
+            settleTo(0f, 0f)
+            scaledDelay(SWIPE_HINT_SETTLE_MS, scale)
+        } finally {
+            isHinting = false
+        }
+    }
+
+    fun revealProgress(offsetX: Float): Float {
+        return (-offsetX / revealWidthPx).coerceIn(0f, 1f)
+    }
+
+    /**
+     * Called by the release animation, once per frame.
+     *
+     * Deliberately holds no detent test. This drives [offsetX] straight through
+     * the threshold once per frame for the whole settle-open animation, so a
+     * flag derived from the offset in general rather than from the drag path in
+     * particular would phantom-fire here one frame after the real event — and
+     * again on every programmatic open, where no finger was ever involved.
+     *
+     * It does hold the *re*-arm, and the two are not the same question. Firing
+     * asks what the drag path did, which this function has no knowledge of.
+     * Arming asks only whether the row has finished coming home, which is
+     * precisely what the last frame of a close spring knows and nothing else
+     * does. See [armIfHome].
+     */
+    internal fun onReleaseFrame(valuePx: Float) {
+        if (isDragging) return
+        offsetX = valuePx
+        armIfHome()
+    }
+
+    internal fun onReleaseSettled(finished: TaskSwipeRelease) {
+        if (release === finished) {
+            release = null
+        }
+    }
+
+    /**
+     * The single funnel every close already passes through — [settle] landing
+     * shut, [close], the row whose slot another row claimed, the tail of
+     * [playHint] — which is why re-arming the detent lives on this path and no
+     * close path has to remember it.
+     *
+     * The re-arm itself is [armIfHome] and it waits for the row to be home, which
+     * is the one thing in this class that reads where the row *is* rather than
+     * where it is headed. Clearing on `targetPx == 0f` alone was wrong by a whole
+     * spring. `close()` on an open row sets [restOffsetX] to zero immediately and
+     * leaves [offsetX] out at `-revealWidthPx` for the ~340 ms the row takes to
+     * travel there — and that is the common close, the row shut from under the
+     * user by another row claiming the one open slot. A finger landing inside
+     * that window found a cleared flag under a row already past the threshold and
+     * bought a reveal buzz on its first frame, with the actions plainly already
+     * out and nothing catching under the thumb.
+     *
+     * It was also the one moment the three clients answered the same gesture
+     * differently: iOS's `.began` and web's `touchstart` both seed their flag from
+     * a released position their model value has *already* snapped to, so neither
+     * can be re-grabbed mid-flight at an offset the animation has not caught up
+     * with. Here the pointer picks the row up wherever the spring had got to, so
+     * the cycle has to end where the row does.
+     */
+    private fun settleTo(targetPx: Float, initialVelocityPxPerSecond: Float) {
+        restOffsetX = targetPx
+        release = if (offsetX == targetPx) {
+            null
+        } else {
+            TaskSwipeRelease(offsetX, targetPx, initialVelocityPxPerSecond)
+        }
+        armIfHome()
+    }
+
+    /**
+     * Re-arms the reveal detent once the row is both closed and staying closed,
+     * which is the end of an open-cycle.
+     *
+     * Called from the two places the row can arrive there. One is the last frame
+     * of a close spring. The other is a [settleTo] home with no distance to
+     * travel, which starts no spring and so would never produce that frame: a row
+     * dragged all the way back under the finger and released is a cycle that ends
+     * without anything animating, and waiting for a landing that cannot come
+     * would leave that row silent for the rest of its life.
+     */
+    private fun armIfHome() {
+        if (offsetX == 0f && restOffsetX == 0f) hasFiredRevealDetent = false
+    }
+}
+
+@Composable
+fun rememberTaskSwipeRevealState(
+    key: Any?,
+    revealWidth: Dp = 176.dp,
+    hintOffset: Dp = 42.dp,
+): TaskSwipeRevealState {
+    val density = LocalDensity.current
+    val revealWidthPx = with(density) { revealWidth.toPx() }
+    val hintOffsetPx = with(density) {
+        hintOffset.toPx().coerceAtMost(revealWidthPx * SWIPE_HINT_MAX_FRACTION)
+    }
+    val maxElasticDragPx = revealWidthPx * SWIPE_MAX_ELASTIC_FRACTION
+
+    return remember(key, revealWidthPx, hintOffsetPx, maxElasticDragPx) {
+        TaskSwipeRevealState(
+            revealWidthPx = revealWidthPx,
+            hintOffsetPx = hintOffsetPx,
+            maxElasticDragPx = maxElasticDragPx,
+        )
+    }
+}
+
+/**
+ * The row's drawn offset.
+ *
+ * There is no animation in the drag path at all: the returned state reads
+ * [TaskSwipeRevealState.offsetX], which the drag writes directly. The spring
+ * runs only for a release, and it starts from the offset the finger left rather
+ * than from wherever an animation happened to have chased to, so the handover
+ * costs no frame and shows no jump.
+ *
+ * @param scale the animator duration scale, from [rememberTdayMotionScale], and
+ *   taken rather than read for the reason [TaskSwipeRevealState.playHint] gives:
+ *   the state class is not a composable and the springs it asks for are run for
+ *   it here. Compose's own `MotionDurationScale` already covers the *system*
+ *   animator setting, but the app's Reduce Motion switch
+ *   (`ReduceMotionPreferenceStore`) is invisible to it, so a user with the app
+ *   switch on still watched a ~340 ms spring on every release. That was
+ *   tolerable while a row only closed when its own pill was tapped; an outside
+ *   tap, a scroll and back make it three more times per minute. Nothing here
+ *   re-reads the preference — it arrives from the row's existing
+ *   `rememberTdayMotionScale()`.
+ */
+@Composable
+fun animateTaskSwipeOffsetAsState(
+    state: TaskSwipeRevealState,
+    label: String,
+    scale: Float,
+): State<Float> {
+    val settle = remember(state) {
+        Animatable(
+            initialValue = state.offsetX,
+            typeConverter = Float.VectorConverter,
+            label = label,
+        )
+    }
+    // Read through an updated state rather than keyed on: the scale changing is
+    // the setting being toggled, which must not restart or cancel a release that
+    // is already in flight. Each release asks once, when it starts.
+    val latestScale = rememberUpdatedState(scale)
+    LaunchedEffect(state, settle) {
+        snapshotFlow { state.release }.collectLatest { release ->
+            if (release == null) return@collectLatest
+            // Motion off: draw the finished state and let no wait survive. The
+            // row's destination is where it was going anyway, so this is the
+            // same close on the same rung (`TaskSwipeMotion.Release`) with its
+            // duration taken to zero -- not a different close. Written as "not
+            // greater than zero" so that a NaN read off the setting lands here
+            // too, exactly as `playHint` does it.
+            if (!(latestScale.value > 0f)) {
+                settle.snapTo(release.toPx)
+                // The animation block does these two on the caller's behalf in
+                // the branch below; snapping has to do them itself, and the
+                // first of them is what re-arms the reveal detent.
+                state.onReleaseFrame(release.toPx)
+                state.onReleaseSettled(release)
+                return@collectLatest
+            }
+            settle.snapTo(release.fromPx)
+            settle.animateTo(
+                targetValue = release.toPx,
+                animationSpec = TaskSwipeMotion.Release,
+                initialVelocity = release.initialVelocityPxPerSecond,
+            ) {
+                state.onReleaseFrame(value)
+            }
+            state.onReleaseSettled(release)
+        }
+    }
+    // This line is the defect site. Reinstating an `animateFloatAsState` here —
+    // or anything else that interposes a clock between the finger and the draw —
+    // brings back the ~141 ms trail, and no gate in this repository can see it:
+    // there is no Compose harness on the unit-test source set (`ui-test-junit4`
+    // is androidTest-only and androidTest is compiled but never run). The only
+    // thing watching it is the PR 19 row in docs/verification/phase-3-device-pass.md.
+    return remember(state) { derivedStateOf { state.offsetX } }
+}

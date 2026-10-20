@@ -1,0 +1,512 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Share2, Trash2, Users } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import AppBottomSheet from "@/components/ui/AppBottomSheet";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  SheetCard,
+  SheetSectionTitle,
+} from "@/components/ui/sheet-chrome";
+import { api } from "@/lib/api-client";
+import { cn, isSubmitEnter } from "@/lib/utils";
+import { hapticTick, hapticConfirm } from "@/lib/haptics";
+import {
+  DEFAULT_SCHEDULED_LIST_COLOR,
+  DEFAULT_SCHEDULED_LIST_COLOR_OPTION,
+  listColorMap,
+} from "@/lib/listColorMap";
+import {
+  DEFAULT_LIST_ICON_KEY,
+  getListIcon,
+  listIconOptions,
+  normalizeListIconKey,
+  resolveListIconKey,
+} from "@/lib/listIcons";
+import { inferListIconKey } from "@/lib/listIconInference";
+import { useToast } from "@/hooks/use-toast";
+import { useUndoableListDelete } from "@/hooks/use-undoable-list-delete";
+import { useCreateList } from "@/components/Sidebar/List/query/create-list";
+import { prioritySwatchClass } from "@/components/ui/sheet-chrome/swatches";
+import { priorityLabelKey, type Priority } from "@/components/todo/component/TodoForm/labels";
+import type { ListColor, ListItemMetaType } from "@/types";
+
+const DEFAULT_PRIORITY_OPTIONS: Priority[] = ["High", "Medium", "Low", "Lowest"];
+
+type EditableList = {
+  id: string;
+  name: string;
+  color?: ListColor;
+  iconKey?: string | null;
+  defaultPriority?: string | null;
+};
+
+type ListFormSheetProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  list?: EditableList | null;
+  initialName?: string;
+  initialColor?: ListColor;
+  initialIconKey?: string;
+  onSaved?: (list?: ListItemMetaType) => void;
+  // Sharing section (edit mode only): manage members + share externally.
+  onManageMembers?: () => void;
+  onShareList?: () => void;
+};
+
+/** The name as it is saved: surrounding whitespace trimmed. */
+function normalizeListName(value: string) {
+  return value.trim();
+}
+
+/** Sends an edited list to `PATCH /api/list` and resolves once the server has accepted it. */
+async function patchList({
+  id,
+  name,
+  color,
+  iconKey,
+  defaultPriority,
+}: {
+  id: string;
+  name: string;
+  color: ListColor;
+  /**
+   * Omitted while the picker is only PREVIEWING an icon. `JSON.stringify` drops an
+   * undefined field, and `ListService.update` writes the column only when one arrives
+   * (`iconKey?.let { … }`), so an untouched picker cannot overwrite an unset icon from
+   * a sheet the user opened to rename the list.
+   */
+  iconKey?: string;
+  defaultPriority: string | null;
+}) {
+  await api.PATCH({
+    url: "/api/list",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id,
+      name,
+      color,
+      iconKey,
+      defaultPriority,
+      // Unlike `iconKey`, this row is always visible with a definite selection, so
+      // there is no "untouched preview" to guard against — every save says so.
+      defaultPriorityChanged: true,
+    }),
+  });
+}
+
+/**
+ * The create / edit sheet for a scheduled list: name, color, icon and default priority, plus sharing
+ * and delete when an existing list is open.
+ */
+export default function ListFormSheet({
+  open,
+  onOpenChange,
+  list,
+  initialName = "",
+  initialColor = DEFAULT_SCHEDULED_LIST_COLOR,
+  initialIconKey = DEFAULT_LIST_ICON_KEY,
+  onSaved,
+  onManageMembers,
+  onShareList,
+}: ListFormSheetProps) {
+  const { t: appDict } = useTranslation("app");
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const stageListDelete = useUndoableListDelete();
+  const { createMutateAsync, createLoading } = useCreateList();
+  const isEditing = Boolean(list?.id);
+
+  /**
+   * What the picker shows before anyone touches it: the chosen icon if there is one,
+   * otherwise the one the name evidences, otherwise the caller's default. Seeding the
+   * editor with the INFERRED glyph matters — a list wearing a name-derived cart whose
+   * settings sheet opened on an inbox would be offering to save a change to something
+   * the user never altered.
+   */
+  const previewIconKeyFor = (listName: string) =>
+    normalizeListIconKey(inferListIconKey(listName) ?? initialIconKey);
+  /** The icon the picker opens on: the list's own when editing, the name-derived or default one when creating. */
+  const seedIconKey = () =>
+    list ? resolveListIconKey(list) : previewIconKeyFor(initialName);
+
+  const [name, setName] = useState(initialName);
+  const [color, setColor] = useState<ListColor>(list?.color ?? initialColor);
+  // The picker always shows SOMETHING, so its value alone cannot say whether the user
+  // chose that glyph or is being shown a guess. This flag is the difference, and the
+  // difference is the whole feature: `iconKey === null` in the database is the only
+  // thing that means "never chosen", and it stays null until this goes true.
+  const [iconTouched, setIconTouched] = useState(false);
+  const [iconKey, setIconKey] = useState(() => seedIconKey());
+  const [defaultPriority, setDefaultPriority] = useState<Priority | null>(
+    (list?.defaultPriority as Priority | null | undefined) ?? null,
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  // This sheet is rendered unconditionally by its host (only the Drawer's own
+  // content unmounts on close), so it must seed exactly once per open — not on
+  // every render where `list` merely has a new object identity. `list` is a
+  // fresh literal recomputed on every parent render (see ListContainer), so
+  // keying this effect on it re-seeds on ANY incidental parent re-render while
+  // the sheet is still open — including the moment right after Save, when the
+  // mutation's own cache invalidation triggers a re-render with the still-stale
+  // pre-save data before the fresh response has landed. That silently
+  // overwrote the user's just-picked color/priority back to the old value for
+  // a frame, right as the sheet closed. Tracking the open transition with a
+  // ref decouples "seed" from "list object changed".
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    const justOpened = open && !wasOpenRef.current;
+    wasOpenRef.current = open;
+    if (!justOpened) return;
+    setName(list?.name ?? initialName);
+    setColor(list?.color ?? initialColor);
+    setIconKey(seedIconKey());
+    setIconTouched(false);
+    setDefaultPriority((list?.defaultPriority as Priority | null | undefined) ?? null);
+    setError(null);
+    setConfirmingDelete(false);
+    // Deliberately keyed on `open` alone — see the comment above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // The detective, made visible: while the picker is a preview, it follows the name
+  // being typed. Editing is deliberately excluded — a list being renamed may have had
+  // its icon chosen long ago, and re-guessing under the user's hands would look like
+  // the app undoing a decision it is in fact preserving (the seed above already shows
+  // the inference for a list that never had one).
+  useEffect(() => {
+    if (isEditing || iconTouched) return;
+    setIconKey(previewIconKeyFor(name));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [iconTouched, isEditing, name]);
+
+  const selectedColor = useMemo(
+    () => listColorMap.find((option) => option.value === color) ?? DEFAULT_SCHEDULED_LIST_COLOR_OPTION,
+    [color],
+  );
+  const SelectedIcon = getListIcon(iconKey);
+  const nameColorClass = selectedColor.tailwind.replace("bg-", "text-");
+
+  /** Refetches everything a list change can alter: list metadata and the todo, timeline, overdue and completed queries. */
+  const invalidateListQueries = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["listMetaData"] }),
+      queryClient.invalidateQueries({ queryKey: ["todo"] }),
+      queryClient.invalidateQueries({ queryKey: ["todoTimeline"] }),
+      queryClient.invalidateQueries({ queryKey: ["overdueTodo"] }),
+      queryClient.invalidateQueries({ queryKey: ["completedTodo"] }),
+    ]);
+  };
+
+  const updateListMutation = useMutation({
+    mutationFn: patchList,
+    onSuccess: async () => {
+      await invalidateListQueries();
+      onSaved?.();
+      onOpenChange(false);
+    },
+    onError: (mutationError) => {
+      const message =
+        mutationError instanceof Error ? mutationError.message : "Failed to update list";
+      setError(message);
+      toast({ description: message, variant: "destructive" });
+    },
+  });
+
+  // Close the sheet and stage the delayed-commit delete (cache prune + undo
+  // toast); the real DELETE only fires if the toast closes without undo.
+  const handleDeleteList = (id: string) => {
+    onOpenChange(false);
+    stageListDelete([id]);
+  };
+
+  const saving = createLoading || updateListMutation.isPending;
+  const canSubmit = Boolean(normalizeListName(name)) && !saving;
+
+  /** Saves the sheet: updates the list when editing, creates it otherwise. A blank name is rejected inline. */
+  const handleSubmit = async () => {
+    const normalizedName = normalizeListName(name);
+    if (!normalizedName) {
+      setError("List name cannot be empty");
+      return;
+    }
+
+    setError(null);
+    if (isEditing && list) {
+      // Compared against the STORED value, not the normalised one. A list with no icon
+      // stores null while `normalizeListIconKey` answers "inbox" for it, so collapsing
+      // the two here would read a deliberate tap on Inbox as "nothing changed" and
+      // throw away the one choice the inference must never be allowed to override.
+      const storedIconKey = list.iconKey?.trim() ? normalizeListIconKey(list.iconKey) : null;
+      const iconChanged = iconTouched && iconKey !== storedIconKey;
+      if (
+        normalizedName === normalizeListName(list.name) &&
+        color === (list.color ?? DEFAULT_SCHEDULED_LIST_COLOR) &&
+        !iconChanged &&
+        defaultPriority === (list.defaultPriority ?? null)
+      ) {
+        onOpenChange(false);
+        return;
+      }
+      updateListMutation.mutate({
+        id: list.id,
+        name: normalizedName,
+        color,
+        iconKey: iconTouched ? iconKey : undefined,
+        defaultPriority,
+      });
+      return;
+    }
+
+    try {
+      const created = await createMutateAsync({
+        name: normalizedName,
+        color,
+        // An untouched picker posts nothing, so the row is created with a null icon and
+        // the list is free to take one from its name. Posting the preview — which every
+        // client used to do — is what made `iconKey` "inbox" on every list ever made and
+        // left nothing in the model able to say "the user has not chosen".
+        iconKey: iconTouched ? iconKey : undefined,
+        defaultPriority,
+      });
+      onSaved?.(created);
+      onOpenChange(false);
+      setName("");
+      setColor(initialColor);
+      setIconKey(previewIconKeyFor(""));
+      setIconTouched(false);
+      setDefaultPriority(null);
+    } catch (createError) {
+      const message =
+        createError instanceof Error ? createError.message : "Failed to create list";
+      setError(message);
+    }
+  };
+
+  // The sheet is a stack of independent cards (name, color, icon, priority, sharing), each holding its
+  // own row of controls, so the JSX is structurally deeper than the lint limit. Flattening a level
+  // would change which element scrolls and clips, so the finding is suppressed on the root element.
+  return (
+    <AppBottomSheet // skipcq: JS-0415
+      variant="native"
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEditing ? appDict("listSettings") : appDict("newList")}
+      onClose={() => onOpenChange(false)}
+      onConfirm={handleSubmit}
+      confirmDisabled={!canSubmit}
+      confirmLabel={appDict("save")}
+      closeLabel={appDict("cancel")}
+    >
+      <div className="flex flex-col gap-3 pb-2">
+        {/* Icon preview + name */}
+        <SheetCard className="p-[18px]">
+          <div className="flex flex-col items-center gap-4">
+            <span
+              className={cn(
+                "flex h-20 w-20 shrink-0 items-center justify-center rounded-full text-white shadow-inner",
+                selectedColor.tailwind,
+              )}
+            >
+              <SelectedIcon className="h-9 w-9 stroke-[2.4]" />
+            </span>
+            <Input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              enterKeyHint="done"
+              onKeyDown={(event) => {
+                if (!isSubmitEnter(event)) return;
+                // Enter is the header ✓. With nothing to save it just dismisses
+                // the keyboard.
+                event.preventDefault();
+                if (canSubmit) handleSubmit();
+                else event.currentTarget.blur();
+              }}
+              placeholder={appDict("listName")}
+              className={cn(
+                "h-14 w-full rounded-lg border-transparent bg-muted/60 text-center text-xl font-extrabold focus-visible:ring-0",
+                nameColorClass,
+              )}
+            />
+          </div>
+        </SheetCard>
+
+        {/* Color */}
+        <SheetSectionTitle>{appDict("color")}</SheetSectionTitle>
+        <SheetCard className="p-3.5">
+          <div className="flex gap-3 overflow-x-auto pb-1">
+            {listColorMap.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => { hapticTick(); setColor(option.value); }}
+                className={cn(
+                  "h-12 w-12 shrink-0 rounded-full transition-transform active:scale-95",
+                  option.tailwind,
+                  color === option.value && "ring-[3px] ring-foreground/30",
+                )}
+                aria-label={`Use ${option.name}`}
+                aria-pressed={color === option.value}
+              />
+            ))}
+          </div>
+        </SheetCard>
+
+        {/* Icon */}
+        <SheetSectionTitle>{appDict("icon")}</SheetSectionTitle>
+        <SheetCard className="p-3.5">
+          <div className="flex gap-2.5 overflow-x-auto pb-1">
+            {listIconOptions.map((option) => {
+              const Icon = option.icon;
+              const selected = iconKey === option.key;
+
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => {
+                    hapticTick();
+                    setIconKey(option.key);
+                    setIconTouched(true);
+                  }}
+                  className={cn(
+                    "flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95",
+                    selected
+                      ? "bg-accent/15 text-accent ring-[2px] ring-accent/55"
+                      : "bg-muted/60 text-muted-foreground hover:text-foreground",
+                  )}
+                  aria-label={`Use ${option.label} icon`}
+                  aria-pressed={selected}
+                >
+                  <Icon className="h-5 w-5 stroke-[2.4]" />
+                </button>
+              );
+            })}
+          </div>
+        </SheetCard>
+
+        {/* Default priority — pre-fills new tasks created in this list; a save always
+            carries a definite value, so there is no "preview" state to guard. */}
+        <SheetSectionTitle>{appDict("defaultPriority")}</SheetSectionTitle>
+        <SheetCard className="p-3.5">
+          <div className="flex gap-2.5 overflow-x-auto pb-1">
+            <button
+              type="button"
+              onClick={() => { hapticTick(); setDefaultPriority(null); }}
+              className={cn(
+                "flex h-9 shrink-0 items-center rounded-full px-4 text-sm font-black transition-transform active:scale-95",
+                defaultPriority === null
+                  ? "bg-accent/15 text-accent ring-[2px] ring-accent/55"
+                  : "bg-muted/60 text-muted-foreground hover:text-foreground",
+              )}
+              aria-pressed={defaultPriority === null}
+            >
+              {appDict("noDefaultPriority")}
+            </button>
+            {DEFAULT_PRIORITY_OPTIONS.map((option) => {
+              const selected = defaultPriority === option;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => { hapticTick(); setDefaultPriority(option); }}
+                  className={cn(
+                    "flex h-9 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-black transition-transform active:scale-95",
+                    selected
+                      ? "bg-accent/15 text-accent ring-[2px] ring-accent/55"
+                      : "bg-muted/60 text-muted-foreground hover:text-foreground",
+                  )}
+                  aria-pressed={selected}
+                >
+                  <span className={cn("h-2.5 w-2.5 rounded-full", prioritySwatchClass(option))} />
+                  {appDict(priorityLabelKey[option])}
+                </button>
+              );
+            })}
+          </div>
+        </SheetCard>
+
+        {error ? (
+          <p className="px-1 text-sm font-extrabold text-destructive">{error}</p>
+        ) : null}
+
+        {isEditing && list && (onManageMembers || onShareList) ? (
+          <>
+            <SheetSectionTitle>{appDict("sharing")}</SheetSectionTitle>
+            <div className="grid grid-cols-2 gap-2.5">
+              {onManageMembers ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    hapticTick();
+                    onOpenChange(false);
+                    onManageMembers();
+                  }}
+                  className="flex items-center justify-center gap-2 rounded-lg border border-border/70 bg-muted/60 px-4 py-2.5 text-sm font-black text-foreground transition-colors hover:bg-muted active:scale-[0.99]"
+                >
+                  <Users className="h-4 w-4 stroke-[2.4]" />
+                  {appDict("members")}
+                </button>
+              ) : null}
+              {onShareList ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    hapticTick();
+                    onOpenChange(false);
+                    onShareList();
+                  }}
+                  className="flex items-center justify-center gap-2 rounded-lg border border-border/70 bg-muted/60 px-4 py-2.5 text-sm font-black text-foreground transition-colors hover:bg-muted active:scale-[0.99]"
+                >
+                  <Share2 className="h-4 w-4 stroke-[2.4]" />
+                  {appDict("share")}
+                </button>
+              ) : null}
+            </div>
+          </>
+        ) : null}
+
+        {isEditing && list ? (
+          confirmingDelete ? (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+              <p className="text-sm font-extrabold text-destructive">
+                Delete &ldquo;{normalizeListName(list.name) || list.name}&rdquo; and all of
+                its tasks? This can&apos;t be undone.
+              </p>
+              <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => { hapticConfirm(); setConfirmingDelete(false); }}
+                  className="rounded-lg border-border/70 bg-card px-5 font-black"
+                >
+                  Keep list
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => handleDeleteList(list.id)}
+                  className="rounded-lg px-5 font-black"
+                >
+                  {appDict("deleteList")}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-5 py-2.5 text-sm font-black text-destructive transition-colors hover:bg-destructive/10 active:scale-[0.99]"
+            >
+              <Trash2 className="h-4 w-4 stroke-[2.4]" />
+              {appDict("deleteList")}
+            </button>
+          )
+        ) : null}
+      </div>
+    </AppBottomSheet>
+  );
+}

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?><!-- Floater widget watermark: the shared lucide leaf (same glyph as the floater screen), mirrored
+     horizontally so it points the same way as the iOS "leaf" symbol, tinted with the floater
+     accent at 10%. scaleX=-1 flips; rotation -7 matches the other widget watermarks. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="180dp"
+    android:height="180dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <group
+        android:pivotX="12"
+        android:pivotY="12"
+        android:rotation="-7"
+        android:scaleX="-1">
+        <path
+            android:pathData="M11,20A7,7 0 0 1 9.8,6.1C15.5,5 17,4.48 19,2c1,2 2,4.18 2,8 0,5.5 -4.78,10 -10,10Z"
+            android:strokeWidth="2"
+            android:strokeAlpha="0.10"
+            android:strokeColor="@color/tday_widget_floater_accent"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M2,21c0,-3 1.85,-5.36 5.08,-6C9.5,14.52 12,13 13,12"
+            android:strokeWidth="2"
+            android:strokeAlpha="0.10"
+            android:strokeColor="@color/tday_widget_floater_accent"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>

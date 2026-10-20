@@ -1,0 +1,381 @@
+package com.ohmz.tday.compose.core.data.cache
+
+import android.util.Log
+import com.ohmz.tday.compose.core.data.OfflineSyncState
+import com.ohmz.tday.compose.core.data.PendingMutationRecord
+import com.ohmz.tday.compose.core.data.SecureConfigStore
+import com.ohmz.tday.compose.core.data.ThemePreferenceStore
+import com.ohmz.tday.compose.core.data.db.SyncMetadataEntity
+import com.ohmz.tday.compose.core.data.db.TdayDatabase
+import com.ohmz.tday.compose.core.data.db.toEntity
+import com.ohmz.tday.compose.core.data.db.toRecord
+import com.ohmz.tday.compose.feature.widget.WidgetRefresher
+import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotWriter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
+import java.net.CookieManager
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class OfflineCacheManager @Inject constructor(
+    private val database: TdayDatabase,
+    private val secureConfigStore: SecureConfigStore,
+    private val json: Json,
+    private val themePreferenceStore: ThemePreferenceStore,
+    private val cookieManager: CookieManager,
+    private val widgetRefresher: WidgetRefresher,
+    private val widgetSnapshotWriter: WidgetSnapshotWriter,
+) {
+    private val todoDao = database.todoDao()
+    private val floaterDao = database.floaterDao()
+    private val listDao = database.listDao()
+    private val floaterListDao = database.floaterListDao()
+    private val completedDao = database.completedDao()
+    private val completedFloaterDao = database.completedFloaterDao()
+    private val mutationDao = database.mutationDao()
+    private val syncMetadataDao = database.syncMetadataDao()
+
+    private val syncMutex = Mutex()
+    private val cacheDataVersionMutable = MutableStateFlow(0L)
+    val cacheDataVersion: StateFlow<Long> = cacheDataVersionMutable.asStateFlow()
+    private val syncMetadataVersionMutable = MutableStateFlow(0L)
+    val syncMetadataVersion: StateFlow<Long> = syncMetadataVersionMutable.asStateFlow()
+
+    @Volatile
+    private var lastPersistedState: OfflineSyncState? = null
+
+    @Volatile
+    private var migrated = false
+    private val migrationLock = Any()
+
+    private fun ensureMigrated() {
+        if (migrated) return
+        synchronized(migrationLock) {
+            if (migrated) return
+            migrateFromSharedPrefsIfNeeded()
+            migrated = true
+        }
+    }
+
+    /**
+     * One-time migration: reads the legacy JSON blob from EncryptedSharedPreferences,
+     * inserts all records into Room, then deletes the prefs key.
+     */
+    private fun migrateFromSharedPrefsIfNeeded() {
+        val raw = secureConfigStore.getOfflineSyncStateRaw()
+        if (raw.isNullOrBlank()) return
+
+        val state = try {
+            json.decodeFromString<OfflineSyncState>(raw)
+        } catch (_: SerializationException) {
+            return
+        } catch (_: IllegalArgumentException) {
+            return
+        }
+
+        persistStateToDaos(state)
+        secureConfigStore.clearOfflineSyncState()
+        // This path bypasses saveOfflineStateBlocking entirely, so it must repeat its widget
+        // side effects by hand: without this, a migrating install's widgets sit stale (wrong
+        // cacheDataVersion, no snapshot on disk, no repaint requested) until an unrelated write.
+        widgetSnapshotWriter.write(state)
+        lastPersistedState = state
+        cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
+        widgetRefresher.requestRefresh()
+        Log.i(LOG_TAG, "Migrated offline cache from SharedPreferences to Room")
+    }
+
+    /**
+     * Suspend entry point for reading the offline cache. Hops to [Dispatchers.IO]
+     * so callers on the main dispatcher (UI / ViewModels) never block on Room.
+     * Contexts that genuinely cannot suspend (Glance widgets, the deliberately
+     * synchronous *Snapshot helpers) must call [loadOfflineStateBlocking] directly.
+     */
+    suspend fun loadOfflineState(): OfflineSyncState =
+        withContext(Dispatchers.IO) { loadOfflineStateBlocking() }
+
+    fun loadOfflineStateBlocking(): OfflineSyncState {
+        ensureMigrated()
+        val todos = todoDao.getAll().map { it.toRecord() }
+        val floaters = floaterDao.getAll().map { it.toRecord() }
+        val lists = listDao.getAll().map { it.toRecord() }
+        val floaterLists = floaterListDao.getAll().map { it.toRecord() }
+        val completed = completedDao.getAll().map { it.toRecord() }
+        val completedFloaters = completedFloaterDao.getAll().map { it.toRecord() }
+        val mutations = mutationDao.getAll().map { it.toRecord() }
+        val metadata = syncMetadataDao.get()
+
+        val state = OfflineSyncState(
+            lastSuccessfulSyncEpochMs = metadata?.lastSuccessfulSyncEpochMs ?: 0L,
+            lastSyncAttemptEpochMs = metadata?.lastSyncAttemptEpochMs ?: 0L,
+            todos = todos,
+            floaters = floaters,
+            completedItems = completed,
+            completedFloaters = completedFloaters,
+            lists = lists,
+            floaterLists = floaterLists,
+            pendingMutations = mutations,
+            aiSummaryEnabled = metadata?.aiSummaryEnabled ?: true,
+            defaultHomeScreen = metadata?.defaultHomeScreen ?: "scheduled",
+        )
+        lastPersistedState = state
+        return state
+    }
+
+    /**
+     * Lightweight synchronous read of just the default-home-screen preference, for callers
+     * (Compose initializers, cold-launch seeding) that need a lower-cost alternative to
+     * [loadOfflineStateBlocking]'s full 7-table cache read. Backed by the same single-row
+     * `sync_metadata` table [loadOfflineStateBlocking] reads it from, so the value always
+     * matches; this just skips the todo/floater/list/completed/mutation queries around it.
+     */
+    fun defaultHomeScreenSnapshotBlocking(): String {
+        ensureMigrated()
+        return syncMetadataDao.get()?.defaultHomeScreen ?: "scheduled"
+    }
+
+    /**
+     * The same lightweight read for the one metadata field that answers "has this install ever
+     * heard from its workspace at all" — see [FirstAnswerSignal], its only caller.
+     *
+     * It is a sibling of [defaultHomeScreenSnapshotBlocking] rather than a call to
+     * [loadOfflineStateBlocking] for a reason its caller makes sharper than "the full read is
+     * bigger": the question is asked from inside the synchronous hydrates of three feed
+     * ViewModels, on the main thread, and those hydrates run on EVERY cache write — every sync,
+     * every mutation, every widget check-off. Answering one `Long` with seven table scans and
+     * seven record mappings, discarding all of them, is the kind of cost that only shows up as a
+     * dropped frame on a big workspace on a slow device, which is where it would matter most.
+     * One single-row `sync_metadata` query says exactly as much.
+     *
+     * Unlike [loadOfflineStateBlocking] this deliberately does NOT refresh `lastPersistedState`:
+     * a partial state is not one, and no caller of this needs the mirror moved.
+     */
+    fun lastSuccessfulSyncEpochMsBlocking(): Long {
+        ensureMigrated()
+        return syncMetadataDao.get()?.lastSuccessfulSyncEpochMs ?: 0L
+    }
+
+    suspend fun saveOfflineState(
+        state: OfflineSyncState,
+        consumedMutationIds: Set<String>? = null,
+    ) = withContext(Dispatchers.IO) { saveOfflineStateBlocking(state, consumedMutationIds) }
+
+    /**
+     * [consumedMutationIds] opts into concurrent-mutation preservation and is passed ONLY by
+     * SyncManager, whose saves are derived from a snapshot loaded before a multi-second network
+     * phase: any mutation persisted now but absent from [state] and not in the set was queued by
+     * a concurrent writer mid-sync (e.g. a widget check-off) — clobbering it would silently drop
+     * that completion, so it is re-attached instead. The set holds the ids the sync legitimately
+     * consumed (replayed to the server / dropped as unrecoverable). Transform-based writers
+     * (updateOfflineState) leave it null: their removals (e.g. Undo discarding a queued
+     * COMPLETE) are intentional and must NOT be resurrected. Writers are serialized
+     * (@Synchronized) so the preserve check can't itself race.
+     */
+    @Synchronized
+    fun saveOfflineStateBlocking(
+        state: OfflineSyncState,
+        consumedMutationIds: Set<String>? = null,
+    ) {
+        ensureMigrated()
+        val previous = lastPersistedState ?: loadOfflineStateBlocking()
+        var normalizedState = if (secureConfigStore.isLocalMode()) {
+            state.copy(
+                lastSuccessfulSyncEpochMs = 0L,
+                lastSyncAttemptEpochMs = 0L,
+                pendingMutations = emptyList(),
+            )
+        } else {
+            state
+        }
+        if (consumedMutationIds != null && !secureConfigStore.isLocalMode()) {
+            normalizedState = normalizedState.copy(
+                pendingMutations = mergeConcurrentlyQueuedMutations(
+                    persisted = previous.pendingMutations,
+                    next = normalizedState.pendingMutations,
+                    consumedMutationIds = consumedMutationIds,
+                ),
+            )
+        }
+        if (previous == normalizedState) {
+            // Nothing changed from what's already persisted — but the widget snapshot may still be
+            // missing (the first save this process makes) or from an earlier day. See ensureCurrent.
+            if (widgetSnapshotWriter.ensureCurrent(normalizedState)) widgetRefresher.requestRefresh()
+            return
+        }
+
+        val hasUiChanges = hasUiDataChanges(previous, normalizedState)
+        val hasSyncMetadataChanges = hasSyncMetadataChanges(previous, normalizedState)
+
+        persistStateToDaos(normalizedState)
+        lastPersistedState = normalizedState
+        if (hasUiChanges) {
+            // Must land on disk BEFORE the refresh is requested below, or the repaint races the
+            // write and paints the previous snapshot.
+            widgetSnapshotWriter.write(normalizedState)
+            cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
+            widgetRefresher.requestRefresh()
+        } else if (widgetSnapshotWriter.ensureCurrent(normalizedState)) {
+            // A sync on a quiet day changes only its timestamps, and would otherwise leave the
+            // snapshot from whatever day the task data last changed.
+            widgetRefresher.requestRefresh()
+        }
+        if (hasSyncMetadataChanges) {
+            syncMetadataVersionMutable.value = syncMetadataVersionMutable.value + 1L
+        }
+    }
+
+    suspend fun updateOfflineState(
+        transform: (OfflineSyncState) -> OfflineSyncState,
+    ): OfflineSyncState = withContext(Dispatchers.IO) { updateOfflineStateBlocking(transform) }
+
+    fun updateOfflineStateBlocking(
+        transform: (OfflineSyncState) -> OfflineSyncState,
+    ): OfflineSyncState {
+        val next = transform(loadOfflineStateBlocking())
+        saveOfflineStateBlocking(next)
+        return next
+    }
+
+    fun hasCachedData(): Boolean {
+        ensureMigrated()
+        if (todoDao.count() > 0) return true
+        if (floaterDao.count() > 0) return true
+        if (listDao.count() > 0) return true
+        if (floaterListDao.count() > 0) return true
+        if (completedDao.count() > 0) return true
+        if (completedFloaterDao.count() > 0) return true
+        return mutationDao.count() > 0
+    }
+
+    fun clearAllLocalData() {
+        val previous = lastPersistedState ?: loadOfflineStateBlocking()
+        val cleared = OfflineSyncState()
+
+        database.clearAllTables()
+        secureConfigStore.clearAllLocalData()
+        themePreferenceStore.clear()
+        runCatching { cookieManager.cookieStore?.removeAll() }
+
+        lastPersistedState = cleared
+        if (hasUiDataChanges(previous, cleared)) {
+            // secureConfigStore.clearAllLocalData() already ran above, so getAppDataMode() here
+            // correctly reads UNSET — this writes a SETUP snapshot, not a stale TASKS one.
+            widgetSnapshotWriter.write(cleared)
+            cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
+            widgetRefresher.requestRefresh()
+        }
+        if (hasSyncMetadataChanges(previous, cleared)) {
+            syncMetadataVersionMutable.value = syncMetadataVersionMutable.value + 1L
+        }
+    }
+
+    fun clearSessionOnly() {
+        val previous = lastPersistedState ?: loadOfflineStateBlocking()
+        val cleared = OfflineSyncState()
+
+        runCatching { cookieManager.cookieStore?.removeAll() }
+        database.clearAllTables()
+        secureConfigStore.clearOfflineSyncState()
+
+        lastPersistedState = cleared
+        if (hasUiDataChanges(previous, cleared)) {
+            widgetSnapshotWriter.write(cleared)
+            cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
+            widgetRefresher.requestRefresh()
+        }
+        if (hasSyncMetadataChanges(previous, cleared)) {
+            syncMetadataVersionMutable.value = syncMetadataVersionMutable.value + 1L
+        }
+    }
+
+    suspend fun <T> withSyncLock(block: suspend () -> T): T {
+        return syncMutex.withLock { block() }
+    }
+
+    private fun persistStateToDaos(state: OfflineSyncState) {
+        database.runInTransaction {
+            todoDao.deleteAll()
+            todoDao.insertAll(state.todos.map { it.toEntity() })
+            floaterDao.deleteAll()
+            floaterDao.insertAll(state.floaters.map { it.toEntity() })
+            listDao.deleteAll()
+            listDao.insertAll(state.lists.map { it.toEntity() })
+            floaterListDao.deleteAll()
+            floaterListDao.insertAll(state.floaterLists.map { it.toEntity() })
+            completedDao.deleteAll()
+            completedDao.insertAll(state.completedItems.map { it.toEntity() })
+            completedFloaterDao.deleteAll()
+            completedFloaterDao.insertAll(state.completedFloaters.map { it.toEntity() })
+            mutationDao.deleteAll()
+            mutationDao.insertAll(state.pendingMutations.map { it.toEntity() })
+            syncMetadataDao.upsert(
+                SyncMetadataEntity(
+                    lastSuccessfulSyncEpochMs = state.lastSuccessfulSyncEpochMs,
+                    lastSyncAttemptEpochMs = state.lastSyncAttemptEpochMs,
+                    aiSummaryEnabled = state.aiSummaryEnabled,
+                    defaultHomeScreen = state.defaultHomeScreen,
+                ),
+            )
+        }
+    }
+
+    private fun hasUiDataChanges(
+        previous: OfflineSyncState,
+        next: OfflineSyncState,
+    ): Boolean {
+        return previous.todos != next.todos ||
+                previous.floaters != next.floaters ||
+            previous.completedItems != next.completedItems ||
+                previous.completedFloaters != next.completedFloaters ||
+            previous.lists != next.lists ||
+                previous.floaterLists != next.floaterLists ||
+            previous.aiSummaryEnabled != next.aiSummaryEnabled
+    }
+
+    private fun hasSyncMetadataChanges(
+        previous: OfflineSyncState,
+        next: OfflineSyncState,
+    ): Boolean {
+        return previous.lastSuccessfulSyncEpochMs != next.lastSuccessfulSyncEpochMs ||
+                previous.lastSyncAttemptEpochMs != next.lastSyncAttemptEpochMs ||
+                previous.pendingMutations != next.pendingMutations
+    }
+
+    private companion object {
+        const val LOG_TAG = "OfflineCacheManager"
+    }
+}
+
+/**
+ * Re-attaches mutations that a concurrent writer queued while a sync was mid-flight.
+ *
+ * A sync builds its saves from a snapshot loaded BEFORE a multi-second network phase, so a
+ * mutation queued during that window (a widget check-off is the common case) is absent from
+ * [next] purely because the sync never saw it — writing [next] verbatim would silently drop
+ * that completion. [consumedMutationIds] is the set the sync legitimately owns (the ids it
+ * loaded, i.e. replayed or deliberately dropped); anything persisted but in neither [next] nor
+ * that set was queued concurrently and is preserved, ordered back into the queue by timestamp.
+ *
+ * Pure + internal so the rule is directly testable — the race it guards is impractical to
+ * reproduce by hand.
+ */
+internal fun mergeConcurrentlyQueuedMutations(
+    persisted: List<PendingMutationRecord>,
+    next: List<PendingMutationRecord>,
+    consumedMutationIds: Set<String>,
+): List<PendingMutationRecord> {
+    val keptIds = next.mapTo(HashSet()) { it.mutationId }
+    val preserved = persisted.filter { queued ->
+        queued.mutationId !in keptIds && queued.mutationId !in consumedMutationIds
+    }
+    if (preserved.isEmpty()) return next
+    return (next + preserved).sortedBy { it.timestampEpochMs }
+}

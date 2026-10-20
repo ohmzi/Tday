@@ -1,0 +1,169 @@
+export type ListColor =
+  | "RED" | "ORANGE" | "YELLOW" | "LIME" | "BLUE" | "PURPLE"
+  | "PINK" | "TEAL" | "CORAL" | "GOLD" | "DEEP_BLUE" | "ROSE"
+  | "LIGHT_RED" | "BRICK" | "SLATE";
+
+export type ShareRoleType = "OWNER" | "EDITOR" | "VIEWER";
+
+export interface ListMemberType {
+  userId: string;
+  username: string;
+  name?: string | null;
+  role: ShareRoleType;
+  addedAt?: string | null;
+}
+
+export interface ListItemMetaType {
+  id: string;
+  name: string;
+  color?: ListColor;
+  iconKey?: string | null;
+  defaultPriority?: "Lowest" | "Low" | "Medium" | "High" | null;
+  todoCount?: number;
+  myRole?: ShareRoleType | null;
+  isShared?: boolean;
+  memberCount?: number;
+  ownerUsername?: string | null;
+}
+
+export type ListItemMetaMapType = {
+  [id: string]: Omit<ListItemMetaType, "id">;
+};
+
+export interface FloaterListItemMetaType {
+  id: string;
+  name: string;
+  color?: ListColor;
+  iconKey?: string | null;
+  defaultPriority?: "Lowest" | "Low" | "Medium" | "High" | null;
+  reusable?: boolean;
+  todoCount?: number;
+  userID?: string | null;
+  createdAt?: Date | null;
+  updatedAt?: Date | null;
+  myRole?: ShareRoleType | null;
+  isShared?: boolean;
+  memberCount?: number;
+  ownerUsername?: string | null;
+}
+
+export type FloaterListItemMetaMapType = {
+  [id: string]: Omit<FloaterListItemMetaType, "id">;
+};
+
+export interface FloaterItemType {
+  id: string;
+  title: string;
+  description: string | null;
+  pinned: boolean;
+  createdAt: Date | null;
+  updatedAt?: Date | null;
+  order: number;
+  priority: "Lowest" | "Low" | "Medium" | "High";
+  userID?: string | null;
+  completed: boolean;
+  listID?: string | null;
+}
+
+export interface TodoItemType {
+  id: string;
+  title: string;
+  description: string | null;
+  pinned: boolean;
+  createdAt: Date;
+  updatedAt?: Date | null;
+  order: number;
+  priority: "Lowest" | "Low" | "Medium" | "High";
+  due: Date;
+  rrule: string | null;
+  timeZone: string;
+  userID: string;
+  completed: boolean;
+  exdates: Date[];
+  instances?: overridingInstance[] | null;
+  instanceDate?: Date | null;
+  listID?: string | null;
+  /**
+   * True when the endpoint this row came from does not send `rrule` at all, so
+   * `rrule: null` here means "not stated", not "does not repeat".
+   *
+   * Only a backend older than the release that added `ListTodoDto.rrule` can
+   * produce it. Bulk selection treats such a row as if it repeats, which keeps
+   * it out of delete / priority / move — the three actions that would hit a
+   * whole series. Failing closed costs a skipped row; failing open costs the
+   * series.
+   */
+  recurrenceUnknown?: boolean;
+}
+
+export interface TaskStepType {
+  id: string;
+  todoID: string;
+  title: string;
+  completed: boolean;
+  position: number;
+}
+
+export interface overridingInstance {
+  id: string;
+  completedAt: Date | null;
+  todoId: string;
+  recurId: string;
+  instanceDate: Date;
+  overriddenTitle: string | null;
+  overriddenDescription: string | null;
+  overriddenDue: Date | null;
+  overriddenPriority: "Lowest" | "Low" | "Medium" | "High" | null;
+}
+
+export interface TodoApiItemType extends Omit<TodoItemType, "due"> {
+  due: Date | null;
+}
+
+export interface CompletedTodoItemType {
+  id: string;
+  originalTodoID: string | null;
+  title: string;
+  description?: string;
+  createdAt: Date;
+  completedAt: Date;
+  priority: "Lowest" | "Low" | "Medium" | "High";
+  due: Date | null;
+  userID: string;
+  rrule: string | null;
+  instanceDate: Date | null;
+  /**
+   * The list this task was in, as the completed record snapshotted it.
+   *
+   * Already on the wire — `CompletedTodoDto` declares it and the local twin writes it — and
+   * this type was the only place missing it. The row needs it to draw the list's glyph, and it
+   * is `null`-able even though the backend does not currently null it for a completed todo:
+   * the floater twin's `ON DELETE SET NULL` is the shape the whole completed feature resolves
+   * against, and the row's lookup treats a missing id as "ask the name" rather than as "no
+   * list".
+   */
+  listID?: string | null;
+  listName?: string;
+  listColor?: string;
+}
+
+export interface CompletedFloaterItemType {
+  id: string;
+  originalFloaterID: string | null;
+  title: string;
+  description?: string | null;
+  completedAt: Date;
+  priority: "Lowest" | "Low" | "Medium" | "High";
+  daysToComplete: number | null;
+  userID?: string | null;
+  listID?: string | null;
+  listName?: string | null;
+  listColor?: ListColor | null;
+  /**
+   * True only when this item had a list at completion time (listName/listColor
+   * populated) and that list has since been deleted — distinct from a floater
+   * that never had a list. Undo still works either way (the backend recreates
+   * the list), but this lets the UI say so up front.
+   */
+  listDeleted: boolean;
+}

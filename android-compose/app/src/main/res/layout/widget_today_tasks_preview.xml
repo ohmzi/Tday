@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_preview_bg_today"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingStart="14dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="7dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="108dp"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFamily="@font/nunito_app"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="@string/widget_today_tasks_title"
+                android:textColor="@color/tday_widget_on_surface"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="50dp"
+                android:layout_height="26dp"
+                android:layout_marginStart="8dp"
+                android:fontFamily="@font/nunito_app"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:paddingStart="2dp"
+                android:paddingEnd="2dp"
+                android:text="6 due"
+                android:textColor="@color/tday_widget_on_surface_variant"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1"
+                android:includeFontPadding="false"
+                android:text="" />
+
+            <FrameLayout
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:background="@drawable/widget_add_button_background">
+
+                <ImageView
+                    android:layout_width="17dp"
+                    android:layout_height="17dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@null"
+                    android:src="@drawable/widget_add_icon_today" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="1dp"
+            android:layout_height="7dp"
+            android:includeFontPadding="false"
+            android:text="" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="22dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp">
+
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:contentDescription="@null"
+                android:src="@drawable/widget_priority_ring_high" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="7dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:fontFamily="@font/nunito_app"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="Gym"
+                android:textColor="@color/tday_widget_on_surface"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="22dp"
+                android:layout_marginStart="6dp"
+                android:fontFamily="@font/nunito_app"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:paddingStart="7dp"
+                android:paddingEnd="7dp"
+                android:text="7:30 AM"
+                android:textColor="@color/tday_widget_on_surface_variant"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="1dp"
+            android:layout_height="2dp"
+            android:includeFontPadding="false"
+            android:text="" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="22dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp">
+
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:contentDescription="@null"
+                android:src="@drawable/widget_priority_ring_medium" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="7dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:fontFamily="@font/nunito_app"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="Plan the morning"
+                android:textColor="@color/tday_widget_on_surface"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="22dp"
+                android:layout_marginStart="6dp"
+                android:fontFamily="@font/nunito_app"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:paddingStart="7dp"
+                android:paddingEnd="7dp"
+                android:text="9:00 AM"
+                android:textColor="@color/tday_widget_on_surface_variant"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="1dp"
+            android:layout_height="2dp"
+            android:includeFontPadding="false"
+            android:text="" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="22dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp">
+
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:contentDescription="@null"
+                android:src="@drawable/widget_priority_ring_low" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="7dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:fontFamily="@font/nunito_app"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="Review today's game plan"
+                android:textColor="@color/tday_widget_on_surface"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="22dp"
+                android:layout_marginStart="6dp"
+                android:fontFamily="@font/nunito_app"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:paddingStart="7dp"
+                android:paddingEnd="7dp"
+                android:text="11:00 AM"
+                android:textColor="@color/tday_widget_on_surface_variant"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="1dp"
+            android:layout_height="2dp"
+            android:includeFontPadding="false"
+            android:text="" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="22dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp">
+
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:contentDescription="@null"
+                android:src="@drawable/widget_priority_ring_lowest" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="7dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:fontFamily="@font/nunito_app"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="Water the plants"
+                android:textColor="@color/tday_widget_on_surface"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="22dp"
+                android:layout_marginStart="6dp"
+                android:fontFamily="@font/nunito_app"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:paddingStart="7dp"
+                android:paddingEnd="7dp"
+                android:text="12:30 PM"
+                android:textColor="@color/tday_widget_on_surface_variant"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+    </LinearLayout>
+</LinearLayout>

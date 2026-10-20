@@ -1,0 +1,1266 @@
+{
+  "terms": {
+    "title": "Termos de Serviço",
+    "lastUpdated": "Última atualização: 19 de janeiro de 2026",
+    "intro": "Ao utilizar o T'Day (o “Serviço”), concorda com estes Termos de Serviço.",
+    "sections": {
+      "1": {
+        "title": "Uso do Serviço",
+        "content": "O T'Day é uma aplicação de produtividade gratuita para gerir tarefas, notas e ficheiros. Concorda em utilizar o Serviço legalmente e não abusar ou interromper o mesmo."
+      },
+      "2": {
+        "title": "Contas",
+        "content": "É responsável por manter a sua conta segura e por toda a atividade na sua conta. A informação deve ser precisa."
+      },
+      "3": {
+        "title": "O Seu Conteúdo",
+        "content": "Mantém a propriedade do seu conteúdo. Ao utilizar o T'Day, concede permissão para o armazenar e processar apenas para operar o Serviço."
+      },
+      "4": {
+        "title": "Uso Aceitável",
+        "content": [
+          "Nenhum conteúdo ilegal, prejudicial ou malicioso",
+          "Nenhum acesso a dados de outros utilizadores",
+          "Nenhum abuso da infraestrutura",
+          "Nenhum uso ilegal do Serviço"
+        ]
+      },
+      "5": {
+        "title": "Disponibilidade",
+        "content": "O T'Day é um projeto pessoal fornecido numa base de melhor esforço. O Serviço pode ser alterado, ficar offline ou ser descontinuado a qualquer momento."
+      },
+      "6": {
+        "title": "Rescisão",
+        "content": "Pode parar de utilizar o T'Day a qualquer momento. Podemos suspender o acesso se estes Termos forem violados."
+      },
+      "7": {
+        "title": "Exoneração de Responsabilidade",
+        "content": "O T'Day é fornecido “tal como está”. Não somos responsáveis por perda de dados, interrupções ou danos resultantes do uso do Serviço."
+      },
+      "8": {
+        "title": "Alterações",
+        "content": "Podemos atualizar estes Termos. O uso continuado significa que aceita as alterações."
+      },
+      "9": {
+        "title": "Contacto",
+        "content": "Dúvidas? Envie e-mail para support"
+      }
+    }
+  },
+  "privacy": {
+    "title": "Política de Privacidade",
+    "lastUpdated": "Última atualização: 4 de outubro de 2026",
+    "intro": "O T'Day (“nós”, ou “nosso”) é uma aplicação de produtividade pessoal. Esta Política de Privacidade explica quais os dados que recolhemos e como os utilizamos.",
+    "sections": {
+      "1": {
+        "title": "Informação que Recolhemos",
+        "content": [
+          "Dados da conta: endereço de e-mail e fuso horário",
+          "Conteúdo do utilizador: tarefas, notas e ficheiros encriptados",
+          "Dados técnicos que o servidor vê quando se liga (não fazem parte dos relatórios de falhas): endereço IP, informações do navegador e da sessão",
+          "Cookies e armazenamento local para autenticação"
+        ]
+      },
+      "2": {
+        "title": "Como Utilizamos os Seus Dados",
+        "content": [
+          "Fornecer e operar o T'Day",
+          "Autenticar utilizadores",
+          "Armazenar e sincronizar o seu conteúdo",
+          "Manter a segurança e prevenir o abuso"
+        ]
+      },
+      "3": {
+        "title": "Armazenamento de Dados e Segurança",
+        "content": "O T'Day é auto-hospedado: um backend em Kotlin guarda os seus dados numa base de dados PostgreSQL no servidor gerido por si ou pelo seu fornecedor. Os campos sensíveis podem ser encriptados em repouso e o tráfego é servido por HTTPS. Embora nenhum sistema seja perfeitamente seguro, são tomadas medidas razoáveis para proteger os seus dados."
+      },
+      "4": {
+        "title": "Partilha de Dados",
+        "content": "Apenas partilhamos dados com fornecedores de serviços necessários para operar o T'Day e, somente com consentimento, com o Sentry para relatórios de falhas e problemas. Não vendemos os seus dados pessoais."
+      },
+      "5": {
+        "title": "Cookies",
+        "content": "Cookies e armazenamento local são utilizados para sessões de login, preferências e segurança. Desativar os cookies pode afetar a funcionalidade."
+      },
+      "6": {
+        "title": "Retenção de Dados",
+        "content": "Mantemos os seus dados enquanto a sua conta estiver ativa. Pode eliminar a sua conta a qualquer momento e o seu conteúdo será removido num período razoável."
+      },
+      "7": {
+        "title": "Os Seus Direitos",
+        "content": "Pode aceder, corrigir, eliminar ou exportar os seus dados utilizando as funcionalidades da aplicação."
+      },
+      "8": {
+        "title": "Alterações",
+        "content": "Podemos atualizar esta política periodicamente. As atualizações aparecerão nesta página."
+      },
+      "9": {
+        "title": "Relatórios de Falhas e Problemas",
+        "content": [
+          "Desativado por padrão. Na aplicação web, um administrador decide por todo o servidor; no telemóvel, é você que decide em cada dispositivo. Os relatórios só são enviados no momento em que algo falha",
+          "Um relatório contém a versão do app, o modelo do dispositivo e o sistema operacional, o erro e onde ele ocorreu. Nunca contém seu nome, conta, endereço IP, localização, endereço do servidor nem qualquer conteúdo de tarefas ou listas",
+          "Os relatórios vão para o Sentry, ficam guardados por 30 dias e são usados apenas para corrigir bugs, nunca para análise de uso nem publicidade. O Sentry vê o endereço de rede de qualquer conexão, mas está configurado para não armazená-lo"
+        ]
+      },
+      "10": {
+        "title": "Contacto",
+        "content": "Dúvidas? Envie e-mail para support"
+      }
+    }
+  },
+  "app": {
+    "agenda": "agenda",
+    "scheduledTaskHome": "Agendado",
+    "more": "Mais",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "clearSearch": "Limpar pesquisa",
+    "versionAvailableTitle": "Atualização disponível",
+    "versionAvailableBody": "Uma nova versão está pronta para carregar.",
+    "versionAvailableReload": "Recarregar",
+    "unresponsiveTitle": "T'Day parou de responder",
+    "unresponsiveBody": "T'Day não respondeu durante {{seconds}} s.",
+    "unresponsiveReload": "Recarregar",
+    "releaseUpdateTitle": "Atualização disponível",
+    "releaseUpdateVersion": "Versão {{version}}",
+    "today": "Hoje",
+    "tonight": "Hoje à noite",
+    "yesterday": "Ontem",
+    "tomorrow": "Amanhã",
+    "nextWeek": "Próxima semana",
+    "day": "Dia",
+    "week": "Semana",
+    "month": "Mês",
+    "duration": "Duração",
+    "date": "Data",
+    "durationMenu": {
+      "error": "Intervalo de datas inválido: A hora de fim deve ser após a hora de início."
+    },
+    "priority": "Prioridade",
+    "list": "Projeto",
+    "overdue": "Atrasado",
+    "low": "Baixa",
+    "normal": "Normal",
+    "important": "Importante",
+    "urgent": "Urgente",
+    "floater": "Flutuante",
+    "root_feed_tab_floater": "Flutuante",
+    "newFloater": "Nova tarefa flutuante",
+    "editFloater": "Editar tarefa flutuante",
+    "floaterList": "Lista flutuante",
+    "newFloaterList": "Nova lista flutuante",
+    "deleteFloaterList": "Excluir lista flutuante",
+    "floaterListName": "Nome da lista flutuante",
+    "floaterTitlePlaceholder": "Tarefa para qualquer momento",
+    "floaterEmpty": "Ainda não há tarefas flutuantes",
+    "floaterListEmpty": "Nenhuma tarefa flutuante nesta lista",
+    "myFloaterLists": "Minhas listas",
+    "searchFloaters": "Pesquisar tarefas flutuantes",
+    "searchFloatersPlaceholder": "Pesquisar tarefas flutuantes...",
+    "noMatchingFloaters": "Nenhuma tarefa flutuante correspondente",
+    "searchIn": "Pesquisar em",
+    "repeat": "Repetir",
+    "everyDay": "Diário",
+    "everyWeek": "Semanal",
+    "everyMonth": "Mensal",
+    "everyYear": "Anual",
+    "weekdaysOnly": "Apenas dias úteis",
+    "custom": "Personalizado",
+    "descPlaceholder": "descrição",
+    "schedule": "Agendar",
+    "scheduleOnHint": "A tarefa tem data de vencimento",
+    "scheduleOffHint": "Tarefa flutuante",
+    "details": "Detalhes",
+    "due": "Vencimento",
+    "notes": "Notas",
+    "clearFormatting": "Limpar formatação",
+    "bold": "Negrito",
+    "italic": "Itálico",
+    "underline": "Sublinhado",
+    "strikethrough": "Tachado",
+    "bulletedList": "Lista com marcadores",
+    "numberedList": "Lista numerada",
+    "noList": "Sem lista",
+    "noRepeat": "Sem repetição",
+    "color": "Cor",
+    "icon": "Ícone",
+    "defaultPriority": "Prioridade padrão",
+    "noDefaultPriority": "Sem padrão",
+    "listName": "Nome da lista",
+    "newTask": "Nova tarefa",
+    "editTask": "Editar tarefa",
+    "newList": "Nova lista",
+    "listSettings": "Configurações da lista",
+    "deleteList": "Excluir lista",
+    "undo": "Desfazer",
+    "taskDeleted": "Tarefa excluída",
+    "taskCompleted": "Tarefa concluída",
+    "listDeleted": "Lista excluída",
+    "listsDeleted": "{{count}} listas excluídas",
+    "done": "Concluído",
+    "previous": "Anterior",
+    "next": "Próximo",
+    "searchTasks": "Pesquisar tarefas",
+    "taskCount": "{{count}} tarefas",
+    "shareList": "Compartilhar lista",
+    "sharing": "Compartilhamento",
+    "share": "Compartilhar",
+    "shareListCopied": "Lista copiada para a área de transferência",
+    "taskCopied": "Tarefa copiada para a área de transferência",
+    "taskCopyFailed": "Não foi possível copiar a tarefa para a área de transferência",
+    "shareDueLabel": "Vencimento: {{date}}",
+    "sharePriorityLabel": "Prioridade: {{priority}}",
+    "shareTaskCount_one": "{{count}} tarefa",
+    "shareTaskCount_few": "{{count}} tarefas",
+    "shareTaskCount_many": "{{count}} tarefas",
+    "shareTaskCount_other": "{{count}} tarefas",
+    "members": "Membros",
+    "sharedBy": "Compartilhada por {{name}}",
+    "addMember": "Adicionar membro",
+    "searchUsersPlaceholder": "Buscar por nome ou nome de usuário",
+    "roleOwner": "Proprietário",
+    "roleEditor": "Editor",
+    "roleViewer": "Leitor",
+    "removeMember": "Remover membro",
+    "leaveList": "Sair da lista",
+    "leaveListConfirm": "Sair de “{{name}}”? As tarefas dela sumirão das suas visualizações.",
+    "noUsersFound": "Nenhum usuário encontrado",
+    "alreadyAMember": "Já é membro",
+    "tasksDueOn": "Tarefas para {{date}}",
+    "noTasksDueThisDay": "Nenhuma tarefa para este dia",
+    "selectAnotherDate": "Selecione outra data no calendário.",
+    "quickDefer": "Adiar",
+    "quickDeferLaterToday": "Mais tarde hoje",
+    "quickDeferTonight": "Hoje à noite",
+    "quickDeferTomorrow": "Amanhã de manhã",
+    "quickDeferNextWeek": "Na próxima semana",
+    "allDoneToday": "Tudo feito por hoje",
+    "allDoneTonight": "Tudo feito por hoje à noite",
+    "sweep": "Varrer",
+    "sweepTitle": "Varredura matinal",
+    "sweepToday": "Hoje",
+    "sweepTomorrow": "Amanhã",
+    "sweepPickDate": "Escolher uma data",
+    "sweepFloat": "Tornar flutuante",
+    "sweepLetGo": "Deixar ir",
+    "sweepSkip": "Pular",
+    "sweepAllToToday": "Varrer tudo para hoje",
+    "sweptToast": "{{count}} tarefas varridas",
+    "sweepDone": "Tudo em dia",
+    "reusableList": "Lista reutilizável",
+    "reusableListHint": "Mostra Reiniciar para desmarcar tudo e usar de novo",
+    "resetFloaterList": "Reiniciar lista",
+    "floaterListReset": "Lista reiniciada — tudo desmarcado",
+    "steps": "Etapas",
+    "add": "Adicionar",
+    "addStep": "Adicionar etapa",
+    "stepsCreateHint": "Salve a tarefa primeiro para adicionar etapas.",
+    "searchFloaterTasksPlaceholder": "Pesquisar tarefas flutuantes",
+    "searchShort": "Pesquisar",
+    "listEmpty": "Ainda não há nada aqui",
+    "listEmptyBody": "Adicione a sua primeira tarefa e ela aparecerá aqui.",
+    "floaterEmptyBody": "Os flutuantes não têm prazo — anote um e ele esperará até você estar pronto.",
+    "floaterListEmptyBody": "Adicione um flutuante e ele esperará aqui.",
+    "noMatchingTasks": "Nenhuma tarefa correspondente",
+    "searchEmptyBody": "Tente outra palavra ou limpe a busca.",
+    "scrollForMore": "Role para ver mais",
+    "tasksShownOfTotal": "Mostrando {{shown}} de {{total}} tarefas",
+    "todayEmpty": "Nenhuma tarefa para hoje",
+    "todayEmptyBody": "Adicione algo para hoje e aparecerá aqui.",
+    "tonightEmpty": "Nenhuma tarefa para hoje à noite",
+    "tonightEmptyBody": "Adicione algo para hoje à noite e aparecerá aqui.",
+    "overdueEmpty": "Nenhuma tarefa atrasada",
+    "overdueEmptyBody": "Nada passou do prazo.",
+    "priorityEmpty": "Nenhuma tarefa prioritária",
+    "priorityEmptyBody": "Marque uma tarefa como prioridade e ela subirá para aqui.",
+    "scheduledEmpty": "Nenhuma tarefa agendada",
+    "scheduledEmptyBody": "Dê uma data a uma tarefa e ela entrará na fila aqui.",
+    "allTasksEmpty": "Nenhuma tarefa ainda",
+    "allTasksEmptyBody": "Tudo o que você adiciona aparece aqui, seja qual for a data.",
+    "noMatchingSettings": "Nenhuma definição correspondente",
+    "noMatchingTopics": "Nenhum tópico correspondente",
+    "bulkSelect": "Selecionar",
+    "bulkSelected": "{{count}} selecionadas",
+    "bulkSelectedCapped": "{{count}} selecionadas — o máximo que uma ação alcança",
+    "bulkSelectAll": "Selecionar tudo",
+    "bulkDeselectAll": "Desmarcar tudo",
+    "bulkAppliesTo": "Aplica-se a {{count}} de {{total}} — tarefas repetidas são ignoradas.",
+    "bulkComplete": "Concluir",
+    "bulkPriority": "Prioridade",
+    "bulkMove": "Mover",
+    "bulkDelete": "Excluir",
+    "tasksCompleted_one": "Tarefa concluída",
+    "tasksCompleted_few": "{{count}} tarefas concluídas",
+    "tasksCompleted_many": "{{count}} tarefas concluídas",
+    "tasksCompleted_other": "{{count}} tarefas concluídas",
+    "tasksDeleted_one": "Tarefa excluída",
+    "tasksDeleted_few": "{{count}} tarefas excluídas",
+    "tasksDeleted_many": "{{count}} tarefas excluídas",
+    "tasksDeleted_other": "{{count}} tarefas excluídas",
+    "bulkDeleteTitle_one": "Excluir esta tarefa?",
+    "bulkDeleteTitle_few": "Excluir {{count}} tarefas?",
+    "bulkDeleteTitle_many": "Excluir {{count}} tarefas?",
+    "bulkDeleteTitle_other": "Excluir {{count}} tarefas?",
+    "bulkDeleteBody": "Elas saem de todas as listas, junto com o histórico de conclusão. Você terá alguns segundos para desfazer.",
+    "bulkDeleteConfirm_one": "Excluir tarefa",
+    "bulkDeleteConfirm_few": "Excluir {{count}} tarefas",
+    "bulkDeleteConfirm_many": "Excluir {{count}} tarefas",
+    "bulkDeleteConfirm_other": "Excluir {{count}} tarefas",
+    "bulkMoveTitle": "Mover {{count}} tarefas?",
+    "bulkMoveBody": "Estas tarefas vêm de listas diferentes. Mover não dá para desfazer de uma vez — você teria que devolver cada uma à mão.",
+    "bulkMoveConfirm": "Mover {{count}} tarefas",
+    "bulkDeleteFailed_one": "Não foi possível excluir uma tarefa",
+    "bulkDeleteFailed_few": "Não foi possível excluir {{count}} tarefas",
+    "bulkDeleteFailed_many": "Não foi possível excluir {{count}} tarefas",
+    "bulkDeleteFailed_other": "Não foi possível excluir {{count}} tarefas",
+    "bulkUpdateFailed_one": "Não foi possível atualizar uma tarefa",
+    "bulkUpdateFailed_few": "Não foi possível atualizar {{count}} tarefas",
+    "bulkUpdateFailed_many": "Não foi possível atualizar {{count}} tarefas",
+    "bulkUpdateFailed_other": "Não foi possível atualizar {{count}} tarefas",
+    "floaterCompletedTile": "Concluídos"
+  },
+  "today": {
+    "saveInstance": "Guardar instância",
+    "nextRepeatText": "Esta tarefa está agendada a seguir para",
+    "addATask": "Adicionar uma tarefa",
+    "titlePlaceholder": "Título",
+    "menu": {
+      "pinToTop": "Fixar no topo",
+      "edit": "Editar",
+      "editAsInstance": "Editar como instância",
+      "copy": "Copiar",
+      "delete": "Eliminar",
+      "Move to": "Mover para..."
+    },
+    "repeatSuggestion": {
+      "prompt": "Repetir {{cadence}}?",
+      "dismiss": "Dispensar",
+      "everyDay": "diariamente",
+      "everyWeek": "semanalmente",
+      "everyMonth": "mensalmente",
+      "everyYear": "anualmente"
+    },
+    "weekInReview": {
+      "title": "Resumo da semana",
+      "dismiss": "Dispensar"
+    },
+    "brainDump": {
+      "title": "Despejo mental",
+      "blurb": "Cole tudo o que está na sua mente — o T'Day divide em tarefas para revisar.",
+      "placeholder": "comprar leite\nligar para o dentista amanhã 15h\nregar plantas toda semana",
+      "parse": "Dividir em tarefas",
+      "parseFailed": "Não foi possível analisar — tente de novo",
+      "reviewHint": "Desmarque o que não quiser. Com data → agendada, sem data → Anytime.",
+      "empty": "Nada a adicionar.",
+      "back": "Voltar",
+      "add": "Adicionar {{count}}",
+      "created": "{{count}} tarefas adicionadas"
+    }
+  },
+  "sidebar": {
+    "completed": "Concluído",
+    "calendar": "Calendário",
+    "note": "Nota",
+    "settings": "Definições",
+    "admin": "Admin",
+    "settingMenu": {
+      "logout": "Sair",
+      "theme": "Tema",
+      "shortcuts": "Atalhos"
+    },
+    "noteMenu": {
+      "rename": "renomear",
+      "delete": "eliminar"
+    }
+  },
+  "completed": {
+    "title": "Histórico de conclusão",
+    "empty": "Nada concluído ainda",
+    "emptyBody": "Marque algo como feito e aparecerá aqui.",
+    "tabTasks": "Agendado",
+    "floaterEmpty": "Ainda não há itens avulsos concluídos",
+    "floaterEmptyBody": "Marque algo como concluído em Avulso e ele aparecerá aqui.",
+    "listDeletedSuffix": "lista excluída",
+    "floaterRestoredIntoRecreatedList": "Restaurado — “{{listName}}” foi recriada"
+  },
+  "modal": {
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "delete": {
+      "title": "Eliminar tarefa?",
+      "subtitle": "Esta ação não pode ser desfeita. Isto irá eliminar permanentemente",
+      "button": "Eliminar"
+    },
+    "deleteAll": {
+      "title": "Eliminar todas as recorrências da tarefa?",
+      "subtitle": "Esta é uma tarefa recorrente, eliminar todas as outras recorrências?",
+      "deleteInstance": "Eliminar apenas esta ocorrência",
+      "deleteAll": "Eliminar todas as recorrências"
+    },
+    "cancelEdit": {
+      "title": "Cancelar Edição?",
+      "subtitle": "As alterações que fez serão descartadas"
+    },
+    "editAll": {
+      "title": "Editar todas as recorrências da tarefa?",
+      "subtitle": "Esta é uma tarefa recorrente, fazer a mesma edição para todas as outras recorrências?",
+      "editInstance": "Editar apenas esta ocorrência",
+      "editAll": "Editar todas as recorrências"
+    }
+  },
+  "shortcuts": {
+    "title": "Atalhos",
+    "todo": {
+      "title": "Atalhos de tarefas",
+      "submitAndOpen": "Submeter formulário e abrir outro",
+      "openForm": "Abrir formulário",
+      "exitForm": "Sair do formulário",
+      "editForm": "Editar formulário",
+      "submit": "Submeter formulário"
+    },
+    "calendar": {
+      "markComplete": "Marcar como concluída",
+      "title": "Atalhos de calendário",
+      "previous": "Mês/semana/dia anterior",
+      "next": "Mês/semana/dia seguinte",
+      "todayView": "Visualização de hoje",
+      "viewModes": "Visualização Mês/Semana/Dia"
+    },
+    "navigation": {
+      "title": "Navegação",
+      "then": "depois",
+      "today": "Hoje",
+      "calendar": "Calendário",
+      "completed": "Concluído"
+    },
+    "global": {
+      "title": "Em qualquer lugar",
+      "newTask": "Nova tarefa",
+      "openPalette": "Paleta de comandos",
+      "showShortcuts": "Este resumo"
+    }
+  },
+  "scheduledTaskHome": {
+    "tileScheduled": "Agendado",
+    "tilePriority": "Prioridade",
+    "tileOverdue": "Atrasado",
+    "tileAll": "Tudo",
+    "tileCompleted": "Concluído",
+    "tileCalendar": "Calendário",
+    "searchTasksPlaceholder": "Pesquisar tarefas...",
+    "noMatchingTasks": "Nenhuma tarefa correspondente",
+    "openList": "Abrir {{name}}",
+    "searchScheduledPlaceholder": "Pesquisar tarefas agendadas"
+  },
+  "settings": {
+    "themeLight": "Claro",
+    "themeDark": "Escuro",
+    "themeSystem": "Sistema",
+    "systemDefault": "Padrão do sistema",
+    "profile": {
+      "title": "Perfil",
+      "unknownUser": "Usuário desconhecido",
+      "description": "Atualize seu nome de exibição",
+      "name": "Nome",
+      "namePlaceholder": "Digite seu nome",
+      "username": "Nome de usuário",
+      "saving": "Salvando...",
+      "save": "Salvar",
+      "edit": "Editar",
+      "cancel": "Cancelar"
+    },
+    "appearance": {
+      "title": "Aparência",
+      "description": "Escolha claro, escuro ou siga a configuração do sistema.",
+      "descriptionSystem": "Siga seu dispositivo, claro ou escuro. Atualmente usando {{theme}}."
+    },
+    "behavior": {
+      "title": "Comportamento",
+      "defaultHomeScreen": "Tela inicial padrão"
+    },
+    "language": {
+      "title": "Idioma",
+      "description": "Escolha o idioma do aplicativo",
+      "appLanguage": "Idioma"
+    },
+    "notifications": {
+      "title": "Notificações",
+      "push": "Notificações push",
+      "description": "Receba notificações sobre coisas importantes, mesmo quando o app não está aberto.",
+      "blocked": "Bloqueadas nas configurações do navegador. Atualize as permissões do navegador para ativá-las.",
+      "toggle": "Alternar notificações push"
+    },
+    "password": {
+      "title": "Senha",
+      "description": "Atualize a senha da sua conta",
+      "current": "Senha atual",
+      "currentPlaceholder": "Digite sua senha atual",
+      "new": "Nova senha",
+      "newPlaceholder": "Digite sua nova senha",
+      "requirement": "A senha deve ter pelo menos 8 caracteres, com uma letra maiúscula e um caractere especial.",
+      "confirm": "Confirmar nova senha",
+      "confirmPlaceholder": "Confirme sua nova senha",
+      "changing": "Salvando...",
+      "change": "Salvar",
+      "changeAction": "Alterar",
+      "cancel": "Cancelar",
+      "forgot": "Esqueceu a senha?"
+    },
+    "dashboard": {
+      "title": "Acesso ao painel",
+      "enabled": "Acesso à API ativado",
+      "disabled": "Acesso à API desativado",
+      "activeKeyEnding": "Chave ativa terminada em …{{preview}}",
+      "activeKeyExists": "Existe uma chave ativa",
+      "noKey": "Nenhuma chave foi gerada",
+      "revoking": "Revogando...",
+      "generating": "Gerando...",
+      "revokeKey": "Revogar chave",
+      "generateKey": "Gerar chave",
+      "copyNow": "Copie sua chave de API agora — ela não será mostrada novamente.",
+      "labelPlaceholder": "Nome da chave (opcional)",
+      "scopeRead": "Somente leitura",
+      "scopeFull": "Acesso total",
+      "scopeReadHint": "Pode ler suas tarefas, mas não alterá-las — seguro para painéis.",
+      "scopeFullHint": "Pode ler e alterar sua conta. Use apenas em apps confiáveis.",
+      "unnamedKey": "Chave sem nome",
+      "expired": "Expirada",
+      "createdAt": "Criada em {{date}}",
+      "lastUsedAt": "Usada pela última vez em {{date}}",
+      "neverUsed": "Nunca usada",
+      "newKeyTitle": "Nova chave de API",
+      "cancel": "Cancelar",
+      "done": "Concluído"
+    },
+    "toast": {
+      "apiKeyGenerated": "Chave de API gerada. Copie-a agora — não será mostrada novamente.",
+      "apiKeyGenerateFailed": "Falha ao gerar a chave de API",
+      "apiKeyRevoked": "Chave de API revogada",
+      "apiKeyRevokeFailed": "Falha ao revogar a chave de API",
+      "apiKeyCopied": "Chave de API copiada para a área de transferência",
+      "apiKeyCopyFailed": "Falha ao copiar a chave de API",
+      "pushDisabled": "Notificações push desativadas",
+      "pushEnabled": "Notificações push ativadas",
+      "pushUpdateFailed": "Falha ao atualizar as configurações de notificação",
+      "noChanges": "Nenhuma alteração para salvar",
+      "nameUpdated": "Nome atualizado com sucesso",
+      "nameUpdateFailed": "Falha ao atualizar",
+      "passwordTooShort": "A senha deve ter pelo menos 8 caracteres",
+      "passwordsDoNotMatch": "As senhas não coincidem",
+      "passwordChanged": "Senha alterada com sucesso",
+      "passwordChangeFailed": "Falha ao alterar a senha",
+      "securityQuestionsUpdated": "Security questions updated",
+      "securityQuestionsUpdateFailed": "Could not update security questions",
+      "securityQuestionsLoadFailed": "Could not load security questions"
+    },
+    "signOut": "Sair",
+    "featureToggle": {
+      "title": "Alternar recurso"
+    },
+    "aiSummary": {
+      "title": "Resumo"
+    },
+    "securityQuestions": {
+      "title": "Security questions",
+      "changeAction": "Change",
+      "configured": "Configuradas",
+      "notConfigured": "Not configured",
+      "questionLabel": "Question {{index}}",
+      "answerPlaceholder": "Resposta",
+      "save": "Salvar",
+      "saving": "Saving...",
+      "errorSelectAll": "Please choose three questions",
+      "errorDistinct": "Escolha três perguntas diferentes",
+      "errorAnswersRequired": "Please answer all three questions",
+      "errorPasswordRequired": "Enter your current password"
+    },
+    "data": {
+      "title": "Os seus dados",
+      "summary": "{{tasks}} tarefas · {{lists}} listas · {{completed}} concluídas",
+      "download": "Descarregar os meus dados",
+      "import": "Importar",
+      "exportDone": "O ficheiro dos seus dados foi descarregado.",
+      "exportFailed": "Não foi possível exportar os seus dados.",
+      "importInvalid": "Esse ficheiro não é uma exportação válida do T'Day.",
+      "importDone": "Importação concluída — {{count}} itens adicionados.",
+      "importFailed": "Não foi possível importar esse ficheiro.",
+      "confirmTitle": "Importar dados?",
+      "confirmBody": "Isto adiciona {{count}} itens à sua conta. Nada do que já tem é alterado ou removido.",
+      "confirmRemapped": "{{count}} itens com IDs em conflito serão adicionados como novas cópias.",
+      "confirmCancel": "Cancelar",
+      "confirmImport": "Importar",
+      "summaryLocal": "{{tasks}} tarefas · {{lists}} listas · {{completed}} concluídas, tudo neste navegador."
+    },
+    "restingFloaters": {
+      "title": "Flutuantes em repouso",
+      "toggle": "Desbotar tarefas Anytime intocadas"
+    },
+    "sound": {
+      "title": "Som",
+      "toggle": "Reproduzir um som ao concluir uma tarefa"
+    },
+    "haptics": {
+      "title": "Vibração",
+      "toggle": "Vibrar ao tocar e arrastar"
+    },
+    "workspace": {
+      "title": "Espaço de trabalho",
+      "localTitle": "Espaço local",
+      "localDetail": "Guardado apenas neste navegador — sem conta, sem sincronização.",
+      "encryptedDetail": "Criptografado com a sua frase secreta.",
+      "unencryptedDetail": "Guardado sem criptografia — qualquer pessoa com este perfil do navegador pode ler.",
+      "encrypt": "Criptografar este espaço",
+      "encryptTitle": "Criptografar este espaço?",
+      "encryptBody": "Suas tarefas serão criptografadas neste navegador com uma frase secreta que só você conhece. Nada se perde — as mesmas tarefas continuam aí, numa forma que ninguém consegue ler sem ela. Não há recuperação: nenhum link de redefinição, nenhuma chave reserva, nenhum suporte. Anote a frase secreta num lugar seguro.",
+      "encryptPassphrase": "Frase secreta",
+      "encryptRepeat": "Repita a frase secreta",
+      "encryptAcknowledge": "Entendo que perder esta frase secreta significa perder este espaço.",
+      "encryptAction": "Criptografar",
+      "encryptCancel": "Cancelar",
+      "encryptDone": "Este espaço agora está criptografado.",
+      "encryptTooShort": "Use pelo menos {{count}} caracteres.",
+      "encryptMismatch": "As duas frases secretas não coincidem.",
+      "encryptFailed": "Não foi possível criptografar este espaço.",
+      "leave": "Sair do espaço local",
+      "delete": "Eliminar os dados locais",
+      "deleteConfirmTitle": "Eliminar os dados locais?",
+      "deleteConfirmBody": "Isto remove definitivamente todas as tarefas, listas e entradas concluídas guardadas neste navegador. Não existe cópia num servidor — descarregue os seus dados antes se quiser mantê-los.",
+      "deleteConfirmCancel": "Cancelar",
+      "deleteConfirmAction": "Eliminar",
+      "deleteDone": "Dados locais eliminados."
+    },
+    "about": {
+      "title": "Sobre",
+      "appVersion": "Versão do app",
+      "server": "Servidor",
+      "updateAvailable": "v{{version}} disponível"
+    },
+    "troubleshooting": {
+      "reset": "Repor a cache da aplicação",
+      "confirmTitle": "Repor a cache da aplicação?",
+      "confirmBody": "Limpa a cache offline deste dispositivo e recarrega a versão mais recente. As suas tarefas, listas e sessão não são afetadas.",
+      "confirmAction": "Repor",
+      "confirmCancel": "Cancelar",
+      "resetFailed": "Não foi possível repor a cache. Feche e reabra a aplicação e tente novamente."
+    },
+    "privacy": {
+      "title": "Privacidade"
+    },
+    "serverTelemetry": {
+      "title": "Relatórios de erro do servidor",
+      "toggle": "Enviar relatórios de erro deste servidor e da web",
+      "description": "Envia os erros deste servidor, mais os tempos de uma pequena amostra de pedidos, para o projeto Sentry definido em SENTRY_DSN. A aplicação web obedece ao mesmo interruptor. Nunca inclui tarefas, listas ou dados da conta.",
+      "helpLabel": "Sobre os relatórios de erro",
+      "stateOn": "Ativado",
+      "stateOff": "Desativado",
+      "stateDetail": "Um administrador decide isto para todo o servidor.",
+      "updateFailed": "Não foi possível atualizar a definição do servidor. Tente novamente."
+    }
+  },
+  "crashReports": {
+    "card": {
+      "title": "Enviar relatórios de erro?",
+      "intro": "Se algo falhar, o T'Day pode enviar um breve relatório técnico para ajudar a corrigir. Uma resposta cobre todo este servidor e quem o utiliza.",
+      "neverSent": "Nunca enviado: nomes, contas ou conteúdo de tarefas e listas.",
+      "share": "Enviar relatórios",
+      "notNow": "Não enviar",
+      "saveFailed": "Não foi possível guardar. Tente novamente.",
+      "readFaq": "Ler as perguntas frequentes"
+    }
+  },
+  "summary": {
+    "untitledTask": "Tarefa sem título",
+    "and": "e",
+    "windowMorning": "de manhã",
+    "windowAfternoon": "à tarde",
+    "windowNight": "à noite",
+    "window_morning": "manhã",
+    "window_afternoon": "tarde",
+    "night": "noite",
+    "dueTonight": "para esta noite",
+    "dueTodayWindow": "para hoje {{window}}",
+    "dueTomorrowWindow": "para amanhã {{window}}",
+    "dueYesterdayWindow": "venceu ontem {{window}}",
+    "targetToday": "hoje",
+    "targetTomorrow": "amanhã",
+    "targetYesterday": "ontem",
+    "targetOnDate": "em {{date}}",
+    "dueOnDate": "para {{target}}",
+    "dueOnDateWindow": "para {{target}} {{window}}",
+    "taskPhrasePast": "{{title}}, que estava {{due}}",
+    "taskPhrasePresent": "{{title}}, que é {{due}}",
+    "thenSeparator": ", depois ",
+    "qualifierBoth": "ambas",
+    "qualifierAll": "todas",
+    "dayGroupedPast": "{{tasks}}, {{qualifier}} venciam {{target}}",
+    "dayGroupedPresent": "{{tasks}}, {{qualifier}} vencem {{target}}",
+    "startWith": "Comece com {{task}}.",
+    "nextUp": "Em seguida, {{tasks}}.",
+    "overdueCatchUp": "Você também tem {{count}} tarefa(s) atrasada(s) para colocar em dia.",
+    "clearForNow": "Por enquanto está tudo em dia. Nenhuma tarefa precisa de atenção nesta visualização.",
+    "floaterClear": "Ainda não há nada à espera aqui.",
+    "floaterPileOne": "Aqui há uma só coisa à espera, sem data.",
+    "floaterPileFew": "Aqui estão à espera algumas coisas sem data.",
+    "floaterPileSome": "Aqui juntaram-se bastantes coisas sem data.",
+    "floaterPileMany": "Aqui acumulou-se uma longa lista de coisas sem data.",
+    "floaterStartWith": "Comece com {{title}}.",
+    "floaterPinnedOne": "Só {{title}} está fixada.",
+    "floaterPinnedMany": "{{title}} está fixada, e não é a única.",
+    "floaterPriorityOne": "Só {{title}} tem prioridade alta.",
+    "floaterPriorityMany": "{{title}} tem prioridade alta, e não é a única.",
+    "floaterMediumOne": "Só {{title}} tem prioridade média.",
+    "floaterMediumMany": "{{title}} tem prioridade média, e não é a única.",
+    "floaterRestingOne": "Uma delas está intocada há meses.",
+    "floaterRestingMany": "Algumas estão intocadas há meses.",
+    "floaterRestingAll": "Aqui nada é tocado há meses.",
+    "floaterRestingAllOne": "Não é tocado há meses.",
+    "title": "Summary",
+    "loading": "Generating summary…",
+    "error": "Couldn't generate a summary. Please try again.",
+    "sourceServer": "Server model",
+    "sourceLocal": "Local model",
+    "dateMonthDay": "{{day}} {{month}}",
+    "dateMonthDayYear": "{{day}} {{month}} {{year}}",
+    "dueAnytime": "a qualquer momento",
+    "monthsShort": [
+      "jan",
+      "fev",
+      "mar",
+      "abr",
+      "mai",
+      "jun",
+      "jul",
+      "ago",
+      "set",
+      "out",
+      "nov",
+      "dez"
+    ],
+    "weekNone": "Nenhuma tarefa concluída esta semana ainda.",
+    "weekCleared": "Você concluiu {{count}} tarefas esta semana.",
+    "weekBusiest": "Dia mais movimentado: {{day}} ({{count}}).",
+    "weekOldest": "A mais antiga que enfim concluiu: {{title}}.",
+    "weekdaysShort": [
+      "seg",
+      "ter",
+      "qua",
+      "qui",
+      "sex",
+      "sáb",
+      "dom"
+    ]
+  },
+  "guide": {
+    "title": "Como fazer e dicas",
+    "subtitle": "Tudo o que o T'Day sabe fazer — o óbvio e o escondido.",
+    "searchPlaceholder": "Pesquisar funcionalidades…",
+    "searchAria": "Pesquisar no guia",
+    "whatsNew": "Novidades",
+    "tryIt": "Experimentar",
+    "clearSearch": "Limpar",
+    "noResults": "Sem correspondências. Tente outra palavra.",
+    "results": "{{count}} resultados",
+    "badges": {
+      "hiddenGem": "Joia escondida",
+      "proTip": "Dica de profissional",
+      "new": "Novo",
+      "server": "Modo servidor"
+    },
+    "sections": {
+      "gettingStarted": "Primeiros passos",
+      "captureAndDates": "Captura e datas",
+      "gestures": "Gestos",
+      "organizing": "Organizar",
+      "recurrenceAndReminders": "Recorrência e lembretes",
+      "widgetsAndSurfaces": "Widgets e ecrãs",
+      "modesAndSync": "Modos e sincronização",
+      "integrations": "Integrações",
+      "keyboardShortcuts": "Atalhos de teclado"
+    },
+    "topics": {
+      "root-feeds": {
+        "title": "Agendado e Qualquer altura",
+        "summary": "Dois feeds principais e serenos entre os quais alterna a partir da barra.",
+        "keywords": "agendado, qualquer altura, feed, barra, raiz, navegar, separadores",
+        "body": "O T'Day tem dois feeds irmãos. O Agendado contém as suas tarefas com data para hoje e para os dias seguintes. O Qualquer altura contém os Flutuantes — tarefas sem data. Alterne entre eles pela barra ao fundo e crie uma tarefa a partir de qualquer um."
+      },
+      "default-home-screen": {
+        "title": "Tela inicial padrão",
+        "summary": "Escolha se o T'Day abre em Agendado ou Qualquer altura.",
+        "keywords": "padrão, tela inicial, ecrã inicial, lançamento, agendado, qualquer altura, comportamento, configurações",
+        "body": "As Configurações têm uma secção Comportamento onde escolhe qual feed abre primeiro — Agendado ou Qualquer altura. Isto define apenas o que vê ao abrir a aplicação; a barra continua a permitir alternar entre os dois a qualquer momento."
+      },
+      "create-task": {
+        "title": "Criar uma tarefa",
+        "summary": "Adicione uma tarefa agendada ou um Flutuante sem data em poucos toques.",
+        "keywords": "criar, adicionar, nova, tarefa, mais, botão, compor",
+        "body": "Toque no botão de criar para adicionar uma tarefa. Dê-lhe um título e, se tiver data, uma hora de conclusão. Deixe a data em branco e ela torna-se um Flutuante no seu feed Qualquer altura.",
+        "tip": "Comece a escrever uma data no próprio título — o T'Day lê-a por si. Veja “Escrever a data”."
+      },
+      "nlp-date-syntax": {
+        "title": "Escrever a data",
+        "summary": "Escreva a data no título e o T'Day agenda-a por si.",
+        "keywords": "linguagem natural, data, amanhã, próxima semana, interpretar, rápido, inteligente, nlp, no dispositivo",
+        "body": "Sem seletores. Digite uma data (\"amanhã 15h\"), uma repetição (\"every day\", \"weekly\", \"every weekday\") ou uma prioridade (\"!\", \"!!\" ou \"high\"/\"low\" no fim) direto no título. O T'Day analisa no dispositivo — sem conta nem rede —, destaca a data entendida e preenche horário, recorrência e prioridade.",
+        "example": "dentista terça 15h every weekday !!"
+      },
+      "calendar-views": {
+        "title": "Vistas de calendário",
+        "summary": "Veja as suas tarefas agendadas por mês, semana ou dia.",
+        "keywords": "calendário, mês, semana, dia, agenda, vista, datas",
+        "body": "Abra o calendário para ver as tarefas agendadas dispostas por mês, semana ou dia. Deslize ou use as setas para mudar de período; o botão no canto superior direito leva-o de volta a hoje sem alterar a vista."
+      },
+      "priorities": {
+        "title": "Prioridades",
+        "summary": "Assinale o que importa com Baixa, Média ou Alta.",
+        "keywords": "prioridade, alta, média, baixa, importante, urgente, marcar",
+        "body": "Atribua uma prioridade a uma tarefa para indicar a sua importância. A prioridade aparece como um pequeno ponto de destaque na tarefa e ajuda a ordenar o que merece atenção primeiro."
+      },
+      "pin-task": {
+        "title": "Fixar uma tarefa",
+        "summary": "Mantenha uma tarefa importante no topo da sua lista.",
+        "keywords": "fixar, fixada, prender, topo, importante, manter",
+        "body": "Fixe uma tarefa para a manter no topo do seu feed, acima da ordem normal. Desafixe-a para a deixar voltar ao seu lugar."
+      },
+      "swipe-actions": {
+        "title": "Ações de deslize",
+        "summary": "Deslize a linha de uma tarefa para ações rápidas sem a abrir.",
+        "keywords": "deslizar, gesto, arrastar, concluir, eliminar, rápido, linha",
+        "body": "Deslize a linha de uma tarefa para revelar ações rápidas — concluí-la ou removê-la — sem sequer a abrir.",
+        "tip": "Uma tarefa concluída mostra uma notificação para anular durante alguns segundos, por isso um deslize por engano nunca é definitivo."
+      },
+      "copy-task-text": {
+        "title": "Copiar detalhes da tarefa",
+        "summary": "Copie o título, as notas, a data de vencimento e a prioridade de uma tarefa como texto.",
+        "keywords": "copiar, área de transferência, compartilhar, texto, deslizar",
+        "body": "Deslize uma tarefa e toque em Copiar — ou use o botão Copiar no desktop — para copiar seu título, notas, data de vencimento e prioridade como texto simples, pronto para colar em qualquer lugar.",
+        "tip": "Útil para colar uma tarefa em uma mensagem, e-mail ou outro aplicativo sem precisar redigitá-la."
+      },
+      "long-press-actions": {
+        "title": "Premir uma tarefa sem largar",
+        "summary": "Prima sem largar para mais opções e para começar a reordenar.",
+        "keywords": "premir sem largar, manter premido, menu de contexto, opções, reordenar, arrastar",
+        "body": "Prima sem largar uma tarefa para abrir as suas opções ou para a levantar e arrastar para uma nova posição na lista."
+      },
+      "drag-reorder": {
+        "title": "Reordenar arrastando",
+        "summary": "Arraste as tarefas para a ordem que quiser.",
+        "keywords": "arrastar, reordenar, mover, ordenar, ordem, organizar",
+        "body": "As suas listas mantêm a ordem que lhes dá. Arraste uma tarefa para cima ou para baixo para organizar o seu dia tal como pensa nele."
+      },
+      "swipe-sheet-away": {
+        "title": "Arraste a folha para baixo para fechar",
+        "summary": "Puxe a folha de nova tarefa para baixo para fechá-la.",
+        "keywords": "deslizar, arrastar, puxar, fechar, descartar, folha, cartão, alça, gesto, para baixo",
+        "body": "A pequena barra no topo da folha de nova tarefa indica que o cartão pode ser puxado para baixo. Arraste e ele acompanha o seu dedo; solte depois de cerca de um quarto do caminho e ele fecha, exatamente como se você tocasse na área escurecida atrás dele. Um impulso rápido também conta — o que vale é para onde você estava indo, não onde soltou — e um puxo do qual você desiste volta ao lugar.",
+        "tip": "Se o conteúdo de uma folha rola, arraste-a pelo topo: o meio do cartão pertence à lista."
+      },
+      "sound-and-vibration": {
+        "title": "Som e vibração",
+        "summary": "Desligue o som de conclusão, a vibração ou ambos.",
+        "keywords": "som, silêncio, silenciar, áudio, volume, vibração, vibrar, háptica, zumbido, acessibilidade",
+        "body": "Concluir uma tarefa toca um som curto e, no telemóvel, a app responde aos seus toques e arrastos com uma pequena vibração. As Definições têm um interruptor para cada um — desligue um e tudo o resto fica igual.",
+        "tip": "Os interruptores pertencem a este navegador e não à sua conta, por isso um portátil silencioso e um telemóvel que vibra podem ter cada um a sua própria resposta."
+      },
+      "reduce-motion": {
+        "title": "Reduzir o movimento",
+        "summary": "Desative as animações do T'Day sem mudar o resto do telefone.",
+        "keywords": "movimento, animação, animações, reduzir, acessibilidade, parado, transições, tontura",
+        "body": "As configurações têm um botão Reduzir o movimento. Com ele ligado, o T'Day para de tocar as animações que ele mesmo escreve: uma tarefa é marcada, riscada e sai de uma vez só em vez de em três tempos, a dica de deslizar e o confete não aparecem, e a ilustração do dia vazio simplesmente está lá em vez de subir até o lugar. Cada espera que existia só para cobrir uma delas vai junto — então o app fica mais rápido, não mais lento. Deslizar entre telas e as folhas que sobem são animações do Android e não do T'Day: essas continuam seguindo a configuração de animações do seu telefone.",
+        "tip": "Ele só tira movimento. Se a própria opção de animações do Android já estiver desligada, o T'Day já está parado e o botão diz isso em vez de oferecer desfazer."
+      },
+      "floaters-vs-todos": {
+        "title": "Flutuantes vs tarefas agendadas",
+        "summary": "As tarefas sem data ficam em Qualquer altura; as tarefas com data ficam no feed Agendado.",
+        "keywords": "flutuante, qualquer altura, não agendada, sem data, tarefa, agendada, diferença",
+        "body": "Uma tarefa com data de conclusão aparece no feed Agendado e no calendário. Um Flutuante não tem data — espera calmamente no seu feed Qualquer altura até estar pronto. Use os Flutuantes para trabalho de “um dia destes” que não deve atravancar o hoje.",
+        "tip": "Os Flutuantes nunca aparecem no calendário — esse espaço é apenas para trabalho com data."
+      },
+      "promote-and-float": {
+        "title": "Promover e deixar flutuar",
+        "summary": "Agende um flutuante como tarefa real, ou deixe flutuar uma tarefa parada.",
+        "keywords": "promover, agendar flutuante, rebaixar, deixar flutuar, converter, a qualquer momento, mover, atrasada",
+        "body": "Quando um flutuante estiver pronto para virar trabalho de verdade, use a ação Agendar: escolha um horário e ele passa para o feed Agendado como tarefa com data. O caminho inverso também funciona — uma tarefa atrasada que você vive adiando pode flutuar em silêncio: rebaixe-a e ela volta para Qualquer momento sem data, mantendo título, notas e prioridade.",
+        "tip": "Tarefas recorrentes não podem flutuar — encerre a série primeiro se quiser deixá-la sem data."
+      },
+      "quick-defer": {
+        "title": "Adiamento rápido",
+        "summary": "Um toque move uma tarefa para mais tarde hoje, hoje à noite, amanhã ou a próxima semana.",
+        "keywords": "adiar, postergar, mais tarde, hoje à noite, amanhã, próxima semana, reagendar",
+        "body": "Quando uma tarefa precisa se mover, mas não para longe, pule o seletor de data: a ação Adiar oferece Mais tarde hoje (+3 horas), Hoje à noite (19:00), Amanhã de manhã (09:00) e Na próxima semana (segunda 09:00) com um toque. É a mesma mudança que a folha de edição faria — só que mais rápida.",
+        "tip": "Tarefas recorrentes são adiadas por ocorrência na folha de edição, então o menu de um toque não atrapalha."
+      },
+      "day-done": {
+        "title": "Dia concluído",
+        "summary": "Termine tudo de hoje e a tela Hoje celebra em silêncio.",
+        "keywords": "dia concluído, tudo feito, terminado, tudo completado, hoje vazio",
+        "body": "Quando todas as tarefas agendadas para hoje estão concluídas — e não apenas ausentes — a tela Hoje troca a mensagem \"Sem tarefas\" por um estado tranquilo: um duplo check suave, as palavras \"Tudo feito por hoje\" e a data. Sem sequências, sem pontuações; apenas a pequena recompensa de um dia realmente terminado."
+      },
+      "floater-lists": {
+        "title": "Listas de Flutuantes",
+        "summary": "Agrupe as suas tarefas de Qualquer altura em listas próprias.",
+        "keywords": "lista de flutuantes, qualquer altura, agrupar, lista, categoria, compras, mala",
+        "body": "Organize os Flutuantes em listas separadas — compras, mala, ideias — cada uma com o seu nome e cor, e o seu próprio histórico de concluídas."
+      },
+      "scheduled-lists": {
+        "title": "Listas para tarefas agendadas",
+        "summary": "Organize as tarefas com data em listas com nome e cor.",
+        "keywords": "lista, projeto, agrupar, cor, agendada, categoria",
+        "body": "Atribua uma lista às tarefas agendadas para manter o trabalho relacionado junto. As listas têm nome e cor e podem ser filtradas."
+      },
+      "completed-history": {
+        "title": "Histórico de concluídas",
+        "summary": "Tudo o que terminou, guardado para poder revisitar.",
+        "keywords": "concluídas, feito, histórico, terminadas, arquivo, passado",
+        "body": "As tarefas terminadas não são descartadas — passam para o seu histórico de concluídas, agrupadas por dia, para poder ver o que realmente fez."
+      },
+      "overdue-view": {
+        "title": "Em atraso",
+        "summary": "Um espaço dedicado às tarefas cujo prazo já passou.",
+        "keywords": "em atraso, atrasada, prazo passado, falhada, transitada, acumuladas",
+        "body": "As tarefas cuja hora de conclusão já passou juntam-se na vista Em atraso para que nada escape em silêncio. Reagende-as quando estiver pronto."
+      },
+      "morning-sweep": {
+        "title": "Varredura matinal",
+        "summary": "Faça a triagem das tarefas acumuladas um cartão de cada vez.",
+        "keywords": "varredura, atrasadas, triagem, acumuladas, colocar em dia, pendências, manhã",
+        "body": "Ficar para trás deixa de doer: o botão Varrer na tela de Atrasadas percorre suas tarefas acumuladas um cartão de cada vez — Hoje, Amanhã, Escolher uma data, Tornar flutuante ou Deixar ir. Com pressa? Varrer tudo para hoje move tudo de uma vez, com um único desfazer.",
+        "tip": "Tarefas recorrentes ficam fora da varredura; suas ocorrências são reagendadas pela folha de edição para manter a série intacta."
+      },
+      "search-tasks": {
+        "title": "Pesquisar as suas tarefas",
+        "summary": "Encontre qualquer tarefa por título, nota ou nome da lista.",
+        "keywords": "pesquisar, encontrar, filtrar, procurar, consulta",
+        "body": "Use o campo de pesquisa para filtrar as suas tarefas de imediato por título, descrição ou nome da lista — sem precisar de percorrer tudo."
+      },
+      "recurrence-presets": {
+        "title": "Tarefas repetidas",
+        "summary": "Faça uma tarefa repetir-se diariamente, semanalmente e mais.",
+        "keywords": "repetir, recorrente, recorrência, todos os dias, semanal, mensal, rrule, agenda",
+        "body": "Defina uma tarefa para se repetir e ela volta na sua própria cadência. Escolha entre as predefinições — todos os dias, dias úteis, semana ou mês — e concluir uma ocorrência deixa o resto da série intacto.",
+        "example": "Regar as plantas · todas as semanas"
+      },
+      "reminders": {
+        "title": "Lembretes",
+        "summary": "Receba uma notificação antes de uma tarefa vencer.",
+        "keywords": "lembrete, notificação, alerta, alarme, avisar, antes",
+        "body": "Adicione um lembrete a uma tarefa agendada e o seu dispositivo notifica-o à hora certa. Os lembretes são agendados no seu dispositivo, por isso funcionam mesmo em Modo local.",
+        "tip": "As opções de antecedência do lembrete variam ligeiramente por tarefa — escolha a que lhe dá aviso suficiente."
+      },
+      "reminder-snooze": {
+        "title": "Adiar um lembrete",
+        "summary": "As notificações de lembrete trazem as ações Adiar 1 h e Hoje à noite.",
+        "keywords": "adiar, lembrete, notificação, mais tarde, hoje à noite, soneca",
+        "body": "Quando um lembrete chega em má hora, não é preciso abrir o app: Adiar 1 h entrega o mesmo lembrete uma hora depois, e Hoje à noite move a tarefa para as 19:00 de hoje. Hoje à noite funciona para tarefas avulsas — ocorrências recorrentes são reagendadas no app para manter a série intacta.",
+        "tip": "Adiar só atrasa a notificação; a tarefa mantém o horário original até você movê-la."
+      },
+      "day-ahead": {
+        "title": "Resumo do dia",
+        "summary": "Uma notificação matinal discreta com os números de hoje.",
+        "keywords": "resumo, dia pela frente, manhã, notificação diária, visão geral",
+        "body": "Ative nos Ajustes e escolha um horário: toda manhã uma notificação mostra como está o dia — \"4 tarefas hoje, 2 acumuladas\" — e abre o Hoje, ou vai direto para a Varredura matinal quando há tarefas acumuladas. Totalmente no dispositivo: nada sai do seu telefone.",
+        "tip": "O resumo fica em silêncio nos dias sem tarefas — sem notícias, boas notícias."
+      },
+      "push-notifications": {
+        "title": "Lembretes na web (push)",
+        "summary": "Deixe a aplicação web notificá-lo quando uma tarefa vence, mesmo com ela fechada.",
+        "keywords": "push, notificação, web, navegador, lembrete, vapid, subscrever, vencimento",
+        "body": "Na aplicação web pode ativar as notificações push nas Definições. O seu servidor autoalojado envia então um lembrete quando chega a hora de conclusão de uma tarefa — para que a aplicação web o possa alcançar mesmo com o separador fechado. Pode concluir a tarefa diretamente a partir da notificação."
+      },
+      "notifications": {
+        "title": "Notificações",
+        "summary": "Um único interruptor decide se o T'Day pode interromper você.",
+        "keywords": "notificações, permissão, interruptor, permitir, silenciar, lembrete, resumo, configurações do sistema",
+        "body": "As Configurações têm um único interruptor de Notificações, e tudo o que chega até você passa por ele — os lembretes de tarefas e o resumo do dia seguinte. Desligá-lo esvazia a fila em vez de silenciá-la, então nada chega atrasado quando você liga de novo. A permissão do sistema também é necessária: enquanto as notificações estiverem bloqueadas para o T'Day no seu aparelho, o interruptor continua desligado e oferece abrir as configurações do sistema.",
+        "tip": "As duas metades precisam estar ligadas. Sem a permissão do sistema, o interruptor aparece desligado, não importa como você o deixou aqui."
+      },
+      "home-widget": {
+        "title": "Widget no ecrã principal",
+        "summary": "Veja as tarefas de hoje sem abrir a aplicação.",
+        "keywords": "widget, ecrã principal, relance, hoje, ecrã de bloqueio",
+        "body": "Adicione o widget do T'Day ao seu ecrã principal para dar uma olhada às tarefas de hoje. Tocar no widget abre a aplicação no sítio certo."
+      },
+      "widget-list-selection": {
+        "title": "Escolha uma lista para o seu widget",
+        "summary": "Faça um widget apontar para uma lista específica em vez de todo o feed.",
+        "keywords": "widget, lista, configurar, editar widget, por lista, ecrã principal, ios",
+        "body": "Mantenha premido um widget do T'Day e escolha Editar Widget para definir exatamente que lista ele mostra — qualquer uma das suas listas agendadas ou listas de flutuantes. Uma lista agendada mostra horas de vencimento e assinala o que está atrasado; uma lista de flutuantes mostra uma lista aberta sem horas de vencimento. Se não escolher nada, o widget continua a mostrar o feed completo de Hoje ou de Flutuantes.",
+        "tip": "Adicione vários widgets, cada um apontando para uma lista diferente, para os ver todos ao mesmo tempo no seu ecrã principal."
+      },
+      "list-widgets": {
+        "title": "Widget de lista",
+        "summary": "Um terceiro widget, para uma vista integrada ou a lista que escolher.",
+        "keywords": "widget, tela inicial, lista, configurar, seletor, flutuante, agendada, adicionar",
+        "body": "Ao lado de Hoje e Flutuantes há um widget de lista. Coloque-o e ele pergunta o que mostrar — as vistas integradas Agendadas e Atrasadas, ou qualquer lista agendada ou de tarefas flutuantes. A partir daí mostra só essa escolha, e o seu + adiciona uma tarefa: dentro da lista quando escolheu uma. Coloque outro para outra vista ou lista; cada um mantém a sua.",
+        "tip": "Para trocar um widget de lista para outra lista, toque e segure nele e escolha Editar (Editar widget no iPhone)."
+      },
+      "widget-quick-add": {
+        "title": "Adição rápida pelo widget",
+        "summary": "Comece uma nova tarefa diretamente a partir do widget.",
+        "keywords": "widget, adição rápida, criar, atalho, ecrã principal",
+        "body": "O widget tem um botão de criar, por isso pode registar uma tarefa a partir do ecrã principal sem abrir primeiro a aplicação — e funciona também em Modo local."
+      },
+      "interactive-widgets": {
+        "title": "Concluir a partir do widget",
+        "summary": "Marque tarefas diretamente no widget do ecrã principal.",
+        "keywords": "widget, concluir, marcar, ecrã principal, interativo, toque",
+        "body": "Os widgets de Hoje e Flutuantes agora respondem ao toque: toque no anel no início de qualquer linha para concluir essa tarefa sem abrir a aplicação. A linha desaparece de imediato e a conclusão sincroniza como qualquer outra — os toques feitos offline ficam em fila e aplicam-se assim que voltar a estar online.",
+        "tip": "Tocou sem querer? Abra o histórico de concluídas na aplicação e restaure a tarefa a partir daí."
+      },
+      "today-widget-progress": {
+        "title": "O widget Hoje num relance",
+        "summary": "Veja quanto do dia já fez, o que está atrasado e o que vem a seguir.",
+        "keywords": "widget, hoje, progresso, anel, concluída, atrasada, amanhã, data, tela inicial",
+        "body": "O widget Hoje começa com a data e um anel de progresso: quantas das tarefas de hoje estão concluídas, do total. O que está atrasado fica numa seção própria abaixo das tarefas de hoje, com o dia em que vencia. Quando não há nada para hoje, o widget mostra o que vem no próximo dia com tarefas. Ao marcar uma tarefa, ela fica marcada e riscada por um instante antes de sair.",
+        "tip": "O anel só conta as tarefas de hoje. Concluir algo de outro dia não o preenche."
+      },
+      "share-into-tday": {
+        "title": "Partilhar para o T'Day",
+        "summary": "Envie texto de qualquer aplicação diretamente para uma nova tarefa.",
+        "keywords": "partilhar, folha de partilha, enviar para, capturar, importar, de outra aplicação",
+        "body": "Encontrou algo noutra aplicação? Abra a folha de partilha do sistema e escolha o T'Day. O texto partilhado entra num formulário de nova tarefa — ao partilhar uma página, o título torna-se o nome da tarefa e a ligação fica nas notas. No Android e na aplicação web o formulário abre no momento; no iOS a captura é guardada de imediato e o formulário pré-preenchido aparece na próxima vez que abrir a aplicação.",
+        "tip": "Partilhe um texto com uma data lá dentro e o analisador define o prazo por si."
+      },
+      "android-shortcuts": {
+        "title": "Mosaico de definições rápidas e atalhos",
+        "summary": "Adicione tarefas a partir das definições rápidas ou do toque longo no ícone da aplicação.",
+        "keywords": "definições rápidas, mosaico, atalho, toque longo, ícone da aplicação, adição rápida",
+        "body": "Duas vias rápidas no Android. Adicione o mosaico do T'Day às definições rápidas (edite a grelha e arraste-o) — um toque abre o formulário de nova tarefa a partir de qualquer lugar, mesmo por cima de outra aplicação. O toque longo no ícone da aplicação também oferece atalhos: Nova tarefa, Hoje e Flutuantes levam-no diretamente ao destino.",
+        "tip": "Os atalhos podem ser arrastados para o ecrã principal como ícones independentes — um botão dedicado de nova tarefa num só toque."
+      },
+      "carplay": {
+        "title": "O T'Day no CarPlay",
+        "summary": "Veja e registe tarefas em segurança enquanto conduz.",
+        "keywords": "carplay, carro, condução, voz, apple, mãos livres",
+        "body": "No CarPlay, o T'Day mostra uma lista focada e fácil de ver, feita para o carro, para que possa ver o que vem a seguir ou adicionar uma tarefa por voz sem pegar no telemóvel."
+      },
+      "android-car": {
+        "title": "Ecrã de carro do T'Day",
+        "summary": "Um ecrã simplificado na aplicação, feito para o carro.",
+        "keywords": "carro, condução, android, voz, mãos livres, ecrã",
+        "body": "O T'Day inclui um ecrã de carro simplificado com alvos grandes e captura por voz, para que possa adicionar uma tarefa com o mínimo de esforço enquanto está em movimento."
+      },
+      "local-mode": {
+        "title": "Modo local",
+        "summary": "Use o T'Day totalmente offline, sem servidor nem conta.",
+        "keywords": "modo local, offline, privado, sem conta, sem servidor, no dispositivo",
+        "body": "O Modo local mantém tudo no seu dispositivo — sem início de sessão, sem servidor, sem envios. É uma forma de primeira classe de usar o T'Day em privado, e os seus dados locais nunca são enviados para lado nenhum por conta própria. Num navegador vive no armazenamento desse navegador, por isso limpar os cookies e os dados do site limpa também o espaço de trabalho — exporte-o antes se quiser mantê-lo. Se você ativar os relatórios de falhas, apenas um breve relatório técnico é enviado quando algo falha, nunca as suas tarefas ou listas.",
+        "tip": "As funcionalidades exclusivas do servidor aparecem aqui com um selo “Modo servidor” para saber o que muda se iniciar sessão."
+      },
+      "server-mode": {
+        "title": "Modo servidor",
+        "summary": "Sincronize entre dispositivos através do seu próprio servidor privado.",
+        "keywords": "modo servidor, sincronização, autoalojado, conta, iniciar sessão, dispositivos, tempo real",
+        "body": "Inicie sessão no seu servidor autoalojado para sincronizar tarefas entre dispositivos em tempo real. As alterações acontecem de imediato no seu dispositivo e são reproduzidas no servidor, por isso a aplicação mantém-se rápida mesmo com uma ligação instável."
+      },
+      "offline-sync": {
+        "title": "Sincronização offline",
+        "summary": "Continue a trabalhar offline; as alterações são reproduzidas ao reconectar.",
+        "keywords": "offline, sincronização, pendente, fila, reproduzir, ligação, conflito",
+        "body": "Em Modo servidor, as suas alterações são guardadas primeiro localmente e colocadas em fila quando está offline. Assim que reconectar, o T'Day reproduz-nas no servidor por ordem."
+      },
+      "export-your-data": {
+        "title": "Exporte os seus dados",
+        "summary": "Descarregue tudo num ficheiro portátil — e traga-o de volta quando quiser.",
+        "keywords": "exportar, importar, descarregar, cópia de segurança, os meus dados, portátil, restaurar, migrar",
+        "body": "Nas Definições pode descarregar toda a sua conta — tarefas, listas, histórico de concluídas e preferências — como um único ficheiro JSON. Importe-o para outro T'Day (um servidor ou um dispositivo em Modo local) e tudo entra como itens novos: a importação adiciona sempre e nunca substitui, por isso não perde nada do que já tem. Num servidor, as descrições são desencriptadas no ficheiro para que continue legível mesmo que mude para um servidor com outra chave.",
+        "tip": "O ficheiro é JSON simples e legível — guarde uma cópia como cópia de segurança pessoal."
+      },
+      "local-to-server-migration": {
+        "title": "Passar deste dispositivo para um servidor",
+        "summary": "Leve as tarefas do dispositivo consigo ao mudar para o Modo servidor.",
+        "keywords": "migração, local para servidor, mover dados, mudar de modo, carregar, iniciar sessão, transferir",
+        "body": "Começou no Modo local e depois configurou um servidor? Nada é carregado por conta própria. Para mover os seus dados: exporte-os primeiro nas Definições, inicie sessão no seu servidor e importe aí o ficheiro. Tarefas, listas e histórico transferem-se num passo deliberado — escolhe o momento, e os dados no dispositivo ficam intactos até lá.",
+        "tip": "Depois de importar, guarde o ficheiro exportado até confirmar que tudo chegou — assim também serve de cópia de segurança."
+      },
+      "crash-reports": {
+        "title": "Relatórios de falhas e problemas",
+        "summary": "Desativado por padrão. Quem decide depende da plataforma.",
+        "keywords": "falha, fechamento inesperado, travamento, erro, relatório, privacidade, diagnóstico, telemetria, memória, análise de uso, crash, sentry, anr, error, report, privacy, diagnostics, telemetry, hang, memory, analytics",
+        "body": "Os relatórios de falhas e problemas são opcionais e vêm desativados por padrão. Quem decide muda conforme a plataforma: na aplicação web, uma única resposta de um administrador cobre todo o servidor — o site, os erros do próprio servidor e todas as pessoas que o usam — e nenhum utilizador individual é questionado. No Android e no iOS, cada pessoa é questionada no fluxo de início de sessão, por isso a resposta é por dispositivo e a pergunta volta a cada início de sessão. Funciona como o Crashlytics: existe para corrigir bugs, não para medir como usa a aplicação. Enquanto tudo funciona normalmente, não há análise de uso, rastreamento de sessões nem monitorização de desempenho no seu dispositivo.",
+        "body2": "Um relatório contém a versão do app, o modelo do seu dispositivo e a versão do sistema operacional (ou o navegador e a versão), o erro e o ponto do código onde ele ocorreu, algumas etapas rotuladas que antecederam o erro, nomes de telas ou de rotas da API sem nenhum ID, códigos de status e, nos dispositivos móveis, condições aproximadas do dispositivo, como memória livre, nível de bateria e se você estava online. Também inclui a diferença do seu fuso horário (por exemplo, UTC+2) e o idioma, porque as datas são essenciais em um planejador de tarefas.",
+        "body3": "O relatório nunca contém: seu nome, nome de usuário, e-mail ou qualquer dado da conta; seu endereço IP ou localização; o endereço do seu servidor; títulos e conteúdos de tarefas, listas ou notas; o conteúdo do seu banco de dados; senhas, cookies ou tokens; capturas de tela ou gravações. As mensagens de erro têm endereços, identificadores e texto entre aspas removidos no seu dispositivo antes do envio, da melhor forma possível. Os relatórios não carregam ID de usuário, por isso não podem ser rastreados até você nem excluídos por pessoa.",
+        "body4": "Os relatórios só são enviados quando algo falha, e apenas se estiverem ativados para essa plataforma: na aplicação web, depois de um administrador os ativar para o servidor; no telemóvel, depois de dizer sim no dispositivo. Se algo falhar com os relatórios desativados, nada é guardado nem colocado em fila, e ativá-los mais tarde não envia falhas anteriores. O que conta como falha depende da plataforma: o Android relata fechamentos inesperados, travamentos e falhas por falta de memória; o iOS relata fechamentos inesperados, travamentos e o sistema encerrar a aplicação por uso excessivo de memória; a aplicação web relata apenas erros inesperados. O T'Day não deteta fugas de memória.",
+        "body5": "Os relatórios vão para o mantenedor do T'Day através do Sentry, um serviço de relatórios de falhas. Ficam guardados 30 dias e são usados apenas para corrigir bugs, nunca vendidos nem partilhados para publicidade. São enviados diretamente ao Sentry, não pelo seu servidor. O Sentry vê o endereço de rede de qualquer ligação, como qualquer serviço online, mas está configurado para não o armazenar, e a aplicação web também informa ao Sentry de que site veio o relatório. Se tem o seu próprio servidor, a mesma resposta do administrador cobre também os relatórios de erro do próprio servidor, além de tempos de uma pequena amostra de pedidos; isso nunca inclui as suas tarefas. Versões sem um ponto de envio de relatórios, como as que compila você mesmo, não mostram esta definição.",
+        "step0": "Abra as Configurações.",
+        "step1": "Na aplicação web, um administrador desativa «Relatórios de erro do servidor» em Privacidade; no telemóvel, é você que desativa «Relatórios de falhas e problemas».",
+        "step2": "Os relatórios param imediatamente, e tudo o que estava aguardando envio é excluído.",
+        "tip": "Dizer não não custa nada. A resposta pode ser alterada a qualquer momento em Definições → Privacidade — por um administrador na web, por você no telemóvel. Detalhes técnicos: docs/TELEMETRY.md no repositório do T'Day."
+      },
+      "in-app-update": {
+        "title": "Atualizações na aplicação",
+        "summary": "Instale a versão mais recente do T'Day a partir da própria aplicação.",
+        "keywords": "atualização, atualizar, versão, instalar, apk, versão mais recente",
+        "body": "Quando há uma nova versão disponível, o T'Day pode descarregá-la e instalá-la por si a partir do ecrã Versão mais recente, para se manter atualizado sem procurar um ficheiro."
+      },
+      "api-key-homarr": {
+        "title": "Chave de API e Homarr",
+        "summary": "Mostre as suas tarefas num painel com uma chave de API pessoal.",
+        "keywords": "chave de api, homarr, painel, integração, token, widget, homelab",
+        "body": "Gere uma chave de API pessoal nas Configurações para mostrar suas tarefas em um painel como o Homarr. Escolha uma chave somente leitura para painéis, assim ela nunca poderá alterar seus dados; dê um nome para diferenciar as chaves e mantenha-a privada. Você pode ter várias chaves e revogar cada uma separadamente.",
+        "step0": "Abra as Definições e encontre o cartão da chave de API.",
+        "step1": "Escolha o escopo somente leitura para painéis, gere a chave e copie-a — ela é exibida apenas uma vez.",
+        "step2": "Cole-a no widget do T'Day do seu painel."
+      },
+      "ai-summary": {
+        "title": "Resumos de tarefas",
+        "summary": "Uma leitura breve e serena do seu dia — com IA local opcional.",
+        "keywords": "resumo, ia, ollama, panorama, síntese, local, privado",
+        "body": "O T'Day pode resumir o seu dia numa frase ou duas. Com um modelo Ollama local, a leitura é natural; sem ele, recorre a um resumo caloroso e determinístico — de qualquer forma, nada sai do seu servidor.",
+        "tip": "O resumo nunca depende de um serviço de IA na nuvem — é local ou nada."
+      },
+      "keyboard-submit": {
+        "title": "Guardar com o teclado",
+        "summary": "Guarde uma tarefa sem tocar no rato.",
+        "keywords": "teclado, atalho, guardar, enter, gravar, tecla de atalho",
+        "body": "Na aplicação web pode submeter o formulário de tarefa diretamente pelo teclado, para que a captura rápida nunca interrompa o seu ritmo.",
+        "kbd": "Ctrl / ⌘ + Enter"
+      },
+      "keyboard-shortcuts": {
+        "title": "Atalhos de teclado",
+        "summary": "Controle a aplicação web pelo teclado: adição rápida, paleta, resumo.",
+        "keywords": "teclado, atalho, tecla rápida, paleta de comandos, cmd+k, adição rápida",
+        "body": "A aplicação web tem uma camada global de teclado. Prima N em qualquer lugar para criar uma tarefa, Ctrl / ⌘ + K para abrir a paleta de comandos — escreva para saltar para qualquer vista ou lista, ou executar uma ação — e ? para ver o resumo de atalhos. As teclas são ignoradas enquanto escreve num campo.",
+        "tip": "Na paleta, as setas movem a seleção e Enter executa-a.",
+        "kbd": "N",
+        "kbd2": "Ctrl / ⌘ + K",
+        "kbd3": "?"
+      },
+      "device-calendar-sync": {
+        "title": "Tarefas no calendário do aparelho",
+        "summary": "Copie suas tarefas com data para um calendário T'Day no seu celular.",
+        "keywords": "calendário, calendário do aparelho, sincronização, google agenda, calendário apple, eventkit, calendário do celular, cópia",
+        "body": "Ao ativar, toda tarefa com data é copiada para um calendário chamado T'Day no seu celular, junto dos seus outros calendários. Tarefas Anytime ficam de fora, porque não têm data. É de mão única: o T'Day escreve nesse calendário, então edições feitas por lá são substituídas na próxima vez que suas tarefas mudarem.",
+        "step0": "Em Configurações, ative “Adicionar tarefas agendadas ao meu calendário”.",
+        "step1": "Permita o acesso ao calendário quando o celular pedir.",
+        "step2": "Abra seu app de calendário — suas tarefas com data estão no calendário T'Day."
+      },
+      "unifiedpush": {
+        "title": "UnifiedPush (Android)",
+        "summary": "Push do servidor sem Google, pelo seu distribuidor.",
+        "keywords": "unifiedpush, ntfy, push, notificações, auto-hospedado, distribuidor, fcm",
+        "body": "No Modo Servidor, o T'Day entrega as notificações do servidor via UnifiedPush em vez do FCM do Google — mantendo seus dados no seu servidor e no seu distribuidor. Não há nada para ativar: instale um app distribuidor (como o ntfy) e o T'Day se registra sozinho. Os lembretes locais continuam funcionando.",
+        "step0": "Instale um distribuidor UnifiedPush como o ntfy na sua loja de apps.",
+        "step1": "Abra o T'Day: ele encontra o distribuidor e se registra sozinho. Se você tiver dois ou mais instalados, Configurações → Lembretes pergunta qual usar.",
+        "step2": "Para parar o push do servidor, desinstale o distribuidor ou saia da conta; os lembretes locais não mudam."
+      },
+      "repeat-suggestions": {
+        "title": "Sugestões de repetição",
+        "summary": "O T'Day nota tarefas concluídas num ritmo e sugere repeti-las.",
+        "keywords": "repetir, sugestão, recorrente, ritmo, hábito, padrão, automático",
+        "body": "Quando você conclui a mesma tarefa num ritmo constante — regar as plantas toda semana, pagar o aluguel todo mês — o T'Day percebe e oferece um chip de um toque para repeti-la. Ele lê apenas seu histórico concluído no dispositivo; nada sai dele.",
+        "tip": "Não tem interesse? Toque no ✕ e esse título não perguntará de novo."
+      },
+      "week-in-review": {
+        "title": "Resumo da semana",
+        "summary": "Um resumo tranquilo de domingo do que você concluiu.",
+        "keywords": "semana, resumo, recap, domingo, concluído, retrospectiva",
+        "body": "Aos domingos, o T'Day mostra um breve resumo no seu feed Hoje: quantas tarefas você concluiu nesta semana, seu dia mais movimentado e a mais antiga que enfim terminou. Vem do seu histórico concluído.",
+        "tip": "Sem clima? Dispense — ele só volta na próxima semana."
+      },
+      "quiet-hours": {
+        "title": "Horas de silêncio",
+        "summary": "Segure os lembretes à noite para nada tocar enquanto você dorme.",
+        "keywords": "silêncio, horas, não perturbe, noite, sono, lembretes, horário",
+        "body": "Defina uma janela — por exemplo 22:00 às 07:00 — e qualquer lembrete que tocaria dentro dela fica retido até o fim. Só no dispositivo; os lembretes locais esperam a manhã.",
+        "tip": "A janela pode cruzar a meia-noite (22:00 → 07:00); o cálculo cuida disso."
+      },
+      "resting-floaters": {
+        "title": "Flutuantes em repouso",
+        "summary": "Tarefas Anytime intocadas desaparecem e descansam, mantendo a lista calma.",
+        "keywords": "repouso, flutuante, anytime, desbotar, envelhecer, inativo, antigo, calma",
+        "body": "Tarefas Anytime que você não toca há um mês desbotam suavemente e, após três meses, se juntam num calmo grupo \"Em repouso\" no fim. Nada é apagado: elas só deixam de pedir atenção.",
+        "tip": "É apenas uma dica visual; um toque acorda um flutuante na hora."
+      },
+      "reusable-lists": {
+        "title": "Listas reutilizáveis",
+        "summary": "Reinicie uma lista para usá-la de novo: mala, tarefas, compras.",
+        "keywords": "reutilizável, reiniciar, lista, flutuante, repetir, modelo",
+        "body": "Marque uma lista Anytime como reutilizável e um Reiniciar aparece. Um toque desmarca todos os itens para refazer a mesma lista, sem recriá-la.",
+        "step0": "Abra uma lista flutuante e ative \"Reutilizável\" nas configurações.",
+        "step1": "Vá marcando os itens como de costume.",
+        "step2": "Quando precisar de novo, toque em Reiniciar para desmarcar tudo."
+      },
+      "brain-dump": {
+        "title": "Despejo mental",
+        "summary": "Esvazie a cabeça numa caixa; o T'Day organiza em tarefas.",
+        "keywords": "despejo mental, capturar, colar, dividir, tarefas, revisar, gtd",
+        "body": "Quando a cabeça está cheia, abra o Despejo mental (⌘K → Despejo mental), cole tudo — um pensamento por linha, marcadores ou \"e depois\" — e o T'Day divide em tarefas candidatas. As datas viram tarefas agendadas; o resto, flutuantes de Anytime. A análise ocorre no seu servidor; nada é inventado.",
+        "step0": "Abra a paleta de comandos (⌘K) e escolha Despejo mental.",
+        "step1": "Cole seus pensamentos e toque em Dividir em tarefas.",
+        "step2": "Desmarque o que não quiser e toque em Adicionar."
+      },
+      "task-steps": {
+        "title": "Etapas",
+        "summary": "Divida uma tarefa numa lista de verificação plana e veja-a a encher.",
+        "keywords": "etapas, lista, subtarefas, divisão, progresso, caixa de seleção, subetapas",
+        "body": "Abra uma tarefa e adicione Etapas para dividi-la numa lista de verificação plana — sem aninhamento nem datas separadas. Um pequeno contador como 2/5 mostra o quanto avançou, e a tarefa inteira continua a ser uma única linha no seu dia. Marque as etapas à medida que avança; quando a tarefa estiver concluída, as suas etapas são mantidas no seu histórico.",
+        "step0": "Abra uma tarefa e adicione a sua primeira etapa em Etapas.",
+        "step1": "Adicione quantas precisar e arraste para reordenar.",
+        "step2": "Marque-as — o contador 2/5 acompanha o seu progresso."
+      },
+      "focus-filters": {
+        "title": "Filtros de foco",
+        "summary": "Deixe um Foco do iOS decidir que listas aparecem no seu feed de Hoje.",
+        "keywords": "foco, filtro, ios, trabalho, pessoal, não incomodar, listas, ocultar, concentrar",
+        "body": "O T'Day integra-se com o Foco do iOS. Escolha um Foco como Trabalho ou Pessoal, selecione que listas ele deve mostrar e, enquanto esse Foco estiver ativo, o seu feed de Hoje e o widget do ecrã principal ocultam discretamente tudo o resto. Desative o Foco e todas as tarefas voltam — nada é eliminado.",
+        "step0": "Abra Definições ▸ Foco no iPhone e escolha um Foco.",
+        "step1": "Adicione um Filtro de Foco e escolha o T'Day, depois selecione as suas listas.",
+        "step2": "Ative o Foco — Hoje e o widget mostram agora apenas essas listas."
+      },
+      "apple-watch": {
+        "title": "Apple Watch",
+        "summary": "As suas tarefas de Hoje no pulso, espelhadas em direto a partir do seu iPhone.",
+        "keywords": "apple watch, relógio, pulso, complicação, watchos, hoje, relance, espelhar",
+        "body": "Instale o T'Day no Apple Watch e as tarefas de hoje seguem consigo no pulso. O Watch espelha a mesma lista de Hoje que o seu iPhone cria — sem início de sessão separado — e uma complicação no mostrador indica quantas tarefas faltam, para que dê uma vista de olhos sem abrir a app. Atualiza-se sempre que o seu iPhone sincroniza.",
+        "step0": "Abra a app Watch no iPhone e instale o T'Day.",
+        "step1": "Adicione a complicação do T'Day ao seu mostrador.",
+        "step2": "Dê uma vista de olhos ao número, ou abra a app para ver a lista completa."
+      },
+      "bulk-actions": {
+        "title": "Ações em massa",
+        "summary": "Selecione várias tarefas de uma vez e trate todas juntas.",
+        "keywords": "massa, seleção múltipla, selecionar tudo, lote, várias, concluir, excluir, prioridade, mover, seleção",
+        "body": "Toque em Selecionar no cabeçalho de uma lista de tarefas para entrar no modo de seleção. Escolha tarefas uma a uma ou toque em Selecionar tudo e aplique uma única ação ao conjunto inteiro: marcá-las como concluídas, mudar a prioridade, movê-las para outra lista ou excluí-las.",
+        "step0": "Abra uma lista de tarefas e toque em Selecionar no cabeçalho.",
+        "step1": "Toque nas tarefas para escolhê-las ou use Selecionar tudo para as que estão na tela.",
+        "step2": "Escolha Concluir, Prioridade, Mover ou Excluir na barra inferior.",
+        "tip": "Excluir pede que você confirme o número exato e ainda deixa um aviso para desfazer. Tarefas repetidas ficam totalmente de fora das ações em massa, para que uma série inteira nunca mude sem querer — abra uma de cada vez para concluir, mover ou excluir."
+      },
+      "list-icons": {
+        "title": "Ícones de lista automáticos",
+        "summary": "Uma lista sem ícone próprio ganha um que combina com o seu nome.",
+        "keywords": "ícone de lista, automático, sugerido, glifo, nome, compras, ginásio, trabalho",
+        "body": "Chame uma lista de Groceries e ela usa um carrinho de compras; Gym recebe um haltere e Work uma pasta. O T'Day só adivinha quando você não escolheu um ícone, e mantém o ícone padrão sempre que o nome não é claro o bastante. Por enquanto os nomes são reconhecidos em inglês.",
+        "tip": "Escolha um ícone nas definições da lista quando quiser: depois de escolhido ele é mantido e nunca é substituído por um palpite."
+      }
+    }
+  },
+  "palette": {
+    "title": "Paleta de comandos",
+    "placeholder": "Escreva um comando ou pesquise…",
+    "empty": "Sem correspondências",
+    "actions": "Ações",
+    "navigation": "Ir para",
+    "lists": "Listas",
+    "newTask": "Nova tarefa",
+    "brainDump": "Despejo mental"
+  },
+  "release": {
+    "loading": "A carregar informações da versão…",
+    "error": "Não foi possível obter as informações da versão. Verifique a sua ligação e tente novamente.",
+    "retry": "Tentar novamente",
+    "statusLatest": "Mais recente",
+    "statusUpdateAvailable": "Atualização disponível",
+    "messageLatest": "Está a usar a versão mais recente",
+    "messageUpdateReady": "A versão {{version}} está pronta para instalar.",
+    "installed": "Instalada",
+    "installedVersion": "Versão instalada",
+    "latest": "Mais recente",
+    "whatsNew": "Novidades da {{version}}",
+    "noNotes": "Não há notas de versão disponíveis para esta versão",
+    "viewOnGithub": "Ver no GitHub",
+    "published": "Publicada a {{date}}",
+    "serverUnavailable": "Indisponível"
+  }
+}

@@ -1,0 +1,59 @@
+FROM node:24-alpine AS frontend
+WORKDIR /web
+# Optional: pass --build-arg GIT_SHA=$(git rev-parse --short HEAD) for build-id
+# traceability (the .git dir isn't copied into this stage). Falls back to a
+# timestamp-only build id otherwise, which is still unique per build.
+ARG GIT_SHA=dev
+ENV GIT_SHA=$GIT_SHA
+# Vite inlines VITE_* at build time, so the DSN has to be present in THIS stage — env_file only
+# applies at runtime, which is why browser Sentry silently reported nothing before.
+ARG VITE_SENTRY_DSN=
+ENV VITE_SENTRY_DSN=$VITE_SENTRY_DSN
+COPY tday-web/package*.json ./
+RUN npm ci
+COPY tday-web/ .
+# The source-map upload token is the one value in this file that must stay secret, so it is a build
+# secret (`--secret id=sentry_auth_token`), never an ARG/ENV: build args land in `docker history`.
+# It is mounted for this single RUN and exported only into its shell. The mount is optional — a
+# build that passes no secret (a plain `docker build`, docker-compose.build.yaml without
+# SENTRY_AUTH_TOKEN set) leaves the variable unset and the Sentry Vite plugin uploads nothing.
+# `RUN --mount` needs BuildKit: the default builder from Docker 23, and the one the Compose v2 plugin
+# that docs/SETUP.md already requires uses. DOCKER_BUILDKIT=0 or an older engine stops at this line.
+RUN --mount=type=secret,id=sentry_auth_token \
+    if [ -s /run/secrets/sentry_auth_token ]; then \
+      export SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token)"; \
+    fi; \
+    npm run build
+
+FROM eclipse-temurin:21-jdk-alpine AS backend
+WORKDIR /project
+COPY gradlew ./
+COPY gradle/wrapper ./gradle/wrapper
+RUN chmod +x gradlew
+COPY docker/settings.gradle.kts settings.gradle.kts
+COPY docker/build.gradle.kts build.gradle.kts
+COPY version.json version.json
+COPY tday-backend/gradle.properties tday-backend/gradle.properties
+COPY tday-backend/build.gradle.kts tday-backend/build.gradle.kts
+COPY tday-backend/settings.gradle.kts tday-backend/settings.gradle.kts
+COPY docker/shared-build.gradle.kts shared/build.gradle.kts
+RUN ./gradlew :tday-backend:dependencies --no-daemon || true
+COPY shared/src shared/src
+COPY tday-backend/src tday-backend/src
+RUN ./gradlew :tday-backend:buildFatJar --no-daemon -x test
+
+FROM eclipse-temurin:21-jre-alpine
+RUN addgroup -S tday && adduser -S tday -G tday
+WORKDIR /app
+COPY --from=backend /project/tday-backend/build/libs/tday-backend-all.jar app.jar
+COPY --from=backend /project/tday-backend/src/main/resources/db/migration /app/migrations
+COPY --from=frontend /web/dist /app/static
+# ARG is scoped to its stage, so the frontend stage's VITE_SENTRY_DSN does not reach this one. The
+# backend needs the browser DSN only for its ingest origin, which it allows in the CSP connect-src
+# (without it the SPA's Sentry requests are blocked). Empty means browser reporting is not built in.
+ARG VITE_SENTRY_DSN=
+ENV TDAY_CLIENT_SENTRY_DSN=$VITE_SENTRY_DSN
+USER tday
+EXPOSE 8080
+ENV STATIC_FILES_DIR=/app/static
+ENTRYPOINT ["java", "-jar", "app.jar"]

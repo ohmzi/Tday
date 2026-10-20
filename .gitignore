@@ -1,0 +1,62 @@
+# dependencies
+**/node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+**/coverage/
+
+# vite
+tday-web/dist/
+
+# production
+/build
+
+# gradle
+.gradle/
+**/build/
+!**/src/**/build/
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files — these hold real secrets (AUTH_SECRET, DATA_ENCRYPTION_KEY, DATABASE_URL).
+# The wildcards matter: a copy like `.env.docker.bak` or `.env.prod` is just as sensitive as
+# the original, and an exact-match rule silently leaves those committable.
+.env
+.env.*
+.env.docker
+.env.docker.*
+.env.local
+*.env.local
+*.env.bak
+*.env.backup
+# ...but keep the placeholder template tracked.
+!.env.example
+!**/.env.example
+
+# typescript
+*.tsbuildinfo
+
+# IDE
+.idea/
+
+# Android
+local.properties
+
+# Kotlin
+.kotlin/
+/android-compose/gradle/gradle-daemon-jvm.properties
+/gradle/gradle-daemon-jvm.properties

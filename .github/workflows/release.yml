@@ -1,0 +1,606 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: release-master
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: ghcr.io/ohmzi/tday
+
+# The release commit is pushed with a deploy key, and unlike GITHUB_TOKEN a
+# deploy-key push DOES trigger workflows — so this guard is what stops the
+# release from re-firing itself in a loop. Both jobs must carry it.
+jobs:
+  lint-and-test:
+    if: ${{ !contains(github.event.head_commit.message, '[skip release]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tday-web/package-lock.json
+
+      - name: Check version mirrors
+        run: node scripts/version.mjs check
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: tday-web
+
+      - name: Lint frontend
+        run: npm run lint
+        working-directory: tday-web
+
+      - name: Run frontend tests
+        run: npm run test
+        working-directory: tday-web
+        env:
+          TZ: UTC
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Run backend tests
+        run: ./gradlew :tday-backend:test --no-daemon
+
+      - name: Run shared module tests
+        run: ./gradlew :shared:jvmTest --no-daemon
+
+      - name: Verify guide content is not stale
+        run: ./gradlew :shared:verifyGuideContent --no-daemon
+
+      - name: Verify motion tokens are not stale
+        run: ./gradlew :shared:verifyMotionTokens --no-daemon
+
+      - name: Verify the list icon table is not stale
+        run: ./gradlew :shared:verifyListIconTable --no-daemon
+
+      # `build-and-release` hangs off this job, so an Android regression caught here stops the
+      # APK from being published rather than shipping inside it. PRs are gated earlier and
+      # separately by `android.yml`; this is the last line, for whatever a merge commit
+      # introduces that neither side of it carried.
+      #
+      # Addressed through the root Gradle build rather than `cd android-compose`, unlike
+      # `android.yml`. Two reasons, both specific to this file: the APK below is built from the
+      # root build (`:android-compose:app:assembleRelease`), so this tests the same build that
+      # ships; and the root build is already configured in this job for the two Gradle steps
+      # above, so this reuses it instead of standing up a second Gradle root. Both roots run
+      # the same 365 tests.
+      #
+      # The SDK comes from the runner's ANDROID_HOME — no `local.properties` exists in CI.
+      - name: Run Android unit tests
+        run: ./gradlew :android-compose:app:testDebugUnitTest --no-daemon
+
+  # Step order in this job is load-bearing, not cosmetic. Everything that can
+  # fail is built first; nothing leaves the runner until the release commit is
+  # on master; and the Docker image is pushed last, after the GitHub release
+  # and its APK exist.
+  #
+  # Why that order: the backend runs `exact` compatibility with
+  # `updateRequired: true`, so a deployed server rejects every client whose
+  # X-Tday-App-Version differs from its own. An image published without a
+  # matching release is therefore unrecoverable from the user's side — the
+  # in-app updater polls the latest release for an `.apk`, and there is nothing
+  # to download. The mirror-image failure (release exists, image does not) is
+  # benign: the running server keeps serving the previous version, and the fix
+  # is a re-run rather than a device-side action.
+  build-and-release:
+    if: ${{ !contains(github.event.head_commit.message, '[skip release]') }}
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    steps:
+      # The write deploy key is the only bypass actor on the master ruleset, so
+      # it is what lets this job push the release commit. checkout wires it into
+      # git and switches the remote to SSH, so every push below uses it.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # Which of the three client DSNs and the upload token exist decides whether this
+      # release can receive crash reports at all. None of them fails the release —
+      # reporting is opt-in and optional — but a missing one would otherwise ship
+      # silently inert: no consent card on that client, or stacks that cannot be
+      # read. So say so on the run. Only emptiness is tested; nothing is printed.
+      # The iOS DSN is checked in ios-testflight.yml, which owns that build.
+      - name: Check the crash-report inputs
+        env:
+          SENTRY_DSN_ANDROID: ${{ secrets.SENTRY_DSN_ANDROID }}
+          SENTRY_DSN_WEB: ${{ secrets.SENTRY_DSN_WEB }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          for name in SENTRY_DSN_ANDROID SENTRY_DSN_WEB; do
+            if [ -z "${!name}" ]; then
+              echo "::warning::${name} is not set, so this release ships with crash reporting unavailable on that client: no consent card, and nothing is ever sent."
+            fi
+          done
+
+          if [ -z "$SENTRY_AUTH_TOKEN" ]; then
+            echo "::warning::SENTRY_AUTH_TOKEN is not set, so this release uploads no Android R8 mapping and no web source maps: crash reports from it will not be deobfuscated or un-minified, and the web source maps ship publicly."
+          fi
+
+      # Every merge into master ships a release, even when nobody touched
+      # version.json. If the manifest version is already tagged we bump the
+      # patch (which also increments ios.buildNumber and re-syncs every mirror);
+      # a version a PR deliberately raised is used as-is.
+      - name: Resolve release version
+        id: version
+        run: |
+          git fetch --tags --force
+
+          VERSION=$(node -p "require('./version.json').version")
+          BUMPED=false
+
+          for _ in $(seq 1 50); do
+            git rev-parse -q --verify "refs/tags/v${VERSION}" >/dev/null || break
+            node scripts/version.mjs bump patch
+            VERSION=$(node -p "require('./version.json').version")
+            BUMPED=true
+          done
+
+          if git rev-parse -q --verify "refs/tags/v${VERSION}" >/dev/null; then
+            echo "::error::Could not find an untagged version after 50 patch bumps."
+            exit 1
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "bumped=${BUMPED}" >> "$GITHUB_OUTPUT"
+          echo "Releasing v${VERSION} (auto-bumped: ${BUMPED})"
+
+      # The guide artifacts embed `currentVersion` from version.json, so a bump
+      # leaves them stale and the next PR's verifyGuideContent gate fails.
+      # Regenerate them here so they ride along in the release commit.
+      - name: Regenerate guide content for the new version
+        run: ./gradlew :shared:exportGuideContent --no-daemon
+
+      # The motion artifacts take no input from version.json, so unlike the guide
+      # ones a bump cannot stale them and this is normally a no-op. It runs anyway
+      # so the two codegens are operated identically — the failure mode being
+      # avoided is someone adding a version-dependent field later and this step
+      # being the one nobody remembered to add.
+      - name: Regenerate motion tokens
+        run: ./gradlew :shared:exportMotionTokens --no-daemon
+
+      # Same reasoning as the motion step above, and the same no-op in the normal case:
+      # the list icon table takes no input from version.json either. It runs so that the
+      # three codegens are operated identically rather than two of them being remembered.
+      - name: Regenerate the list icon table
+        run: ./gradlew :shared:exportListIconTable --no-daemon
+
+      # The repo still carries legacy v1.8.x-v1.44.0 tags from an earlier
+      # versioning era, so ask GitHub for the previous release rather than
+      # letting `git describe` pick one of those up.
+      - name: Resolve previous release
+        id: previous
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PREVIOUS=$(gh release view --json tagName -q .tagName 2>/dev/null || echo "")
+          echo "tag=${PREVIOUS}" >> "$GITHUB_OUTPUT"
+          echo "Previous release: ${PREVIOUS:-<none>}"
+
+      - name: Generate release metadata
+        run: |
+          node ./scripts/generate-release-metadata.mjs \
+            --version "${{ steps.version.outputs.version }}" \
+            --previous "${{ steps.previous.outputs.tag }}" \
+            --current-output ./tday-web/public/release/current-release.json \
+            --latest-output ./tday-web/public/release/latest-changes.json \
+            --body-output ./body.md \
+            --repository "${{ github.repository }}"
+
+      - name: Commit release bump locally
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            version.json \
+            tday-web/package.json \
+            tday-web/package-lock.json \
+            tday-web/public/release/current-release.json \
+            tday-web/public/release/latest-changes.json \
+            ios-swiftUI/Tday/Info.plist \
+            ios-swiftUI/project.yml \
+            ios-swiftUI/TdayApp.xcodeproj/project.pbxproj \
+            .env.example \
+            tday-backend/.env.example \
+            tday-web/src/generated/guide-structure.json \
+            tday-web/tests/fixtures/guide-search-vectors.json \
+            tday-web/tests/fixtures/guide-icons.json \
+            shared/src/commonMain/kotlin/com/ohmz/tday/shared/guide/GuideStringsGenerated.kt \
+            shared/src/commonMain/kotlin/com/ohmz/tday/shared/summary/SummaryStringBundlesGenerated.kt \
+            ios-swiftUI/Tday/Resources/Guide \
+            android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayMotionTokensGenerated.kt \
+            ios-swiftUI/Tday/UI/Theme/TdayMotionGenerated.swift \
+            tday-web/src/generated/motion-tokens.css \
+            tday-web/src/generated/motion-tokens.ts
+
+          if git diff --cached --quiet; then
+            echo "::error::Release commit is empty — expected at least regenerated release metadata."
+            exit 1
+          fi
+
+          git commit -m "chore(release): ${{ steps.version.outputs.tag }} [skip release]"
+
+      # ────────────────────────────────────────────
+      #  Android APK
+      # ────────────────────────────────────────────
+      - name: Accept Android SDK licenses
+        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
+
+      # T'Day updates itself in place through the system installer, so the
+      # signing identity has to stay stable forever: an APK signed with a
+      # different key makes PackageInstaller return STATUS_FAILURE_CONFLICT and
+      # the only remedy is asking every user to uninstall and reinstall (it has
+      # happened once — see docs/DEPLOYMENT.md § Android Signing).
+      #
+      # This step keeps the historical resolution order — RELEASE_* secrets
+      # first, legacy TWA_* second, alias derived from the keystore when
+      # RELEASE_KEY_ALIAS is unset — but says out loud which source actually
+      # supplied each value, refuses a half-migrated mix, and fails with the
+      # reason instead of a bare "could not determine".
+      - name: Resolve Android signing credentials
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          TWA_KEYSTORE_BASE64: ${{ secrets.TWA_KEYSTORE_BASE64 }}
+          TWA_STORE_PASSWORD: ${{ secrets.TWA_STORE_PASSWORD }}
+          TWA_KEY_PASSWORD: ${{ secrets.TWA_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          # The keystore, the store password and the key password must all come
+          # from the same generation of secrets. A mix is always a half-finished
+          # migration, and it only surfaces as an opaque keytool "password was
+          # incorrect" — so reject it up front instead.
+          modern=0
+          for name in RELEASE_KEYSTORE_BASE64 RELEASE_KEYSTORE_PASSWORD RELEASE_KEY_PASSWORD; do
+            if [ -n "${!name}" ]; then
+              modern=$((modern + 1))
+            fi
+          done
+
+          if [ "$modern" -eq 3 ]; then
+            KEYSTORE_SECRET="RELEASE_KEYSTORE_BASE64"
+            STORE_PASSWORD_SECRET="RELEASE_KEYSTORE_PASSWORD"
+            KEY_PASSWORD_SECRET="RELEASE_KEY_PASSWORD"
+            KEYSTORE_BASE64="$RELEASE_KEYSTORE_BASE64"
+            STORE_PASSWORD="$RELEASE_KEYSTORE_PASSWORD"
+          elif [ "$modern" -eq 0 ]; then
+            KEYSTORE_SECRET="TWA_KEYSTORE_BASE64"
+            STORE_PASSWORD_SECRET="TWA_STORE_PASSWORD"
+            KEY_PASSWORD_SECRET="TWA_KEY_PASSWORD"
+            KEYSTORE_BASE64="$TWA_KEYSTORE_BASE64"
+            STORE_PASSWORD="$TWA_STORE_PASSWORD"
+
+            legacy=0
+            legacy_missing=""
+            for name in TWA_KEYSTORE_BASE64 TWA_STORE_PASSWORD TWA_KEY_PASSWORD; do
+              if [ -n "${!name}" ]; then
+                legacy=$((legacy + 1))
+              else
+                legacy_missing="${legacy_missing}${name} "
+              fi
+            done
+
+            if [ "$legacy" -eq 0 ]; then
+              echo "::error::No Android signing secrets are configured, so this release would be unsigned or debug-signed. Set RELEASE_KEYSTORE_BASE64, RELEASE_KEYSTORE_PASSWORD, RELEASE_KEY_PASSWORD and RELEASE_KEY_ALIAS from T'Day's existing release keystore — see docs/DEPLOYMENT.md § Android Signing."
+              exit 1
+            fi
+
+            if [ -n "$legacy_missing" ]; then
+              echo "::error::The legacy TWA_* signing secrets are incomplete: ${legacy_missing% } is missing. Restore it, or move to RELEASE_KEYSTORE_BASE64 / RELEASE_KEYSTORE_PASSWORD / RELEASE_KEY_PASSWORD / RELEASE_KEY_ALIAS — see docs/DEPLOYMENT.md § Android Signing."
+              exit 1
+            fi
+
+            echo "::warning::Android release signing fell back to the legacy TWA_* secrets because no RELEASE_* signing secrets are configured. Migrate to RELEASE_KEYSTORE_BASE64 / RELEASE_KEYSTORE_PASSWORD / RELEASE_KEY_PASSWORD / RELEASE_KEY_ALIAS (same keystore, same alias) — see docs/DEPLOYMENT.md § Android Signing."
+          else
+            partial=""
+            for name in RELEASE_KEYSTORE_BASE64 RELEASE_KEYSTORE_PASSWORD RELEASE_KEY_PASSWORD; do
+              if [ -z "${!name}" ]; then
+                partial="${partial}${name} "
+              fi
+            done
+
+            echo "::error::Android signing secrets are half-migrated: ${modern} of 3 RELEASE_* secrets are set, and these are not — ${partial% }. Set all three, or none of them to keep using the legacy TWA_* secrets. The keystore and its passwords must come from the same source."
+            exit 1
+          fi
+
+          echo "Android signing secrets: keystore from ${KEYSTORE_SECRET}, store password from ${STORE_PASSWORD_SECRET}, key password from ${KEY_PASSWORD_SECRET}"
+
+          if ! echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/release.keystore 2>/tmp/keystore-decode.err; then
+            echo "::error::The ${KEYSTORE_SECRET} secret is not valid base64. base64 reported:"
+            sed 's/^/  /' /tmp/keystore-decode.err
+            exit 1
+          fi
+
+          if [ ! -s /tmp/release.keystore ]; then
+            echo "::error::The ${KEYSTORE_SECRET} secret decoded to an empty file."
+            exit 1
+          fi
+
+          echo "Decoded keystore: $(stat -c %s /tmp/release.keystore) bytes"
+
+          if [ -n "$RELEASE_KEY_ALIAS" ]; then
+            ALIAS="$RELEASE_KEY_ALIAS"
+            ALIAS_SOURCE="RELEASE_KEY_ALIAS secret"
+          else
+            echo "::warning::RELEASE_KEY_ALIAS is not configured, so the signing alias is being derived by parsing keytool -list output. That derivation breaks if a second alias is added to the keystore or keytool changes its output format — pin the alias with a secret."
+
+            # keytool reports failures on stdout, not stderr, so echo both.
+            if ! keytool -list -keystore /tmp/release.keystore -storepass "$STORE_PASSWORD" > /tmp/keytool-list.txt 2>/tmp/keytool-list.err; then
+              echo "::error::keytool could not read the ${KEYSTORE_SECRET} keystore using the ${STORE_PASSWORD_SECRET} password. keytool reported:"
+              cat /tmp/keytool-list.txt /tmp/keytool-list.err | sed 's/^/  /'
+              exit 1
+            fi
+
+            mapfile -t KEY_ALIASES < <(awk -F, '/^[^[:space:]][^,]*,[[:space:]]/{print $1}' /tmp/keytool-list.txt)
+
+            if [ "${#KEY_ALIASES[@]}" -eq 0 ]; then
+              echo "::error::The release keystore opened, but no alias could be parsed out of keytool's output — most likely its format changed. Set RELEASE_KEY_ALIAS to the alias T'Day has always signed with. keytool -list printed:"
+              sed 's/^/  /' /tmp/keytool-list.txt
+              exit 1
+            fi
+
+            if [ "${#KEY_ALIASES[@]}" -gt 1 ]; then
+              echo "::error::The release keystore holds ${#KEY_ALIASES[@]} aliases (${KEY_ALIASES[*]}) and CI will not guess which one signs T'Day — a wrong guess ships an APK that cannot update existing installs. Set RELEASE_KEY_ALIAS to the alias whose certificate matches the published APKs."
+              exit 1
+            fi
+
+            ALIAS="${KEY_ALIASES[0]}"
+            ALIAS_SOURCE="derived from the keystore (single alias)"
+          fi
+
+          echo "Android signing alias: ${ALIAS} (source: ${ALIAS_SOURCE})"
+
+          echo "RELEASE_KEYSTORE_PATH=/tmp/release.keystore" >> "$GITHUB_ENV"
+          echo "RELEASE_KEY_ALIAS=${ALIAS}" >> "$GITHUB_ENV"
+
+      # These fall back exactly like the keystore above. The resolve step has
+      # already guaranteed the RELEASE_* trio is all-set or all-unset, so these
+      # two expressions cannot pick a different generation than the keystore
+      # did. They stay inline rather than going through GITHUB_ENV so the
+      # passwords are only visible to this one step.
+      #
+      # The Sentry pair follows the same rule. SENTRY_DSN is baked into
+      # BuildConfig.SENTRY_DSN; it is a public identifier, and the in-app consent
+      # gate — not its secrecy — decides whether it is ever used. SENTRY_AUTH_TOKEN
+      # (upload scope only) lets the Sentry Gradle plugin upload the R8 mapping so
+      # release stacks deobfuscate; the build skips the upload when it is blank.
+      - name: Build Android APK
+        env:
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD || secrets.TWA_STORE_PASSWORD }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD || secrets.TWA_KEY_PASSWORD }}
+          TDAY_PROBE_ENCRYPTION_KEY: ${{ secrets.TDAY_PROBE_ENCRYPTION_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_ANDROID }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: ./gradlew :android-compose:app:assembleRelease --no-daemon
+
+      - name: Prepare APK for release
+        id: apk
+        run: |
+          APK=$(find android-compose/app/build/outputs/apk/release -name "*.apk" | head -1)
+          if [ -z "$APK" ]; then
+            echo "::error::No APK found in android-compose/app/build/outputs/apk/release — the release must ship one."
+            exit 1
+          fi
+
+          DEST="tday-${{ steps.version.outputs.tag }}.apk"
+          cp "$APK" "$DEST"
+          echo "file=$DEST" >> "$GITHUB_OUTPUT"
+          echo "Found APK: $APK → $DEST"
+
+      # Records the signing identity of every release in its own log, so a
+      # change of key is visible immediately instead of on the first user who
+      # cannot install the update. Certificate digests are public information —
+      # they are the same values served in /.well-known/assetlinks.json.
+      # Set the ANDROID_SIGNING_CERT_SHA256 repository variable to turn the
+      # report into an enforced pin.
+      - name: Verify APK signing certificate
+        env:
+          EXPECTED_CERT_SHA256: ${{ vars.ANDROID_SIGNING_CERT_SHA256 }}
+        run: |
+          set -uo pipefail
+
+          APKSIGNER=$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools" -name apksigner -type f 2>/dev/null | sort -V | tail -1)
+
+          if [ -z "$APKSIGNER" ]; then
+            echo "::warning::apksigner was not found under ANDROID_HOME, so this release's APK signing certificate could not be reported."
+            if [ -n "$EXPECTED_CERT_SHA256" ]; then
+              echo "::error::ANDROID_SIGNING_CERT_SHA256 is pinned but the certificate could not be read — refusing to publish an unverified APK."
+              exit 1
+            fi
+            exit 0
+          fi
+
+          if ! "$APKSIGNER" verify --print-certs "${{ steps.apk.outputs.file }}" > /tmp/apk-certs.txt 2>&1; then
+            echo "::error::The release APK failed signature verification. apksigner reported:"
+            sed 's/^/  /' /tmp/apk-certs.txt
+            exit 1
+          fi
+
+          FINGERPRINT=$(awk -F': ' '/SHA-256 digest:/ {print $2; exit}' /tmp/apk-certs.txt | tr -d '[:space:]' | tr 'A-F' 'a-f')
+
+          if [ -z "$FINGERPRINT" ]; then
+            echo "::warning::Could not parse a certificate digest out of apksigner's output:"
+            sed 's/^/  /' /tmp/apk-certs.txt
+          else
+            echo "Release APK signing certificate SHA-256: ${FINGERPRINT}"
+          fi
+
+          if [ -z "$EXPECTED_CERT_SHA256" ]; then
+            echo "::warning::The ANDROID_SIGNING_CERT_SHA256 repository variable is not set, so the signing identity above is reported but not enforced. Set it to the digest of the certificate that signed the currently published APKs to make a key change fail the release."
+            exit 0
+          fi
+
+          EXPECTED=$(echo "$EXPECTED_CERT_SHA256" | tr -d '[:space:]:' | tr 'A-F' 'a-f')
+
+          if [ "$FINGERPRINT" != "$EXPECTED" ]; then
+            echo "::error::The release APK was signed with a different certificate than the pinned ANDROID_SIGNING_CERT_SHA256. Publishing it would break in-place updates for every existing install. Expected ${EXPECTED}, got ${FINGERPRINT:-<unparsed>}."
+            exit 1
+          fi
+
+          echo "Signing certificate matches the pinned ANDROID_SIGNING_CERT_SHA256."
+
+      # ────────────────────────────────────────────
+      #  Docker image (built here, pushed after the release exists)
+      # ────────────────────────────────────────────
+      # The image is built now so a broken Dockerfile fails before anything is
+      # published, and pushed at the very end so GHCR never advertises a version
+      # that has no tag, no release and no downloadable APK. The push step below
+      # replays this build from the layer cache, so it is a push, not a rebuild.
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # Browser crash reporting is wired in here, at image build time, because Vite
+      # inlines VITE_* into the bundle and the DSN has to be in the frontend stage.
+      # Both steps must pass the same inputs: the DSN is a build arg and so part of
+      # the layer cache key, and the push step below replays this build from that
+      # cache — a push step without it would rebuild the SPA with no DSN and ship
+      # exactly that. The DSN is a public identifier; the in-app consent gate, not
+      # its secrecy, decides whether it is ever used.
+      #
+      # The source-map upload token is a build SECRET, not a build arg (args land in
+      # `docker history`), and it goes through `secret-envs` rather than `secrets`:
+      # the action rejects an empty `secrets` value ("... is not a valid secret"),
+      # which would fail the whole release whenever the repository secret is unset,
+      # whereas an empty env var yields an empty secret and the Dockerfile simply
+      # skips the upload. See the RUN --mount=type=secret in Dockerfile.backend.
+      - name: Build Docker image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        with:
+          context: .
+          file: ./Dockerfile.backend
+          push: false
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/ohmzi/Tday
+            org.opencontainers.image.description=Tday - Personal task planner
+          build-args: |
+            VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN_WEB }}
+          secret-envs: |
+            sentry_auth_token=SENTRY_AUTH_TOKEN
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ────────────────────────────────────────────
+      #  Publish
+      # ────────────────────────────────────────────
+      # Nothing above this line has published anything. The release commit lands
+      # on master first, because it is the only step that can be rejected by
+      # something outside this job (a concurrent push), and abandoning the run
+      # here leaves no tag, no release and no image behind.
+      - name: Publish release commit to master
+        run: |
+          for attempt in 1 2 3; do
+            if git push origin HEAD:master; then
+              echo "Pushed release commit on attempt ${attempt}."
+              exit 0
+            fi
+
+            echo "Push rejected — master moved. Rebasing and retrying."
+            git fetch origin master
+            if ! git rebase origin/master; then
+              git rebase --abort || true
+              break
+            fi
+          done
+
+          echo "::error::Could not push the release commit to master."
+          exit 1
+
+      - name: Create tag
+        run: |
+          git tag "${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.version.outputs.tag }}" \
+            --title "${{ steps.version.outputs.tag }}" \
+            --notes-file body.md \
+            "${{ steps.apk.outputs.file }}"
+
+      # Last, and deliberately so. The in-app updater can only fetch an APK from
+      # the latest release, so an image must never exist for a version that has
+      # no release — with `exact` compatibility on the backend that combination
+      # locks every client out with no way to update. The reverse gap (release
+      # published, image missing) leaves the running server on the previous
+      # version and is fixed by re-running this workflow.
+      #
+      # Same DSN build arg and token secret as the build step above, on purpose — see
+      # the note there for why dropping either here would change what gets shipped.
+      - name: Push Docker image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        with:
+          context: .
+          file: ./Dockerfile.backend
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/ohmzi/Tday
+            org.opencontainers.image.description=Tday - Personal task planner
+          build-args: |
+            VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN_WEB }}
+          secret-envs: |
+            sentry_auth_token=SENTRY_AUTH_TOKEN
+          cache-from: type=gha
+
+      # develop is an ancestor of master right after a merge-commit merge, so
+      # this fast-forwards cleanly and keeps version.json from conflicting on
+      # the next PR. Non-fatal: the following merge resolves any drift.
+      - name: Fast-forward develop to master
+        continue-on-error: true
+        run: |
+          if ! git push origin HEAD:develop; then
+            echo "::warning::Could not fast-forward develop to master — merge master into develop manually."
+          fi

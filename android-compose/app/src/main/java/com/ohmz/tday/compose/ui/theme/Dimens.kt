@@ -1,0 +1,87 @@
+package com.ohmz.tday.compose.ui.theme
+
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+
+object TdayDimens {
+
+    // Spacing scale
+    val SpacingNone: Dp = 0.dp
+    val SpacingXxs: Dp = 2.dp
+    val SpacingXs: Dp = 4.dp
+    val SpacingSm: Dp = 6.dp
+    val SpacingMd: Dp = 8.dp
+    val SpacingLg: Dp = 12.dp
+    val SpacingXl: Dp = 14.dp
+    val SpacingXxl: Dp = 18.dp
+    val Spacing3xl: Dp = 24.dp
+    val Spacing4xl: Dp = 32.dp
+
+    // Content padding (horizontal page margins)
+    val ContentPaddingHorizontal: Dp = 18.dp
+    val ContentPaddingVertical: Dp = 14.dp
+
+    // Corner radii. The Sm…Full steps say how round something is; the named rungs wedged between
+    // them say what is round, because 16, 18, 22 and 26 are four steps no eye separates in
+    // isolation and a call site that picks one by size picks a different one next time.
+    val RadiusSm: Dp = 8.dp
+    val RadiusMd: Dp = 14.dp
+    /** Rows and cells inside a scrolling list or a grid: feed rows, calendar days, the toast. */
+    val RadiusRow: Dp = 16.dp
+    val RadiusLg: Dp = 18.dp
+    /** What a finger aims at in a form: text fields, filled buttons, chips, segmented tracks. */
+    val RadiusField: Dp = 22.dp
+    val RadiusXl: Dp = 24.dp
+    /** The card a section is drawn on — the tiles that group rows, never the rows themselves. */
+    val RadiusCard: Dp = 26.dp
+    val RadiusSheet: Dp = 34.dp
+    val RadiusFull: Dp = 999.dp
+
+    // Icon sizes
+    val IconSm: Dp = 20.dp
+    val IconMd: Dp = 26.dp
+    val IconLg: Dp = 28.dp
+    val IconXl: Dp = 30.dp
+
+    // Component sizes
+    val FabSize: Dp = 56.dp
+    val FabIconSize: Dp = 40.dp
+    val FabElevation: Dp = 16.dp
+    /**
+     * Circle buttons that live in a pinned bar. Softer than a floating action
+     * button's, because content scrolls behind these and a deep shadow reads as
+     * a hard edge dragging across whatever is passing underneath.
+     */
+    val BarButtonElevation: Dp = 6.dp
+    /** Lifts settings cards off the page so their options read as a surface. */
+    val SettingsCardElevation: Dp = 3.dp
+    val FabPressedElevation: Dp = 8.dp
+    val RootFeedDockHeight: Dp = 64.dp
+    val RootFeedDockInnerPadding: Dp = 6.dp
+    val RootFeedDockOuterPaddingStart: Dp = ContentPaddingHorizontal
+    val RootFeedDockOuterPaddingBottom: Dp = ContentPaddingHorizontal
+    val RootFeedDockTabWidth: Dp = 112.dp
+    val RootFeedDockSelectorInset: Dp = SpacingXxs
+    val RootFeedDockSelectorElevation: Dp = SpacingLg
+    val RootFeedDockIconSize: Dp = 22.dp
+    val BottomSheetTonalElevationDark: Dp = 10.dp
+    val CardElevationDefault: Dp = 0.dp
+    val PullRefreshContainerWidth: Dp = 152.dp
+    val PullRefreshContainerHeight: Dp = 58.dp
+    val PullRefreshDotWidth: Dp = 9.dp
+    val PullRefreshDotMinHeight: Dp = 12.dp
+    val PullRefreshDotMaxHeight: Dp = 30.dp
+    val PullRefreshDotSpacing: Dp = 10.dp
+    val PullRefreshContainerCornerRadius: Dp = 29.dp
+    val PullRefreshElevation: Dp = 18.dp
+    val PullRefreshSweepInset: Dp = 11.dp
+    val PullRefreshSweepHeight: Dp = 40.dp
+    val BorderWidth: Dp = 1.dp
+    val BorderWidthThick: Dp = 1.5.dp
+
+    // List item spacing
+    val ListItemSpacing: Dp = 8.dp
+
+    // Bottom spacer (scroll past FAB)
+    val BottomScrollSpacer: Dp = 96.dp
+}

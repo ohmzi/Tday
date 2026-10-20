@@ -1,0 +1,1441 @@
+# Deployment
+
+How T'Day is built, deployed, and operated in production. Product direction and data boundaries are documented in [`PRODUCT_DIRECTION.md`](PRODUCT_DIRECTION.md) and [`DATA_MODEL.md`](DATA_MODEL.md).
+
+## Environments
+
+| Environment | Branch | URL | Deployment |
+|-------------|--------|-----|------------|
+| Production | `master` | `tday.ohmz.cloud` | GitHub Actions publishes the image to GHCR; the host runs `scripts/deploy-release.sh` to pull and recreate |
+| Development | `develop` | Local only | `docker compose -f docker-compose.yaml -f docker-compose.build.yaml up -d --build`, or local dev servers |
+
+Merging to `master` publishes a release; it does **not** reach into this host. Deploying is a separate,
+deliberate step on the deploy host — see [Deploying a release](#deploying-a-release).
+
+Mobile clients can also run in Local Mode without a deployed backend. Deployment work affects Server Mode, remote access, app compatibility checks, and server-backed sync.
+
+## Docker
+
+### Architecture
+
+```
+docker-compose.yaml            # the stack; backend image is pulled, never built
+├── tday_backend    (Ktor + Vite SPA, port 2525 → 8080)
+├── tday_db         (PostgreSQL 15, internal port 5432)
+└── tday_ollama     (optional Ollama AI profile, internal port 11434)
+
+docker-compose.build.yaml      # opt-in override that builds tday_backend locally
+docker-compose.gpu.yaml        # opt-in override for NVIDIA-accelerated Ollama
+```
+
+The `tday-backend` service in `docker-compose.yaml` has **no `build:` section**. Its image is
+`${TDAY_BACKEND_IMAGE:-ghcr.io/ohmzi/tday:latest}`, so a bare `docker compose up -d` on the deploy
+host pulls a released image and can never silently replace production with a working-tree build.
+Layer `docker-compose.build.yaml` on top when you actually want to build.
+
+### Build
+
+The Docker image (`Dockerfile.backend`) is a multi-stage build:
+
+1. **Stage 1 — Frontend** (`node:24-alpine`): `npm ci` + `npm run build` in `tday-web/` → static assets at `/web/dist`
+2. **Stage 2 — Backend** (`eclipse-temurin:21-jdk-alpine`): Copies Docker-specific Gradle files from `docker/`, `shared/src`, and `tday-backend/src`, then runs `./gradlew :tday-backend:buildFatJar -x test`
+3. **Stage 3 — Runtime** (`eclipse-temurin:21-jre-alpine`): Non-root user `tday`, copies fat JAR to `app.jar` and static files to `/app/static`, sets `STATIC_FILES_DIR=/app/static`
+
+The production image is a **single JVM process** serving both the REST API and the static SPA.
+
+Each frontend build also stamps a **unique build id** (`git-sha + UTC timestamp`) into the JS bundle as `__BUILD_ID__` and emits a matching `dist/version.json` (`{ "buildId", "version" }`), served at `/version.json`. This is the cache key that drives client cache invalidation — see [Web Cache Invalidation & Client Updates](#web-cache-invalidation--client-updates). For a readable SHA in the id, pass it as a build arg (the `.git` dir is not copied into the frontend stage):
+
+```bash
+docker compose -f docker-compose.yaml -f docker-compose.build.yaml \
+  build --build-arg GIT_SHA=$(git rev-parse --short HEAD) tday-backend
+```
+
+Without it the id falls back to a timestamp only — still unique per build, just less traceable.
+The release workflow passes no `GIT_SHA`, so CI-published images carry a `dev-<timestamp>` build id
+(cosmetic for cache invalidation; the id is still unique per build). Its one build arg is
+`VITE_SENTRY_DSN`, taken from the `SENTRY_DSN_WEB` repository secret, so the published image carries
+the maintainer's browser Sentry DSN. That DSN is inert until a person opts in to crash reports in
+the app (see [Crash reporting](#crash-reporting-sentry)); a build with no DSN, such as a plain
+`docker build` or a self-built image without `VITE_SENTRY_DSN`, never shows the consent card. The
+source-map upload token is a build **secret** (`--secret id=sentry_auth_token`), not a build arg,
+so it never lands in `docker history`.
+
+```bash
+# Local build (development). docker-compose.build.yaml adds the build: section and
+# tags the result tday-backend:local so it cannot be confused with a released image.
+docker compose -f docker-compose.yaml -f docker-compose.build.yaml up -d --build
+
+# Optional local AI summaries
+# Set OLLAMA_URL=http://ollama:11434 in .env.docker, then run:
+docker compose --profile ai pull ollama ollama-model-setup
+docker compose -f docker-compose.yaml -f docker-compose.build.yaml --profile ai up -d --build
+```
+
+Setting `COMPOSE_FILE=docker-compose.yaml:docker-compose.build.yaml` in your shell (or in the root
+`.env`) makes a plain `docker compose up -d --build` build locally again, if you prefer that on a
+development machine. Never set it on the deploy host.
+
+When the `ai` profile is enabled, Compose starts `tday_ollama` plus a one-shot model setup container. The setup container pulls `qwen3.5:0.8b` and attempts to remove the old `qwen2.5:0.5b` model. Pull the Ollama images during updates too; the qwen3.5 model requires a recent Ollama runtime. If the AI profile is not enabled, Summary still works through the backend logic fallback.
+
+Ollama runs on CPU by default. For NVIDIA GPU acceleration, install the NVIDIA Container Toolkit on the host and add the GPU override file to every Compose command:
+
+```bash
+docker compose -f docker-compose.yaml -f docker-compose.gpu.yaml --profile ai up -d
+```
+
+Add `-f docker-compose.build.yaml` to that as well if you are also building the backend locally.
+
+### Docker Security
+
+The `tday_backend` container runs with:
+- `security_opt: no-new-privileges:true`
+- `cap_drop: ALL`
+- No privileged mode
+
+### Network Security
+
+By default the backend port is bound to **`127.0.0.1`** (localhost only). External clients cannot reach it over HTTP — an ingress method is required to bridge external traffic to `localhost:2525`.
+
+```
+Browser / Mobile App
+  └─ HTTPS / VPN ─► [ ingress method ] ─► localhost:2525 ─► tday_backend :8080
+```
+
+The binding is controlled by two variables in the **project-root `.env`** file (not `.env.docker`):
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `TDAY_HOST_BIND` | `127.0.0.1` | Interface to bind on the Docker host |
+| `TDAY_HOST_PORT` | `2525` | Host port mapped to the container's `8080` |
+
+To allow direct external access (development / trusted LAN only):
+
+```bash
+# .env (project root)
+TDAY_HOST_BIND=0.0.0.0
+```
+
+When exposing the port externally, set `TDAY_ENV=production` in `.env.docker` so the backend enables secure cookies and HSTS headers.
+
+For detailed instructions on all supported remote access methods — including Cloudflare Tunnel, Tailscale, WireGuard, ZeroTier, SSH tunnels, ngrok, and frp — see **[Remote Access](REMOTE_ACCESS.md)**.
+
+### Self-hosting on a NAS (TrueNAS / Unraid / Synology / Proxmox)
+
+These are the recurring "I deployed it but can't reach it / it behaves oddly" issues on NAS and
+home-server platforms, with the symptom and the fix.
+
+| Symptom                                                                                                           | Cause                                                                                                        | Fix                                                                                                                                                                                                                                            |
+|-------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Container is "running" but the web UI is unreachable from any other device                                        | Default bind is `127.0.0.1` (localhost of the container/VM only)                                             | Either put a reverse proxy / VPN in front (recommended — gives HTTPS), or for a trusted LAN set `TDAY_HOST_BIND=0.0.0.0` in the **root `.env`** and recreate. On Unraid/TrueNAS custom-app UIs, map host port → container `8080` the same way. |
+| Behind a reverse proxy, registration/login throttles trip far too early, or all users share one rate-limit bucket | Proxy isn't forwarding the real client IP, so every request looks like the proxy's IP                        | Configure the proxy to send `X-Forwarded-For` (or `X-Real-IP`; Cloudflare sends `cf-connecting-ip`). T'Day reads these in priority order — no extra "trust proxy" flag needed.                                                                 |
+| Logged out constantly / "secure cookie" warnings when served over a domain                                        | App not in production mode, so cookies aren't marked Secure for an HTTPS origin, or the origin is cross-site | Set `TDAY_ENV=production` in `.env.docker` once you terminate HTTPS at the proxy. Add the external origin to `CORS_ALLOWED_ORIGINS` only if the web app is served from a *different* origin than the API.                                      |
+| Server **log** timestamps are in UTC, not your local time                                                         | Container defaults to UTC                                                                                    | Optional: set `TZ` (IANA name) in the root `.env` — passed to the backend container. This affects **logs only**. Task due times, overdue, and reminders are always shown in each user's own device timezone and are unaffected by `TZ` (see [Server timezone](#server-timezone)). |
+| Data lost after recreating the container                                                                          | App data lives only in the `postgres_data` named volume                                                      | Keep the named volume (don't `down -v`); back it up with scheduled `pg_dump`. On Unraid/TrueNAS, map the Postgres data path to persistent array storage, not a temp/ephemeral dir.                                                             |
+| New version doesn't appear after pulling                                                                          | NAS UIs use their own update flow                                                                            | Unraid: container → **Force update**. Portainer: **Recreate** → **Re-pull image** (see [Updating in Production](#updating-in-production)). `docker compose pull && up -d` for plain Compose.                                                   |
+
+For HTTPS without exposing a port at all (and to satisfy the secure-context requirements of PWAs and
+WebCrypto), prefer a tunnel/VPN from [Remote Access](REMOTE_ACCESS.md) over binding `0.0.0.0`
+directly.
+
+### Health Checks
+
+| Service | Check | Interval |
+|---------|-------|----------|
+| PostgreSQL | `pg_isready` | 1s (10 retries) |
+| Ollama, optional `ai` profile | `ollama list` | 20s (5 retries) |
+| T'Day backend | Depends on PostgreSQL; uses Ollama opportunistically when configured | — |
+
+### Self-healing a hung backend
+
+`restart: always` covers one failure and only one: a container whose **process exits** is started
+again. A JVM that stops answering while its process stays alive is not restarted by Compose — the
+healthcheck above marks the container `unhealthy` and nothing acts on health. The stack therefore
+heals a crash but not a hang, and a hung backend stays hung until somebody notices.
+
+`scripts/backend-watchdog.sh` closes that gap. It reads the health the healthcheck already writes
+and restarts the container once the evidence is unambiguous:
+
+| Guard | Default | Why it exists |
+|-------|---------|---------------|
+| `--failures N` | 3 | Docker calls a container `unhealthy` only after its own `retries: 3` failed probes, so this is a second, deliberate delay on top of that — a restart is disruptive and a backend that is briefly unwell should be left alone |
+| `--cooldown MIN` | 15 | A restart is expensive, and a backend that is failing for its own reasons is not fixed by restarting it in a loop |
+
+With the healthcheck above (30s interval, `retries: 3`) and the default `--failures 3` on a
+one-minute cron, a backend that stops answering is restarted roughly four to five minutes later:
+about ninety seconds for Docker to call it unhealthy, then about three further minutes of
+consecutive unhealthy checks. That delay is the point; a brief wobble must not cost a restart.
+
+It is silent while the backend is healthy (cron mails on any output), logs one line per decision to
+stderr, and treats both `starting` — the healthcheck's `start_period` — and a container Docker is
+already restarting as "leave it alone". The failure count and the time of the last restart live in
+`$XDG_STATE_HOME/tday-watchdog` (`~/.local/state/tday-watchdog` by default), which is what lets
+"three consecutive" span three separate cron runs.
+
+Install it beside the compose file and run it every minute:
+
+```cron
+* * * * * /opt/tday/scripts/backend-watchdog.sh >>/var/log/tday-watchdog.log 2>&1
+```
+
+Each decision is one line on stderr, so the redirect is what keeps cron quiet and keeps the history.
+`--log-file PATH` writes the same lines to a file *as well as* stderr, for a host that wants both
+the mail and a log.
+
+Flags win over the matching `TDAY_WATCHDOG_*` environment variable:
+
+| Flag | Environment | Default |
+|------|-------------|---------|
+| `--container NAME` | `TDAY_WATCHDOG_CONTAINER` | `tday_backend` |
+| `--failures N` | `TDAY_WATCHDOG_FAILURES` | `3` |
+| `--cooldown MIN` | `TDAY_WATCHDOG_COOLDOWN` | `15` |
+| `--health-url URL` | `TDAY_WATCHDOG_HEALTH_URL` | unset — only needed when the container has no healthcheck to read |
+| `--log-file PATH` | `TDAY_WATCHDOG_LOG` | unset — decisions already go to stderr |
+| `--state-dir DIR` | `TDAY_WATCHDOG_STATE_DIR` | `$XDG_STATE_HOME/tday-watchdog` |
+| `--docker CMD` | `TDAY_WATCHDOG_DOCKER` | `docker` — cron's `PATH` is minimal, so pass an absolute path if the CLI is not on it |
+| `--dry-run` | — | report the decision and write nothing |
+| `--status` | — | print health, failure count, last restart and cooldown left, then exit |
+
+`scripts/backend-watchdog-test.sh` drives every branch through stubs — no Docker and no host
+needed — and is the reference for the exact decision rule.
+
+**macOS host.** cron works, but a launchd agent survives sleep and login changes and needs no
+`crontab` edit. Save this as `~/Library/LaunchAgents/com.tday.watchdog.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.tday.watchdog</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/tday/scripts/backend-watchdog.sh</string>
+  </array>
+  <key>StartInterval</key><integer>60</integer>
+  <key>RunAtLoad</key><true/>
+  <key>StandardOutPath</key><string>/tmp/tday-watchdog.log</string>
+  <key>StandardErrorPath</key><string>/tmp/tday-watchdog.log</string>
+</dict>
+</plist>
+```
+
+then load it with `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.tday.watchdog.plist`
+(`launchctl load -w …` on older macOS). launchd does not mail output, so the `Standard*Path` keys
+are how its decisions reach a file.
+
+**Alternative: the `autoheal` sidecar.** `willfarrell/autoheal` watches the health status of every
+container and restarts the unhealthy ones, which is less to own than the script above. The tradeoff
+is the Docker socket: it has to mount `/var/run/docker.sock`, and anything holding that socket can
+control every container on the host — root-equivalent access. This compose file is deliberately
+built to avoid that: `security_opt: no-new-privileges` and `cap_drop: ALL` are doing real work
+there, and a socket-mounted sidecar gives that reach back for itself. Prefer the host script unless
+the host already accepts a socket-mounted helper.
+
+**Seeing why it restarted:**
+
+- `docker compose logs --tail=200 tday-backend` — the JVM's own output up to the restart
+- `docker inspect --format '{{json .State.Health}}' tday_backend | jq` — the recent probes and what each one returned
+- the watchdog's log file — one line per decision, including the failure count at the moment it restarted
+- `docker events --filter container=tday_backend --since 1h` — `die`/`start` transitions, including ones Docker made on its own
+
+## CI/CD Pipeline
+
+### Workflows
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `pr-gate.yml` | PR to `master` | Validates source branch (`develop` only), runs web lint + test, backend test |
+| `android.yml` | PR to `develop` or `master` | Skips when nothing under `android-compose/` or `shared/` (or `version.json`) changed; otherwise runs the Android JVM unit tests and compiles the instrumentation source set |
+| `release.yml` | Push to `master` | Runs lint + tests, resolves the release version (auto-bumping the patch when it is already tagged), builds the signed APK and the Docker image, pushes the release commit, tags, publishes the GitHub release, and only then pushes the image |
+| `ios-testflight.yml` | Push of a `v*` tag (uploads), or `workflow_dispatch` on any ref (build-only) | Diffs the tag against the last release that actually reached TestFlight; when an iOS-relevant file changed — or the version moved under `exact` + `updateRequired`, since parity is then mandatory — archives the `Tday` scheme on macOS and, on a tag push only, uploads it to TestFlight |
+
+### Test-Before-Build Policy
+
+**No Docker image is built or published unless all tests pass.** This is enforced across the CI workflows:
+
+- **PR Gate** (`pr-gate.yml`): On every PR to `master`, the pipeline validates the source branch is `develop`, then runs `npm run lint` and `npm run test` in `tday-web/`, followed by `./gradlew :tday-backend:test`. PRs cannot merge if either step fails.
+- **Android** (`android.yml`): On every PR to `develop` *or* `master`, `cd android-compose && ./gradlew :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin`. This is the only gate that runs on PRs into `develop`, which is where essentially all work lands — the Android suite is otherwise never executed by CI. A `changes` job skips the Gradle build when the PR touches no Android-relevant file. `:app:lintDebug` is deliberately not part of it (see below).
+- **Release** (`release.yml`): On push to `master`, a `lint-and-test` job runs first — web lint and tests, backend tests, shared tests, guide-content drift, and the Android unit tests. The `build-and-release` job (Docker build, push, tag, release) has `needs: lint-and-test` — it will not start unless all of those pass.
+
+```
+PR to develop:
+  android.yml: changes → unit-tests
+
+PR to master:
+  check-source-branch → lint-and-test → hook-check → (merge allowed)
+  android.yml: changes → unit-tests
+
+Push to master:
+  lint-and-test → build-and-release
+                    build:   version bump → APK (signed + cert verified) → Docker image
+                    publish: release commit → tag → GitHub release + APK → Docker push
+```
+
+**Android lint is not in the gate.** `:app:lintDebug` reports 47 errors and 410 warnings against
+today's `develop`, so wiring it in would fail every PR on pre-existing findings. It needs its own
+change — a `lint-baseline.xml`, or the fixes — before it can gate anything.
+
+This ensures:
+- Broken code never produces a Docker image.
+- Security guardrails, coding standards, and architecture tests gate every release.
+- Test failures block the pipeline before any artifact is published.
+
+### Publication Order
+
+Inside `build-and-release`, everything that can fail is built before anything leaves the runner, and
+the Docker image is pushed **last** — after the tag and the GitHub release with its APK exist.
+
+That order is chosen for its failure modes, not for tidiness. The backend runs `exact` compatibility
+with `updateRequired: true`, so a deployed server rejects every client whose `X-Tday-App-Version`
+differs from its own, and the Android in-app updater can only fetch an APK from the latest GitHub
+release. So:
+
+- **Image published without a release** (the old order) is unrecoverable from the user's side: pull
+  the image and every client is locked out with no version to update to.
+- **Release published without an image** is benign: the running server stays on the previous image
+  and keeps serving, and re-running the workflow publishes the image.
+
+The release commit is pushed to `master` before the tag, the release, or the image, because it is the
+only step that an outside event (a concurrent push to `master`) can reject. Abandoning the run there
+leaves no tag, no release, and no image behind.
+
+The image is *built* before the publish steps and only *pushed* afterwards, so a broken
+`Dockerfile.backend` fails while nothing has been published yet. The push step replays the same build
+from the layer cache rather than rebuilding it.
+
+### Release Process
+
+1. Features are developed on `feature/*` branches.
+2. PRs merge into `develop` after review.
+3. When ready for release, PR `develop` → `master`.
+4. `pr-gate.yml` validates source branch, then runs lint + tests.
+5. On merge to `master`, `release.yml`:
+   - Runs lint and the full test suite (including guardrails).
+   - **Resolves the release version.** If root `version.json` still carries a version that is already
+     tagged, the job runs `scripts/version.mjs bump patch` — so **every merge into `master` produces a
+     release, even when nobody bumped the version by hand**. A version a PR deliberately raised
+     (minor/major) is used as-is.
+   - Generates structured release metadata from the commit range since the previous GitHub release.
+   - Builds and signs the Android release APK, then reports the signing certificate's SHA-256 digest.
+     A missing APK fails the run — it is a required release asset.
+   - **Only if tests pass**: builds the Docker image for `ghcr.io/ohmzi/tday:latest` and `:v<version>`
+     without pushing it yet.
+   - Commits the version bump plus `tday-web/public/release/current-release.json` and
+     `latest-changes.json` back to `master` as `chore(release): v<version> [skip release]`. This push
+     uses the write deploy key in `RELEASE_DEPLOY_KEY`, which is the bypass actor on the `master`
+     ruleset (GitHub does not allow granting that bypass to `github-actions[bot]` on a
+     personally-owned repository).
+   - Creates the Git tag and a GitHub release with the APK attached.
+   - Pushes the Docker image, last — see [Publication Order](#publication-order).
+   - Fast-forwards `develop` to `master` so the bump does not conflict on the next PR. This step is
+     non-fatal; if it is skipped, merge `master` into `develop` by hand.
+
+**The contract: every `develop` → `master` merge produces three artifacts.** A Git tag and a GitHub
+release, an Android APK attached to that release, and an iOS build uploaded to TestFlight. None of
+the three is optional and none is skipped for a "small" release. A release that ships web and
+Android without iOS is not a smaller release — it leaves every iOS user on `exact` compatibility
+being told to update to a build that does not exist, which is what v0.7.30 did to TestFlight.
+`scripts/ios-release-changed.mjs` forces the iOS build whenever the version moves for that reason;
+see [Trigger and path filter](#trigger-and-path-filter).
+
+**Deploying is the fourth step, and is deliberately not in CI.** The host runs
+`scripts/deploy-release.sh`, which pulls `ghcr.io/ohmzi/tday:v<version>` for the version in
+`version.json`, recreates the backend container, and verifies the running server reports it.
+Publishing a container image is something CI can do; recreating a container on a self-hosted box is
+not, so the deploy stays a deliberate manual action with the database-backup guard in front of it
+(that guard refuses to cross a new Flyway migration without `--backup` or `--skip-backup`). A
+release nobody deployed is a release nobody is running: `latest` moving on GHCR does not move the
+host.
+
+Because the release job bumps the patch version itself, the version climbs one patch per merge. Bump
+`minor`/`major` in a PR when a release deserves it.
+
+### Version Bumping
+
+The **single source of truth** for the app/server version is root `version.json`. All other systems derive from it:
+
+- **CI/CD**: Reads `version.json` → Docker image tags (`:v1.6.0`, `:latest`), Git tags, GitHub releases.
+- **Web**: `scripts/version.mjs sync` mirrors the version into `tday-web/package.json` and `package-lock.json`; Vite bundles that package value.
+- **Backend**: `tday-backend/build.gradle.kts` parses `version.json`, embeds it as `tday-version.json`, and `AppConfig` uses it as the default `TDAY_APP_VERSION`/backend release fallback.
+- **Android**: `app/build.gradle.kts` parses root `version.json` at build time → `versionName` and computed `versionCode`.
+- **iOS**: `scripts/version.mjs sync` mirrors the version, build number, and update URL into `Info.plist`, Xcode project metadata, and `project.yml`.
+- **Backend compatibility templates**: The same sync script mirrors version/update-required values into `.env.example` and `tday-backend/.env.example`. Live deployment env files such as `.env.docker` stay operator-owned; leave `TDAY_APP_VERSION` unset there so the container inherits the image's version, and set it only to deliberately pin the probe.
+- **Runtime**: Android sends `BuildConfig.VERSION_NAME` and iOS sends `CFBundleShortVersionString` in the `X-Tday-App-Version` HTTP header.
+
+To bump the version deliberately before merging to `master` (a patch bump happens automatically on
+merge, so this is only needed for `minor`/`major`):
+
+```bash
+node scripts/version.mjs bump patch   # 1.6.0 -> 1.6.1
+node scripts/version.mjs bump minor   # 1.6.0 -> 1.7.0
+node scripts/version.mjs bump major   # 1.6.0 -> 2.0.0
+node scripts/version.mjs check
+```
+
+The bump command updates `version.json`, increments `ios.buildNumber`, and syncs every checked-in mirror. If you manually edit `version.json`, run `node scripts/version.mjs sync` and then `node scripts/version.mjs check`.
+
+**Never** set release version numbers directly in Gradle files, iOS project files, web package files, lockfiles, or example env templates.
+
+### Version Reference
+
+Every file that contains or controls a version number, grouped by platform.
+
+#### Root Manifest (source of truth)
+
+| File | What | Notes |
+|------|------|-------|
+| `version.json` | App semver, exact compatibility policy, iOS build number, iOS update URL | **Edit this file or use `scripts/version.mjs bump`**; all other app/server versions derive from it. |
+
+#### Web App
+
+| File | What | Notes |
+|------|------|-------|
+| `tday-web/package.json` / `package-lock.json` (`"version"`) | App semver mirror | Auto-synced from `version.json`. |
+| `tday-web/vite.config.ts` (`__APP_VERSION__`) | Build-time define from `npm_package_version` | Injected into the SPA at build; fallback `"0.0.0"`. |
+| `tday-web/src/lib/observability/sentryInit.ts` | Sentry release (`tday-web@<version>`) | Derived at build time; `vite.config.ts` uses the same name for the source-map upload. The web client sends no traces, so there is no sample-rate setting. |
+
+#### Android
+
+| File | What | Notes |
+|------|------|-------|
+| `android-compose/app/build.gradle.kts` | `versionName` / `versionCode` | Parsed from root `version.json` at build time. `versionCode` = `major*10_000_000 + minor*10_000 + patch` (`0.7.2` → `70002`), one decimal slot per component so the encoding never collides. `minor` ≤ 999, `patch` ≤ 9999, ceiling 2_100_000_000 — all enforced by `require` checks that fail the build. |
+| `android-compose/.../core/observability/TelemetryOptions.kt` | Sentry release (`tday-android@<version>`) | Uses `BuildConfig.VERSION_NAME`. The Android client sends no traces, so there is no sample-rate setting. |
+| `android-compose/.../NetworkModule.kt` | `X-Tday-App-Version` HTTP header | Uses `BuildConfig.VERSION_NAME`. |
+
+#### iOS
+
+| File | What | Notes |
+|------|------|-------|
+| `ios-swiftUI/Tday/Info.plist` (`CFBundleShortVersionString`) | Marketing version (e.g. `1.21.0`) | Auto-synced from `version.json`. |
+| `ios-swiftUI/Tday/Info.plist` (`TdayUpdateURL`) | App Store/TestFlight update URL | Auto-synced from `version.json` `ios.updateUrl`; leave empty only for builds without direct iOS update action. |
+| `ios-swiftUI/project.yml` / `TdayApp.xcodeproj/project.pbxproj` (`MARKETING_VERSION`, `CURRENT_PROJECT_VERSION`) | Xcode project metadata | Auto-synced from `version.json`; keep both aligned when regenerating the project. |
+| `ios-swiftUI/Tday/Info.plist` (`CFBundleVersion`) | Build number | Mirrors `ios.buildNumber`; the bump command increments it. |
+| `ios-swiftUI/.../SentryConfiguration.swift` | Sentry release (`tday-ios@<version>`) | Uses `CFBundleShortVersionString`. `SENTRY_DSN` flows through `Info.plist` build settings; the iOS client sends no traces, so there is no sample-rate setting. |
+
+#### Backend
+
+| File | What | Notes |
+|------|------|-------|
+| `tday-backend/build.gradle.kts` (`version`) | Gradle artifact version | Parsed from root `version.json` and embedded as `tday-version.json`. |
+| `tday-backend/.../observability/BackendSentry.kt` | Sentry release (`tday-backend@<version>`) | Reads `TDAY_BACKEND_VERSION`, then `TDAY_APP_VERSION`, then embedded manifest version. `SENTRY_TRACES_SAMPLE_RATE` controls trace sampling (default `0.1` in production). |
+
+For Sentry project setup, release artifact verification, alerting, smoke drills,
+and failure triage, see [`SENTRY_RUNBOOK.md`](SENTRY_RUNBOOK.md). Do not store
+Sentry account passwords in deployment files; use DSNs for SDK configuration and
+least-privilege auth tokens only for release/source artifact upload. What is
+collected, and how a deployment's own switch works, is in
+[Crash reporting](#crash-reporting-sentry) below and [`TELEMETRY.md`](TELEMETRY.md).
+
+#### Server Compatibility (`TDAY_APP_VERSION`)
+
+The manifest and `TDAY_APP_VERSION` environment variable tell the backend which app version it is compatible with. When exact compatibility is enabled with `TDAY_UPDATE_REQUIRED=true`, mobile clients that connect with a different version are shown an "Update Required" or "Server Update Needed" screen.
+
+Local Mode does not require this probe. Server Mode Android and iOS clients use `/api/mobile/probe` plus the `X-Tday-App-Version` header to decide whether the installed app and server can safely sync. The backend also rejects mismatched mobile API requests: older apps receive `426 Upgrade Required`; apps newer than the server receive `409 Conflict`.
+
+| File | Purpose | Notes |
+|------|---------|-------|
+| `.env.docker` | **Live override** for the running Docker container | Leave `TDAY_APP_VERSION` commented out (the default) so the server reports the version baked into the image and follows every release automatically. Set it only to pin the probe to a specific version. |
+| `.env.example` | Template for new deployments (project root) | Auto-synced to the manifest version; copy the value into live env files when that version should be required. |
+| `tday-backend/.env.example` | Template for local backend development | Auto-synced to the manifest version; copy the value into live env files when that version should be required. |
+| `tday-backend/.../AppConfig.kt` (`probeAppVersion`, `backendVersion`) | Reads `TDAY_APP_VERSION` at startup | Env-driven, falling back to the embedded `tday-version.json` — which `tday-backend/build.gradle.kts` builds from root `version.json`. |
+
+**Keeping the server on the same version as the apps:** don't. Leave `TDAY_APP_VERSION` unset in
+`.env.docker`. The backend then reports `versionDefaults.version`, which is compiled into the image
+from root `version.json`, so pulling a new image is the only step — the server, web, Android, and
+iOS all report the same version and move together on every release.
+
+```bash
+docker compose pull tday-backend && docker compose up -d tday-backend
+```
+
+Only set `TDAY_APP_VERSION` when you deliberately want the probe to advertise something other than
+the image's own version. A stale pin here is invisible until a client refuses to sync.
+
+### Android Signing
+
+Distributable Android release builds must use the same release keystore every time, or Android will reject updates with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`.
+
+- CI supplies the release signing credentials through `RELEASE_KEYSTORE_PATH`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`, and `RELEASE_KEY_PASSWORD`.
+- The preferred secrets are `RELEASE_KEYSTORE_BASE64`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_PASSWORD`, and `RELEASE_KEY_ALIAS`. The release workflow still accepts the legacy `TWA_KEYSTORE_BASE64`, `TWA_STORE_PASSWORD`, and `TWA_KEY_PASSWORD` secrets, and derives the alias from the keystore when `RELEASE_KEY_ALIAS` is unset — but it now logs which secret supplied each value and warns on every run that takes either fallback, so the fallback can never be silent.
+- The three keystore secrets must all come from the same generation. Setting some of the `RELEASE_*` secrets while leaving the rest on `TWA_*` fails the run immediately, naming the missing secrets, instead of surfacing later as an opaque "keystore password was incorrect".
+- Deriving the alias depends on parsing `keytool -list` output, so it fails — loudly, listing the aliases it found — if the keystore ever holds more than one. CI never guesses which alias to sign with, because a wrong guess ships an APK that cannot update existing installs. Set `RELEASE_KEY_ALIAS` to remove that dependency.
+- Every release logs the signing certificate's SHA-256 digest from `apksigner verify --print-certs`, so a change of signing identity is visible in the run log rather than on the first user who cannot install the update. Set the `ANDROID_SIGNING_CERT_SHA256` repository *variable* (not a secret — certificate digests are public, and the same value is served in `/.well-known/assetlinks.json`) to turn that report into an enforced pin that fails the release on any mismatch.
+- Local `assembleRelease` or `bundleRelease` builds now fail fast if those variables are missing, instead of silently producing a debug-signed release APK that cannot update an existing release install.
+- For a local-only build that is not meant to update an existing release-signed install, you can opt in explicitly with `-PallowDebugSignedRelease=true`.
+- The Android app can download a release APK in-app and hand it directly to the system installer. The first sideloaded update still requires enabling "Install unknown apps" for T'Day in Android settings.
+- Historical note: GitHub Android APKs published before the stable signing fix on April 1, 2026 may have been signed with ephemeral debug certificates from CI runners. Devices on one of those installs must uninstall once and reinstall `v1.8.1` or newer before sideloaded updates will work again.
+
+### iOS Signing and Associated Domains
+
+- The iOS app uses `ios-swiftUI/TdayApp.xcodeproj`, automatic signing, and the `Tday` scheme.
+- `/.well-known/apple-app-site-association` is served by the backend for webcredentials/deep-link support.
+- `CFBundleShortVersionString`, `CFBundleVersion`, iOS `MARKETING_VERSION`, `CURRENT_PROJECT_VERSION`, `TdayUpdateURL`, and example `TDAY_APP_VERSION` values are synced from root `version.json` by `scripts/version.mjs sync`.
+- Set `ios.updateUrl` in `version.json` to the App Store or TestFlight URL before distributing an iOS build that should offer direct updates.
+- Both configurations set `CODE_SIGN_IDENTITY = Apple Development` once at the project level, with no target overrides. That is deliberate and is **not** a bug: under `CODE_SIGN_STYLE = Automatic` the archive is signed with a development identity and the App Store re-sign happens in `-exportArchive`, which the lane drives with `signingStyle: automatic` + `method: app-store`. It is also not optional — Xcode refuses `Apple Distribution` at archive time under automatic signing (*"is automatically signed for development, but a conflicting code signing identity Apple Distribution has been manually specified"*), so the archive always needs a development identity with its private key on the machine doing the archiving. On CI that identity comes from the `IOS_DEVELOPMENT_CERT_P12_*` secrets — see [CI development certificate](#ci-development-certificate).
+- `DEVELOPMENT_TEAM` is `JUFACN2FS3` in the project and is overridden from CI by the `IOS_TEAM_ID` repository variable.
+
+### iOS TestFlight Releases
+
+`.github/workflows/ios-testflight.yml` archives the five iOS/watchOS bundles and uploads them to
+TestFlight. It is separate from `release.yml` on purpose: an Apple upload needs a macOS runner and
+depends on Apple-side state (App IDs, profiles, processing) that should never be able to block the
+Docker image or the Android APK.
+
+#### What ships in one archive
+
+The `Tday` scheme archives one app with four embedded bundles, so **five App IDs** and five App Store
+distribution profiles are involved:
+
+| Bundle | Identifier | Capabilities |
+|---|---|---|
+| App | `com.ohmz.tday.ios` | App Groups `group.com.ohmz.tday`, Associated Domains `webcredentials:tday.ohmz.cloud` |
+| Widget extension | `com.ohmz.tday.ios.TdayTasksWidget` | App Groups `group.com.ohmz.tday` |
+| Share extension | `com.ohmz.tday.ios.TdayShareExtension` | App Groups `group.com.ohmz.tday` |
+| Watch app | `com.ohmz.tday.ios.watchkitapp` | App Groups `group.com.ohmz.tday` |
+| Watch complication | `com.ohmz.tday.ios.watchkitapp.widget` | App Groups `group.com.ohmz.tday` |
+
+`TdayTests` is a unit-test bundle; it is not archived and needs no App ID. There is no push, no
+iCloud, no Sign in with Apple, no HealthKit, and no keychain sharing.
+
+#### Trigger and path filter
+
+The workflow fires on **`push` of a `v*` tag**. `release.yml` pushes that tag over
+`RELEASE_DEPLOY_KEY`, and deploy-key pushes trigger workflows (unlike `GITHUB_TOKEN`-produced
+events, which is why an `on: release: [published]` trigger would never fire at all). At the tag,
+`version.json` is authoritative and the pbxproj's `CURRENT_PROJECT_VERSION` already equals
+`ios.buildNumber` — **the pipeline never derives or increments a build number.**
+
+A cheap `decide` job on Linux gates the expensive macOS job. It:
+
+1. refuses any tag whose name disagrees with `version.json` at that commit (this is what stops the
+   45 legacy `v1.x` tags from ever building, so the trigger pattern can stay a simple `v*`);
+2. runs `node scripts/version.mjs check`, so a drifted mirror fails before an archive starts;
+3. resolves the comparison base — **the last tag whose iOS build actually reached TestFlight**,
+   not simply the previous tag (see below);
+4. runs `scripts/ios-release-changed.mjs` to diff the two tags;
+5. checks that the Apple secrets exist, but only once it knows a build is wanted — so a
+   web-only release stays green on a repo that has not finished the Apple setup.
+
+That diff cannot be a `paths:` filter — `on: push: tags:` does not accept one. It also cannot be a
+naive "did `ios-swiftUI/` change", because **every** release commit rewrites `Info.plist`,
+`project.yml`, `project.pbxproj` and all ten `guide.*.json` files with new version numbers. So the
+script compares those specific files with the version tokens normalised away: a file whose *only*
+difference is the release bump does not count, while any other edit to that same file does.
+`version.json`'s `ios.buildNumber` is excluded from the relevant set, since it increments on every
+release. A `workflow_dispatch` run with `force` bypasses the filter — but cannot upload: a manual
+run is always build-only, because App Store Connect spends a `(version, buildNumber)` pair the
+moment it accepts an upload and never accepts it again.
+
+**One exception, and it is load-bearing.** Under `compatibility.mode: "exact"` with
+`compatibility.updateRequired: true` — what this repo sets, and what the server hands the mobile
+clients through the probe — both mobile clients treat *any* version difference as fatal, in either
+direction: the app is told to update when it is older, the server when it is newer. Under that
+policy the iOS build and the server must ship the same version, so the version moving is itself
+iOS-relevant and the filter forces the build. Without that, a release whose only iOS-visible change
+was the version bump skips iOS entirely and points every iOS user at a TestFlight build that does
+not exist — which is exactly what v0.7.30 did, leaving TestFlight on v0.7.29 while the backend
+moved on. The rule is read from `version.json` at the head being evaluated, so relaxing the policy
+is itself the way to have such a release skip iOS again.
+
+#### Two modes: `release` and `verify`
+
+The workflow runs in one of two modes, and the mode is **derived from the event and the ref** — it
+is not an input:
+
+| Trigger | Mode | What it does |
+|---------|------|--------------|
+| Push of a `v*` tag | `release` | Archive, sign, export, **upload to TestFlight** |
+| `workflow_dispatch`, any ref, any inputs | `verify` | Archive, sign, export, **stop** |
+
+`verify` mode is how a change to this pipeline gets tested. Before it existed, the only way to
+exercise the iOS build was to cut a real release, so iterating on a Swift compile error that only
+CI can reproduce cost one version bump per error. Now:
+
+```bash
+gh workflow run ios-testflight.yml --ref develop
+```
+
+archives the whole app on a macOS runner, proves the five bundles compile and that signing,
+provisioning and the export all resolve, and uploads nothing.
+
+**There is deliberately no input that makes a manual run upload.** App Store Connect spends a
+`(version, buildNumber)` pair the moment it *accepts* an upload and will never accept that pair
+again — not even after the build fails processing. A branch dispatch reads the same `version.json`
+a release does, so an upload from `develop` would burn the build number the next real release
+needs, with no way to reclaim it short of a version bump. Two independent gates enforce this:
+
+1. the `decide` job computes the mode from `GITHUB_EVENT_NAME` / `GITHUB_REF` in one place and
+   publishes it as a job output, and the macOS job refuses to start unless the mode and
+   `TDAY_SKIP_UPLOAD` it receives are a consistent pair (an empty output — a renamed step, a typo
+   — fails the job rather than defaulting to an upload);
+2. the fastlane `beta` lane **re-derives the same predicate from GitHub's own environment** and
+   downgrades itself to build-only if the workflow ever hands it something inconsistent. It does
+   not trust the workflow, so an expression bug in the YAML cannot on its own produce an upload.
+
+Dispatching against a *tag* ref is still `verify` — the event, not just the ref, has to be a push.
+The retry path for a genuine release is GitHub's own re-run of the tag-push run, which preserves
+`event: push`.
+
+A verify run also cannot be mistaken for a release afterwards: the comparison-base walk below
+filters run history to `--event push`, so a build-only run is never eligible to become the "last
+tag that shipped".
+
+**Why the base is not just the previous tag.** `git describe ... HEAD^` looks right and is subtly
+wrong: it is pure git topology and knows nothing about whether that release's iOS build succeeded.
+If v0.8.0 changed a Swift file but its upload died on a transient App Store Connect error and
+nobody re-ran it, a web-only v0.8.1 would diff `v0.8.0..v0.8.1`, see only version mirrors, skip,
+and report **success** — with TestFlight still serving the pre-0.8.0 binary and two consecutive
+releases claiming green. So `decide` instead walks this workflow's own run history (via
+`gh run list` plus the run's job-level conclusions, which is why the job needs `actions: read`) and
+anchors on the newest tag whose `testflight` **job** concluded `success`. A run whose macOS job was
+*skipped* still concludes `success` at the run level, so the job conclusion is what is checked.
+A stranded change therefore stays inside the diff until it actually ships.
+
+When no such tag can be established — first ever run, a deleted tag, a `gh` failure — the answer is
+to **build**. Failing safe there costs macOS minutes; failing the other way silently drops a
+release.
+
+#### Signing model
+
+App Store Connect API key (`.p8`) plus Xcode automatic signing via `-allowProvisioningUpdates` —
+**not** `fastlane match` — plus, on CI only, **one persistent Apple Development certificate**
+imported from a secret. No certificates are committed. The three pieces do three different jobs:
+
+| Step | Signed with | Where the key lives | Provided by |
+|---|---|---|---|
+| `xcodebuild archive` (all five bundles) | **Apple Development** — automatic signing always development-signs the archive | A keychain on the runner | `IOS_DEVELOPMENT_CERT_P12_BASE64` + `_PASSWORD`, imported by the lane into a throwaway keychain |
+| Development + App Store provisioning profiles | — | Minted/renewed by Xcode in the Developer portal | `-allowProvisioningUpdates` + the API key |
+| `-exportArchive` (App Store re-sign) | **Apple Distribution**, cloud-managed | Apple's servers; the private key never leaves them | Xcode cloud signing, authenticated with the same API key |
+
+What `-allowProvisioningUpdates` does here is **mint and renew provisioning profiles on demand**,
+against App IDs and an App Group that **already exist**. It does not create the App Group, and you
+should not rely on it to create the App IDs either. All five entitlements files request
+`com.apple.security.application-groups`, so if `group.com.ohmz.tday` is missing the archive fails
+on the first App-Group-bearing target with *"Provisioning profile … doesn't include the
+com.apple.security.application-groups entitlement"* — and missing it on only one of the five (the
+watch complication is the easy one to forget) fails only that target, deep into a 40-minute build.
+Steps 1–3 of the one-time setup below are therefore mandatory, not optional.
+
+**The API key needs the Admin role.** See step 4 — App Manager is enough to upload a build but not
+to create profiles, and not to cloud-sign with the team's managed distribution certificate.
+
+The `.p8` and the `.p12` are written `0600` under `RUNNER_TEMP`, which is outside the checked-out
+workspace, and deleted in an `ensure` block along with the throwaway keychain. Neither is ever
+written into the repository, the `.ipa`, or a workflow artifact — the `.ipa` is deliberately not
+uploaded as an artifact at all.
+
+##### CI development certificate
+
+**Why the archive needs a certificate at all when the export is App Store.** Under
+`CODE_SIGN_STYLE = Automatic`, `xcodebuild archive` is *always* development-signed. Passing
+`CODE_SIGN_IDENTITY=Apple Distribution` at archive time does not change that — Xcode refuses it
+before compiling anything (run 33939427858, all five targets):
+
+> `Tday has conflicting provisioning settings. Tday is automatically signed for development, but a
+> conflicting code signing identity Apple Distribution has been manually specified. Set the code
+> signing identity value to "Apple Development" in the build settings editor, or switch to manual
+> signing in the project editor.`
+
+Cloud signing — the Apple-managed distribution certificate whose private key never leaves Apple —
+exists only in the distribution step. Apple's own description is *"Xcode 13 or later will cloud
+sign any apps or software for distribution if you're using the Xcode Organizer archive and
+distribution workflow"* ([Cloud-managed certificates](https://developer.apple.com/help/account/certificates/cloud-managed-certificates/)),
+and the community's experience with `xcodebuild` + API key on ephemeral CI is the same: the
+archive *"always demands a local Development certificate + private key installed on the building
+machine even if you provide authentication parameters to xcodebuild"*
+([fastlane discussion #19973](https://github.com/fastlane/fastlane/discussions/19973), still true
+on Xcode 26). So every archive needs an Apple Development identity **with its private key** in a
+keychain on the runner.
+
+**What went wrong before this existed.** A fresh runner has no such identity, and
+`-allowProvisioningUpdates` "helpfully" mints one: every successful run's identity report showed a
+*different* `Apple Development: Created via API (…)`. Its private key died with the runner, so the
+next run minted another, and the team's certificate quota filled up one run at a time until the
+v0.7.7 release (run 33830438480) failed at the archive step with:
+
+> `Choose a certificate to revoke. Your account has reached the maximum number of certificates. To
+> create a new one, you must choose a certificate to revoke.` / `No profiles for 'com.ohmz.tday.ios'
+> were found: Xcode couldn't find any iOS App Development provisioning profiles`
+
+Once the quota was full, nothing in the pipeline could recover it; the stale certificates had to
+be revoked by hand in the portal. Revoking them clears the symptom, not the cause.
+
+**The fix.** The `beta` lane, **only when `IOS_DEVELOPMENT_CERT_P12_BASE64` is set** (which the
+workflow always does, and which the lane *requires* under `GITHUB_ACTIONS` so a missing secret is
+refused rather than allowed to mint a few more times):
+
+1. decodes the `.p12` to `RUNNER_TEMP`, `0600`;
+2. creates a throwaway keychain there (`create_keychain`, random password, no auto-lock, made the
+   default keychain and added to the search list — both, because Xcode looks identities up through
+   the search list and would store anything it created in the default);
+3. imports the certificate and key (`import_certificate` with the keychain password, which also
+   runs `security set-key-partition-list` so `codesign` can use the key headlessly) and checks
+   that something actually landed — fastlane only *prints* a failed `security import` and carries
+   on, so a wrong password or a `.p12` exported without `-legacy` would otherwise be diagnosed
+   fifteen lines later as the wrong problem; then installs Apple's WWDR intermediates into that
+   keychain so the identity is *valid*, not merely present;
+4. verifies what it imported before spending macOS minutes on an archive: it must be an
+   `Apple Development` identity **for the team the build signs as** (`IOS_TEAM_ID`), and not
+   expired. The name, team and expiry date are printed (they are not secrets — every provisioning
+   profile carries them). Fewer than 30 days of validity left produces a `::warning::` annotation;
+5. archives as before — with a usable identity in the search list, `-allowProvisioningUpdates`
+   creates nothing and only manages profiles;
+6. in `ensure`, diffs the keychain's identities against what it imported and emits a `::warning::`
+   naming any certificate Xcode minted anyway, then deletes the `.p12` and the keychain (restoring
+   the original default). Nothing persists on the runner.
+
+**The local developer path is unchanged.** Xcode on a Mac keeps using the developer's own Apple
+Development certificate and automatic signing; the project file is untouched. A local
+`fastlane beta` without the two variables archives with whatever identity that Mac's keychain
+already holds. Setting them locally exercises exactly the CI path, which is the way to test a new
+`.p12` before rotating the secret.
+
+**What to expect in the logs.** The lane prints `Imported development identity: Apple Development:
+… (team JUFACN2FS3), expires …` before the archive and `Xcode created no certificate on this
+runner` after it. The workflow's `Report the signing identities that were used` step then lists the
+runner's *login* keychain and expects **`0 valid identities found`**: the imported identity left
+with the throwaway keychain, and the cloud-managed distribution certificate has no local private
+key, so it is never an identity in any local keychain. Any identity listed there, or any
+`::warning::` from the lane's diff, means the archive fell back to minting — check the secret
+(team, expiry, private key present), and revoke the stray certificate.
+
+**Rotation.** Apple Development certificates are valid for one year. The lane warns from 30 days
+out and refuses an expired one (an expired identity is ignored by Xcode, which would go straight
+back to minting). Rotating is the one-time procedure below, repeated: new certificate, new `.p12`,
+`gh secret set` both values. Revoke the old certificate in the portal afterwards. Revoking a
+*development* certificate affects nothing shipped — TestFlight and App Store builds are signed with
+the distribution certificate.
+
+**Rejected alternatives.** Archiving with `Apple Distribution` directly is refused by Xcode, as
+shown above; making it work would mean switching all five targets to manual signing with pinned
+profiles, which is a different signing model and still needs a local private key. Auto-revoking
+certificates through the App Store Connect API is dangerous — nothing distinguishes a CI-minted
+certificate from one a developer's Mac depends on — and would only reset the quota, not stop the
+minting.
+
+#### Re-run safety
+
+Re-running the workflow on the same tag would re-upload an identical `(version, buildNumber)` pair,
+which App Store Connect rejects. The `beta` lane therefore asks `latest_testflight_build_number` what
+TestFlight already holds for the current marketing version and exits cleanly when this build is
+already there. The upload is also the **last** step in the lane, so anything that can fail has
+already failed before a byte is sent.
+
+**"Already uploaded" does not mean "testers can install it."** A build number is spent the moment
+App Store Connect *accepts* the upload, even if processing then fails — and Apple will not let you
+re-use it. So the lane also reads the build's `processingState` and, when it is `FAILED` or
+`INVALID`, **fails the run** with an explicit instruction to bump `version.json` rather than
+skipping quietly. That state lookup goes through Spaceship's private API and is deliberately
+wrapped in a rescue: if it cannot answer, the lane degrades to a skip whose message says plainly
+that a build missing from TestFlight means a spent build number.
+
+For the same reason the `force` dispatch input only bypasses the **path filter**. It cannot force
+an upload — a manual run is always `verify` mode — and even on the release path a duplicate upload
+cannot succeed. There is no escape hatch for a spent build number other than a version bump.
+
+In `verify` mode the lane **skips the duplicate check entirely** rather than consulting App Store
+Connect. A run that will not upload has nothing to protect, and asking anyway would break the
+verification case: once a build number is spent, the check would either skip `build_app` and
+report a green run that compiled nothing, or — for a `FAILED`/`INVALID` build — fail a run whose
+only job was to prove that the project still compiles.
+
+#### Processing confirmation (`confirm-processing`)
+
+`upload_to_testflight` runs with `skip_waiting_for_build_processing: true` (see Export compliance
+below for why) — so `testflight` going green proves App Store Connect **accepted** the binary, not
+that it finished processing. A build that fails processing still permanently spends its
+`(version, buildNumber)` pair, and until this job existed nobody found that out until the *next*
+release's duplicate guard tripped on it.
+
+A separate `confirm-processing` job runs after `testflight` in the same workflow run and polls for
+the answer:
+
+- **`ubuntu-latest`, not macOS.** It is an HTTP poll against App Store Connect — nothing here
+  touches Xcode, `xcodebuild`, or the `.ipa` — so there is no reason to pay the 10x macOS rate.
+- **It reuses the lookup, not a second client.** The polling lives in a dedicated fastlane lane,
+  `await_processing`, which calls the same `testflight_processing_state` helper the `beta` lane's
+  duplicate guard already calls, in the same `Fastfile`. Both call sites also share one constant,
+  `PROCESSING_FAILURE_STATES = %w[FAILED INVALID]`, so there is exactly one place that says which
+  states are terminal failures.
+- **Gated to the release path.** It runs only when `needs.decide.outputs.mode == 'release'` (only
+  reachable from a tag push — see Two modes above) **and** `needs.testflight.result == 'success'`
+  (a skipped or failed `testflight` job leaves nothing new to confirm). Unlike the upload gate,
+  this does not need a second, independently-derived check: it never writes to App Store Connect,
+  so a wrong `mode` here wastes a few Linux minutes at worst, not a build number.
+- **Bounded wait.** `await_processing` polls in a loop with its own timeout —
+  `TDAY_PROCESSING_POLL_MAX_ATTEMPTS` (default `20`) × `TDAY_PROCESSING_POLL_INTERVAL_SECONDS`
+  (default `60`), about 20 minutes — and always returns. Processing routinely takes 10-30 minutes,
+  so the window closing before ASC answers is expected, not exceptional: the lane prints a
+  `::warning::` annotation and exits **successfully**. A later `FAILED`/`INVALID` result is still
+  caught by the `beta` lane's own duplicate guard the next time a release runs, same as before this
+  job existed.
+- **Fails loudly on `FAILED`/`INVALID`.** `UI.user_error!` names the exact spent
+  `(version, buildNumber)` pair and the build number the next release must use
+  (`ios.buildNumber + 1` — every `node scripts/version.mjs bump …` increments it by exactly one),
+  and points at `node scripts/version.mjs bump patch` (or `minor`/`major`) as the fix.
+- **Same three secrets, no new ones.** `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_P8_BASE64` are
+  read again here; the `.p8` this job writes to `RUNNER_TEMP` is independent of the one `testflight`
+  already wrote and deleted (jobs run in separate VMs) and is deleted in the lane's own `ensure`
+  block.
+
+#### Export compliance
+
+`Tday/Info.plist` declares `ITSAppUsesNonExemptEncryption = false`. Without it, every upload parks at
+"Missing Compliance" awaiting a manual answer — and because the lane sets
+`skip_waiting_for_build_processing: true` (App Store Connect processing takes 10-30 minutes and
+would bill macOS runner minutes for a result nothing consumes), fastlane never gets a chance to
+answer that question after the fact. The key is what makes skipping the wait safe.
+
+T'Day's cryptography is:
+
+| Where | What | Purpose |
+|---|---|---|
+| `CredentialEnvelope.swift` | AES-256-GCM (CryptoKit) + RSA-2048 OAEP-SHA256 (Security) | Wraps the sign-in username/password for transport to the user's own server |
+| `ProbeDecryptor.swift` | AES-256-GCM (CryptoKit) | Decrypts the server's version-compatibility probe |
+| `NetworkConfiguration`, `TodayTasksWidget` | SHA-256 (CryptoKit) | Hashing, not encryption |
+| Everywhere | HTTPS/TLS via `URLSession` | Transport |
+
+**The basis for the exemption**, in order of how cleanly it fits:
+
+1. **Encryption limited to that provided within the operating system.** Every primitive above is
+   Apple's own CryptoKit / Security / URLSession. T'Day implements no cipher, bundles no
+   third-party crypto library, and ships no modified crypto.
+2. **Publicly available source code** (EAR §740.13(e)) — T'Day is open source at
+   `github.com/ohmzi/Tday`. Note this exemption carries a **one-time email notification** to BIS
+   (`crypt@bis.doc.gov`) and the NSA (`enc@nsa.gov`) giving the source URL. Relying on it means
+   sending that email.
+
+Two bases are deliberately **not** relied on:
+
+- *"Limited to authentication"* on its own. It covers `CredentialEnvelope`, but **not**
+  `ProbeDecryptor`, which applies confidentiality to ordinary application data (`appVersion`,
+  `updateRequired`, `compatibilityMode`) using a key bundled in the app. An earlier draft of this
+  PR claimed the authentication exemption covered everything; that was wrong, and the declaration
+  now rests on basis 1 above, which does cover it.
+- *"Short key length."* AES-256 and RSA-2048 exceed the 56-bit symmetric / 512-bit asymmetric
+  thresholds.
+
+> **This is a legal export declaration, not a build setting.** The Apple account holder must confirm
+> it before the first upload. The reasoning is restated in a comment above the key in `Info.plist`.
+> If they are not comfortable with the above, the alternative is `ITSAppUsesNonExemptEncryption =
+> true` plus the annual self-classification report to BIS; the pipeline still works, but the first
+> build of each version then needs the compliance question answered by hand in App Store Connect.
+
+#### Secrets and variables
+
+| Name | Kind | Purpose |
+|---|---|---|
+| `ASC_KEY_ID` | secret | 10-character App Store Connect API Key ID |
+| `ASC_ISSUER_ID` | secret | Issuer UUID shown above the key list |
+| `ASC_KEY_P8_BASE64` | secret | base64 of the `.p8` Apple lets you download exactly once |
+| `TDAY_PROBE_ENCRYPTION_KEY` | secret | Already set — the same secret `release.yml` passes to the Android build. `Tday/Info.plist` publishes `TdayProbeEncryptionKey` as `$(TDAY_PROBE_ENCRYPTION_KEY)`, and an undefined build setting expands to `""`, which makes `ProbeDecryptor` return `nil` and silently disables the whole server version-compatibility gate |
+| `IOS_DEVELOPMENT_CERT_P12_BASE64` | secret | base64 of a PKCS#12 export of an **Apple Development** certificate *and its private key* for team `IOS_TEAM_ID`. The archive is signed with it — see [CI development certificate](#ci-development-certificate). Valid one year; rotate before expiry |
+| `IOS_DEVELOPMENT_CERT_P12_PASSWORD` | secret | The password the `.p12` was exported with. Must be non-empty |
+| `IOS_TEAM_ID` | **variable** | Apple Team ID (`JUFACN2FS3`). Not a secret — it is printed on every provisioning profile |
+| `IOS_XCODE_VERSION` | **variable** | Optional Xcode pin, e.g. `16.4`. Unset, the job warns and uses the runner default |
+| `SENTRY_DSN_IOS` | secret (optional) | DSN of the `tday-ios` Sentry project. `Tday/Info.plist` publishes `SENTRY_DSN` as `$(SENTRY_DSN)`, and an undefined setting expands to `""`, which leaves crash reporting off and hides the consent card. It is a public identifier. Passed in every mode, and it must match `https://<hex key>@<host>/<digits>` or the lane fails, even in a verify run |
+| `SENTRY_AUTH_TOKEN` | secret (optional) | Upload-scope Sentry token. Given to release-mode runs only; the lane hands it to a pinned `sentry-cli` to upload the dSYMs to org `tday-kb`, project `tday-ios`, **before** the TestFlight upload. Without it the upload is skipped and iOS crash reports do not symbolicate |
+
+The **`decide` job on Linux** fails with an actionable message if any of the Apple secrets above is missing,
+rather than 40 minutes later inside `xcodebuild` — and rather than booting a macOS runner (billed at
+10x the Linux rate) to run a six-variable emptiness test. No secret is ever echoed; only emptiness
+is tested. The check is gated on the build actually being wanted, so a web-only release still
+reports green on a repo where the Apple setup is unfinished.
+
+The two Sentry secrets never fail a release: a missing one makes the "Check the crash-report inputs"
+step emit a `::warning::` and that build ships without crash reporting or without symbolication.
+
+`TDAY_PROBE_ENCRYPTION_KEY` reaches the build through a temporary `xcconfig` written `0600` under
+`RUNNER_TEMP` and deleted in the lane's `ensure` block — **not** through `xcargs`, because gym
+echoes the assembled `xcodebuild` command into the build log. `SENTRY_DSN` travels the same way,
+with its `//` rewritten as `/$()/` because a `//` starts a comment in an xcconfig.
+
+`sentry-cli` is installed on the macOS runner (release mode only) from a direct download pinned to
+one version and verified against its SHA-256 before it runs. To change the pin, take the new
+release's `sentry-cli-Darwin-universal` digest and update `SENTRY_CLI_VERSION` and
+`.github/pinned/cli-darwin-universal.sha256` together (see [`SENTRY_RUNBOOK.md`](SENTRY_RUNBOOK.md)).
+
+#### One-time setup (Apple account holder only)
+
+The App Store Connect app record already exists — bundle `com.ohmz.tday.ios`, Apple ID
+`6772349115`, name "Tday". Do not create another. Everything below is on the Apple side or in
+repository settings, and cannot be done from a pull request.
+
+1. **Register the five App IDs** at
+   [developer.apple.com → Certificates, Identifiers & Profiles → Identifiers](https://developer.apple.com/account/resources/identifiers/list).
+   Create an App ID for each identifier in the table above.
+2. **Create the App Group** `group.com.ohmz.tday` (Identifiers → App Groups), then enable the **App
+   Groups** capability on all five App IDs and assign that group to each.
+3. **Enable Associated Domains** on `com.ohmz.tday.ios` only.
+4. **Mint an App Store Connect API key**: App Store Connect → Users and Access → Integrations → App
+   Store Connect API → Team Keys → `+`. Give it the **Admin** role (Account Holder also works).
+   Download the `.p8` immediately; Apple only offers it once.
+
+   > **Admin, not App Manager.** App Manager covers the TestFlight half — it can upload a build.
+   > It does **not** cover the Developer-Portal half, and this signing model lives on that half:
+   > `-allowProvisioningUpdates` drives xcodebuild against Certificates, Identifiers & Profiles to
+   > create the development and App Store profiles, and cloud signing uses the team's managed
+   > distribution certificate; Apple's program-roles matrix restricts *distribution* profiles and
+   > cloud-managed distribution signing to Account Holder and Admin. With an App Manager key the
+   > run gets all the way to the CodeSign step of the first signed target — roughly 40 minutes of
+   > macOS time — and then fails with a provisioning error. **If the key already in the
+   > repository secrets was minted as App Manager, re-mint it.**
+5. **Create the CI development certificate** — one Apple Development certificate whose private
+   key is kept as a repository secret, so the archive never has to mint one (see
+   [CI development certificate](#ci-development-certificate) for why). It must belong to the
+   same team as `IOS_TEAM_ID`. Two ways to get the `.p12`:
+
+   **Without a Mac** (this repository's own deploy host is Linux) — generate the key pair and a
+   CSR with OpenSSL, have Apple sign it, and bundle the result:
+
+   ```bash
+   # 1. Private key + CSR. Apple names the certificate after your account, not after the CSR,
+   #    so the subject values here are cosmetic.
+   openssl req -new -newkey rsa:2048 -nodes \
+     -keyout tday-ci-development.key -out tday-ci-development.csr \
+     -subj "/emailAddress=you@example.com/CN=Tday CI/C=US"
+
+   # 2. developer.apple.com -> Certificates, Identifiers & Profiles -> Certificates -> "+"
+   #    -> "Apple Development" -> upload tday-ci-development.csr -> download development.cer
+   #    It appears as "Apple Development: <your name> (<id>)"; the run log prints that name and
+   #    the expiry date, which is what tells it apart from the "Created via API" leftovers.
+
+   # 3. Choose the export password FIRST. It is used twice below — the export and the second
+   #    `gh secret set` — so it has to exist before either. Nothing has to memorise it; it only
+   #    travels to the repository secret. An empty one is silently fatal: OpenSSL exports a
+   #    passwordless .p12 and exits 0, `security import` on the runner will not reliably read it,
+   #    and the `decide` job rejects an empty IOS_DEVELOPMENT_CERT_P12_PASSWORD. Hex, so the
+   #    value needs no quoting anywhere it travels (gh -> Actions env -> `security import -P`).
+   #    Exported because the `openssl` call below reads it from the environment, not the argv.
+   P12_PASSWORD=$(openssl rand -hex 24)
+   export P12_PASSWORD
+
+   # 4. Bundle certificate + key as PKCS#12. `-legacy` matters: OpenSSL 3 defaults to a MAC and
+   #    ciphers that `security import` on macOS 14 rejects with "MAC verification failed".
+   #    `-passout env:` rather than `pass:"$P12_PASSWORD"`: with the variable unset, `env:` errors
+   #    and writes no file, where `pass:` quietly produces a passwordless .p12.
+   openssl x509 -in development.cer -inform DER -out tday-ci-development.pem
+   openssl pkcs12 -export -legacy \
+     -inkey tday-ci-development.key -in tday-ci-development.pem \
+     -out tday-ci-development.p12 -passout env:P12_PASSWORD
+
+   # 5. Verify BEFORE destroying anything — this is the last moment the private key exists
+   #    locally. These are the checks the lane runs on CI, minus the ones only macOS can do.
+   openssl x509 -in tday-ci-development.pem -noout -enddate
+   openssl x509 -in tday-ci-development.pem -noout -subject \
+     -nameopt multiline,-esc_msb | grep -E 'commonName|organizationalUnitName'
+   #    commonName             must start with "Apple Development:" — a distribution certificate
+   #                           fails the archive with a conflicting-identity error.
+   #    organizationalUnitName must equal IOS_TEAM_ID (JUFACN2FS3). This account has more than
+   #                           one team and the portal will happily issue under the other.
+   #    notAfter               must be about a year out.
+
+   openssl pkcs12 -in tday-ci-development.p12 -info -legacy -noout \
+     -passin env:P12_PASSWORD 2>&1 | grep -E 'MAC:|Shrouded Keybag|Mac verify error'
+   #    Expect exactly these two lines, and no error:
+   #      MAC: sha1, Iteration 2048
+   #      Shrouded Keybag: pbeWithSHA1And3-KeyTripleDES-CBC, Iteration 2048
+   #    "Mac verify error: invalid password?" -> $P12_PASSWORD is not what the file was made with.
+   #    No "Shrouded Keybag" line       -> the export lost the private key; redo step 4.
+   #    "MAC: sha256" / PBES2, AES-256  -> `-legacy` did not take effect. It reads fine here and
+   #                                       `security import` on the runner rejects it. Redo step 4.
+
+   # 6. Store both secrets, and only then delete the local files. Chained on `&&`: after the
+   #    shred the private key exists nowhere but in a GitHub secret, and a secret cannot be read
+   #    back — a half-finished upload here costs a second certificate against the quota. Piping
+   #    keeps the key and the password out of the process list.
+   base64 -w0 tday-ci-development.p12 | gh secret set IOS_DEVELOPMENT_CERT_P12_BASE64 &&
+     printf '%s' "$P12_PASSWORD" | gh secret set IOS_DEVELOPMENT_CERT_P12_PASSWORD &&
+     shred -u tday-ci-development.key tday-ci-development.p12
+   ```
+
+   Those checks are the whole of what Linux can prove. The remaining risk — that the runner's
+   `security import` rejects the file for a reason `openssl` cannot see — is settled by a
+   `verify`-mode run (see [The first run](#the-first-run)); recovery is this step again plus
+   revoking the unused certificate in the portal.
+
+   **On a Mac** — Keychain Access → Certificate Assistant → *Request a Certificate From a
+   Certificate Authority* (saved to disk), create the Apple Development certificate from that CSR
+   in the portal, double-click the downloaded `.cer` so it pairs with the key, then in Keychain
+   Access select the certificate *and* its private key → *Export 2 items…* → `.p12` with a
+   password. Selecting the certificate row alone produces a `.p12` with no private key, which the
+   lane rejects with *"`security import` put no code-signing identity in the CI keychain"* — the
+   `Shrouded Keybag` check in the verification block above is what catches that before the key is
+   shredded, so run it here too (a Keychain Access export is already in the legacy format, so only
+   the `MAC: sha1` expectation is Mac-optional). Then put the password you typed in the export
+   dialog into the same variable the steps above use — `read -rs P12_PASSWORD && export
+   P12_PASSWORD`, which prompts without echoing and keeps it out of the shell history — and run
+   the two `gh secret set` lines above (`base64 -i` instead of `base64 -w0`). The second one reads
+   that variable, and an empty value fails the `decide` job.
+
+   Keep it separate from any developer's personal certificate: the CI one can be revoked and
+   re-issued without touching a Mac. The lane prints its name, team and expiry on every run and
+   warns 30 days before it expires; rotation is this step again.
+6. **Set the remaining repository secrets and variables** (from the repo root):
+
+   ```bash
+   gh secret set ASC_KEY_ID        --body "XXXXXXXXXX"
+   gh secret set ASC_ISSUER_ID     --body "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+   gh secret set ASC_KEY_P8_BASE64 --body "$(base64 -w0 ~/Downloads/AuthKey_XXXXXXXXXX.p8)"
+   #   on macOS the flag is different:
+   #   gh secret set ASC_KEY_P8_BASE64 --body "$(base64 -i ~/Downloads/AuthKey_XXXXXXXXXX.p8)"
+
+   gh variable set IOS_TEAM_ID --body "JUFACN2FS3"
+   ```
+
+7. **Pin Xcode** once you have seen a run log (the "Select Xcode" step prints every version
+   installed on the runner):
+
+   ```bash
+   gh variable set IOS_XCODE_VERSION --body "16.4"   # use a version the log actually lists
+   ```
+
+8. **Confirm the export-compliance declaration** described above.
+9. **Create the TestFlight group and public link**: App Store Connect → TestFlight → Groups → `+`.
+   Enable **Public Link** and, if you want testers to get builds without per-build action, turn on
+   automatic distribution for the group.
+10. **Set `ios.updateUrl`** once that public link exists. Done — `version.json` now carries the
+   group's public TestFlight link, and it is the only place that value lives. While it was `""`,
+   `AppViewModel.bundleUpdateURL()` returned `nil` and both in-app update surfaces (the blocking
+   `UpdateRequiredView` and the Settings "Update Available" card) rendered an explanatory sentence
+   with no button. To repoint it — at the App Store listing, once the app leaves TestFlight — edit
+   `version.json`, then:
+
+   ```bash
+   node scripts/version.mjs sync && node scripts/version.mjs check
+   ```
+
+   Never hand-edit the mirrored values — `Info.plist`, `project.yml` and the pbxproj are generated
+   from `version.json`.
+
+#### The first run
+
+`workflow_dispatch` is only exposed for workflows that exist on the **default branch**, so this
+workflow cannot be exercised at all until it merges to `master` — and that same merge triggers
+`release.yml`, which bumps, commits and pushes a tag, which fires this workflow automatically.
+There is no gap in between, and the path filter cannot save you: a change to
+`.github/workflows/ios-testflight.yml` is itself iOS-relevant, so the first post-merge tag always
+resolves `should_build=true`.
+
+That means the first execution would otherwise be an unsupervised production archive of five
+bundles plus a real TestFlight upload, on a pipeline where `xcodebuild` and `fastlane` have never
+run once. Rehearse it with a `verify` run instead:
+
+1. Finish steps 1–10 above **before** merging.
+2. Merge to `master`. Cancel the automatic run the release tag triggers.
+3. Dispatch the workflow manually — `gh workflow run ios-testflight.yml --ref develop`, or the
+   **Run workflow** button. It archives, signs, exports the `.ipa` and stops, proving signing,
+   profiles, entitlements and the App Group without touching TestFlight.
+4. When that is green, cut the next release normally; the tag push uploads.
+
+`verify` mode is permanent, not scaffolding. It is the right way to test any later change to
+signing, the lane, or the Swift sources this pipeline compiles — and it is the only way to see a
+compile error that reproduces on a macOS runner without spending a release to find it.
+
+#### Building it locally
+
+```bash
+cd ios-swiftUI
+bundle install
+ASC_KEY_ID=... ASC_ISSUER_ID=... ASC_KEY_P8_BASE64=... \
+  TDAY_SKIP_UPLOAD=true bundle exec fastlane beta
+```
+
+`TDAY_SKIP_UPLOAD=true` puts the lane in the same build-only mode `verify` runs use — archive and
+export, no upload. Drop it to upload for real. Locally that is all it takes; inside GitHub Actions
+the lane additionally refuses to upload from anything but a tag push, whatever this variable says.
+
+`TDAY_PROBE_ENCRYPTION_KEY` is optional locally: the lane warns loudly and continues without it,
+producing a build whose server version-compatibility gate is inert. CI treats it as required.
+
+`IOS_DEVELOPMENT_CERT_P12_BASE64` / `IOS_DEVELOPMENT_CERT_P12_PASSWORD` are optional locally too:
+without them the archive is signed with whatever Apple Development identity the Mac's own keychain
+holds, exactly as Xcode would. Set them to run the CI path — throwaway keychain, import,
+verification, cleanup — which is how to check a freshly exported `.p12` before rotating the
+secret. CI refuses to archive without them.
+
+That path makes the throwaway keychain the Mac's **default** keychain for the length of the run
+and puts the original back in the lane's `ensure`. If a run is killed outright (`kill -9`, a
+closed lid) that `ensure` never runs, and the default is left pointing at a file under `$TMPDIR`.
+The next run repairs it; to repair it by hand:
+
+```bash
+security default-keychain -s ~/Library/Keychains/login.keychain-db
+```
+
+There is deliberately **no committed `Gemfile.lock`** — see the comment in `ios-swiftUI/Gemfile`.
+To add one, run `bundle lock --add-platform arm64-darwin --add-platform x86_64-darwin` on a machine
+with Ruby and commit the result; the workflow picks it up with no change.
+
+## Configuration
+
+### Environment Variables
+
+All configuration is via environment variables. See `.env.example` for the full list with documentation.
+
+The Ktor backend (`AppConfig.kt`) loads all settings from environment variables and supports `_FILE` suffixes for secret file mounts (Docker/Kubernetes).
+
+#### Required
+
+| Variable | Purpose |
+|----------|---------|
+| `DATABASE_URL` | PostgreSQL connection string (JDBC or `postgresql://` format) |
+| `AUTH_SECRET` | JWE encryption secret (generate: `openssl rand -base64 32`) |
+
+#### Recommended
+
+| Variable                            | Purpose                                                                                                                        |
+|-------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
+| `AUTH_PBKDF2_ITERATIONS`            | Password hash iterations (default: 310,000)                                                                                    |
+| `AUTH_SESSION_MAX_AGE_SEC`          | Rolling web-session inactivity window in seconds (default: 2,592,000)                                                          |
+| `AUTH_SESSION_ABSOLUTE_MAX_AGE_SEC` | Absolute session cap from original login time in seconds (default: 7,776,000)                                                  |
+| `AUTH_SESSION_RENEW_THRESHOLD_SEC`  | Renewal threshold in seconds before expiry (default: 604,800)                                                                  |
+| `AUTH_CREDENTIALS_PRIVATE_KEY`      | RSA key for credential envelope encryption; recommended in production to avoid ephemeral startup keys                          |
+| `APPLE_TEAM_ID`                     | Apple Developer Team ID used in Tday's canonical `apple-app-site-association` webcredentials payload for iOS Password AutoFill |
+| `IOS_BUNDLE_ID`                     | iOS app bundle identifier for webcredentials association (default: `com.ohmz.tday.ios`)                                        |
+| `ANDROID_PACKAGE_NAME`              | Android app package name for Digital Asset Links credential sharing (default: `com.ohmz.tday.compose`)                         |
+| `ANDROID_SHA256_CERT_FINGERPRINTS`  | Comma-separated SHA-256 signing certificate fingerprints for Android Digital Asset Links credential sharing                    |
+| `OLLAMA_URL`                        | Optional Ollama service URL. Leave blank for backend logic-only summaries; use `http://ollama:11434` with the Compose `ai` profile |
+| `OLLAMA_MODEL`                      | AI model for summaries when Ollama is enabled (default: `qwen3.5:0.8b`)                                                        |
+
+#### Optional: crash reporting
+
+| Variable | Purpose |
+|----------|---------|
+| `SENTRY_DSN` | The server's own Sentry DSN. Blank (the default) means the server never reports and the admin toggle stays hidden. With a DSN set, nothing is sent until an admin switches on "Server error reports" in web Settings → Privacy (default off) |
+| `SENTRY_TRACES_SAMPLE_RATE` | Backend trace sampling from `0.0` to `1.0`. Defaults to `0.1` in production and `1.0` otherwise; health, probe, websocket, and calendar-feed requests are never traced |
+| `TDAY_CLIENT_SENTRY_DSN` | Baked into the published image from the web build's DSN; leave it alone. The server never sends to it, it only adds that ingest host to the CSP `connect-src` so the browser can report there |
+| `CSP_CONNECT_EXTRA` | Extra `connect-src` origins. When set, it replaces the origin otherwise derived from `SENTRY_DSN`; the client DSN's origin is always added on top |
+
+See [Crash reporting](#crash-reporting-sentry) for how the switch behaves after a deploy.
+
+The native iOS app saves and retrieves Tday credentials under the canonical `tday.ohmz.cloud` Apple Passwords scope, regardless of the server URL a user connects to.
+The native Android app can save and retrieve app-scoped password credentials immediately. Sharing
+credentials with the canonical `tday.ohmz.cloud` web scope requires
+`ANDROID_SHA256_CERT_FINGERPRINTS` so the backend can serve `/.well-known/assetlinks.json`.
+
+### Server timezone
+
+**You almost never need to set this, and the server's timezone does not affect anyone's task
+times.** T'Day uses the industry-standard "store UTC, render per-user" model:
+
+- Every task due time is stored in **UTC**. Each client converts the user's local input to a UTC
+  instant when saving, and converts it back to **that user's own device timezone** when displaying.
+- Each user's timezone is detected from their device and synced to the server automatically
+  (`X-User-Timezone` header + `GET /api/timezone`, stored on the user record). It is used for
+  per-user, server-side groupings like the "today / overdue" summary.
+- All server-side time math runs in UTC, so it is **independent of the container clock**. Two users
+  in different timezones see the same task at the correct local time for each of them, on web, iOS,
+  and Android alike.
+- Reminders are scheduled **on each device** and fire at the task's absolute due instant, rendered
+  in that device's local time — also independent of the server timezone.
+
+Because of this, the `TZ` environment variable only changes the **server's log timestamps**. Leave
+it at the default `UTC` unless you specifically want logs in your local zone:
+
+```bash
+# root .env — affects log timestamps only, NOT task due times or reminders
+TZ=America/New_York
+```
+
+`TZ` is read by Docker Compose and passed into the backend container
+(`docker-compose.yaml`: `TZ: ${TZ:-UTC}`). The PostgreSQL service is unaffected — all timestamps
+are stored and compared in UTC. If task times ever appear off for a single user, the cause is that
+user's **device** timezone being wrong, not the server `TZ`.
+
+#### Docker Compose (project-root `.env`)
+
+These variables are read by Docker Compose for port binding. They belong in the **root `.env`** file, not `.env.docker`.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `TDAY_HOST_BIND` | `127.0.0.1` | Network interface for the host port binding (`127.0.0.1` = localhost only, `0.0.0.0` = all interfaces) |
+| `TDAY_HOST_PORT` | `2525` | Host port mapped to the backend container's port `8080` |
+
+#### Optional
+
+| Variable | Purpose |
+|----------|---------|
+| `TDAY_ENV` | Runtime mode (`production` enables production-only behavior such as HSTS and secure session cookies; `NODE_ENV` is still accepted as a fallback) |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated list of allowed cross-origin web origins (same-origin requests work without it) |
+| `DATA_ENCRYPTION_KEY` / `DATA_ENCRYPTION_KEY_ID` | Field-level encryption at rest |
+| `API_RATE_LIMIT_MAX` / `API_RATE_LIMIT_WINDOW_SEC` | Global `/api/**` request budget |
+| `INFRA_RATE_LIMIT_MAX` / `INFRA_RATE_LIMIT_WINDOW_SEC` | `/health` and `/api/mobile/probe` request budget |
+| `SUMMARY_RATE_LIMIT_MAX` / `SUMMARY_RATE_LIMIT_WINDOW_SEC` | `POST /api/todo/summary` request budget |
+| `CHANGE_PASSWORD_RATE_LIMIT_MAX` / `CHANGE_PASSWORD_RATE_LIMIT_WINDOW_SEC` | `POST /api/user/change-password` request budget |
+| `WS_RATE_LIMIT_MAX` / `WS_RATE_LIMIT_WINDOW_SEC` | `/ws` connect-attempt budget |
+| `AUTH_LIMIT_SESSION_GET_MAX` / `AUTH_LIMIT_SESSION_GET_WINDOW_SEC` | `GET /api/auth/session` budget |
+| `AUTH_LIMIT_CREDENTIALS_KEY_MAX` / `AUTH_LIMIT_CREDENTIALS_KEY_WINDOW_SEC` | `GET /api/auth/credentials-key` budget |
+
+### Secrets via Files
+
+For Docker/Kubernetes secret mounts, append `_FILE` to any sensitive variable:
+
+```bash
+AUTH_SECRET_FILE=/run/secrets/auth_secret
+DATABASE_URL_FILE=/run/secrets/database_url
+```
+
+The Ktor backend's `AppConfig` reads file contents into the corresponding variable at startup when `_FILE` variants are present.
+
+## Database Migrations
+
+### How Migrations Work
+
+T'Day uses **Flyway** for database migrations. Flyway runs automatically on Ktor backend startup (`DatabaseConfig.kt`), applying any pending migrations from `tday-backend/src/main/resources/db/migration/`.
+
+Migration files follow the naming convention: `V<number>__<description>.sql`. The current baseline sequence is:
+
+- `V1__baseline.sql`: legacy placeholder kept for compatibility.
+- `V2__full_schema.sql`: full schema snapshot generated from the live PostgreSQL schema for clean installs.
+- `V3__add_missing_indexes.sql`: first incremental migration after the schema snapshot.
+
+Existing databases with pre-Flyway schema but no migration history are baselined at version `2`, which skips the placeholder and full-schema migrations and applies only new incremental migrations.
+
+### Creating Migrations
+
+1. Create the next SQL file in `tday-backend/src/main/resources/db/migration/` following the naming convention (`V4__...`, `V5__...`, and so on).
+2. Write the DDL/DML statements, or generate/review SQL from a local database when a full snapshot is explicitly needed.
+3. Update the corresponding Exposed `Table` objects in `tday-backend/src/main/kotlin/com/ohmz/tday/db/tables/` to match.
+4. Restart the backend — Flyway applies the migration automatically.
+5. Commit both the migration SQL and the Exposed table changes.
+
+### Migration Safety
+
+- Always review generated SQL before committing.
+- Do not regenerate `V2__full_schema.sql` for routine schema changes. Add a new incremental migration instead.
+- Backward-compatible changes are preferred (add columns with defaults, don't drop columns immediately).
+- For destructive changes, use a multi-step migration:
+  1. Add new column / table.
+  2. Deploy code that writes to both old and new.
+  3. Migrate data.
+  4. Remove old column / table.
+
+## Rollback Strategy
+
+### Application Rollback
+
+Redeploy the previous release tag. The backend image is a compose variable, so no file needs editing
+and the rest of the stack is left alone:
+
+```bash
+./scripts/deploy-release.sh --version 1.4.0
+# equivalently, by hand:
+TDAY_BACKEND_IMAGE=ghcr.io/ohmzi/tday:v1.4.0 docker compose up -d --no-build tday-backend
+```
+
+Never `docker compose down -v` — the `-v` deletes the `postgres_data` volume, which is the only copy
+of the data.
+
+### Database Rollback
+
+Flyway does not support automatic down-migrations. For rollbacks:
+
+1. Write a manual SQL script to reverse the migration.
+2. Apply via `psql` or a migration tool.
+3. Keep database backups before every release.
+
+## Observability
+
+### Logging
+
+- Application logs go to stdout/stderr via **Logback** (Docker captures them).
+- Security events are written to the `eventLog` database table.
+- OkHttp (Android) logs at DEBUG level with cookie redaction.
+- Log configuration is in `tday-backend/src/main/resources/logback.xml`.
+
+### Monitoring Recommendations
+
+- Monitor `auth_lockout`, `auth_limit_ip`, and `auth_limit_ip_burst` event codes for abuse (the
+  burst code fires when an IP exceeds the short-window account-creation tier).
+- Set alerts for container restarts.
+- Monitor PostgreSQL connection pool (HikariCP) and disk usage.
+- Check the Ollama health endpoint only when the `ai` profile is enabled. Without Ollama, Summary falls back to backend logic.
+
+### Crash reporting (Sentry)
+
+Crash reporting is optional and consent-based. What is collected and the full consent model are in
+[`TELEMETRY.md`](TELEMETRY.md); setup, secrets, and drills are in [`SENTRY_RUNBOOK.md`](SENTRY_RUNBOOK.md).
+
+- **Server reports.** `SENTRY_DSN` is the master switch. With it set, an admin turns "Server error
+  reports" on in web Settings → Privacy (Server Mode, `ADMIN` role). The setting lives in the
+  `instance_settings` table (migration `V32`) and **defaults to off**, so a server that updates to
+  0.8.0 with a DSN already set goes quiet until an admin switches the toggle on. With no DSN the row
+  is hidden.
+- **Switching it on.** The setting is loaded when the server starts and written through by
+  `PATCH /api/admin/telemetry`, so changing it needs no restart. The toggle and the web consent card
+  only exist on a live instance once the new image is running, so compare the `buildId` at
+  `/version.json` before concluding the toggle is missing.
+- **Client reports.** The published image carries the maintainer's browser DSN and the release
+  builds carry the Android and iOS DSNs. Each client asks its user once, and sends nothing until they
+  say yes. An image or app built without a DSN never asks. The web report is sent with no `Referer`,
+  but the browser still sends `Origin`, so the maintainer's Sentry sees the domain your web image is
+  served from.
+- **Release secrets.** `SENTRY_DSN_WEB`, `SENTRY_DSN_ANDROID`, `SENTRY_DSN_IOS`, and
+  `SENTRY_AUTH_TOKEN` (see the secrets table in [`SENTRY_RUNBOOK.md`](SENTRY_RUNBOOK.md)). A missing
+  one only warns.
+- **Store labels (to-do).** Apple App Privacy and Google Play Data Safety must declare Crash Data and
+  Diagnostics even though collection is opt-in. There is no `PrivacyInfo.xcprivacy` yet; it becomes a
+  pre-submission task if iOS distribution moves beyond TestFlight.
+
+### Backups
+
+- Database: Schedule automated PostgreSQL dumps with encryption at rest.
+- Secrets: Store in a secrets manager with audit logging.
+
+## Updating in Production
+
+### Deploying a release
+
+Merging to `master` builds and publishes `ghcr.io/ohmzi/tday:v<version>` and `:latest`. It does not
+touch any host. On the deploy host, pull that image and recreate the backend:
+
+```bash
+git pull                                              # so version.json names the release you want
+./scripts/deploy-release.sh --url https://tday.ohmz.cloud
+```
+
+The script:
+
+1. reads `version` from root `version.json` (override with `--version X.Y.Z` or `--image REF`),
+2. pulls `ghcr.io/ohmzi/tday:v<version>`, falling back to `:latest` with a warning if that tag is
+   not published yet (`--no-fallback` to fail instead),
+3. compares the Flyway migrations baked into the **running** image with the target image's and
+   refuses to continue if the target adds any, unless you pass `--backup` (take one now) or
+   `--skip-backup` (you already have one) — Flyway has no down-migrations,
+4. recreates only `tday-backend` with `TDAY_BACKEND_IMAGE` pinned to that tag, waits for the
+   healthcheck, then verifies `/version.json` and `/api/mobile/probe` report the expected version,
+   on loopback and (with `--url`) through the ingress.
+
+`--dry-run` resolves the image and runs the migration check without deploying.
+
+Deploy **once** per release. Every distinct image re-hashes the SPA chunks, and each rebuild is a
+fresh cache generation for already-open PWA/iOS-Safari clients; recreating the container from the
+*same* image is harmless, but a string of separate builds is not.
+
+`version.json` sets `compatibility.mode: "exact"`, so the server and the mobile apps must report the
+same version. Publish a release and leave the server behind and every client that takes the in-app
+update is locked out until this step runs. Deploy promptly after a release.
+
+### Plain Docker Compose
+
+`docker compose up -d` on the deploy host also pulls, because the backend service has no `build:`
+section and defaults to `ghcr.io/ohmzi/tday:latest`:
+
+```bash
+docker compose pull tday-backend && docker compose up -d tday-backend
+```
+
+This skips the migration/backup guard and the version verification, so prefer the script.
+
+### Portainer
+
+1. Containers → select **tday_backend**.
+2. Click **Recreate** → enable **Re-pull image** → click **Recreate**.
+
+### Post-Update
+
+- Flyway migrations run automatically on container start.
+- Existing databases without Flyway history are baselined at version `2`; empty databases replay the full schema snapshot and then incremental migrations.
+- Verify the app is healthy by checking `GET /health` returns `{ "status": "ok" }`.
+- Confirm `GET /version.json` and `GET /api/mobile/probe` both report the released version (`deploy-release.sh` does this for you).
+- Review `docker logs tday_backend` for startup errors.
+- **Web clients self-update.** Already-open browsers/PWAs detect the new build and reload into it automatically — no manual cache clearing on each release. See below.
+
+### Rolling back
+
+There is no automated rollback. Redeploy the previous tag:
+
+```bash
+./scripts/deploy-release.sh --version 0.7.1
+```
+
+That only reverses the application. Any Flyway migration the newer image applied stays applied —
+restore from a dump (`scripts/restore-database.sh`) if the schema has to go back too.
+
+## Web Cache Invalidation & Client Updates
+
+### Why this exists
+
+`tday-web` is a Vite PWA served same-origin by the backend from `/app/static`. Every build produces content-hashed chunks and a fresh `index.html`. Without coordination, an already-open client (or a Service Worker / browser / Cloudflare cache) keeps an **old `index.html`** whose chunk hashes no longer exist on the server. When the app then lazy-loads a route chunk it gets a 404 → the SPA fallback returns `index.html` (HTML) → the dynamic import fails and the app crashes (`Failed to fetch dynamically imported module`, or in WebKit `undefined is not an object (evaluating 'o._result.default')`).
+
+This system makes deploys self-healing across every OS/browser. It has four cooperating layers, each guarded against reload loops.
+
+### 1. Per-build cache key
+
+- `tday-web/vite.config.ts` computes a unique `BUILD_ID` once per build (`GIT_SHA` env/arg → else `git rev-parse` → else `dev`, suffixed with a UTC timestamp). It is both:
+  - injected into the bundle as the `__BUILD_ID__` define (declared in `src/vite-env.d.ts`), and
+  - emitted as `dist/version.json` via an inline `generateBundle` plugin (single source of truth — the same const feeds both, so they can never disagree).
+- The backend serves `dist/version.json` at `/version.json` automatically (it rides in the static dir; no backend route needed).
+
+### 2. HTTP cache headers (`tday-backend/.../plugins/Routing.kt`)
+
+The static handler sets `Cache-Control` by path (`cacheControlFor`), so browsers and Cloudflare cache correctly:
+
+| Resource | `Cache-Control` | Rationale |
+|----------|-----------------|-----------|
+| `index.html`, SPA-fallback HTML, `/version.json` | `no-cache, no-store, must-revalidate` | Always revalidate so a new build is picked up immediately |
+| `/assets/**` (content-hashed) | `public, max-age=31536000, immutable` | Filename changes every build, so cache forever safely |
+| everything else (icons, manifest, locales) | `public, max-age=3600` | Modest TTL for non-hashed static files |
+
+The HTML rule is keyed so the **SPA fallback** (e.g. a deep link like `/en/app/tday`) is also `no-store`, not just literal `index.html`.
+
+### 3. Service worker (`tday-web/src/sw.ts`)
+
+- **Navigations are NetworkFirst** (`cacheName: tday-navigation`, 4s timeout), falling back to the precached `/index.html` **only when offline**. So online clients always fetch the current `index.html` (and thus current chunk refs); offline still works.
+- `/version.json` has an explicit `NetworkOnly` route, and is excluded from precache (the Workbox `globPatterns` deliberately omits `json` — **do not add it**).
+- A `message` handler supports `{type:"SKIP_WAITING"}` and `{type:"CLEAR_CACHES"}` for client-driven activation / hard reset.
+
+### 4. Client version poller (`useVersionGate` → `components/app/VersionGate.tsx`, mounted in `App.tsx`)
+
+Fetches `/version.json` (`cache:"no-store"`) on mount, on tab refocus (`visibilitychange`), and every 15 minutes. On a `buildId` mismatch it applies a **hybrid UX**:
+
+- **Silent reload** when the tab had been backgrounded/idle and the user is *not* typing (no editable element focused) — zero interruption.
+- Otherwise a non-blocking **"New version available — Reload"** toast (Sonner).
+
+Reload-loop protection lives in `src/lib/chunkError.ts` (`versionReloadAlreadyTried` / `markVersionReloadTried` / `clearVersionReloadFlag`), a separate one-shot guard from the reactive stale-chunk guard. Both clear after 8s of healthy runtime (`main.tsx`), so a *second* deploy within the same session can also self-heal.
+
+### Layer composition (defense in depth)
+
+1. **NetworkFirst nav** (structural) — any reload/navigation while online lands on fresh `index.html`.
+2. **`useVersionGate`** (proactive) — detects a deploy before a stale chunk is even requested.
+3. **`chunkError.ts` + `vite:preloadError`** (reactive net) — recovers any stale dynamic import that still slips through; thanks to NetworkFirst the recovery reload reliably lands on the current build. See also the Safari/WebKit notes in [Developer notes](#developer-notes--gotchas).
+
+### Verifying after a deploy
+
+```bash
+# build key is served and never cached
+curl -sI http://127.0.0.1:2525/version.json | grep -i cache-control   # no-store
+curl -s  http://127.0.0.1:2525/version.json                            # {"buildId":...}
+# HTML shell never cached, hashed assets immutable
+curl -sI http://127.0.0.1:2525/            | grep -i cache-control      # no-store
+curl -sI http://127.0.0.1:2525/assets/<hashed>.js | grep -i cache-control  # immutable
+```
+
+End-to-end (real Safari engine) with Playwright WebKit: load the app fresh and confirm no spurious reload; intercept `/version.json` to return a different `buildId` and confirm the prompt/auto-reload fires. (`webkit` browser is bundled; run `sudo npx playwright install-deps` once for the system libs.)
+
+### Recovering a device stuck on a pre-this-code build
+
+This mechanism only takes effect once a device has loaded **one** build that contains it. A device still pinned to an older cached build needs a one-time manual clear:
+
+- If installed to the home screen (PWA), delete that icon first — it caches separately from the browser.
+- iOS Safari: **Settings → Safari → Clear History and Website Data**. Desktop: DevTools → Application → Service Workers → *Unregister*, then *Clear site data*, then hard reload.
+
+### Developer notes / gotchas
+
+- **Don't churn caches needlessly.** Each build re-hashes every chunk (and the Sentry plugin injects a fresh debug id), so rapid back-to-back rebuilds while someone is testing can leave a device's precache half-updated. Batch changes into one build.
+- **Keep `version.json` uncacheable.** Don't add `json` to the SW `globPatterns`, and keep the `NetworkOnly` route + the `no-store` header.
+- **New static assets:** content-hashed output goes under `/assets/**` (immutable) automatically; anything you drop in `tday-web/public/` is non-hashed and gets the 1h default — bump its handling in `cacheControlFor` if it needs different behavior.
+- **Tuning:** poll cadence is `CHECK_INTERVAL_MS` in `useVersionGate.ts`; the toast UX is in `VersionGate.tsx`.
+- **Safari/WebKit:** Safari has never shipped `requestIdleCallback` and only added `structuredClone` in 15.4 — guard browser globals with `typeof x === "function"` fallbacks (see `usePrefetchRoutes.ts`). A WebKit-only crash surfaces as the `RouteErrorPage`/`ErrorBoundary` screen; both expose an "Error details" expander, and both route stale-chunk errors through the auto-reload.
+
+### Key files
+
+| Concern | File |
+|---------|------|
+| Build id + `version.json` emit | `tday-web/vite.config.ts`, `src/vite-env.d.ts` |
+| Cache-Control headers | `tday-backend/src/main/kotlin/com/ohmz/tday/plugins/Routing.kt` (`cacheControlFor`) |
+| SW strategy + messages | `tday-web/src/sw.ts` |
+| Version poller + UX | `tday-web/src/hooks/useVersionGate.ts`, `src/components/app/VersionGate.tsx`, `src/App.tsx` |
+| Reload guards + reactive net | `tday-web/src/lib/chunkError.ts`, `src/main.tsx` |
+| Build-arg for SHA | `Dockerfile.backend` |

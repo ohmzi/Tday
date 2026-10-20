@@ -1,0 +1,220 @@
+import Foundation
+import Observation
+import UIKit
+
+@MainActor
+@Observable
+final class CalendarViewModel {
+    private let container: AppContainer
+
+    var isLoading = false
+    var items: [TodoItem] = []
+    var completedItems: [CompletedItem] = []
+    var lists: [ListSummary] = []
+    var errorMessage: String?
+
+    @ObservationIgnored nonisolated(unsafe) private var observationTask: Task<Void, Never>?
+    /// Rows `complete(_:)` has already taken off screen whose staged write has
+    /// not landed in the cache yet. Every hydrate filters them out until it does.
+    /// The stage waits on the sync lock, and the sync holding it posts its
+    /// cache-changed notification first, so without this the hydrate that
+    /// notification drives put the pending row back before the stage took it
+    /// away again. `ScheduledTaskHomeViewModel.completingIDs` is the same guard.
+    /// `TodoListViewModel.complete(_:)` needs none: it keeps the row on screen
+    /// until the stage lands, so a hydrate inside the stage changes nothing.
+    @ObservationIgnored private var completingIDs: Set<String> = []
+
+    init(container: AppContainer) {
+        self.container = container
+        TdayTelemetry.addBreadcrumb("calendar.load", data: calendarTelemetryData())
+        hydrateFromCache()
+        observeCacheChanges()
+    }
+
+    deinit {
+        observationTask?.cancel()
+    }
+
+    func refresh(userInitiated: Bool = false) async {
+        TdayTelemetry.addBreadcrumb("calendar.refresh", data: calendarTelemetryData())
+        isLoading = true
+        let result = await container.syncAndRefresh(
+            force: true,
+            replayPendingMutations: false,
+            userInitiated: userInitiated,
+            connectionProbeTimeoutSeconds: SyncAndRefreshUseCase.userRefreshConnectionTimeoutSeconds
+        )
+        if case let .failure(error) = result, !isLikelyConnectivityIssue(error) {
+            errorMessage = userFacingMessage(for: error, fallback: "Failed to load calendar.")
+        }
+        hydrateFromCache()
+        isLoading = false
+    }
+
+    func createTask(_ payload: CreateTaskPayload) async {
+        TdayTelemetry.addBreadcrumb("calendar.task.create", data: calendarTelemetryData(payload: payload))
+        do {
+            try await container.createTodo(payload)
+            hydrateFromCache()
+        } catch {
+            container.snackbarManager.show(userFacingMessage(for: error, fallback: "Could not create task."), kind: .error)
+        }
+    }
+
+    /// Delayed-commit complete (see TodoListViewModel.complete): stage the
+    /// completion into the local cache now, show an undoable toast, and un-stage
+    /// then flush the already-queued mutation once the undo window expires.
+    ///
+    /// Staging rather than hiding the row in memory is the whole point: this
+    /// screen re-reads the cache on every `.offlineCacheDidChange`, so a row
+    /// removed only from `items` comes straight back off the next sync and the
+    /// deferred commit then takes it away again. Same discipline as `delete(_:)`
+    /// below.
+    ///
+    /// The staging covers the time after the stage lands. `completingIDs` covers
+    /// the time before it: the stage waits on the sync lock, and a hydrate in
+    /// that window would otherwise put the row back.
+    func complete(_ todo: TodoItem) async {
+        TdayTelemetry.addBreadcrumb("calendar.task.complete", data: calendarTelemetryData())
+        let container = container
+        completingIDs.insert(todo.id)
+        items.removeAll { $0.id == todo.id }
+        let staged = await container.todoRepository.stageCompleteTodo(todo)
+        completingIDs.remove(todo.id)
+        hydrateFromCache()
+        container.undoableDeleteScheduler.schedule(
+            message: L("Task completed"),
+            restore: { [weak self] in
+                await container.todoRepository.undoStagedCompletion(staged)
+                self?.hydrateFromCache()
+            },
+            commit: { [weak self] in
+                do {
+                    try await container.todoRepository.commitStagedCompletion(staged)
+                } catch {
+                    container.snackbarManager.show(userFacingMessage(for: error, fallback: "Could not complete task."), kind: .error)
+                }
+                self?.hydrateFromCache()
+            }
+        )
+    }
+
+    func uncomplete(_ item: CompletedItem) async {
+        TdayTelemetry.addBreadcrumb("calendar.task.restore", data: calendarTelemetryData())
+        do {
+            try await container.completedRepository.uncomplete(item)
+            hydrateFromCache()
+        } catch {
+            container.snackbarManager.show(userFacingMessage(for: error, fallback: "Could not restore task."), kind: .error)
+        }
+    }
+
+    func updateTask(_ todo: TodoItem, payload: CreateTaskPayload) async {
+        TdayTelemetry.addBreadcrumb("calendar.task.update", data: calendarTelemetryData(payload: payload))
+        do {
+            try await container.todoRepository.updateTodo(todo, payload: payload)
+            hydrateFromCache()
+        } catch {
+            container.snackbarManager.show(userFacingMessage(for: error, fallback: "Could not update task."), kind: .error)
+        }
+    }
+
+    func moveTask(_ todo: TodoItem, toDay targetDay: Date, scope: TaskRescheduleScope) async {
+        let calendar = Calendar.current
+        guard let due = todo.due,
+              !calendar.isDate(due, inSameDayAs: targetDay),
+              let movedDue = movedDuePreservingTime(due: due, targetDay: targetDay, calendar: calendar) else {
+            return
+        }
+
+        var telemetryData = calendarTelemetryData()
+        telemetryData["scope"] = scope.rawValue
+        TdayTelemetry.addBreadcrumb("calendar.task.reschedule", data: telemetryData)
+        do {
+            try await container.todoRepository.moveTodo(
+                todo.repositoryTargetForReschedule(scope: scope),
+                due: movedDue
+            )
+            hydrateFromCache()
+        } catch {
+            container.snackbarManager.show(userFacingMessage(for: error, fallback: "Could not update task."), kind: .error)
+        }
+    }
+
+    /// Swipe-to-copy: writes the task's title/notes/due/priority as plain text
+    /// to the system pasteboard. See TodoListViewModel.copyToClipboard.
+    func copyToClipboard(_ todo: TodoItem) {
+        UIPasteboard.general.string = ShareSheet.taskShareText(todo)
+        container.snackbarManager.show(L("Copied to clipboard"), kind: .success)
+    }
+
+    /// Delayed-commit delete: the task is staged out of the local cache
+    /// immediately, an undoable toast is shown, and the real (server) delete
+    /// only commits once the undo window expires. The closures capture
+    /// `container` rather than `self` so a pending commit survives this
+    /// view model being deallocated.
+    func delete(_ todo: TodoItem) async {
+        TdayTelemetry.addBreadcrumb("calendar.task.delete", data: calendarTelemetryData())
+        let container = container
+        let staged = container.todoRepository.stageDeleteTodo(todo)
+        hydrateFromCache()
+        container.undoableDeleteScheduler.schedule(
+            message: L("Task deleted"),
+            restore: {
+                container.todoRepository.undoStagedTodo(staged)
+            },
+            commit: {
+                do {
+                    try await container.todoRepository.deleteTodo(todo)
+                } catch {
+                    container.snackbarManager.show(userFacingMessage(for: error, fallback: "Could not delete task."), kind: .error)
+                }
+            }
+        )
+    }
+
+    func parseTaskTitleNlp(text: String, referenceDueEpochMs: Int64) async -> TodoTitleNlpResponse? {
+        await container.todoRepository.parseTodoTitleNlp(text: text, referenceDueEpochMs: referenceDueEpochMs)
+    }
+
+    private func hydrateFromCache() {
+        // `completingIDs` is empty on every hydrate but the ones that land
+        // inside a stage, when it hides the rows that stage is completing.
+        items = container.todoRepository.fetchTodosSnapshot(mode: .all).filter {
+            $0.due != nil && !completingIDs.contains($0.id)
+        }
+        completedItems = container.completedRepository.fetchCompletedItemsSnapshot()
+        lists = container.listRepository.fetchListsSnapshot()
+        errorMessage = nil
+    }
+
+    // `[weak self]` is load-bearing here, not style — see the identical note
+    // on `TodoListViewModel.observeCacheChanges()`. Without it this view
+    // model can never deinit, so `observationTask?.cancel()` never runs and
+    // every discarded instance keeps reacting to every future cache write.
+    private func observeCacheChanges() {
+        observationTask = Task { [weak self] in
+            for await _ in NotificationCenter.default.notifications(named: .offlineCacheDidChange) {
+                guard let self else { return }
+                await MainActor.run {
+                    self.hydrateFromCache()
+                }
+            }
+        }
+    }
+
+    private func calendarTelemetryData(payload: CreateTaskPayload? = nil) -> [String: Any] {
+        var data: [String: Any] = [
+            "surface": "calendar",
+            "scheduled_items": items.count,
+            "completed_items": completedItems.count
+        ]
+        if let payload {
+            data["has_due"] = payload.due != nil
+            data["has_repeat"] = !(payload.rrule ?? "").isEmpty
+            data["has_list"] = !(payload.listId ?? "").isEmpty
+            data["has_description"] = !(payload.description ?? "").isEmpty
+        }
+        return data
+    }
+}

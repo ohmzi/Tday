@@ -1,0 +1,7046 @@
+import Observation
+import SwiftUI
+import UIKit
+import UniformTypeIdentifiers
+
+private let todoDragContentTypes = [UTType.plainText.identifier, UTType.text.identifier]
+private let todoTimelineDragCoordinateSpace = "todoTimelineDragCoordinateSpace"
+
+private struct FloaterSearchResultsFrameKey: PreferenceKey {
+    static var defaultValue: CGRect = .zero
+
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        value = nextValue()
+    }
+}
+
+/// The height the "all done" illustration (`watermarkedModeContent`'s
+/// `.overlay`) must yield at the top of its frame before it centres itself in
+/// what is left. Fed by the hero title row (always) and, only while it is
+/// actually on screen, the collapsed Overdue/Earlier section header sitting
+/// right below it (`minimalTimelineSection`) — the one section that can ever
+/// be visible above the illustration, since every OTHER section is empty
+/// (and therefore unrendered) whenever `hasNoPendingItems` is true. Without
+/// this, the illustration centred itself in the List's FULL frame regardless
+/// of how much of that frame the real content above it actually filled: when
+/// the screen's own scope was empty and Overdue held nothing but its
+/// collapsed header, that populated region was well under half the
+/// available height, so the frame's geometric centre — where the
+/// illustration draws — landed on the header instead of safely below it.
+/// Summed via `reduce` rather than overwritten, so the hero row's and the
+/// header's own reports (each posted independently, from wherever they sit
+/// in the tree) combine into one total.
+private struct EmptyStateReservedTopHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value += nextValue()
+    }
+}
+private let todoTimelineScrollTopID = "todo-timeline-scroll-top"
+
+private final class TodoTaskDragSession {
+    static let shared = TodoTaskDragSession()
+    var todo: TodoItem?
+    var handledDropSignature: String?
+
+    private init() {}
+}
+
+private struct TodoInAppDrag: Equatable {
+    let todo: TodoItem
+    var location: CGPoint
+}
+
+/// The in-app drag's per-move state, boxed so a finger move redraws only the floating preview.
+///
+/// The same shape as `TimelineTitleScrollState`, for the same reason. `drag` carries the
+/// finger's location and is written on every touch move of a long-press drag — 60 to 120
+/// times a second. Held as `@State` and read in `TodoListScreen.body` (the preview overlay and
+/// the List's `.scrollDisabled`), each move rebuilt the whole feed at its most expensive: a
+/// drag brings back every empty date bucket, and every section re-asked whether it could take
+/// the drop. The preview is drawn in that same pass, so it juddered and trailed the finger.
+/// Only `TodoDragPreviewLayer` reads `drag`; nothing in the screen's body may.
+///
+/// `sections` is the timeline as it stood when the drag began, empty drop buckets included,
+/// for the drop hit test and finish to resolve targets against. It never draws anything, so
+/// it is ignored by Observation. The target set cannot change shape mid-gesture — see
+/// `groupedSections` — and `handleItemsChanged` ends the drag if the items change under it.
+@Observable
+private final class TodoDragPreviewModel {
+    var drag: TodoInAppDrag? = nil
+    @ObservationIgnored var sections: [TodoTimelineSection]? = nil
+
+    func clear() {
+        drag = nil
+        sections = nil
+    }
+}
+
+private enum TodoCompletionPhase {
+    case checked
+    case struck
+    case fading
+}
+
+private struct TodoDropTargetFrame: Equatable {
+    let sectionID: String
+    let frame: CGRect
+}
+
+private struct TodoDropTargetFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [String: TodoDropTargetFrame] = [:]
+
+    static func reduce(value: inout [String: TodoDropTargetFrame], nextValue: () -> [String: TodoDropTargetFrame]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
+}
+
+enum TodoTimelineMetrics {
+    static let horizontalPadding: CGFloat = 18
+    static let heroTitleSize: CGFloat = 32
+    static let sectionTitleSize: CGFloat = 22
+    static let sectionChevronSize: CGFloat = 14
+    static let sectionSpacing: CGFloat = 10
+    static let minimalRowToggleSize: CGFloat = 24
+    static let minimalRowToggleFrame: CGFloat = 38
+    static let minimalRowTitleSize: CGFloat = 18
+    static let minimalRowSubtitleSize: CGFloat = 13
+    static let minimalRowIndicatorSize: CGFloat = 14
+    static let minimalRowTrailingIndicatorPadding: CGFloat = 24
+    static let minimalRowVerticalPadding: CGFloat = 8
+    /// Between the toggle and the text column, and between the lines inside it.
+    /// Named here rather than left at the call sites because the loading
+    /// placeholder has to be built at them too, and a number a placeholder copies
+    /// is a number that stays right until somebody adjusts the row.
+    static let minimalRowContentSpacing: CGFloat = 12
+    static let minimalRowTextSpacing: CGFloat = 4
+    /// How far the toggle's reported first-text-baseline sits below its centre, so
+    /// it stays on line one of a title that wraps. Part of the row's height, not a
+    /// decoration: the guide is what stands the button proud of the text column.
+    static let minimalRowBaselineNudge: CGFloat = 5
+    static let sameDateTaskSpacing: CGFloat = 2
+    static let sectionTopSpacing: CGFloat = 6
+    static let sectionHeaderBottomPadding: CGFloat = 2
+    // The expanded title now leads with the screen's glyph in a tinted circle,
+    // so the row — and therefore the distance over which it collapses — is
+    // taller than the 64pt it was when the row held only the title.
+    static let expandedTitleHeight: CGFloat = 56
+    static let heroMarkBox: CGFloat = 96
+    static let heroMarkGlyph: CGFloat = 44
+    static let heroMarkTopGap: CGFloat = 8
+    static let heroMarkBottomGap: CGFloat = 18
+    /// The mark goes first and is gone before the title reaches the bar.
+    static let heroMarkFadeEnd: CGFloat = 0.45
+    static let heroMarkWashTopAlpha: Double = 0.24
+    static let heroMarkWashBottomAlpha: Double = 0.07
+    static let heroMarkEchoAlpha: Double = 0.17
+    static let heroMarkEchoGlyph: CGFloat = 108
+    /// Band below the bar that dissolves rows as they pass under it.
+    static let contentFadeHeight: CGFloat = 30
+    /// Clear space kept under the collapsing block, so that when the title has
+    /// finished docking the first row comes to rest BELOW the fade band rather
+    /// than with its top edge dissolved into it. Deliberately not part of
+    /// `titleCollapseDistance`: it moves the content down without changing when
+    /// the title arrives, and scrolling on past still fades the row as it goes.
+    static let settledContentGap: CGFloat = contentFadeHeight + 6
+
+    static let titleCollapseDistance: CGFloat =
+        heroMarkTopGap + heroMarkBox + heroMarkBottomGap + expandedTitleHeight
+    static let timelineBottomSpacerHeight: CGFloat = 120
+    static let floaterTaskHomeBottomSpacerHeight: CGFloat = 12
+    static let topBarRowHeight: CGFloat = 56
+    static let topBarButtonFrame: CGFloat = 56
+    static let topBarButtonSpacing: CGFloat = 8
+    /// A floater list that is reusable carries five actions beside the back chevron — search,
+    /// summary, select, Reset and more — and six 56pt circles do not fit a phone: the bar grew
+    /// past the screen and SwiftUI widened the whole page with it, pushing the rows' rings and
+    /// the create button off both edges. From five actions the cluster shrinks to these, which
+    /// is Android's `HeaderButtonCompactSize` (48dp, 20dp glyphs, 6dp gaps) and web's 48px/6px
+    /// for the same screen; every other bar keeps the full size.
+    static let topBarCompactActionThreshold = 5
+    static let topBarCompactButtonFrame: CGFloat = 48
+    static let topBarCompactButtonIconSize: CGFloat = 20
+    static let topBarCompactButtonSpacing: CGFloat = 6
+    /// What every circle in a pinned bar draws its glyph at, the root feeds'
+    /// buttons included — see `RootFeedHeaderCircleButton`, and Android's 22.dp.
+    static let topBarButtonIconSize: CGFloat = 22
+    static let expandedTitleLiftDistance: CGFloat = 14
+    // The hero title now starts far below the bar, so it holds its ground for
+    // most of the collapse and hands over to the bar's copy at a single point:
+    // one is at zero exactly where the other starts, so there is never a moment
+    // with two titles, nor one with none.
+    static let expandedTitleFadeStart: CGFloat = 0.60
+    static let expandedTitleFadeEnd: CGFloat = 0.82
+    static let collapsedTitleRevealDistance: CGFloat = 10
+    static let collapsedTitleRevealStart: CGFloat = 0.82
+    static let collapsedTitleRevealEnd: CGFloat = 1
+    static let searchResultSectionExpandDelay: TimeInterval = 0.08
+    static let searchResultScrollDelay: TimeInterval = 0.44
+    static let searchResultScrollDuration: TimeInterval = 0.90
+    static let searchResultFlashDelay: TimeInterval = 0.62
+    static let searchResultPreScrollItemCount = 5
+
+    /// The leg's own septic smootherstep, borrowed from the root feeds' header
+    /// rather than restated: the two header families are meant to feel like one
+    /// thing, and this one was still on cubic smoothstep — two orders less flat
+    /// at both ends, so its per-page collapse started and stopped harder than
+    /// the home screen's. Android reads the same function through
+    /// `TdayHeroTitleHeader.staggerRange`; web's is `nativeHeaderEasing.ts`.
+    static func progress(_ value: CGFloat, from start: CGFloat, to end: CGFloat) -> CGFloat {
+        guard end > start else { return value >= end ? 1 : 0 }
+        return RootFeedHeroHeaderMetrics.stagger(value - start, to: end - start)
+    }
+}
+
+/// What the loading placeholder has to be, to be these two rows.
+///
+/// Kept beside `TodoTimelineMetrics` rather than in `TdayTaskRowSkeleton.swift`
+/// for the reason the file itself gives: a set built from anything other than the
+/// constants its row is drawn with is a copy, and a copy is right until the day
+/// somebody edits the row. `TdayTaskRowSkeletonMetrics.today` is built the same
+/// way, next to Today's own numbers.
+///
+/// Two sets and not one because these are two rows. They now agree on everything
+/// they are built from, including the thing that decides their height — both hang
+/// their toggle off the title's first baseline so it stays on line one of a title
+/// that wraps. Completed used to centre its own, which is the defect this pair of
+/// sets faithfully reproduced: the placeholder was right, and so was the row, and
+/// the row was wrong. Kept as two sets anyway, because they are still two screens
+/// and the next thing to diverge between them will not announce itself either.
+extension TdayTaskRowSkeletonMetrics {
+
+    /// `TodoListScreen.minimalTimelineRow`.
+    static let minimalTimeline = TdayTaskRowSkeletonMetrics(
+        contentSpacing: TodoTimelineMetrics.minimalRowContentSpacing,
+        checkSlot: TodoTimelineMetrics.minimalRowToggleFrame,
+        checkGlyph: TodoTimelineMetrics.minimalRowToggleSize,
+        textSpacing: TodoTimelineMetrics.minimalRowTextSpacing,
+        titleFontSize: TodoTimelineMetrics.minimalRowTitleSize,
+        subtitleFontSize: TodoTimelineMetrics.minimalRowSubtitleSize,
+        metaIcon: TodoTimelineMetrics.minimalRowIndicatorSize,
+        metaTrailingPadding: TodoTimelineMetrics.minimalRowTrailingIndicatorPadding,
+        verticalPadding: TodoTimelineMetrics.minimalRowVerticalPadding,
+        // The timeline rows carry no horizontal padding of their own: the List's
+        // `listRowInsets` already hold them off both edges, and the placeholder is
+        // given the same insets at its call site. Today's 4 pt here would put the
+        // bars 4 pt to the right of the rows that replace them.
+        horizontalPadding: 0,
+        rowAlignment: .firstTextBaseline,
+        checkBaselineNudge: TodoTimelineMetrics.minimalRowBaselineNudge
+    )
+
+    /// `CompletedScreen`'s history row, which is the same row.
+    static let completedTimeline = TdayTaskRowSkeletonMetrics(
+        contentSpacing: TodoTimelineMetrics.minimalRowContentSpacing,
+        checkSlot: TodoTimelineMetrics.minimalRowToggleFrame,
+        checkGlyph: TodoTimelineMetrics.minimalRowToggleSize,
+        textSpacing: TodoTimelineMetrics.minimalRowTextSpacing,
+        titleFontSize: TodoTimelineMetrics.minimalRowTitleSize,
+        subtitleFontSize: TodoTimelineMetrics.minimalRowSubtitleSize,
+        metaIcon: TodoTimelineMetrics.minimalRowIndicatorSize,
+        metaTrailingPadding: TodoTimelineMetrics.minimalRowTrailingIndicatorPadding,
+        verticalPadding: TodoTimelineMetrics.minimalRowVerticalPadding,
+        horizontalPadding: 0,
+        rowAlignment: .firstTextBaseline,
+        checkBaselineNudge: TodoTimelineMetrics.minimalRowBaselineNudge
+    )
+}
+
+/// Layout guards for the "all done" illustration in `watermarkedModeContent` —
+/// see `EmptyStateReservedTopHeightPreferenceKey`.
+private enum EmptyStateIllustrationLayout {
+    /// A floor under the space the illustration centres in, once the reserved
+    /// hero-row/header height is subtracted from the frame. Roughly
+    /// `TdayEmptyState`'s own natural height (its 136pt scene, the 28pt gap
+    /// below it, and its title/description block) with headroom: without a
+    /// floor, a reported reservation approaching or exceeding the frame's own
+    /// height — extreme Dynamic Type, a very short window — could push the
+    /// scene's centre past the bottom edge instead of merely crowding it.
+    static let minimumRemainder: CGFloat = 240
+}
+
+/// Snappy's response (0.28) with two hundredths more damping. Left off the token
+/// for the damping alone: the placeholder is opening a gap under a row the finger
+/// is still holding, and Snappy's 0.86 lets that gap overshoot visibly.
+private let todoDropPlaceholderAnimation = Animation.spring(response: 0.28, dampingFraction: 0.88, blendDuration: 0.02)
+
+private func todoTimeOfDaySystemImage(for date: Date) -> String {
+    TdayTimeOfDay.isDaytime(date) ? "sun.max.fill" : "moon.stars.fill"
+}
+
+private func todoTimeOfDayIconColor(for date: Date) -> Color {
+    todoHexColor(TdayTimeOfDay.isDaytime(date) ? 0xF4C542 : 0xA8B8E8)
+}
+
+private func normalizedTodoSearchQuery(_ value: String) -> String {
+    value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(with: .current)
+}
+
+private func todoSearchText(_ value: String) -> String {
+    value.lowercased(with: .current)
+}
+
+struct TimelinePinnedSectionHeaderBackground: ViewModifier {
+    @Environment(\.tdayColors) private var colors
+
+    func body(content: Content) -> some View {
+        content
+            .background(colors.background)
+            .listRowBackground(colors.background)
+            .zIndex(1)
+    }
+}
+
+extension View {
+    func timelinePinnedSectionHeaderBackground() -> some View {
+        modifier(TimelinePinnedSectionHeaderBackground())
+    }
+}
+
+struct TimelineRowDivider: View {
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Rectangle()
+            .fill(colors.onSurfaceVariant.opacity(0.18))
+            .frame(height: 1)
+            .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(colors.background)
+            .listRowSeparator(.hidden)
+            .environment(\.defaultMinListRowHeight, 1)
+            .allowsHitTesting(false)
+    }
+}
+
+private struct TimelineTaskFlashHighlight: ViewModifier {
+    let active: Bool
+
+    @Environment(\.tdayColors) private var colors
+    @State private var strength: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content
+            .background(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                colors.primary.opacity(0.42 * strength),
+                                colors.primary.opacity(0.28 * strength),
+                                .clear
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+            }
+            .onChange(of: active, initial: true) { _, isActive in
+                guard isActive else { return }
+                pulse()
+            }
+    }
+
+    private func pulse() {
+        Task { @MainActor in
+            strength = 0
+            for pulseIndex in 0..<2 {
+                // not a token — see docs/motion.md's 340–420 and 600–620 bands.
+                // Each leg is timed against the sleep directly under it rather
+                // than against the ladder: the flash has to have landed before
+                // the next one is armed, so the duration and the wait are one
+                // number written twice, and a rung would desynchronise them.
+                withAnimation(.easeInOut(duration: 0.42)) {
+                    strength = 0.46
+                }
+                try? await Task.sleep(nanoseconds: 420_000_000)
+                withAnimation(.easeInOut(duration: 0.62)) {
+                    strength = 0
+                }
+                try? await Task.sleep(nanoseconds: pulseIndex == 0 ? 770_000_000 : 620_000_000)
+            }
+        }
+    }
+}
+
+struct TodoTimelineTaskTitle: View {
+    let text: String
+    let isCompleted: Bool
+    let titleColor: Color
+    let strikeColor: Color
+    var font: Font = .tdayRounded(size: TodoTimelineMetrics.minimalRowTitleSize, weight: .bold)
+    // nil = no line limit; in-app screens show the full title across as many lines
+    // as it needs.
+    var lineLimit: Int? = nil
+
+    var body: some View {
+        Text(text)
+            .font(font)
+            .foregroundStyle(titleColor)
+            // Real per-line strikethrough so every line of a wrapped title is crossed
+            // out, instead of a single rule drawn across the middle of the block.
+            .strikethrough(isCompleted, color: strikeColor)
+            .lineLimit(lineLimit)
+            .animation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis), value: isCompleted)
+    }
+}
+
+struct TimelineTopBarAction {
+    let systemName: String
+    /// Preferred over `systemName` when set, so a bar can use the same drawn
+    /// glyph the root feeds do rather than the SF symbol that resembles it.
+    let assetName: String?
+    let tint: Color?
+    let usesCircularChrome: Bool
+    /// Worth setting for a drawn glyph above all: an asset button otherwise
+    /// reads out as its image name.
+    let accessibilityLabel: String?
+    let action: () -> Void
+
+    init(
+        systemName: String,
+        assetName: String? = nil,
+        tint: Color? = nil,
+        usesCircularChrome: Bool = false,
+        accessibilityLabel: String? = nil,
+        action: @escaping () -> Void
+    ) {
+        self.systemName = systemName
+        self.assetName = assetName
+        self.tint = tint
+        self.usesCircularChrome = usesCircularChrome
+        self.accessibilityLabel = accessibilityLabel
+        self.action = action
+    }
+}
+
+private struct FloaterTaskHomeSearchResultsCard: View {
+    let todos: [TodoItem]
+    let listsByID: [String: ListSummary]
+    let onOpenTodo: (TodoItem) -> Void
+
+    @Environment(\.tdayColors) private var colors
+    private let maxResultsHeight: CGFloat = 320
+    private let rowHeight: CGFloat = 66
+
+    private var resultsHeight: CGFloat {
+        min(CGFloat(max(todos.count, 1)) * rowHeight, maxResultsHeight)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if todos.isEmpty {
+                Text("No matching tasks")
+                    .font(.tdayRounded(size: 14, weight: .bold))
+                    .foregroundStyle(colors.onSurfaceVariant)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+            } else {
+                ScrollView(showsIndicators: true) {
+                    VStack(spacing: 0) {
+                        ForEach(todos) { todo in
+                            let list = todo.listId.flatMap { listsByID[$0] }
+                            HStack(spacing: 10) {
+                                TdayListIcon(iconKey: list?.iconKey, listName: list?.name, size: 17)
+                                    .foregroundStyle(todoListAccentColor(for: list?.color, isFloater: true).opacity(0.92))
+                                    .frame(width: 18)
+
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(todo.title)
+                                        .font(.tdayRounded(size: 15, weight: .bold))
+                                        .foregroundStyle(colors.onSurface)
+                                        .lineLimit(1)
+
+                                    Text(list?.name ?? TaskPriorityDisplay.label(for: todo.priority))
+                                        .font(.tdayRounded(size: 12, weight: .bold))
+                                        .foregroundStyle(colors.onSurfaceVariant)
+                                        .lineLimit(1)
+                                }
+
+                                Spacer(minLength: 0)
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                HapticManager.buttonPress()
+                                onOpenTodo(todo)
+                            }
+                        }
+                    }
+                }
+                .frame(height: resultsHeight)
+            }
+        }
+        .background(colors.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(colors.onSurface.opacity(0.2), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 6)
+    }
+}
+
+private struct FloaterTaskHomeListCard: View {
+    let list: ListSummary
+    let count: Int
+    /// The route this card pushes, carried alongside the closure that pushes it.
+    ///
+    /// The closure is an opaque `() -> Void` handed up to `AppRootView`, so it cannot
+    /// be asked where it goes, and the zoom needs an id both ends agree on. Per-list,
+    /// because several of these cards are on screen at once — a single shared id would
+    /// match the wrong rectangle. The argument list it is built from is the same
+    /// `row.list` the `onTap` closure hands to `onOpenFloaterList`.
+    let zoomRoute: AppRoute
+    let onTap: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+    @Environment(\.tdayAnimation) private var tdayAnimation
+
+    private var symbolName: String {
+        todoListSymbolName(for: list.iconKey)
+    }
+
+    private var containerColor: Color {
+        todoBlendColor(colors.surfaceVariant, todoListAccentColor(for: list.color, isFloater: true), amount: 0.66)
+    }
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: TdayRadius.card, style: .continuous)
+
+        Button(action: onTap) {
+            ZStack {
+                shape.fill(containerColor)
+                shape.fill(
+                    RadialGradient(
+                        colors: [Color.white.opacity(0.22), Color.white.opacity(0.08), .clear],
+                        center: .topLeading,
+                        startRadius: 8,
+                        endRadius: 120
+                    )
+                )
+                shape.fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.12),
+                            Color(red: 231.0 / 255.0, green: 243.0 / 255.0, blue: 255.0 / 255.0).opacity(0.1),
+                            Color(red: 255.0 / 255.0, green: 242.0 / 255.0, blue: 250.0 / 255.0).opacity(0.08),
+                            .clear,
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+                TdayListIcon(iconKey: list.iconKey, listName: list.name, size: 60)
+                    .foregroundStyle(todoBlendColor(containerColor, .white, amount: 0.34).opacity(0.42))
+                    .offset(x: 18, y: 8)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                    .allowsHitTesting(false)
+
+                HStack {
+                    HStack(spacing: 10) {
+                        TdayListIcon(iconKey: list.iconKey, listName: list.name, size: 22)
+                            .foregroundStyle(.white)
+                            .frame(width: 32, height: 32)
+
+                        Text(list.name)
+                            .font(.tdayRounded(size: 22, weight: .bold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    // Same roll, same rung as the scheduled feed's counts — the
+                    // argument is at `ScheduledTaskHomeTodayCard`.
+                    Text("\(count)")
+                        .font(.tdayRounded(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
+                        .contentTransition(.numericText(value: Double(count)))
+                        .animation(
+                            tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)),
+                            value: count
+                        )
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+            .frame(maxWidth: .infinity, minHeight: 70, maxHeight: 70)
+            .clipShape(shape)
+            .contentShape(shape)
+        }
+        .buttonStyle(.plain)
+        .shadow(color: .black.opacity(0.14), radius: 10, x: 0, y: 7)
+        // The rectangle the pushed screen grows out of, on this card's own chain. On
+        // iOS 17, under Reduce Motion, or for a route with no source id it resolves to
+        // nothing and the push is the stock slide — see `ZoomNavigation.swift`.
+        .tdayZoomSource(zoomRoute)
+    }
+}
+
+/// The Anytime feed's entry to the browsable Completed screen.
+///
+/// Built in `FloaterTaskHomeListCard`'s idiom rather than reusing the Scheduled
+/// board's `ScheduledTaskHomeCategoryTile`: that one is `private` to its file,
+/// and promoting it would drag its 2-up grid metrics and its zoom source onto a
+/// single-column feed that has neither. Android reaches the same conclusion from
+/// the other side — it shares one `CategoryCard` across both feeds and the
+/// Anytime call site opts out of the grid geometry item by item.
+///
+/// No count, deliberately, and Android's call site passes none either
+/// (`CategoryCard`'s `count` defaults to null). The number this tile would want
+/// is "Anytime tasks ever completed", which is not a figure this screen holds —
+/// `completedTodayCount` is a different question with a different answer — and
+/// reading it would mean wiring the completed repository into the Anytime feed
+/// for a decoration.
+///
+/// It does carry a `.tdayZoomSource`, and what used to stop that is worth writing
+/// down because the reason is gone. `ZoomNavigation` minted one id per route, the
+/// Scheduled board's Completed tile already claimed `.completed`, and `AppRootView`
+/// crossfades the two root feeds through a `ZStack` — so during a tab swap both trees
+/// are mounted and two views would have carried one id in one namespace. The origin
+/// now travels on the route, so the board's tile publishes `home-tile.completed` and
+/// this one publishes `floater-tile.completed`: two distinct ids, and the both-mounted
+/// window has nothing to collide. Android's tile still has no shared-element
+/// transition here; that is a separate piece of work.
+private struct FloaterTaskHomeCompletedCard: View {
+    let onTap: () -> Void
+    /// The route this card pushes, carried alongside the closure that pushes it.
+    ///
+    /// Same reason as `FloaterTaskHomeListCard` above: the closure is opaque and the
+    /// zoom needs an id both ends agree on. `.completed(origin: .floaterFeed)` is the
+    /// floater feed's id, and a copy of the Scheduled board's would put two views on one
+    /// id in one namespace while both feeds are mounted.
+    let zoomRoute: AppRoute
+
+    /// The Completed accent, pinned across all three clients: Android's
+    /// `TdayCompletedTileAccent` (0xFF719F84), the Scheduled board's
+    /// `Color(hex: 0x719F84)`, web's `nativeScreenAccentColors.completed`.
+    /// Spelled in components because the `Color(hex:)` sugar is a `private
+    /// extension` in each of the two files that declare one — a third copy of
+    /// that extension to serve a single call site is a worse trade than this.
+    private static let accent = Color(
+        red: 113.0 / 255.0,
+        green: 159.0 / 255.0,
+        blue: 132.0 / 255.0
+    )
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: TdayRadius.card, style: .continuous)
+
+        // VoiceOver reads the whole button as its one piece of text,
+        // "Completed", the way the list cards beside it read as their list
+        // name. An explicit label would only restate what the `Text` already
+        // says, and would then be the copy that goes stale when the wording
+        // changes.
+        Button(action: onTap) {
+            ZStack {
+                shape.fill(Self.accent)
+                shape.fill(
+                    RadialGradient(
+                        colors: [Color.white.opacity(0.22), Color.white.opacity(0.08), .clear],
+                        center: .topLeading,
+                        startRadius: 8,
+                        endRadius: 120
+                    )
+                )
+                shape.fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.12),
+                            Color(red: 231.0 / 255.0, green: 243.0 / 255.0, blue: 255.0 / 255.0).opacity(0.1),
+                            Color(red: 255.0 / 255.0, green: 242.0 / 255.0, blue: 250.0 / 255.0).opacity(0.08),
+                            .clear,
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+                Image("TileComplete")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 60, height: 60)
+                    // Tinted with the accent rather than pure white, at the
+                    // blend and opacity `FloaterTaskHomeListCard` uses right
+                    // below it. White at 0.42 on this mid-green reads as a
+                    // second, brighter glyph instead of a watermark.
+                    .foregroundStyle(todoBlendColor(Self.accent, .white, amount: 0.34).opacity(0.42))
+                    .offset(x: 18, y: 8)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                    .allowsHitTesting(false)
+
+                HStack(spacing: 10) {
+                    Image("TileComplete")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 22, height: 22)
+                        .foregroundStyle(.white)
+                        .frame(width: 32, height: 32)
+
+                    Text(L("Completed"))
+                        .font(.tdayRounded(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+            .frame(maxWidth: .infinity, minHeight: 70, maxHeight: 70)
+            .clipShape(shape)
+            .contentShape(shape)
+        }
+        .buttonStyle(.plain)
+        .shadow(color: .black.opacity(0.14), radius: 10, x: 0, y: 7)
+        // This card's own chain, and this feed's own id — not the Scheduled board's.
+        .tdayZoomSource(zoomRoute)
+    }
+}
+
+/// Where a screen's view model lives: built on first read, then kept for the life of
+/// the screen.
+///
+/// Not `State(initialValue: TodoListViewModel(…))`. SwiftUI evaluates that argument on
+/// every init of the screen struct, and whatever builds the screen re-inits it on every
+/// one of its own body passes. `AppRootView` rebuilds the root feed on every push and pop,
+/// FAB tap, dock fold and search toggle, and a `navigationDestination` re-runs for the
+/// routes it has already presented. SwiftUI kept the first model and discarded the rest,
+/// but each discarded one had already hydrated from the cache on the main actor, started
+/// and cancelled its observation Task, and recorded a `todo_list.load` breadcrumb. That
+/// work landed in the first frames of a zoom, or in the frame the create sheet was meant
+/// to start rising. Now a surplus init allocates only this empty box.
+///
+/// A plain class, deliberately not `@Observable`: filling it during the first body pass
+/// must invalidate nothing. The model is `@Observable` and body still tracks the
+/// properties it reads from it. `ScheduledTaskHomeScreen`, `CalendarScreen` and
+/// `CompletedScreen` keep their models the same way, each with its own file-private copy
+/// of this box.
+private final class LazyViewModelBox<M: AnyObject> {
+    var model: M?
+}
+
+struct TodoListScreen: View {
+    let highlightedTodoId: String?
+    let onListDeleted: () -> Void
+    let rootFeedTab: RootFeedTab?
+    let onRootFeedTabSelected: ((RootFeedTab) -> Void)?
+    let showsRootControls: Bool
+    let usesRootFeedHeader: Bool
+    let createTaskRequestID: Int
+    /// Applied to the next create sheet the request above opens — the Anytime root feed's half
+    /// of `AppRootView.rootCreateTaskPrefill` (a List widget's "+") — and handed back through
+    /// `onCreateTaskSheetClosed` so a later manual create starts blank.
+    let createTaskPrefill: CreateTaskPayload?
+    let onCreateTaskSheetClosed: () -> Void
+    let openCreateTaskOnAppear: Bool
+    let scrollToTopRequestID: Int
+    let onRootDockCollapsedChange: (Bool) -> Void
+    let onRootControlsVisibleChange: (Bool) -> Void
+    let pullRefreshEnabled: Bool
+    let summaryAvailable: Bool
+    let onOpenFloaterList: (String, String) -> Void
+    let onOpenSettings: () -> Void
+    /// Floater root feed only — pushes the browsable Completed screen from the
+    /// feed's own Completed tile (`FloaterTaskHomeCompletedCard`). Every other
+    /// `TodoListScreen` mode fails `isFloaterTaskHomeScreen` and never emits the
+    /// tile, so the default no-op is never reached.
+    let onOpenCompleted: () -> Void
+    /// The view model's box and the inputs it is built from. `LazyViewModelBox` says why
+    /// the model is built on first read and not in `init`. Only that first build reads
+    /// the inputs, so, as with `State(initialValue:)` before, a later init that passes
+    /// different ones does not rebuild the model for the same screen identity.
+    @State private var viewModelBox = LazyViewModelBox<TodoListViewModel>()
+    private let viewModelContainer: AppContainer
+    private let viewModelMode: TodoListMode
+    private let viewModelListId: String?
+    private let viewModelListName: String?
+    @Environment(\.tdayColors) private var colors
+    @Environment(\.dismiss) private var dismiss
+    /// Foreground half of "the screen is actually visible/foregrounded" for
+    /// `celebratesEmptyState`'s remote branch — the app can be backgrounded
+    /// while this screen is still the one on top. See `isScreenVisible` for
+    /// the on-screen half.
+    @Environment(\.scenePhase) private var scenePhase
+    /// Gates the feed's own motion — see `timelineItemAnimationKey`'s
+    /// `.animation(_:value:)` and `timelineRowTransition`. The travel and the
+    /// row legs are refused separately because they come from two different
+    /// mechanisms; `TdayFeedItemMotion.row(reduceMotion:)` says why.
+    @Environment(\.tdayAnimation) private var tdayAnimation
+    @FocusState private var floaterTaskHomeSearchFieldFocused: Bool
+    @FocusState private var listSearchFieldFocused: Bool
+    @State private var showingCreateTask = false
+    @State private var showingCreateList = false
+    @State private var editingTodo: TodoItem?
+    @State private var promotingFloater: TodoItem?
+    @State private var promoteDue = Date()
+    @State private var deferringTodo: TodoItem?
+    @State private var showingSummary = false
+    @State private var showingListSettings = false
+    @State private var showingMembers = false
+    @State private var pendingMembersAfterSettings = false
+    @State private var showingDeleteListConfirmation = false
+    @State private var draggedTodo: TodoItem?
+    /// Set at drag start so the scroll reader can keep that row realized; see
+    /// `beginInAppDrag`. Consumed and cleared by the reader.
+    @State private var dragAnchorTodoID: String?
+    /// The finger's location and the drag-start sections. Only `TodoDragPreviewLayer` reads
+    /// the location — never this screen's body — so a finger move redraws the preview and
+    /// leaves the feed alone. `TodoDragPreviewModel` says why.
+    @State private var dragPreview = TodoDragPreviewModel()
+    @State private var activeDropSectionId: String?
+    @State private var dropTargetFrames: [String: TodoDropTargetFrame] = [:]
+    @State private var pendingRescheduleDrop: TodoRescheduleDrop?
+    /// Measured, not guessed — see `EmptyStateReservedTopHeightPreferenceKey`.
+    /// Read by `watermarkedModeContent` to keep the "all done" illustration
+    /// out from under the hero row and (when it is showing) the collapsed
+    /// Overdue/Earlier header.
+    @State private var emptyStateReservedTopHeight: CGFloat = 0
+    @State private var collapsedSectionIDs: Set<String>
+    /// Req. 3's hand-off flag — see `toggleEarlierSectionWithIllustrationHandoff`.
+    /// Held true for the width of the illustration/Earlier hand-off in either
+    /// direction so `showsEmptyStateIllustration` cannot flip mid-transition.
+    /// Both branches clear it back to `false` once their hand-off completes —
+    /// the expand branch as soon as `isEarlierSectionExpanded` has taken over
+    /// masking the illustration, so this flag is never left stuck true once
+    /// Earlier is no longer around to hand back to (e.g. its last row clears
+    /// without the header being tapped again). One flag shared by every mode
+    /// with this coexistence (Today, Priority, All, List) — see
+    /// `modeHasEarlierAwareEmptyState`.
+    @State private var suppressEmptyStateForEarlierHandoff = false
+    /// Set alongside the above only on Earlier's *collapse* path: the Day
+    /// Done haptic/sound (see the `TdayEmptyState` call site) is a payoff for
+    /// a completion, and this reappearance is Earlier folding shut again,
+    /// not one. Only Today's branch actually reads this flag, but it is set
+    /// unconditionally by the shared hand-off rather than special-cased —
+    /// a harmless write on every other mode, which has no onAppear to read it.
+    @State private var suppressDayDoneFeedbackOnReturn = false
+    /// Guards `toggleEarlierSectionWithIllustrationHandoff` against a second
+    /// tap landing mid hand-off, the way `completionPhases[todo.id] == nil`
+    /// guards a row against a second completion tap: without it, a fast
+    /// double-tap on Earlier's header while the first tap's delayed
+    /// continuation is still pending would queue a second one that fires
+    /// after the first, flips `collapsedSectionIDs` right back, and leaves
+    /// Earlier the opposite of what the second tap actually asked for.
+    @State private var earlierHandoffInFlight = false
+    /// The per-mode screens' scroll offset. Only `TimelineCollapseProgressReader` reads it —
+    /// never this screen's body — so a scroll frame redraws the bar and the hero title row and
+    /// leaves the feed alone. `TimelineTitleScrollState` says why.
+    @State private var timelineScroll = TimelineTitleScrollState()
+    @State private var headerScroll = RootFeedHeaderScrollState()
+    @State private var rootDockCollapsed = false
+    /// The same answer as `rootDockCollapsed`, for the modes that have no root
+    /// feed header to observe the scroll for them. It exists because the fold
+    /// point has a dead band and a dead band needs the previous answer: this
+    /// screen's own scroll offset arrives as a number, and the side of the fold
+    /// it puts the dock on cannot be recovered from that number alone.
+    @State private var legacyRootDockCollapsed = false
+    @State private var titleScrollToTopRequestID = 0
+    @State private var completionPhases: [String: TodoCompletionPhase] = [:]
+    @State private var flashTodoId: String?
+    @State private var highlightedScrollRequestID = 0
+    /// The highlight id `scrollToHighlightedTodo` has already scrolled to and
+    /// flashed. The route argument never changes on its own, so without this
+    /// every items change would replay the whole arrival sequence.
+    @State private var servedHighlightTodoId: String?
+    @State private var floaterTaskHomeSearchExpanded = false
+    @State private var floaterSearchResultsFrame: CGRect = .zero
+    @State private var floaterTaskHomeSearchQuery = ""
+    @State private var openingFloaterTaskHomeSearchResultID: String?
+    @State private var listSearchExpanded = false
+    @State private var listSearchQuery = ""
+    /// The screen's single swipe slot: the id of the row whose actions are revealed.
+    ///
+    /// Screen level is the right altitude — each of these is its own destination with its own
+    /// chrome, so there is nothing above it worth hoisting to — and a plain `@State` is what
+    /// keeps a dismissal cheap. THE PROPERTY THAT DOES IT IS THAT NO HOST BODY READS THIS VALUE.
+    /// The hosts construct `$openSwipeTaskID` and nothing else, and `@State.projectedValue`
+    /// registers no dependency, so writing it does not re-run this screen's body. The only read
+    /// is `.onChange(of: openRowID)` inside `TodoTrailingSwipeActionsModifier.body`, which makes
+    /// a dismissal cost one modifier-body evaluation per REALIZED row — and `List` realizes
+    /// lazily, on feeds that run to hundreds of rows.
+    ///
+    /// So: every dismissal is a WRITE to this and nothing else. Never add a read of it inside a
+    /// host's `body` — no `.disabled(openSwipeTaskID != nil)`, no computed property, no overlay
+    /// conditioned on it. One such read converts a cheap write into a full re-evaluation of the
+    /// largest body in the app. It is not `@Observable` or an `EnvironmentObject` for the same
+    /// reason: same fan-out, worse locality, and it would strand the
+    /// `onChange(of: items.map(\.id))` cleanup that reads the plain optional.
+    @State private var openSwipeTaskID: String?
+    // Multi-select. Screen-local on purpose: the view model re-hydrates `items`
+    // on every cache-version bump, and a selection held there would fight it.
+    @State private var isSelecting = false
+    @State private var selectedTodoIDs: Set<String> = []
+    @State private var activeBulkSelector: BulkSelectionSelector?
+    @State private var showingBulkDeleteConfirmation = false
+    @State private var showingBulkMoveConfirmation = false
+    @State private var pendingBulkMoveListID: String?
+    @State private var hasOpenedCreateTaskOnAppear = false
+    /// On-screen half of "the screen is actually visible/foregrounded" for
+    /// `celebratesEmptyState`'s remote branch. Set by this screen's own
+    /// `onAppear`/`onDisappear`, so a remote-driven empty transition that
+    /// lands while this screen is pushed behind another, or backgrounded,
+    /// does not surface a stale burst when the user comes back to it later.
+    @State private var isScreenVisible = false
+
+    init(
+        container: AppContainer,
+        mode: TodoListMode,
+        listId: String?,
+        listName: String?,
+        highlightedTodoId: String?,
+        rootFeedTab: RootFeedTab? = nil,
+        onRootFeedTabSelected: ((RootFeedTab) -> Void)? = nil,
+        showsRootControls: Bool = true,
+        pullRefreshEnabled: Bool = false,
+        usesRootFeedHeader: Bool = false,
+        createTaskRequestID: Int = 0,
+        createTaskPrefill: CreateTaskPayload? = nil,
+        onCreateTaskSheetClosed: @escaping () -> Void = {},
+        openCreateTaskOnAppear: Bool = false,
+        scrollToTopRequestID: Int = 0,
+        onRootDockCollapsedChange: @escaping (Bool) -> Void = { _ in },
+        onRootControlsVisibleChange: @escaping (Bool) -> Void = { _ in },
+        onOpenFloaterList: @escaping (String, String) -> Void = { _, _ in },
+        onOpenSettings: @escaping () -> Void = {},
+        onOpenCompleted: @escaping () -> Void = {},
+        summaryAvailable: Bool = true,
+        onListDeleted: @escaping () -> Void = {}
+    ) {
+        self.highlightedTodoId = highlightedTodoId
+        self.onListDeleted = onListDeleted
+        self.rootFeedTab = rootFeedTab
+        self.onRootFeedTabSelected = onRootFeedTabSelected
+        self.showsRootControls = showsRootControls
+        self.pullRefreshEnabled = pullRefreshEnabled
+        self.usesRootFeedHeader = usesRootFeedHeader
+        self.createTaskRequestID = createTaskRequestID
+        self.createTaskPrefill = createTaskPrefill
+        self.onCreateTaskSheetClosed = onCreateTaskSheetClosed
+        self.openCreateTaskOnAppear = openCreateTaskOnAppear
+        self.scrollToTopRequestID = scrollToTopRequestID
+        self.onRootDockCollapsedChange = onRootDockCollapsedChange
+        self.onRootControlsVisibleChange = onRootControlsVisibleChange
+        self.onOpenFloaterList = onOpenFloaterList
+        self.onOpenSettings = onOpenSettings
+        self.onOpenCompleted = onOpenCompleted
+        self.summaryAvailable = summaryAvailable
+        self.viewModelContainer = container
+        self.viewModelMode = mode
+        self.viewModelListId = listId
+        self.viewModelListName = listName
+        // A highlighted arrival (a reminder or a search result opening All)
+        // starts with Earlier open, as Android does: the target is in the first
+        // frame, so nothing springs open and reshuffles the rows while the push
+        // is still sliding in, and the pre-scroll lands on the push's first frames.
+        _collapsedSectionIDs = State(initialValue: highlightedTodoId?.isEmpty == false ? [] : (mode == .today || mode == .priority || mode == .all || mode == .list ? ["earlier"] : []))
+    }
+
+    /// Built on first read, which is the first body pass, then served from the box. The
+    /// first frame is still drawn from a model that has already hydrated, so
+    /// `feedAnswer`'s `hasHydratedFromCache` term is true from the start. Never read this
+    /// from `init`: the box `init` sees is the throwaway, not the one SwiftUI keeps.
+    private var viewModel: TodoListViewModel {
+        if let model = viewModelBox.model {
+            return model
+        }
+        let model = TodoListViewModel(
+            container: viewModelContainer,
+            mode: viewModelMode,
+            listId: viewModelListId,
+            listName: viewModelListName
+        )
+        viewModelBox.model = model
+        return model
+    }
+
+    /// An empty date bucket is scaffolding, not content: at rest a list holding
+    /// three overdue tasks drew one section of rows and twelve bare headers under
+    /// it. The buckets are drag-to-reschedule drop targets, though, so the whole
+    /// scaffold comes back for the length of a drag and there is still somewhere
+    /// to drop a task into an empty day. `draggedTodo` holds still for the whole
+    /// gesture, so the target set cannot change shape under the finger.
+    private var groupedSections: [TodoTimelineSection] {
+        buildSections(
+            items: timelineItems,
+            mode: viewModel.mode,
+            showsEmptyDropTargets: draggedTodo != nil
+        )
+    }
+
+    /// What the timeline is built from. Only a live list search narrows it — the
+    /// query filters the tasks and the sections are rebuilt from the survivors,
+    /// exactly as web rebuilds its timeline from the filtered todos.
+    private var timelineItems: [TodoItem] {
+        guard isSearchingList else {
+            return viewModel.items
+        }
+        return viewModel.items.filter { todo in
+            todoSearchText(todo.title).contains(normalizedListSearchQuery) ||
+                todoSearchText(flattenNotesToPlainText(todo.description)).contains(normalizedListSearchQuery)
+        }
+    }
+
+    // MARK: - Multi-select
+
+    /// Everything Select all can reach: every task in the screen's current result
+    /// set, in display order, after the live search — including the rows inside a
+    /// collapsed section, which are part of the list even when folded away. It
+    /// never reaches another screen, another list, or completed history.
+    private var selectableTodos: [TodoItem] {
+        var seen = Set<String>()
+        return groupedSections.flatMap(\.items).filter { seen.insert($0.id).inserted }
+    }
+
+    /// Selected rows in display order. Selection is keyed on the row id (which
+    /// already encodes a recurring occurrence), but every action is handed the
+    /// whole row: the repositories need `canonicalId` and `instanceDate`.
+    private var selectedTodos: [TodoItem] {
+        selectableTodos.filter { selectedTodoIDs.contains($0.id) }
+    }
+
+    private var isSelectionAtCap: Bool {
+        selectedTodoIDs.count >= BulkSelectionCopy.maxSelection
+    }
+
+    private var selectionAllSelected: Bool {
+        !selectableTodos.isEmpty &&
+            selectedTodoIDs.count >= min(selectableTodos.count, BulkSelectionCopy.maxSelection)
+    }
+
+    /// Gated exactly as the magnifier is: no affordance on a screen with nothing
+    /// to act on, and none at all on a list this user can only read. The root
+    /// floater feed wears the shared hero header rather than this bar, so it has
+    /// no action cluster to put the button in — see the note in the PR.
+    private var canEnterSelectionMode: Bool {
+        showsTimelineNavigationTopBar && !isViewerList && !viewModel.items.isEmpty
+    }
+
+    /// Move targets: this screen's silo only — `viewModel.lists` is already
+    /// scheduled-vs-floater correct for the mode — minus the lists this user
+    /// cannot write to. Crossing the two silos is promote/demote, not a move.
+    private var bulkMoveTargetLists: [ListSummary] {
+        viewModel.lists.filter { !$0.isViewer }
+    }
+
+    private var bulkPriorityOptions: [(label: String, value: String)] {
+        TaskPriorityDisplay.options
+    }
+
+    /// The rows an action will actually touch. A recurring occurrence may be
+    /// bulk-completed as the occurrence it represents, but is never eligible for
+    /// delete, priority or move: those three have no per-occurrence route and
+    /// would silently act on the whole series.
+    ///
+    /// Complete additionally skips a repeating row that is not an occurrence
+    /// (`rrule` set, no `instanceDate` — a series created locally and not yet
+    /// expanded by a sync). `completeTodo` on the backend writes a completed-history
+    /// row for that shape and then neither marks the parent complete nor records an
+    /// occurrence, so the task stays on screen and history gains a phantom entry.
+    /// One row doing that from a swipe is a known bug; a hundred doing it from one
+    /// tap is not something to ship.
+    private func effectiveBulkTodos(for action: BulkTaskAction) -> [TodoItem] {
+        guard action == .complete else {
+            return selectedTodos.filter { !$0.isRecurring }
+        }
+        return selectedTodos.filter { !$0.isRecurring || $0.instanceDate != nil }
+    }
+
+    /// "Applies to N of M — repeating tasks are skipped", shown only when the
+    /// recurring rule actually narrowed the selection.
+    private func bulkRecurringNote(for action: BulkTaskAction) -> String? {
+        let effective = effectiveBulkTodos(for: action).count
+        let total = selectedTodoIDs.count
+        guard effective < total else { return nil }
+        return BulkSelectionCopy.appliesTo(effective: effective, total: total)
+    }
+
+    /// Cheap change token for the reconcile pass. Empty while not selecting, so
+    /// the sections are not rebuilt a second time on every redraw of a screen
+    /// that is not in selection mode.
+    private var selectableRowIDKey: String {
+        guard isSelecting else { return "" }
+        return selectableTodos.map(\.id).joined(separator: "|")
+    }
+
+    private var floaterTaskHomeListRows: [(list: ListSummary, count: Int)] {
+        guard viewModel.mode == .floater, viewModel.listId == nil else {
+            return []
+        }
+        let counts = Dictionary(grouping: viewModel.items.compactMap(\.listId), by: { $0 }).mapValues(\.count)
+        // Show every list, including ones with no tasks yet, so a newly created
+        // (still-empty) list is always reachable here.
+        return viewModel.lists.map { list in
+            (list: list, count: counts[list.id] ?? 0)
+        }
+    }
+
+    private var isFloaterTaskHomeScreen: Bool {
+        viewModel.mode == .floater && viewModel.listId == nil
+    }
+
+    /// The Anytime home's own answer, counted on the raw item list: this screen
+    /// has no Earlier bucket to subtract, unlike the modes `pendingScopeAnswer`
+    /// speaks for.
+    private var floaterTaskHomeAnswer: FeedAnswer {
+        feedAnswer(
+            storeRead: viewModel.hasHydratedFromCache,
+            rowsEmpty: viewModel.items.isEmpty,
+            firstAnswerLanded: viewModel.firstAnswerLanded
+        )
+    }
+
+    /// The same question asked of the timeline modes, which count what they
+    /// actually render. Two properties rather than one because `rowsEmpty` is
+    /// genuinely two different counts on this screen, not because the rule
+    /// differs — the rule is `feedAnswer` and there is only one of it.
+    private var timelineAnswer: FeedAnswer {
+        feedAnswer(
+            storeRead: viewModel.hasHydratedFromCache,
+            rowsEmpty: timelineItems.isEmpty,
+            firstAnswerLanded: viewModel.firstAnswerLanded
+        )
+    }
+
+    /// And the third count: the illustration's scope, which subtracts a
+    /// collapsed Earlier section out (see `hasNoPendingItems`). This is a
+    /// sibling term for the overlay's `if`, deliberately not folded into
+    /// `showsEmptyStateIllustration` — that predicate is the Earlier/celebration
+    /// gate the last two commits rewrote, and it is extended here, not edited.
+    private var pendingScopeAnswer: FeedAnswer {
+        feedAnswer(
+            storeRead: viewModel.hasHydratedFromCache,
+            rowsEmpty: hasNoPendingItems,
+            firstAnswerLanded: viewModel.firstAnswerLanded
+        )
+    }
+
+    // Root floater empty state is shown inline (in the list, above the list
+    // names) to mirror the web layout, rather than as a full-screen overlay.
+    //
+    // `!viewModel.isLoading` stood where the answer state does now, and it is
+    // the whole of the reported bug: `isLoading` is raised by nothing but
+    // `refresh()`, so pulling this screen down with no tasks in it withdrew the
+    // illustration, the heading and the body, collapsed the page upward, and put
+    // the block back when the refresh returned with nothing new. An empty state
+    // is an answer; a refresh is a request to check that answer, not a reason to
+    // withdraw it. `feedAnswer` has no term a pull can move.
+    private var showInlineFloaterTaskHomeEmpty: Bool {
+        isFloaterTaskHomeScreen && floaterTaskHomeAnswer == .empty
+    }
+
+    private var inlineEmptyStateGapHeight: CGFloat {
+        UIScreen.main.bounds.height * 0.42
+    }
+
+    private var isListDetailScreen: Bool {
+        viewModel.mode == .list ||
+            (viewModel.mode == .floater && !(viewModel.listId?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true))
+    }
+
+    private var selectedListSummary: ListSummary? {
+        guard let listId = viewModel.listId else { return nil }
+        return viewModel.lists.first(where: { $0.id == listId })
+    }
+
+    // VIEWER members of a shared list get a read-only screen: no create FAB,
+    // no swipe edit/delete, no complete taps, no drag.
+    private var isViewerList: Bool {
+        isListDetailScreen && selectedListSummary?.isViewer == true
+    }
+
+    private var currentShareKind: ShareListKind {
+        viewModel.mode == .floater ? .floater : .scheduled
+    }
+
+    private var floaterTaskHomeListByID: [String: ListSummary] {
+        Dictionary(viewModel.lists.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest })
+    }
+
+    private var normalizedFloaterTaskHomeSearchQuery: String {
+        normalizedTodoSearchQuery(floaterTaskHomeSearchQuery)
+    }
+
+    private var floaterTaskHomeSearchResults: [TodoItem] {
+        guard isFloaterTaskHomeScreen, !normalizedFloaterTaskHomeSearchQuery.isEmpty else {
+            return []
+        }
+
+        return viewModel.items.filter { todo in
+            todoSearchText(todo.title).contains(normalizedFloaterTaskHomeSearchQuery) ||
+                todoSearchText(flattenNotesToPlainText(todo.description)).contains(normalizedFloaterTaskHomeSearchQuery) ||
+                (todo.listId.flatMap { floaterTaskHomeListByID[$0]?.name }.map {
+                    todoSearchText($0).contains(normalizedFloaterTaskHomeSearchQuery)
+                } ?? false)
+        }
+        .sorted(by: floaterTodoSortPrecedes)
+        .prefix(20)
+        .map { $0 }
+    }
+
+    private var showFloaterTaskHomeSearchResults: Bool {
+        isFloaterTaskHomeScreen && floaterTaskHomeSearchExpanded && !normalizedFloaterTaskHomeSearchQuery.isEmpty
+    }
+
+    /// Every screen that pins the timeline bar searches its own tasks from it —
+    /// the five scopes as well as a custom list, the way the matching web pages
+    /// do. The root floater feed has its own field in the hero header and never
+    /// takes this one.
+    private var showsListSearch: Bool {
+        showsTimelineNavigationTopBar && !isFloaterTaskHomeScreen
+    }
+
+    /// Whether the bar offers the magnifier at all. A scope or a list with no
+    /// tasks in it has no set for a query to narrow, so the button would only
+    /// raise a keyboard over an empty screen — and over the empty-state scene,
+    /// which is the whole of what that screen has to say.
+    ///
+    /// Gates the button, not `showsListSearch`: deleting the last task while a
+    /// search is open should retire the affordance, not slam the field shut
+    /// under the user's hands.
+    private var canOpenListSearch: Bool {
+        showsListSearch && !viewModel.items.isEmpty
+    }
+
+    private var normalizedListSearchQuery: String {
+        normalizedTodoSearchQuery(listSearchQuery)
+    }
+
+    private var isSearchingList: Bool {
+        showsListSearch && !normalizedListSearchQuery.isEmpty
+    }
+
+    /// The scope the magnifier is searching, named the way the hero above it names
+    /// itself — so "Search in Tonight" sits under a hero that says Tonight, rather
+    /// than the two disagreeing about what screen this is.
+    ///
+    /// This one reads the clock at body-evaluation time rather than inside a
+    /// `TimelineView` like the hero does, because the result is baked into a single
+    /// formatted sentence rather than drawn as a word. That costs nothing real: the
+    /// placeholder is only visible while the field is up, and opening the field
+    /// flips `listSearchExpanded` and re-runs this pass. The hero is the surface
+    /// that has to be right without being touched, and it is.
+    private var listSearchPlaceholder: String {
+        let name = (selectedListSummary?.name ?? viewModel.resolvedTitle(at: Date()))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? L("Search") : L("Search in %@", name)
+    }
+
+    /// A live query that matched nothing, and nothing else. The `!isLoading`
+    /// term that used to be here is dropped outright rather than swapped: a
+    /// search is answered locally out of rows this screen already holds, so
+    /// there is no first load to withhold it for and no sync that could make the
+    /// no-match true or false. What the term actually did was leave a refresh
+    /// under a non-matching query showing NEITHER scene — not this one, because
+    /// the flag was up, and not the skeleton below, because the skeleton excludes
+    /// search on purpose.
+    private var showsListSearchEmptyState: Bool {
+        isSearchingList && timelineItems.isEmpty
+    }
+
+    /// The first load of this screen's own scope, and only that.
+    ///
+    /// The premise this comment used to carry was false about its own client and
+    /// is worth replacing rather than leaving as load-bearing prose: there is no
+    /// cold open here to cover. `TodoListViewModel` hydrates from the local cache
+    /// synchronously in `init`, so the rows beat the first body pass, and the
+    /// only thing that ever raised `isLoading` was `refresh()`. Gated on that
+    /// flag, this skeleton did the exact inverse of its own name — it GREW three
+    /// grey bars during a pull on a feed that had already answered, which is the
+    /// second half of the reported screenshot, and it drew nothing at all on the
+    /// one occasion that really has no answer.
+    ///
+    /// That occasion is what it draws for now: the cache is empty AND no first
+    /// answer has ever landed, which on this client means a fresh install or a
+    /// fresh login whose first sync failed or is still in flight — a case that
+    /// until now wrongly said "No tasks" about a workspace nobody had counted.
+    ///
+    /// The search cases stay out of it, as they always did — a live query answers
+    /// for itself, and a placeholder under a query the user is typing would flash
+    /// three grey rows per keystroke.
+    private var showsTimelineSkeleton: Bool {
+        timelineAnswer == .awaitingFirst && !isSearchingList && !showFloaterTaskHomeSearchResults
+    }
+
+    private var isTodayMode: Bool {
+        viewModel.mode == .today
+    }
+
+    private var isMinimalTimelineMode: Bool {
+        viewModel.mode == .overdue ||
+            viewModel.mode == .scheduled ||
+            viewModel.mode == .priority ||
+            viewModel.mode == .floater ||
+            viewModel.mode == .all ||
+            viewModel.mode == .list
+    }
+
+    private var usesHeroTimelineMode: Bool {
+        isTodayMode || isMinimalTimelineMode
+    }
+
+    private var showsTimelineNavigationTopBar: Bool {
+        usesHeroTimelineMode && !usesRootFeedHeader
+    }
+
+    private var modeAccentColor: Color {
+        todoModeAccentColor(viewModel.mode, listColorKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.color)
+    }
+
+    private func emptyWatermarkSystemName(for date: Date) -> String {
+        let selectedList = viewModel.lists.first(where: { $0.id == viewModel.listId })
+        return emptyTimelineSystemImage(
+            for: viewModel.mode,
+            listIconKey: selectedList?.iconKey,
+            listName: selectedList?.name,
+            date: date
+        )
+    }
+
+    /// Modes whose own current scope can sit empty while a display-time
+    /// Earlier bucket, built from that SAME query, still holds overdue rows —
+    /// see `buildSections`. Today started this: `TodoRepository.buildTodos`'s
+    /// `.today` case folds overdue tasks into `items` for exactly this reason,
+    /// and `buildSections`'s `.today` case buckets them into a collapsed
+    /// "earlier" section rather than the Morning/Afternoon/Tonight buckets
+    /// they were never actually due in. Priority/All/List already queried one
+    /// array that includes overdue and already bucketed it the same way
+    /// (`buildFutureTimelineSections`'s own "earlier" section) — they simply
+    /// never had the illustration/confetti/collapse machinery read that split
+    /// before now. Scheduled is deliberately excluded: verified against
+    /// `TodoRepository.buildTodos`'s `.scheduled` case, `isScheduledTodo`
+    /// filters to `due >= now` before `items` ever reaches this screen, so
+    /// there is no overdue row left to bucket and no Earlier section in
+    /// `buildSections`'s `.scheduled` case — `viewModel.items.isEmpty` is
+    /// already exactly "nothing in Scheduled's own scope". Overdue and
+    /// Floater are excluded too: Overdue is one flat list with no nested
+    /// Earlier-within-Earlier concept (out of scope by product decision), and
+    /// Floaters carry no due date at all, so "overdue" is not meaningful for
+    /// them.
+    private var modeHasEarlierAwareEmptyState: Bool {
+        switch viewModel.mode {
+        case .today, .priority, .all, .list:
+            return true
+        case .overdue, .scheduled, .floater:
+            return false
+        }
+    }
+
+    /// The condition behind both the "all done" illustration and its
+    /// confetti (`celebratesEmptyState`): nothing left *pending* in this
+    /// screen's own scope. For a mode outside `modeHasEarlierAwareEmptyState`
+    /// that is just "no items at all" — `viewModel.items` is already exactly
+    /// what the screen renders. The modes inside it can hold overdue tasks in
+    /// a collapsed Earlier section alongside nothing left in their own
+    /// current scope: those overdue tasks are still on screen, just tucked
+    /// away, and must not keep either the illustration or its confetti from
+    /// firing. Reads `groupedSections` rather than re-deriving each mode's own
+    /// day/earlier split, so this always agrees with what `buildSections`
+    /// actually rendered for that mode.
+    private var hasNoPendingItems: Bool {
+        guard modeHasEarlierAwareEmptyState else { return viewModel.items.isEmpty }
+        return !groupedSections.contains { $0.id != "earlier" && !$0.items.isEmpty }
+    }
+
+    /// This screen's own Earlier section, expanded and holding rows. While
+    /// true the illustration stands down even if `hasNoPendingItems` is true
+    /// — Earlier's own rows are the content in that case, not an absence —
+    /// see `showsEmptyStateIllustration` and req. 3's coexistence rule.
+    private var isEarlierSectionExpanded: Bool {
+        guard modeHasEarlierAwareEmptyState,
+              let section = groupedSections.first(where: { $0.id == "earlier" }),
+              !section.items.isEmpty else {
+            return false
+        }
+        return !isTimelineSectionCollapsed(section)
+    }
+
+    /// `hasNoPendingItems`, gated by the two things specific to sharing the
+    /// screen with an Earlier section: hidden while Earlier is open (its rows
+    /// are the content), and held back mid hand-off by
+    /// `toggleEarlierSectionWithIllustrationHandoff` so it never moves on the
+    /// same frame as Earlier's own expand/collapse. A mode outside
+    /// `modeHasEarlierAwareEmptyState` has no Earlier to share the screen
+    /// with and no reason to suppress, so this is just `hasNoPendingItems`
+    /// there.
+    private var showsEmptyStateIllustration: Bool {
+        hasNoPendingItems && !isEarlierSectionExpanded && !suppressEmptyStateForEarlierHandoff
+    }
+
+    /// Whether the Day Done payoff — the completion haptic and the chime — is owed
+    /// right now.
+    ///
+    /// Split out of the illustration deliberately, and the split is the whole fix. The
+    /// payoff used to hang off the illustration's own `.onAppear`, which fires whenever
+    /// that view is INSERTED — and a view is inserted just as readily by arriving at a
+    /// Today that was already finished an hour ago as by finishing the last task while
+    /// looking at it. So opening the screen replayed a celebration the user had already
+    /// been given, which is the reported defect: a chime on open, earned by nothing.
+    ///
+    /// As a condition it can instead be watched for a CHANGE, and `.onChange(of:)`
+    /// without `initial:` does not fire on its first evaluation. Arriving already-done is
+    /// therefore silent, and the one case the payoff exists for — the last task going out
+    /// under the user's thumb — still fires, because that is a false→true transition
+    /// observed while the screen is mounted.
+    ///
+    /// The four leading terms mirror the illustration's own call site rather than
+    /// re-deriving it, so the payoff can never fire for a state the illustration is not
+    /// actually in.
+    private var showsDayDonePayoff: Bool {
+        showsEmptyStateIllustration
+            && pendingScopeAnswer == .empty
+            && !isFloaterTaskHomeScreen
+            && !isSearchingList
+            && viewModel.mode == .today
+            && viewModel.completedTodayCount > 0
+    }
+
+    /// This screen's half of the celebration gate: gather the inputs, and hand
+    /// the decision to `shouldCelebrateEmptyState`, which is where it is argued
+    /// and where it is tested. Nothing is decided here on purpose — a `View`
+    /// property is reachable from no test, and this one is the difference
+    /// between a payoff and paper flying over a row the user just got back.
+    private var celebratesEmptyState: Bool {
+        shouldCelebrateEmptyState(
+            hasNoPendingItems: hasNoPendingItems,
+            lastCompletionAt: viewModel.lastCompletionAt,
+            remoteEmptiedAt: viewModel.remoteEmptiedAt,
+            celebrationCancelledAt: viewModel.celebrationCancelledAt,
+            isVisible: isScreenVisible,
+            isActive: scenePhase == .active,
+            now: Date(),
+            window: TodoListScreen.completionCelebrationWindow
+        )
+    }
+
+    private static let completionCelebrationWindow: TimeInterval = 4
+
+    /// Timing for req. 3's illustration/Earlier hand-off — see
+    /// `toggleEarlierSectionWithIllustrationHandoff`. Shared by every mode
+    /// that hand-off applies to (Today, Priority, All, List) — one motion
+    /// feel, not one invented per screen. Not shared with `EmptyStateEnter`
+    /// (`TdayEmptyState.swift`): that one times a scene arriving over a row
+    /// the user just cleared, a bigger, slower hand-off than this one, which
+    /// times a small illustration getting out of the way of a section header
+    /// a few points below it.
+    ///
+    /// `exitDuration` does double duty: it is both the animation on
+    /// `suppressEmptyStateForEarlierHandoff`'s flip to `true` and the delay
+    /// before `applyTimelineSectionCollapse` runs, so the illustration's own
+    /// fade-out (`emptyStateIllustrationTransition`'s removal leg, which
+    /// takes its animation from that same `withAnimation`) finishes exactly
+    /// when Earlier's rows start — the exit-before-expand guarantee is that
+    /// delay matching this duration, not a coincidence. Change one, change
+    /// the other.
+    ///
+    /// `enterDuration` has no matching duty on the way back: it still wraps
+    /// `suppressEmptyStateForEarlierHandoff`'s flip to `false` on the collapse
+    /// path, but `emptyStateIllustrationTransition`'s insertion leg is
+    /// `.identity` on purpose (see its own doc comment), so this duration
+    /// drives nothing visible on the illustration itself — the fade-*in* is
+    /// entirely `TdayEmptyState`'s own `onAppear` arrival. It is kept as
+    /// `withAnimation` anyway, both for symmetry with the exit branch and as
+    /// a live seam if a future visible property ever needs to ride along
+    /// with this flag on the way back in.
+    ///
+    /// None of the three is a rung and none is moved onto one. This is a sequence
+    /// whose legs are timed against each other, so putting any single leg on its
+    /// nearest token (Enter 0.20, Emphasis 0.32) would retime the hand-off, not
+    /// just that leg.
+    private enum EarlierIllustrationHandoff {
+        static let exitDuration: Double = 0.22
+        /// The section toggle's own spring (`response: 0.28,
+        /// dampingFraction: 0.9`) reads as settled slightly past its
+        /// response time; this is that spring's practical settle time, not
+        /// its response value.
+        static let collapseSettleDuration: Double = 0.34
+        static let enterDuration: Double = 0.3
+    }
+
+    private var emptyStateAssetName: String {
+        let selectedList = viewModel.lists.first(where: { $0.id == viewModel.listId })
+        return emptyTimelineBadgeAssetName(
+            for: viewModel.mode,
+            listIconKey: selectedList?.iconKey,
+            listName: selectedList?.name
+        )
+    }
+
+    private var shouldCollapseRootDock: Bool {
+        // Neither offset is read here, so a scroll frame does not invalidate this
+        // screen's body: the root feed's lives in `headerScroll`, every other
+        // mode's in `timelineScroll`. What this reads is the folded answer, which
+        // only changes when the scroll crosses the dock's fold point.
+        usesRootFeedHeader
+            ? rootDockCollapsed
+            : legacyRootDockCollapsed
+    }
+
+    private var minimalTimelineBottomSpacerHeight: CGFloat {
+        isFloaterTaskHomeScreen ? TodoTimelineMetrics.floaterTaskHomeBottomSpacerHeight : TodoTimelineMetrics.timelineBottomSpacerHeight
+    }
+
+    /// Row identity and nothing else. The completing ids used to be joined in
+    /// too — a leftover from when they drove the row's fade — and that made the
+    /// tap itself a key change: the List's travel modifier is nearer the row
+    /// than `completeTodoWithoutReflow`'s `withAnimation`, so it took over the
+    /// tick and ran the checkmark at Emphasis instead of Quick, still filling
+    /// when the strike began. The fade is the row's own `isFading` animation
+    /// now, and the removal still changes this key in the same update that
+    /// rehydrates `items`, so the gap closing keeps the travel.
+    private var timelineItemAnimationKey: String {
+        viewModel.items.map(\.id).joined(separator: "|")
+    }
+
+    private var canSummarizeCurrentMode: Bool {
+        // Summary button is intentionally hidden on the root floater screen; it
+        // remains available on the per-mode screens (today/all/scheduled/etc.)
+        // and list detail.
+        summaryAvailable && viewModel.aiSummaryEnabled && !viewModel.items.isEmpty && !isFloaterTaskHomeScreen
+    }
+
+    private var heroTopBarActions: [TimelineTopBarAction] {
+        var actions: [TimelineTopBarAction] = []
+
+        // Leads the cluster, as it does on the web list bar.
+        if canOpenListSearch {
+            actions.append(TimelineTopBarAction(
+                systemName: "magnifyingglass",
+                assetName: "NavSearch",
+                usesCircularChrome: true,
+                accessibilityLabel: L("Search"),
+                action: openListSearch
+            ))
+        }
+
+        if canSummarizeCurrentMode {
+            actions.append(TimelineTopBarAction(
+                systemName: "sparkles",
+                assetName: "LucideSparkles",
+                usesCircularChrome: true,
+                accessibilityLabel: L("Summary"),
+                action: presentSummary
+            ))
+        }
+
+        // An explicit button, never a long press: long press already starts
+        // drag-to-reschedule on five of the seven modes, and stealing it would be
+        // an untestable gesture-arbitration bug on a build nobody can run.
+        if canEnterSelectionMode {
+            actions.append(TimelineTopBarAction(
+                systemName: "checkmark.circle",
+                assetName: "LucideCircleCheckBig",
+                usesCircularChrome: true,
+                accessibilityLabel: L("Select"),
+                action: enterSelectionMode
+            ))
+        }
+
+        if viewModel.mode == .floater,
+           let resetTarget = selectedListSummary,
+           resetTarget.reusable,
+           !resetTarget.isViewer {
+            // Web's FloaterListContainer draws Reset on the SAVED list's `reusable`
+            // (never the in-sheet toggle) and hides it from viewers — the backend
+            // forbids a VIEWER at FloaterListService.resetFloaters. Same gate here,
+            // so the affordance and the server agree.
+            actions.append(TimelineTopBarAction(
+                systemName: "arrow.counterclockwise",
+                assetName: "LucideRefreshCw",
+                usesCircularChrome: true,
+                accessibilityLabel: L("Reset list"),
+                action: { Task { await viewModel.resetFloaterList() } }
+            ))
+        }
+
+        if isListDetailScreen {
+            // One entry point per role: owners get list settings (which hosts
+            // the Sharing section); members go straight to the members sheet.
+            actions.append(TimelineTopBarAction(
+                systemName: "ellipsis",
+                assetName: "NavEllipsis",
+                usesCircularChrome: true,
+                accessibilityLabel: L("More"),
+                action: {
+                    if selectedListSummary?.isOwner == false {
+                        showingMembers = true
+                    } else {
+                        showingListSettings = true
+                    }
+                }
+            ))
+        }
+
+        return actions
+    }
+
+    private func enterSelectionMode() {
+        HapticManager.buttonPress()
+        // Nothing may be half-open underneath the mode.
+        openSwipeTaskID = nil
+        selectedTodoIDs = []
+        withAnimation(.spring(response: 0.26, dampingFraction: 0.9)) {
+            isSelecting = true
+        }
+    }
+
+    private func exitSelectionMode() {
+        selectedTodoIDs = []
+        activeBulkSelector = nil
+        showingBulkDeleteConfirmation = false
+        showingBulkMoveConfirmation = false
+        pendingBulkMoveListID = nil
+        withAnimation(.spring(response: 0.26, dampingFraction: 0.9)) {
+            isSelecting = false
+        }
+    }
+
+    private func toggleSelection(of todo: TodoItem) {
+        if selectedTodoIDs.contains(todo.id) {
+            selectedTodoIDs.remove(todo.id)
+            HapticManager.selection()
+            return
+        }
+        // At the cap a further tap is refused in place. The bar already says the
+        // hundred is the most one action can cover, and a toast for something
+        // already on screen would only talk over it.
+        guard !isSelectionAtCap else { return }
+        selectedTodoIDs.insert(todo.id)
+        HapticManager.selection()
+    }
+
+    private func toggleSelectAll() {
+        HapticManager.selection()
+        if selectionAllSelected {
+            selectedTodoIDs = []
+            return
+        }
+        // Capped from the top in display order, so which hundred you get is the
+        // hundred you were looking at rather than whichever the set held.
+        selectedTodoIDs = Set(selectableTodos.prefix(BulkSelectionCopy.maxSelection).map(\.id))
+    }
+
+    /// Selection never outlives what it points at: a row that synced away, was
+    /// completed elsewhere, or fell out of a live search drops out silently, and
+    /// an emptied selection closes the mode.
+    private func reconcileSelection() {
+        guard isSelecting else { return }
+        if selectableTodos.isEmpty {
+            exitSelectionMode()
+            return
+        }
+        guard !selectedTodoIDs.isEmpty else { return }
+        let visible = Set(selectableTodos.map(\.id))
+        let remaining = selectedTodoIDs.intersection(visible)
+        guard remaining != selectedTodoIDs else { return }
+        selectedTodoIDs = remaining
+        if remaining.isEmpty {
+            exitSelectionMode()
+        }
+    }
+
+    private func performBulkComplete() {
+        let targets = effectiveBulkTodos(for: .complete)
+        guard !targets.isEmpty else { return }
+        HapticManager.completion()
+        exitSelectionMode()
+        Task { await viewModel.bulkComplete(targets) }
+    }
+
+    /// Layer one of two. Bulk delete always asks first, whatever the count — the
+    /// undo toast that follows is the second guard, not a substitute for this.
+    private func requestBulkDelete() {
+        guard !effectiveBulkTodos(for: .delete).isEmpty else { return }
+        HapticManager.buttonPress()
+        withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
+            showingBulkDeleteConfirmation = true
+        }
+    }
+
+    private func confirmBulkDelete() {
+        let targets = effectiveBulkTodos(for: .delete)
+        showingBulkDeleteConfirmation = false
+        guard !targets.isEmpty else {
+            exitSelectionMode()
+            return
+        }
+        HapticManager.destructive()
+        exitSelectionMode()
+        Task { await viewModel.bulkDelete(targets) }
+    }
+
+    private func applyBulkPriority(_ priority: String) {
+        let targets = effectiveBulkTodos(for: .priority)
+        activeBulkSelector = nil
+        guard !targets.isEmpty else {
+            exitSelectionMode()
+            return
+        }
+        exitSelectionMode()
+        Task { await viewModel.bulkSetPriority(targets, priority: priority) }
+    }
+
+    /// A move out of one shared source list is undone by a second bulk move, so
+    /// it goes straight through. A move that gathers tasks from several lists is
+    /// the one nobody can put back — that one asks.
+    private func requestBulkMove(toListID listID: String?) {
+        let targets = effectiveBulkTodos(for: .move)
+        activeBulkSelector = nil
+        guard !targets.isEmpty else {
+            exitSelectionMode()
+            return
+        }
+        let sourceLists = Set(targets.map { $0.listId ?? "" })
+        guard sourceLists.count > 1 else {
+            exitSelectionMode()
+            Task { await viewModel.bulkMove(targets, toListId: listID) }
+            return
+        }
+        pendingBulkMoveListID = listID
+        withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
+            showingBulkMoveConfirmation = true
+        }
+    }
+
+    private func confirmBulkMove() {
+        let targets = effectiveBulkTodos(for: .move)
+        let listID = pendingBulkMoveListID
+        showingBulkMoveConfirmation = false
+        pendingBulkMoveListID = nil
+        guard !targets.isEmpty else {
+            exitSelectionMode()
+            return
+        }
+        HapticManager.completion()
+        exitSelectionMode()
+        Task { await viewModel.bulkMove(targets, toListId: listID) }
+    }
+
+    /// Every `TodoListMode` renders the same drop-capable minimal timeline —
+    /// Today included, so tasks can be dragged between the Morning / Afternoon /
+    /// Tonight buckets. `isTodayMode` and `isMinimalTimelineMode` cover all seven
+    /// cases between them, so the second layout this used to fall back to could
+    /// never be reached; it is gone rather than left looking like a default.
+    private var modeContent: AnyView {
+        AnyView(minimalTimelineModeContent)
+    }
+
+    var body: some View {
+        screenWithListSheets
+        // The whole screen opts out of keyboard avoidance, not just the empty
+        // scene inside it. This screen's only text field is the search box in
+        // the *top* safe-area inset, which the keyboard can never cover, so
+        // there is nothing here for SwiftUI to move out of the way. What the
+        // avoidance actually did was shorten the feed's region — and the empty
+        // scene, being centred in whatever region is left, rode up with it.
+        // `.ignoresSafeArea` on the scene alone could not undo that: it is an
+        // overlay, and an overlay cannot grow past the bounds of the view it is
+        // laid over. The shrink has to be refused where it lands, which is here.
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+    }
+
+    // MARK: - Screen composition
+    //
+    // The screen is assembled in stages rather than as one modifier chain. The
+    // chain outgrew what the Swift type checker will solve for a single
+    // expression, and it failed the build with "unable to type-check this
+    // expression in reasonable time". Each stage applies the next run of
+    // modifiers in exactly the order they were applied before, so the composed
+    // view tree is identical. Keep new modifiers in the stage that matches what
+    // they do, and split a stage rather than letting one grow without limit.
+    //
+    // The presentation bindings, dialog buttons and the two title/visibility
+    // arguments below are spelled out with their types for the same reason: as
+    // inline arguments they were inference the solver had to do inside the
+    // chain, and that is exactly the cost that blew the budget.
+
+    private var navigationBarTitleText: String {
+        (usesRootFeedHeader || usesHeroTimelineMode) ? "" : viewModel.title
+    }
+
+    private var navigationBarVisibility: Visibility {
+        (usesRootFeedHeader || usesHeroTimelineMode) ? .hidden : .visible
+    }
+
+    /// Quick Defer's dialog is presented for as long as a task is staged in
+    /// `deferringTodo`, and dismissing it clears the stage.
+    private var quickDeferDialogPresented: Binding<Bool> {
+        Binding(
+            get: { deferringTodo != nil },
+            set: { isPresented in
+                if !isPresented {
+                    deferringTodo = nil
+                }
+            }
+        )
+    }
+
+    @ViewBuilder
+    private var quickDeferDialogActions: some View {
+        if let todo = deferringTodo {
+            ForEach(Array(quickDeferOptions().enumerated()), id: \.offset) { entry in
+                Button(entry.element.choice.label) {
+                    deferringTodo = nil
+                    Task { await viewModel.deferTask(todo, due: entry.element.due) }
+                }
+            }
+        }
+    }
+
+    private var pendingReschedulePromptPresented: Binding<Bool> {
+        Binding(
+            get: { pendingRescheduleDrop != nil },
+            set: { isPresented in
+                if !isPresented {
+                    pendingRescheduleDrop = nil
+                }
+            }
+        )
+    }
+
+    @ViewBuilder
+    private var pendingRescheduleDialogActions: some View {
+        Button("This occurrence") {
+            commitPendingReschedule(scope: .occurrence)
+        }
+        Button("Entire series") {
+            commitPendingReschedule(scope: .series)
+        }
+        Button("Cancel", role: .cancel) {
+            pendingRescheduleDrop = nil
+        }
+    }
+
+    private var screenBaseContent: some View {
+        refreshableModeContent
+        .coordinateSpace(name: todoTimelineDragCoordinateSpace)
+        .background(colors.background)
+        .onPreferenceChange(FloaterSearchResultsFrameKey.self) { frame in
+            floaterSearchResultsFrame = frame
+        }
+        // A tap on the blank space the feed gave up dismisses the field. The
+        // toolbar row is tested by its fixed geometry, not a reported rect, so
+        // the tap that opened the field can never read as an outside tap.
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0, coordinateSpace: .named(todoTimelineDragCoordinateSpace))
+                .onEnded { value in
+                    guard usesRootFeedHeader, floaterTaskHomeSearchExpanded else { return }
+                    let isTap = abs(value.translation.width) < 8 && abs(value.translation.height) < 8
+                    guard isTap else { return }
+                    let location = value.startLocation
+                    guard location.y > RootFeedHeroHeaderMetrics.barHeight else { return }
+                    guard !floaterSearchResultsFrame.contains(location) else { return }
+                    closeFloaterTaskHomeSearch()
+                }
+        )
+        .overlay(alignment: .top) {
+            if usesRootFeedHeader {
+                rootFeedHeroHeader
+            }
+        }
+        .onPreferenceChange(TodoDropTargetFramePreferenceKey.self) { frames in
+            dropTargetFrames = frames
+        }
+        // Tapping the feed puts the field away, as it already did on the root
+        // feeds. Sits here, inside the bar's own safe-area inset, so the gesture
+        // never sees a tap on the bar itself.
+        .tdayClosesSearchOnOutsideTap(isSearchOpen: showsListSearch && listSearchExpanded) {
+            closeListSearch()
+        }
+        // The preview reads the finger's location in a body of its own, so a move redraws this
+        // layer and not the screen around it — see `TodoDragPreviewModel`.
+        .overlay(alignment: .topLeading) {
+            GeometryReader { proxy in
+                TodoDragPreviewLayer(model: dragPreview, rootOrigin: proxy.frame(in: .global).origin)
+            }
+            .allowsHitTesting(false)
+        }
+    }
+
+    private var screenWithOverlays: some View {
+        screenBaseContent
+        .overlay {
+            if showingDeleteListConfirmation {
+                ListDeleteConfirmationOverlay(
+                    onCancel: {
+                        withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
+                            showingDeleteListConfirmation = false
+                        }
+                    },
+                    onDelete: {
+                        showingDeleteListConfirmation = false
+                        Task {
+                            // Navigate from the screen after the delete completes,
+                            // so navigation is not dropped while the confirmation
+                            // overlay is still animating its dismissal.
+                            if await viewModel.deleteList() {
+                                onListDeleted()
+                            }
+                        }
+                    }
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                .zIndex(30)
+            }
+        }
+        .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingDeleteListConfirmation)
+        // Bulk delete's first guard. It states the exact count in both the
+        // headline and the confirm button, and promises the undo that genuinely
+        // follows rather than claiming permanence.
+        .overlay {
+            if showingBulkDeleteConfirmation {
+                let count = effectiveBulkTodos(for: .delete).count
+                BulkSelectionConfirmationOverlay(
+                    title: BulkSelectionCopy.deleteTitle(count),
+                    message: BulkSelectionCopy.deleteBody,
+                    note: bulkRecurringNote(for: .delete),
+                    confirmTitle: BulkSelectionCopy.deleteConfirm(count),
+                    isDestructive: true,
+                    onCancel: {
+                        withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
+                            showingBulkDeleteConfirmation = false
+                        }
+                    },
+                    onConfirm: confirmBulkDelete
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                .zIndex(30)
+            }
+        }
+        .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingBulkDeleteConfirmation)
+        .overlay {
+            if showingBulkMoveConfirmation {
+                let count = effectiveBulkTodos(for: .move).count
+                BulkSelectionConfirmationOverlay(
+                    title: BulkSelectionCopy.moveTitle(count),
+                    message: BulkSelectionCopy.moveBody,
+                    note: bulkRecurringNote(for: .move),
+                    confirmTitle: BulkSelectionCopy.moveConfirm(count),
+                    isDestructive: false,
+                    onCancel: {
+                        withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
+                            showingBulkMoveConfirmation = false
+                            pendingBulkMoveListID = nil
+                        }
+                    },
+                    onConfirm: confirmBulkMove
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                .zIndex(30)
+            }
+        }
+        .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingBulkMoveConfirmation)
+        .overlay {
+            if let activeBulkSelector {
+                bulkSelectorOverlay(for: activeBulkSelector)
+                    .transition(.opacity)
+                    .zIndex(31)
+            }
+        }
+        .animation(.spring(response: 0.24, dampingFraction: 0.9), value: activeBulkSelector)
+    }
+
+    private var screenWithNavigationChrome: some View {
+        screenWithOverlays
+        .navigationBackButtonBehavior()
+        .navigationTitleTypography(
+            largeTitleColor: modeAccentColor,
+            inlineTitleColor: colors.onSurface,
+            backgroundColor: colors.background
+        )
+        .navigationTitle(navigationBarTitleText)
+        .navigationBarBackButtonHidden(usesRootFeedHeader)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(navigationBarVisibility, for: .navigationBar)
+        .toolbar {
+            navigationToolbarContent
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            timelineTopInset
+        }
+    }
+
+    private var screenWithLifecycleHandlers: some View {
+        screenWithNavigationChrome
+        .onChange(of: viewModel.items) {
+            handleItemsChanged()
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            // The action bar takes the dock's slot outright, so the create FAB
+            // and the bulk verbs can never sit on top of one another.
+            if isSelecting {
+                bulkActionBar
+            } else if showsRootControls {
+                floatingActionButtonDock
+            } else {
+                Color.clear.frame(height: 80)
+            }
+        }
+        .onChange(of: selectableRowIDKey) {
+            reconcileSelection()
+        }
+        .onChange(of: floaterTaskHomeSearchExpanded, initial: true) { _, expanded in
+            guard isFloaterTaskHomeScreen else {
+                onRootControlsVisibleChange(true)
+                return
+            }
+            onRootControlsVisibleChange(!expanded)
+            if expanded {
+                floaterTaskHomeSearchFieldFocused = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                    if floaterTaskHomeSearchExpanded {
+                        floaterTaskHomeSearchFieldFocused = true
+                    }
+                }
+            } else {
+                floaterTaskHomeSearchFieldFocused = false
+            }
+        }
+        // The field only joins the hierarchy once the bar has swapped its row
+        // over, so focusing it in the same turn is dropped on the floor.
+        .onChange(of: listSearchExpanded) { _, expanded in
+            guard expanded else {
+                listSearchFieldFocused = false
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                if listSearchExpanded {
+                    listSearchFieldFocused = true
+                }
+            }
+        }
+        .onChange(of: createTaskRequestID) { _, requestID in
+            guard requestID > 0 else { return }
+            closeFloaterTaskHomeSearch()
+            showingCreateTask = true
+        }
+        .onChange(of: showsDayDonePayoff) { _, owed in
+            guard owed else { return }
+            // Earlier folding shut hands the illustration back too (see
+            // `toggleEarlierSectionWithIllustrationHandoff`), and that return is not a
+            // fresh completion — it must not replay the payoff each time.
+            guard !suppressDayDoneFeedbackOnReturn else {
+                suppressDayDoneFeedbackOnReturn = false
+                return
+            }
+            HapticManager.completion()
+            SoundManager.taskCompleted()
+        }
+        .onAppear {
+            isScreenVisible = true
+            onRootControlsVisibleChange(!(isFloaterTaskHomeScreen && floaterTaskHomeSearchExpanded))
+            onRootDockCollapsedChange(shouldCollapseRootDock)
+            if openCreateTaskOnAppear && !hasOpenedCreateTaskOnAppear {
+                hasOpenedCreateTaskOnAppear = true
+                closeFloaterTaskHomeSearch()
+                showingCreateTask = true
+            }
+        }
+        .onDisappear {
+            isScreenVisible = false
+            onRootControlsVisibleChange(true)
+            // Nobody returns to a screen expecting a Delete pill still armed under their thumb
+            // from a minute ago. Both halves of the reveal are `@State` and both survive a
+            // NavigationStack push, so without this line the row is exactly where it was left.
+            // The write trips `todoTrailingSwipeActions`' own `.onChange(of: openRowID)` and the
+            // row is closed before it is next seen.
+            //
+            // This is also the whole of iOS's answer to "should back close the row", and the
+            // answer is that iOS does not intercept back at all: these are tab roots with no
+            // back button, and the one back-shaped gesture that exists — the left-edge
+            // interactive pop — travels in the SAME direction as the drag-back close, so
+            // intercepting it would mean an app recognizer fighting the system pop over the same
+            // pixels. Android does intercept, because Android has a back to intercept.
+            openSwipeTaskID = nil
+        }
+    }
+
+    private var screenWithTaskSheets: some View {
+        screenWithLifecycleHandlers
+        .onChange(of: showingCreateTask) { _, showing in
+            if !showing {
+                onCreateTaskSheetClosed()
+            }
+        }
+        .createTaskSheet(isPresented: $showingCreateTask) {
+            createTaskSheetContent
+        }
+        .tdayBottomSheetPresentation(isPresented: $showingCreateList) {
+            CreateListSheet(showsReusable: viewModel.mode == .floater) { name, color, iconKey, reusable, defaultPriority in
+                Task {
+                    await viewModel.createList(name: name, color: color, iconKey: iconKey, reusable: reusable ?? false, defaultPriority: defaultPriority)
+                }
+            }
+        }
+        .createTaskSheet(item: $editingTodo) { todo in
+            editTaskSheetContent(for: todo)
+        }
+        .sheet(item: $promotingFloater) { floater in
+            promoteFloaterSheetContent(for: floater)
+        }
+        // Quick Defer: one tap moves the task to a locally computed instant.
+        .confirmationDialog(
+            L("Defer"),
+            isPresented: quickDeferDialogPresented,
+            titleVisibility: .visible
+        ) {
+            quickDeferDialogActions
+        }
+    }
+
+    private var screenWithListSheets: some View {
+        screenWithTaskSheets
+        .sheet(isPresented: $showingSummary) {
+            summarySheetContent
+        }
+        .sheet(isPresented: $showingListSettings, onDismiss: {
+            // Sheet swap requested from the settings sheet's Sharing section:
+            // present members only after settings has fully dismissed.
+            if pendingMembersAfterSettings {
+                pendingMembersAfterSettings = false
+                showingMembers = true
+            }
+        }) {
+            listSettingsSheetContent
+        }
+        .sheet(isPresented: $showingMembers) {
+            membersSheetContent
+        }
+        .confirmationDialog(
+            "Move repeating task?",
+            isPresented: pendingReschedulePromptPresented,
+            titleVisibility: .visible
+        ) {
+            pendingRescheduleDialogActions
+        } message: {
+            Text("Choose whether to move only this task occurrence or the entire repeating series.")
+        }
+    }
+
+    @ViewBuilder
+    private var refreshableModeContent: some View {
+        if isFloaterTaskHomeScreen {
+            PullToRefreshContainer(
+                isRefreshing: viewModel.isLoading,
+                isEnabled: pullRefreshEnabled,
+                // The header draws the pill itself, so it can fly in from the
+                // top of the screen and hover in front of the title instead of
+                // being painted underneath the pinned toolbar.
+                showsIndicator: false,
+                onIndicatorStateChange: { headerScroll.refresh = $0 },
+                action: {
+                    await viewModel.refresh(userInitiated: true)
+                }
+            ) {
+                watermarkedModeContent
+            }
+        } else {
+            watermarkedModeContent
+                .tdayPullToRefresh(isRefreshing: viewModel.isLoading, isEnabled: pullRefreshEnabled) {
+                    await viewModel.refresh(userInitiated: true)
+                }
+        }
+    }
+
+    // The watermark is overlaid on `modeContent` *before* the pull-to-refresh
+    // wrapper is applied, so the loading/refresh pill (added as an overlay by the
+    // pull-to-refresh container on top of this content) renders in front of the
+    // watermark rather than behind it.
+    private var watermarkedModeContent: some View {
+        modeContent
+            .onPreferenceChange(EmptyStateReservedTopHeightPreferenceKey.self) { height in
+                emptyStateReservedTopHeight = height
+            }
+            .overlay {
+                TimelineView(.periodic(from: .now, by: 60)) { context in
+                    ZStack {
+                        EmptyTaskWatermark(
+                            systemName: emptyWatermarkSystemName(for: context.date),
+                            accentColor: modeAccentColor,
+                            assetName: emptyTimelineAssetName(
+                                for: viewModel.mode,
+                                listIconKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.iconKey,
+                                listName: viewModel.lists.first(where: { $0.id == viewModel.listId })?.name
+                            )
+                        )
+                        // A live query answers for itself in the feed, so the
+                        // screen's own "nothing here" line stands down rather
+                        // than talking over the no-results state.
+                        // `pendingScopeAnswer == .empty` where `!viewModel.isLoading`
+                        // used to be, and a sibling term rather than an edit to
+                        // `showsEmptyStateIllustration`: that predicate is the
+                        // Earlier/celebration gate, and it answers a different
+                        // question (is this scope finished, and is Earlier out of
+                        // the way) than "has this scope answered at all". Both
+                        // still have to be true; only the second one used to be
+                        // spelled as the refresh flag.
+                        if showsEmptyStateIllustration, pendingScopeAnswer == .empty, !isFloaterTaskHomeScreen, !isSearchingList {
+                            // Centred in whatever is left BELOW the hero row
+                            // and — while it is on screen — the collapsed
+                            // Overdue/Earlier header, not in the full frame
+                            // regardless of how much of it that content
+                            // actually fills. A plain `ZStack`-centred scene
+                            // here used to land on top of the header rather
+                            // than under it whenever the screen's own scope
+                            // was empty (so Overdue's header was the only
+                            // thing rendered above it): that populated
+                            // region ran to a few hundred points, well under
+                            // half the frame's own few hundred + more, so
+                            // the frame's geometric centre fell on the
+                            // header instead of past it. See
+                            // `EmptyStateReservedTopHeightPreferenceKey`.
+                            GeometryReader { proxy in
+                                // Clamped so a reserved height taller than
+                                // the frame itself (extreme Dynamic Type, a
+                                // very short window) still leaves the scene a
+                                // floor to centre in rather than being pushed
+                                // off the bottom edge entirely.
+                                let reservedTop = min(
+                                    emptyStateReservedTopHeight,
+                                    max(0, proxy.size.height - EmptyStateIllustrationLayout.minimumRemainder)
+                                )
+                                VStack(spacing: 0) {
+                                    Color.clear.frame(height: reservedTop)
+                                    Spacer(minLength: 0)
+                                    emptyStateIllustration(for: context.date)
+                                    Spacer(minLength: 0)
+                                }
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .allowsHitTesting(false)
+                    // The scene inside opts out too, but it is this overlay's
+                    // frame that the keyboard actually squeezes — so without it
+                    // here the whole thing still rides up when the create sheet
+                    // or a search field opens.
+                    .ignoresSafeArea(.keyboard, edges: .bottom)
+                }
+            }
+    }
+
+    /// Day Done: "finished everything" is a payoff, not an absence, so it
+    /// keeps its own glyph and its date line rather than the screen's —
+    /// which would undersell it. Correct even with overdue tasks still
+    /// tucked away in a collapsed Earlier: nothing *pending* is what "done"
+    /// means here (`hasNoPendingItems`), not nothing at all.
+    @ViewBuilder
+    private func emptyStateIllustration(for date: Date) -> some View {
+        if viewModel.mode == .today, viewModel.completedTodayCount > 0 {
+            TdayEmptyState(
+                assetName: "LucideCheckCheck",
+                accentColor: modeAccentColor,
+                // `date` is the minute tick from `watermarkedModeContent`'s
+                // `TimelineView`, the same one the watermark's sun/moon is drawn
+                // from — so the payoff's wording crosses 18:00 with the glyph
+                // behind it and never a minute apart from it.
+                title: TdayTimeOfDay.isDaytime(date)
+                    ? L("All done for today")
+                    : L("All done for tonight"),
+                description: date.formatted(.dateTime.weekday(.wide).day().month(.wide)),
+                celebrate: celebratesEmptyState
+            )
+            .transition(emptyStateIllustrationTransition)
+        } else {
+            TdayEmptyState(
+                assetName: emptyStateAssetName,
+                accentColor: modeAccentColor,
+                title: emptyTimelineTitle(for: viewModel.mode, isListDetail: isListDetailScreen, at: date),
+                description: emptyTimelineDescription(for: viewModel.mode, isListDetail: isListDetailScreen),
+                celebrate: celebratesEmptyState
+            )
+            .transition(emptyStateIllustrationTransition)
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var navigationToolbarContent: some ToolbarContent {
+        if !usesHeroTimelineMode {
+            // Morning Sweep: guided triage entry, only where there is something
+            // to triage (recurring occurrences reschedule via the edit flow).
+            if viewModel.mode == .overdue,
+               viewModel.items.contains(where: { !$0.isRecurring && $0.instanceDate == nil }) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        NotificationDeepLinkRouter.shared.route(URL(string: "tday://morning-sweep")!)
+                    } label: {
+                        Image(systemName: "sunrise")
+                    }
+                    .accessibilityLabel(Text(L("Sweep")))
+                }
+            }
+            if canSummarizeCurrentMode {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: presentSummary) {
+                        Image(systemName: "sparkles")
+                    }
+                }
+            }
+            if isListDetailScreen {
+                // One entry point per role: owners get list settings (which
+                // hosts the Sharing section); members the members sheet.
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        if selectedListSummary?.isOwner == false {
+                            showingMembers = true
+                        } else {
+                            showingListSettings = true
+                        }
+                    } label: {
+                        Image(systemName: "slider.horizontal.3")
+                    }
+                }
+            }
+        }
+    }
+
+    /// The bar takes its collapse progress from `TimelineCollapseProgressReader` and nothing
+    /// else from it: every other input is read HERE, in this screen's body, and only the values
+    /// go into the reader's closure. So the screen still depends on each of them exactly as it
+    /// did, and a scroll frame re-runs the reader and the bar and not this body.
+    @ViewBuilder
+    private var timelineTopInset: some View {
+        if showsTimelineNavigationTopBar {
+            let barTitle = viewModel.title
+            let barNightTitle = viewModel.nightTitle
+            let barAccentColor = modeAccentColor
+            let barActions = heroTopBarActions
+            let barShowsTimeOfDayIcon = viewModel.mode == .today
+            let barSearchActive = showsListSearch && listSearchExpanded
+            let barSearchText = $listSearchQuery
+            let barSearchPlaceholder = listSearchPlaceholder
+            let barSearchFieldFocused = $listSearchFieldFocused
+            let barSelectionActive = isSelecting
+            let barSelectionTitle = BulkSelectionCopy.selectedCount(selectedTodoIDs.count, capped: isSelectionAtCap)
+            let barSelectionAllSelected = selectionAllSelected
+            TimelineCollapseProgressReader(scroll: timelineScroll) { progress in
+                TimelineTopBar(
+                    title: barTitle,
+                    nightTitle: barNightTitle,
+                    accentColor: barAccentColor,
+                    collapseProgress: progress,
+                    onBack: { dismiss() },
+                    actions: barActions,
+                    showsTimeOfDayIcon: barShowsTimeOfDayIcon,
+                    searchActive: barSearchActive,
+                    searchText: barSearchText,
+                    searchPlaceholder: barSearchPlaceholder,
+                    searchFieldFocused: barSearchFieldFocused,
+                    onSearchClose: closeListSearch,
+                    selectionActive: barSelectionActive,
+                    selectionTitle: barSelectionTitle,
+                    selectionAllSelected: barSelectionAllSelected,
+                    onSelectionCancel: exitSelectionMode,
+                    onSelectionToggleAll: toggleSelectAll
+                )
+            }
+        }
+    }
+
+    /// Where the per-mode scroll offset comes in. The offset goes into `timelineScroll` for the
+    /// two readers; the dock's fold is decided here, off the same number, and written to
+    /// `@State` only when it actually flips — so, as on the root feed, a scroll frame that
+    /// crosses nothing touches nothing this body reads.
+    ///
+    /// The fold used to be an `.onChange(of:)` on the offset held as `@State`, which is what
+    /// made every scroll frame re-run this body: Today, Overdue, Scheduled, All, Priority and
+    /// every list re-diffed the whole feed under the title reveal and the dock fold, 60 to
+    /// 120 times a second. The fold is tested against the raw offset, not the box's clamped
+    /// one, so its answer is the one that `.onChange` gave at every offset.
+    private func publishTimelineScrollOffset(_ offset: CGFloat) {
+        timelineScroll.publish(offset)
+        guard !usesRootFeedHeader else { return }
+        let collapsed = RootFeedDockCollapse.next(previous: legacyRootDockCollapsed, offset: offset)
+        guard legacyRootDockCollapsed != collapsed else { return }
+        legacyRootDockCollapsed = collapsed
+        onRootDockCollapsedChange(collapsed)
+    }
+
+    /// The screen's own glyph for the hero circle. Prefers the drawn tile art
+    /// each mode already owns and falls back to the symbol — which is what
+    /// Today wants anyway, since its glyph follows the time of day.
+    private var timelineHeroMark: Image {
+        let selectedList = viewModel.lists.first(where: { $0.id == viewModel.listId })
+        let listIconKey = selectedList?.iconKey
+        let listName = selectedList?.name
+        if let asset = emptyTimelineAssetName(for: viewModel.mode, listIconKey: listIconKey, listName: listName) {
+            return Image(asset)
+        }
+        return Image(systemName: emptyTimelineSystemImage(for: viewModel.mode, listIconKey: listIconKey, listName: listName))
+    }
+
+    private var timelineHeroTitleRowBase: some View {
+        // Read here and handed over by value, for the reason `timelineTopInset` gives.
+        let rowTitle = viewModel.title
+        let rowNightTitle = viewModel.nightTitle
+        let rowAccentColor = modeAccentColor
+        let rowShowsTimeOfDayIcon = viewModel.mode == .today
+        let rowMark = timelineHeroMark
+        // The root feed wears its own header, so this row never collapses there.
+        let rowPinnedExpanded = usesRootFeedHeader
+        return TimelineCollapseProgressReader(scroll: timelineScroll) { progress in
+            TimelineExpandedTitleRow(
+                title: rowTitle,
+                nightTitle: rowNightTitle,
+                accentColor: rowAccentColor,
+                collapseProgress: rowPinnedExpanded ? 0 : progress,
+                showsTimeOfDayIcon: rowShowsTimeOfDayIcon,
+                mark: rowMark
+            )
+        }
+        // Outside the reader, so the observer is part of this body and not rebuilt with the
+        // row on every scroll frame.
+        .background {
+            TimelineScrollOffsetObserver { offset in
+                publishTimelineScrollOffset(offset)
+            }
+            .frame(width: 0, height: 0)
+        }
+        // Reports its own rendered height so the "all done" illustration can
+        // reserve exactly this much space at the top of its frame instead of
+        // centring through it — see `EmptyStateReservedTopHeightPreferenceKey`.
+        .background {
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: EmptyStateReservedTopHeightPreferenceKey.self,
+                    value: proxy.size.height
+                )
+            }
+        }
+        .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+        .listRowBackground(colors.background)
+        .listRowSeparator(.hidden)
+    }
+
+    // Reserves the pinned hero header's space at the top of the root feed.
+    // Rows scroll behind the header, which folds down into its always-visible
+    // toolbar strip as this spacer scrolls away.
+    private var rootFeedHeaderSpacerRow: some View {
+        Color.clear
+            .frame(height: RootFeedHeroHeaderMetrics.expandedHeight)
+            .background {
+                RootFeedHeaderScrollObserver(state: headerScroll) { collapsed in
+                    guard rootDockCollapsed != collapsed else { return }
+                    rootDockCollapsed = collapsed
+                    onRootDockCollapsedChange(collapsed)
+                }
+                .frame(width: 0, height: 0)
+            }
+            .allowsHitTesting(false)
+            .onTopPartialScrollSnap(
+                anchorDistance: RootFeedHeroHeaderMetrics.collapseDistance,
+                isDisabled: floaterTaskHomeSearchExpanded
+            )
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(colors.background)
+            .listRowSeparator(.hidden)
+    }
+
+    private var rootFeedHeroHeader: some View {
+        RootFeedHeroHeader(
+            title: viewModel.title,
+            searchPlaceholder: L("Search Floater Task"),
+            searchPlaceholderShort: L("Search"),
+            mark: viewModel.mode == .floater ? .floaterLeaf : .timeOfDay,
+            scroll: headerScroll,
+            coordinateSpaceName: todoTimelineDragCoordinateSpace,
+            searchExpanded: $floaterTaskHomeSearchExpanded,
+            searchQuery: $floaterTaskHomeSearchQuery,
+            searchFieldFocused: $floaterTaskHomeSearchFieldFocused,
+            onSearchClose: {
+                closeFloaterTaskHomeSearch()
+            },
+            onCreateList: {
+                closeFloaterTaskHomeSearch()
+                showingCreateList = true
+            },
+            onOpenSettings: {
+                closeFloaterTaskHomeSearch()
+                onOpenSettings()
+            },
+            onScrollToTop: {
+                titleScrollToTopRequestID += 1
+            }
+        )
+    }
+
+    @ViewBuilder
+    private var timelineHeroTitleRow: some View {
+        if usesRootFeedHeader {
+            rootFeedHeaderSpacerRow
+        } else {
+            timelineHeroTitleRowBase
+                .onVerticalScrollSnap(collapseDistance: TodoTimelineMetrics.titleCollapseDistance)
+        }
+    }
+
+    private var floatingActionButtonDock: some View {
+        HStack(alignment: .bottom) {
+            if showsRootControls, let rootFeedTab, let onRootFeedTabSelected {
+                RootFeedDock(
+                    activeTab: rootFeedTab,
+                    collapsed: shouldCollapseRootDock,
+                    accentColor: rootFeedTab == .floaterTaskHome ? .tdayFloaterGreen : .tdayTodayBlue,
+                    onSelect: onRootFeedTabSelected
+                )
+                .padding(.leading, 18)
+                .padding(.vertical, 8)
+            }
+
+            Spacer(minLength: 12)
+
+            if !isViewerList {
+                TaskFloatingActionButton(fillColor: modeAccentColor) {
+                    HapticManager.buttonPress()
+                    showingCreateTask = true
+                }
+                .padding(.trailing, 18)
+                .padding(.vertical, 8)
+            }
+        }
+    }
+
+    /// Replaces the dock while selecting. Four verbs and nothing else; each one
+    /// stands down when the recurring rule leaves it nothing to act on.
+    ///
+    /// No "N of M" line here on purpose: the four buttons have different reaches,
+    /// so one number under all of them would be wrong for at least one. Delete
+    /// says it in its dialog and Priority and Move say it in their pickers, which
+    /// is where the count is about to matter.
+    private var bulkActionBar: some View {
+        let completeCount = effectiveBulkTodos(for: .complete).count
+        let editableCount = effectiveBulkTodos(for: .delete).count
+        return HStack(spacing: 0) {
+            bulkActionButton(
+                // check-check, matching Android's ic_lucide_check_check and web's
+                // CheckCheck. circle-check-big is the Select entry point's glyph
+                // on all three surfaces, so reusing it here made one icon mean
+                // both "enter selection" and "complete the selection".
+                title: L("Complete"),
+                assetName: "LucideCheckCheck",
+                tint: nil,
+                isEnabled: completeCount > 0,
+                action: performBulkComplete
+            )
+            bulkActionButton(
+                title: L("Priority"),
+                assetName: "LucideFlag",
+                tint: nil,
+                isEnabled: editableCount > 0
+            ) {
+                HapticManager.buttonPress()
+                activeBulkSelector = .priority
+            }
+            bulkActionButton(
+                title: L("Move"),
+                assetName: "LucideList",
+                tint: nil,
+                isEnabled: editableCount > 0
+            ) {
+                HapticManager.buttonPress()
+                activeBulkSelector = .list
+            }
+            bulkActionButton(
+                title: L("Delete"),
+                assetName: "LucideTrash2",
+                tint: colors.error,
+                isEnabled: editableCount > 0,
+                action: requestBulkDelete
+            )
+        }
+        .padding(.top, 10)
+        .padding(.bottom, 4)
+        .background(colors.background)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(colors.onSurfaceVariant.opacity(0.16))
+                .frame(height: 1)
+        }
+    }
+
+    private func bulkActionButton(
+        title: String,
+        assetName: String,
+        tint: Color?,
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 5) {
+                Image(assetName)
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 22, height: 22)
+                Text(title)
+                    .font(.tdayRounded(size: 12, weight: .heavy))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(tint ?? colors.onSurface)
+        .opacity(isEnabled ? 1 : 0.35)
+        .disabled(!isEnabled)
+        .accessibilityLabel(Text(title))
+    }
+
+    /// The same centred picker the create/edit sheet uses for these two fields,
+    /// rather than a second way of choosing a priority or a list.
+    @ViewBuilder
+    private func bulkSelectorOverlay(for selector: BulkSelectionSelector) -> some View {
+        ZStack {
+            colors.bottomSheetScrim
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    activeBulkSelector = nil
+                }
+
+            TdayCenteredSelectorCard(title: selector.title) {
+                switch selector {
+                case .priority:
+                    ForEach(Array(bulkPriorityOptions.enumerated()), id: \.element.value) { index, option in
+                        if index > 0 {
+                            TdaySheetDivider(horizontalPadding: 20, opacity: 0.16)
+                        }
+                        TdayCenteredSelectorRow(
+                            title: option.label,
+                            swatchColor: priorityColor(option.value),
+                            selected: false
+                        ) {
+                            applyBulkPriority(option.value)
+                        }
+                    }
+
+                case .list:
+                    TdayCenteredSelectorRow(
+                        title: L("No list"),
+                        swatchColor: colors.onSurfaceVariant.opacity(0.35),
+                        selected: false
+                    ) {
+                        requestBulkMove(toListID: nil)
+                    }
+
+                    ForEach(bulkMoveTargetLists) { list in
+                        TdaySheetDivider(horizontalPadding: 20, opacity: 0.16)
+                        TdayCenteredSelectorRow(
+                            title: list.name,
+                            swatchColor: todoListAccentColor(for: list.color),
+                            selected: false
+                        ) {
+                            requestBulkMove(toListID: list.id)
+                        }
+                    }
+                }
+
+                if let note = bulkRecurringNote(for: selector == .priority ? .priority : .move) {
+                    TdaySheetDivider(horizontalPadding: 20, opacity: 0.16)
+                    Text(note)
+                        .font(.tdayRounded(size: 13, weight: .semibold))
+                        .foregroundStyle(colors.onSurfaceVariant)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 12)
+                }
+            }
+            .padding(.horizontal, 34)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var createTaskSheetContent: some View {
+        CreateTaskSheet(
+            lists: viewModel.lists,
+            titleText: L("New task"),
+            submitText: L("Create"),
+            initialPayload: createTaskPrefill ?? CreateTaskPayload(title: "", description: nil, priority: viewModel.mode == .priority ? TaskPriorityDisplay.importantValue : TaskPriorityDisplay.normalValue, due: viewModel.mode == .floater ? nil : Date().addingTimeInterval(60 * 60), rrule: nil, listId: viewModel.listId),
+            defaultScheduled: viewModel.mode != .floater,
+            showScheduleControls: viewModel.mode != .floater,
+            onParseTaskTitleNlp: viewModel.mode == .floater ? nil : { title, dueRef in
+                await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
+            },
+            onDismiss: {
+                showingCreateTask = false
+            },
+            onSubmit: { payload in
+                await viewModel.addTask(payload)
+            }
+        )
+    }
+
+    private func editTaskSheetContent(for todo: TodoItem) -> some View {
+        CreateTaskSheet(
+            lists: viewModel.lists,
+            titleText: L("Edit task"),
+            submitText: L("Save"),
+            initialPayload: CreateTaskPayload(title: todo.title, description: todo.description, priority: todo.priority, due: todo.due, rrule: todo.rrule, listId: todo.listId),
+            isEditingExistingTask: true,
+            defaultScheduled: viewModel.mode != .floater,
+            showScheduleControls: viewModel.mode != .floater,
+            onParseTaskTitleNlp: viewModel.mode == .floater ? nil : { title, dueRef in
+                await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
+            },
+            onDismiss: { editingTodo = nil },
+            onSubmit: { payload in
+                await viewModel.updateTask(todo, payload: payload)
+            }
+        )
+    }
+
+    /// The mode-specific third swipe action: floaters get "Schedule" (promote
+    /// into a dated task), overdue non-recurring todos get "Float" (demote to
+    /// Anytime), other dated non-recurring rows get "Defer" (Quick Defer).
+    private func promoteOrFloatSwipeAction(for todo: TodoItem) -> TodoSwipeExtraAction? {
+        switch viewModel.mode {
+        case .floater:
+            return TodoSwipeExtraAction(
+                title: L("Schedule"),
+                assetName: "LucideCalendarClock",
+                tint: TaskSwipeActionTint.schedule
+            ) {
+                promoteDue = defaultPromoteDue()
+                promotingFloater = todo
+            }
+        case .overdue where !todo.isRecurring:
+            return TodoSwipeExtraAction(
+                title: L("Float"),
+                assetName: "LucideWaves",
+                tint: TaskSwipeActionTint.float
+            ) {
+                Task { await viewModel.demoteTodo(todo) }
+            }
+        case .today, .scheduled, .priority, .list:
+            // Recurring todos defer per-occurrence via the edit sheet instead.
+            guard !todo.isRecurring else { return nil }
+            return TodoSwipeExtraAction(
+                title: L("Defer"),
+                assetName: "LucideAlarmClock",
+                tint: TaskSwipeActionTint.schedule
+            ) {
+                deferringTodo = todo
+            }
+        default:
+            return nil
+        }
+    }
+
+    /// Tomorrow 09:00 — a sane starting point for scheduling a floater.
+    private func defaultPromoteDue() -> Date {
+        let calendar = Calendar.current
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+        return calendar.date(bySettingHour: 9, minute: 0, second: 0, of: tomorrow) ?? tomorrow
+    }
+
+    private func promoteFloaterSheetContent(for floater: TodoItem) -> some View {
+        VStack(spacing: 0) {
+            TdaySheetHeader(
+                title: L("Schedule"),
+                closeAccessibilityLabel: L("Close"),
+                onClose: { promotingFloater = nil }
+            )
+
+            DatePicker(
+                "",
+                selection: $promoteDue,
+                displayedComponents: [.date, .hourAndMinute]
+            )
+            .datePickerStyle(.graphical)
+            .padding(.horizontal, 18)
+
+            Button {
+                let due = promoteDue
+                promotingFloater = nil
+                Task { await viewModel.promoteFloater(floater, due: due) }
+            } label: {
+                Text(L("Schedule"))
+                    .font(.tdayRounded(size: 17, weight: .heavy))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+            }
+            .buttonStyle(.borderedProminent)
+            .padding(.horizontal, 18)
+            .padding(.bottom, 18)
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private var summarySheetContent: some View {
+        VStack(spacing: 0) {
+            TdaySheetHeader(
+                title: L("Summary"),
+                closeAccessibilityLabel: L("Close"),
+                confirmSystemName: nil,
+                onClose: { showingSummary = false }
+            )
+
+            ScrollView {
+                TdaySheetCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        if viewModel.isSummarizing {
+                            ProgressView()
+                        } else if let summaryText = viewModel.summaryText {
+                            Text(summaryText)
+                                .font(.tdayRounded(.body, weight: .bold))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        } else if viewModel.summaryConnectivityError {
+                            ErrorRetryView(message: L("Summary needs a network connection.")) {
+                                Task { await viewModel.summarizeCurrentMode() }
+                            }
+                        } else if let summaryError = viewModel.summaryError {
+                            Text(summaryError)
+                                .foregroundStyle(colors.error)
+                        } else {
+                            Text("No summary available.")
+                        }
+                    }
+                    .padding(18)
+                }
+                .padding(.horizontal, 18)
+                .padding(.top, 14)
+                .padding(.bottom, 24)
+            }
+            .disableVerticalScrollBounce()
+        }
+        .background(colors.bottomSheetBackground.ignoresSafeArea())
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.hidden)
+        .presentationCornerRadius(34)
+        .presentationBackground {
+            colors.bottomSheetBackground
+                .ignoresSafeArea(.container, edges: .bottom)
+        }
+    }
+
+    @ViewBuilder
+    private var membersSheetContent: some View {
+        if let selectedList = selectedListSummary {
+            ManageMembersSheet(
+                listId: selectedList.id,
+                listName: selectedList.name,
+                kind: currentShareKind,
+                myRole: selectedList.myRole,
+                shareText: listShareText(listName: selectedList.name, items: viewModel.items),
+                onLeftList: {
+                    Task { await viewModel.refresh() }
+                    dismiss()
+                }
+            )
+        }
+    }
+
+    private var listSettingsSheetContent: some View {
+        let selectedList = viewModel.lists.first(where: { $0.id == viewModel.listId })
+        return ListSettingsSheet(
+            list: selectedList,
+            shareText: selectedList.map { listShareText(listName: $0.name, items: viewModel.items) },
+            onMembersRequest: {
+                pendingMembersAfterSettings = true
+                showingListSettings = false
+            },
+            showsReusable: viewModel.mode == .floater,
+            onSubmit: { name, color, iconKey, reusable, defaultPriority in
+                Task {
+                    await viewModel.updateListSettings(
+                        name: name,
+                        color: color,
+                        iconKey: iconKey,
+                        reusable: reusable,
+                        defaultPriority: defaultPriority,
+                        defaultPriorityChanged: true
+                    )
+                }
+            },
+            onDeleteRequest: {
+                showingListSettings = false
+                withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
+                    showingDeleteListConfirmation = true
+                }
+            }
+        )
+    }
+
+    private func handleItemsChanged() {
+        setActiveDropSection(nil)
+        draggedTodo = nil
+        dragPreview.clear()
+        dropTargetFrames = [:]
+        TodoTaskDragSession.shared.todo = nil
+        if let openSwipeTaskID, !viewModel.items.contains(where: { $0.id == openSwipeTaskID }) {
+            self.openSwipeTaskID = nil
+        }
+        // Only until the highlight has been shown: after that a section the
+        // user folded shut stays shut when another row changes.
+        if viewModel.mode == .all, highlightedTodoId != nil, servedHighlightTodoId != highlightedTodoId {
+            collapsedSectionIDs = []
+        }
+    }
+
+    private func requestReschedule(_ todo: TodoItem, to targetDate: Date) {
+        setActiveDropSection(nil)
+        draggedTodo = nil
+        dragPreview.clear()
+        dropTargetFrames = [:]
+        TodoTaskDragSession.shared.todo = nil
+        let targetDay = Calendar.current.startOfDay(for: targetDate)
+        let dropSignature = "\(todo.id)|\(targetDay.timeIntervalSince1970)"
+        guard TodoTaskDragSession.shared.handledDropSignature != dropSignature else {
+            return
+        }
+        TodoTaskDragSession.shared.handledDropSignature = dropSignature
+        guard let due = todo.due,
+              !Calendar.current.isDate(due, inSameDayAs: targetDay) else {
+            return
+        }
+
+        HapticManager.dragDrop()
+        if todo.isRecurring {
+            pendingRescheduleDrop = TodoRescheduleDrop(todo: todo, targetDate: targetDay, targetHour: nil)
+        } else {
+            Task { await viewModel.moveTask(todo, toDay: targetDay, scope: .occurrence) }
+        }
+    }
+
+    // Routes a drop to the right reschedule: Today buckets change the time of day,
+    // every other section changes the date.
+    private func performDrop(_ todo: TodoItem, into section: TodoTimelineSection) {
+        if let hour = section.targetHour {
+            requestRescheduleTime(todo, toHour: hour)
+        } else if let targetDate = section.targetDate {
+            requestReschedule(todo, to: targetDate)
+        }
+    }
+
+    private func todayBucketLabel(forHour hour: Int) -> String {
+        if hour < 12 { return "Morning" }
+        if hour < 18 { return "Afternoon" }
+        return "Tonight"
+    }
+
+    // Today screen: set a task's time of day to a bucket's hour (date unchanged).
+    // Mirrors `requestReschedule` but for the Morning / Afternoon / Tonight move.
+    private func requestRescheduleTime(_ todo: TodoItem, toHour hour: Int) {
+        setActiveDropSection(nil)
+        draggedTodo = nil
+        dragPreview.clear()
+        dropTargetFrames = [:]
+        TodoTaskDragSession.shared.todo = nil
+        let dropSignature = "\(todo.id)|hour-\(hour)"
+        guard TodoTaskDragSession.shared.handledDropSignature != dropSignature else {
+            return
+        }
+        TodoTaskDragSession.shared.handledDropSignature = dropSignature
+        guard let due = todo.due,
+              todayBucketLabel(forHour: Calendar.current.component(.hour, from: due)) != todayBucketLabel(forHour: hour) else {
+            return
+        }
+
+        HapticManager.dragDrop()
+        if todo.isRecurring {
+            pendingRescheduleDrop = TodoRescheduleDrop(todo: todo, targetDate: nil, targetHour: hour)
+        } else {
+            Task { await viewModel.moveTask(todo, toTimeOfDay: hour, scope: .occurrence) }
+        }
+    }
+
+    private func resolveTodoForDrop(id: String) -> TodoItem? {
+        viewModel.items.first { $0.id == id || $0.canonicalId == id }
+    }
+
+    private func sectionID(containing todo: TodoItem) -> String? {
+        sectionID(containing: todo, in: groupedSections)
+    }
+
+    /// `groupedSections` is rebuilt on every read — grouped, sorted and titled from every
+    /// item — so a caller that already holds this pass's sections passes them in.
+    private func sectionID(containing todo: TodoItem, in sections: [TodoTimelineSection]) -> String? {
+        if let exactSection = sections.first(where: { section in
+            section.items.contains { item in item.id == todo.id }
+        }) {
+            return exactSection.id
+        }
+        return sections.first { section in
+            section.items.contains { item in item.canonicalId == todo.canonicalId }
+        }?.id
+    }
+
+    /// The form the drop delegates call. They run outside a body pass and hold no sections of
+    /// their own, so this resolves the dragged task's section itself. The in-app drag's hit
+    /// test and finish do not come through here: they resolve against the sections snapshot
+    /// taken when the drag began — see `inAppDragSections`.
+    private func canDropTodo(_ todo: TodoItem, into section: TodoTimelineSection) -> Bool {
+        guard section.targetDate != nil else {
+            return false
+        }
+        return canDrop(todo, into: section, draggedSectionID: sectionID(containing: todo))
+    }
+
+    /// The same question with the dragged task's section already resolved. The feed asks it
+    /// for every section on every body pass of a drag — the pass the pick-up makes, and one
+    /// each time the finger crosses into another section (the finger's own moves no longer
+    /// reach the body; see `TodoDragPreviewModel`). Resolving the section per ask rebuilt
+    /// `groupedSections` once or twice for each of them, on top of the rebuild the feed itself
+    /// made. `minimalTimelineModeContent` resolves it once per pass from the sections it built
+    /// and hands it to each section; the in-app hit test does the same from its snapshot.
+    private func canDrop(_ todo: TodoItem, into section: TodoTimelineSection, draggedSectionID: String?) -> Bool {
+        guard let targetDate = section.targetDate else {
+            return false
+        }
+        if draggedSectionID == section.id {
+            return false
+        }
+        guard let due = todo.due else {
+            return false
+        }
+        // Today time-buckets: a same-day move between Morning / Afternoon /
+        // Tonight. The same-section check above already blocks dropping in place.
+        if section.targetHour != nil {
+            return true
+        }
+        return !Calendar.current.isDate(due, inSameDayAs: targetDate)
+    }
+
+    private func setActiveDropSection(_ sectionId: String?) {
+        guard activeDropSectionId != sectionId else { return }
+        withAnimation(todoDropPlaceholderAnimation) {
+            activeDropSectionId = sectionId
+        }
+    }
+
+    private func beginInAppDrag(_ todo: TodoItem, at location: CGPoint) {
+        openSwipeTaskID = nil
+        if draggedTodo?.id != todo.id {
+            HapticManager.dragPickUp()
+        }
+        draggedTodo = todo
+        TodoTaskDragSession.shared.todo = todo
+        TodoTaskDragSession.shared.handledDropSignature = nil
+        // Taken after `draggedTodo` is set, so the snapshot carries the empty drop buckets
+        // the drag is about to bring back. See `TodoDragPreviewModel`.
+        dragPreview.sections = groupedSections
+        dragPreview.drag = TodoInAppDrag(todo: todo, location: location)
+        updateInAppDrag(todo, to: location)
+        // Keep the picked-up row realized. Setting `draggedTodo` brings back
+        // every empty bucket, and on a list whose tasks are months out that can
+        // be ten headers inserted ABOVE this row — enough to push it out of the
+        // List's realized window. A dismantled row takes its long-press
+        // recognizer with it (TodoInAppLongPressBridge's `detach()` calls
+        // `onCancel`), so the drag would end the instant it began, silently.
+        // The scroll is minimal rather than centred: if the row is still on
+        // screen this does nothing.
+        dragAnchorTodoID = todo.id
+    }
+
+    /// Called on every touch move. Writes only the preview's box and — when the section under
+    /// the finger changes — `activeDropSectionId`, so a move that stays inside one section
+    /// redraws the preview and nothing else.
+    private func updateInAppDrag(_ todo: TodoItem, to location: CGPoint) {
+        dragPreview.drag = TodoInAppDrag(todo: todo, location: location)
+        setActiveDropSection(dropSectionID(at: location, for: todo))
+    }
+
+    /// The sections the in-app drag resolves its targets against: the snapshot taken when the
+    /// drag began, falling back to a fresh build if there is none. `groupedSections` is
+    /// rebuilt on every read, and the hit test runs on every touch move.
+    private var inAppDragSections: [TodoTimelineSection] {
+        dragPreview.sections ?? groupedSections
+    }
+
+    private func finishInAppDrag(_ todo: TodoItem, at location: CGPoint?) {
+        let sections = inAppDragSections
+        let draggedSectionID = sectionID(containing: todo, in: sections)
+        let targetSectionID = location.flatMap { dropSectionID(at: $0, for: todo) } ??
+            activeDropSectionId.flatMap { activeID in
+                guard let section = sections.first(where: { $0.id == activeID }),
+                      canDrop(todo, into: section, draggedSectionID: draggedSectionID) else {
+                    return nil
+                }
+                return activeID
+            }
+        let targetSection = targetSectionID
+            .flatMap { targetID in sections.first { $0.id == targetID } }
+        setActiveDropSection(nil)
+        draggedTodo = nil
+        dragPreview.clear()
+        dropTargetFrames = [:]
+        if let targetSection {
+            performDrop(todo, into: targetSection)
+        } else {
+            TodoTaskDragSession.shared.todo = nil
+        }
+    }
+
+    private func cancelInAppDrag() {
+        setActiveDropSection(nil)
+        draggedTodo = nil
+        dragPreview.clear()
+        dropTargetFrames = [:]
+        TodoTaskDragSession.shared.todo = nil
+    }
+
+    /// Runs on every touch move. Resolves against `inAppDragSections` and works out the
+    /// dragged task's own section once per call, not once per frame under the finger: each of
+    /// those used to rebuild `groupedSections` from every item, in the frame the preview was
+    /// trying to keep up in.
+    private func dropSectionID(at location: CGPoint, for todo: TodoItem) -> String? {
+        let candidates = dropTargetFrames.values.filter { $0.frame.contains(location) }
+        guard !candidates.isEmpty else {
+            return nil
+        }
+        let sections = inAppDragSections
+        let draggedSectionID = sectionID(containing: todo, in: sections)
+        return candidates
+            .filter { target in
+                guard let section = sections.first(where: { $0.id == target.sectionID }) else {
+                    return false
+                }
+                return canDrop(todo, into: section, draggedSectionID: draggedSectionID)
+            }
+            .min { lhs, rhs in
+                (lhs.frame.width * lhs.frame.height) < (rhs.frame.width * rhs.frame.height)
+            }?
+            .sectionID
+    }
+
+    private func commitPendingReschedule(scope: TaskRescheduleScope) {
+        guard let drop = pendingRescheduleDrop else {
+            return
+        }
+        pendingRescheduleDrop = nil
+        Task {
+            if let hour = drop.targetHour {
+                await viewModel.moveTask(drop.todo, toTimeOfDay: hour, scope: scope)
+            } else if let targetDate = drop.targetDate {
+                await viewModel.moveTask(drop.todo, toDay: targetDate, scope: scope)
+            }
+        }
+    }
+
+    private func closeFloaterTaskHomeSearch() {
+        floaterTaskHomeSearchFieldFocused = false
+        withAnimation(TdayMotion.snappy) {
+            floaterTaskHomeSearchExpanded = false
+        }
+        floaterTaskHomeSearchQuery = ""
+    }
+
+    private func openListSearch() {
+        HapticManager.buttonPress()
+        withAnimation(TdayMotion.snappy) {
+            listSearchExpanded = true
+        }
+    }
+
+    /// Leaving the search drops the query with it, so the list is whole again
+    /// the next time the bar is opened — the same bargain web's close makes.
+    private func closeListSearch() {
+        HapticManager.buttonPress()
+        listSearchFieldFocused = false
+        withAnimation(TdayMotion.snappy) {
+            listSearchExpanded = false
+        }
+        listSearchQuery = ""
+    }
+
+    private func openFloaterTaskHomeSearchResult(_ todo: TodoItem, using proxy: ScrollViewProxy) {
+        guard openingFloaterTaskHomeSearchResultID == nil else {
+            return
+        }
+        openingFloaterTaskHomeSearchResultID = todo.id
+        closeFloaterTaskHomeSearch()
+
+        highlightedScrollRequestID += 1
+        let requestID = highlightedScrollRequestID
+        DispatchQueue.main.asyncAfter(deadline: .now() + TodoTimelineMetrics.searchResultScrollDelay) {
+            guard requestID == highlightedScrollRequestID else {
+                return
+            }
+            openingFloaterTaskHomeSearchResultID = nil
+            withAnimation(.easeInOut(duration: TodoTimelineMetrics.searchResultScrollDuration)) {
+                proxy.scrollTo(timelineTodoScrollID(todo.id), anchor: .center)
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + TodoTimelineMetrics.searchResultFlashDelay) {
+                guard requestID == highlightedScrollRequestID else {
+                    return
+                }
+                flashTodoId = todo.id
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                guard requestID == highlightedScrollRequestID else {
+                    return
+                }
+                if flashTodoId == todo.id || flashTodoId == todo.canonicalId {
+                    flashTodoId = nil
+                }
+            }
+        }
+    }
+
+    private func matchesHighlightedTodo(_ todo: TodoItem, id: String) -> Bool {
+        todo.id == id || todo.canonicalId == id
+    }
+
+    private struct HighlightedTodoTarget {
+        let todo: TodoItem
+        let preScrollTodo: TodoItem
+    }
+
+    private func highlightedTodoTarget(for id: String) -> HighlightedTodoTarget? {
+        let orderedTodos = groupedSections.flatMap(\.items)
+        guard let targetIndex = orderedTodos.firstIndex(where: { matchesHighlightedTodo($0, id: id) }) else {
+            return nil
+        }
+        let preScrollIndex = max(0, targetIndex - TodoTimelineMetrics.searchResultPreScrollItemCount)
+        return HighlightedTodoTarget(
+            todo: orderedTodos[targetIndex],
+            preScrollTodo: orderedTodos[preScrollIndex]
+        )
+    }
+
+    private func timelineSectionScrollID(_ sectionID: String) -> String {
+        "timeline-section-\(sectionID)"
+    }
+
+    private func timelineTodoScrollID(_ todoID: String) -> String {
+        "timeline-todo-\(todoID)"
+    }
+
+    private func shouldFlashTodo(_ todo: TodoItem) -> Bool {
+        guard let flashTodoId else {
+            return false
+        }
+        return matchesHighlightedTodo(todo, id: flashTodoId)
+    }
+
+    /// Shows the highlighted row once per arrival, not once per items change.
+    /// `.onChange(of: viewModel.items)` calls this so a target that lands after
+    /// the screen opens is still found; `servedHighlightTodoId` is what stops
+    /// every later change — ticking another row, a sync landing, a pop back
+    /// re-firing `onAppear` — from jumping the list away from where the user is
+    /// working and scrolling it all the way back to the reminder's row.
+    private func scrollToHighlightedTodo(using proxy: ScrollViewProxy) {
+        guard viewModel.mode == .all,
+              let highlightedTodoId,
+              !highlightedTodoId.isEmpty,
+              servedHighlightTodoId != highlightedTodoId,
+              let target = highlightedTodoTarget(for: highlightedTodoId) else {
+            return
+        }
+        // Latched as the sequence is scheduled rather than when it lands, so an
+        // items change inside the first half-second cannot restart it with the
+        // same hard jump. A target missing at open leaves this nil, which is
+        // what lets the late-arrival path above run it exactly once.
+        servedHighlightTodoId = highlightedTodoId
+
+        // A highlighted arrival is seeded with nothing collapsed (see `init`),
+        // so on the push this is empty and no section springs open under the
+        // slide; the branch is left for a highlight id that changes in place.
+        let hadCollapsedSections = !collapsedSectionIDs.isEmpty
+        if !collapsedSectionIDs.isEmpty {
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                collapsedSectionIDs = []
+            }
+        }
+
+        highlightedScrollRequestID += 1
+        let requestID = highlightedScrollRequestID
+        let preScrollID = timelineTodoScrollID(target.preScrollTodo.id)
+        let targetScrollID = timelineTodoScrollID(target.todo.id)
+        let preScrollDelay = hadCollapsedSections ? TodoTimelineMetrics.searchResultSectionExpandDelay : 0
+        // The pre-scroll and the wait after it only exist to give the long
+        // scroll a short, readable trip. Under Reduce Motion there is no trip,
+        // so the list goes straight to the finished state (rule 5) instead of
+        // sitting through a wait that covers nothing.
+        let animatesScroll = tdayAnimation.isEnabled
+        let scrollDelay = animatesScroll ? preScrollDelay + TodoTimelineMetrics.searchResultScrollDelay : preScrollDelay
+
+        if animatesScroll {
+            DispatchQueue.main.asyncAfter(deadline: .now() + preScrollDelay) {
+                guard requestID == highlightedScrollRequestID else {
+                    return
+                }
+                proxy.scrollTo(preScrollID, anchor: .top)
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + scrollDelay) {
+            guard requestID == highlightedScrollRequestID else {
+                return
+            }
+
+            withAnimation(tdayAnimation(.easeInOut(duration: TodoTimelineMetrics.searchResultScrollDuration))) {
+                proxy.scrollTo(targetScrollID, anchor: .center)
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + TodoTimelineMetrics.searchResultFlashDelay) {
+                guard requestID == highlightedScrollRequestID else {
+                    return
+                }
+                flashTodoId = highlightedTodoId
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                guard requestID == highlightedScrollRequestID else {
+                    return
+                }
+                if flashTodoId == highlightedTodoId {
+                    flashTodoId = nil
+                }
+            }
+        }
+    }
+
+    /// Sheet first, then the request, as the Scheduled home does: the tap gets
+    /// its answer on the next frame and the sheet's `isSummarizing` spinner
+    /// covers the round-trip, instead of a dead wait before a filled sheet.
+    /// Both lines sit in one main-actor turn — `summarizeCurrentMode` sets
+    /// `isSummarizing` and clears `summaryText` before its first `await` — so
+    /// the sheet's first frame is the spinner, never an earlier summary.
+    private func presentSummary() {
+        Task {
+            showingSummary = true
+            await viewModel.summarizeCurrentMode()
+        }
+    }
+
+    /// Shown in place of the timeline when a search matches nothing. The screen's
+    /// own empty scene carries it, so a screen has one no-results treatment and
+    /// not two — with the way out of the query that does not need the keyboard
+    /// back hung off the scene's action slot.
+    private var listSearchEmptyState: some View {
+        TdayEmptyState(
+            assetName: "NavSearch",
+            accentColor: modeAccentColor,
+            title: L("No matching tasks"),
+            description: L("Try a different word, or clear the search."),
+            action: AnyView(
+                Button {
+                    HapticManager.buttonPress()
+                    listSearchQuery = ""
+                    listSearchFieldFocused = true
+                } label: {
+                    Text(L("Clear search"))
+                        .font(.tdayRounded(size: 15, weight: .bold))
+                        .foregroundStyle(colors.primary)
+                }
+                .buttonStyle(.plain)
+            )
+        )
+        .frame(
+            maxWidth: .infinity,
+            minHeight: inlineEmptyStateGapHeight,
+            alignment: .center
+        )
+        .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+        .listRowBackground(colors.background)
+        .listRowSeparator(.hidden)
+    }
+
+    private var minimalTimelineModeContent: some View {
+        ScrollViewReader { scrollProxy in
+            ZStack {
+                List {
+                    timelineHeroTitleRow
+                        .id(todoTimelineScrollTopID)
+
+                    if showFloaterTaskHomeSearchResults {
+                        FloaterTaskHomeSearchResultsCard(
+                            todos: floaterTaskHomeSearchResults,
+                            listsByID: floaterTaskHomeListByID,
+                            onOpenTodo: { todo in
+                                openFloaterTaskHomeSearchResult(todo, using: scrollProxy)
+                            }
+                        )
+                        .background(
+                            GeometryReader { proxy in
+                                Color.clear
+                                    .preference(
+                                        key: FloaterSearchResultsFrameKey.self,
+                                        value: proxy.frame(in: .named(todoTimelineDragCoordinateSpace))
+                                    )
+                            }
+                        )
+                        .listRowInsets(
+                            EdgeInsets(
+                                top: 0,
+                                leading: TodoTimelineMetrics.horizontalPadding,
+                                bottom: 10,
+                                trailing: TodoTimelineMetrics.horizontalPadding
+                            )
+                        )
+                        .listRowBackground(colors.background)
+                        .listRowSeparator(.hidden)
+                    }
+
+                    // While a query is live only the results remain; the rest
+                    // of the feed gives way to blank space, and a tap there
+                    // dismisses the field.
+                    if !showFloaterTaskHomeSearchResults {
+
+                    if let errorMessage = viewModel.errorMessage {
+                        Section {
+                            ErrorRetryView(message: errorMessage) {
+                                Task { await viewModel.refresh() }
+                            }
+                            .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 18, trailing: TodoTimelineMetrics.horizontalPadding))
+                            .listRowBackground(colors.background)
+                            .listRowSeparator(.hidden)
+                        }
+                    }
+
+                    if showsTimelineSkeleton {
+                        // Today stacks its placeholder over its rows so the two share one
+                        // slot; a `List` has no such move — its sections are siblings by
+                        // construction, and a `Section` cannot be overlaid on the ones after
+                        // it. So this one is above the rows it hands over to, and whether the
+                        // feed reflows as they swap depends on something source cannot settle:
+                        // SwiftUI holds a removing view in the layout, while a `List` on iOS
+                        // resolves the same change as a UIKit batch update that animates the
+                        // delete and the inserts into their final places together. The two
+                        // look different, and only a device can say which one this is — so it
+                        // is a line in docs/verification/phase-9-device-pass.md rather than a
+                        // claim here.
+                        Section {
+                            // `.minimalTimeline`, not the default: this feed's row
+                            // is not Today's, and a placeholder built at the other
+                            // one runs a line taller and sits 4 pt to its right.
+                            TdayTaskRowSkeletonGroup(metrics: .minimalTimeline)
+                                .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                                .listRowBackground(colors.background)
+                                .listRowSeparator(.hidden)
+                                .transition(.opacity)
+                        }
+                    }
+
+                    // A query that matches nothing keeps its own counsel: the
+                    // section headers would otherwise stay behind with nothing
+                    // under them, a floater list's empty header included.
+                    if showsListSearchEmptyState {
+                        Section {
+                            listSearchEmptyState
+                        }
+                    } else {
+                        // Built once for the pass. Every read of `groupedSections` rebuilds it
+                        // from every item, and this used to read it once for the `ForEach` and
+                        // again inside it for every section — N+1 rebuilds on each check-off
+                        // phase, search keystroke and drag move, landing in the frames those
+                        // animations start on.
+                        let sections = groupedSections
+                        let draggedSectionID: String? = draggedTodo.flatMap { todo in
+                            sectionID(containing: todo, in: sections)
+                        }
+                        ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
+                            minimalTimelineSection(
+                                section,
+                                sectionIndex: index,
+                                sections: sections,
+                                isFirstSection: index == 0,
+                                draggedSectionID: draggedSectionID
+                            )
+                        }
+                    }
+
+                    if showInlineFloaterTaskHomeEmpty {
+                        Section {
+                            TdayEmptyState(
+                                assetName: emptyStateAssetName,
+                                accentColor: modeAccentColor,
+                                title: emptyTimelineTitle(for: viewModel.mode, isListDetail: isListDetailScreen),
+                                description: emptyTimelineDescription(for: viewModel.mode, isListDetail: isListDetailScreen),
+                                celebrate: celebratesEmptyState
+                            )
+                            .frame(maxWidth: .infinity, minHeight: inlineEmptyStateGapHeight, alignment: .center)
+                            .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                            .listRowBackground(colors.background)
+                            .listRowSeparator(.hidden)
+                        }
+                    }
+
+                    // Between the empty scene and "My Lists", which is exactly
+                    // where Android emits its own Completed tile. Web is not a
+                    // third vote for this slot and should not be read as one:
+                    // its dashboard puts the tile *above* the empty scene,
+                    // because that scene is a sibling in the same flex column
+                    // there and the tiles are the column's header. Android is
+                    // the reference for this screen, so this follows Android,
+                    // and the guardrail pins those two orders only.
+                    //
+                    // Not gated on anything having been completed: an archive
+                    // you can only reach once it is non-empty is an archive you
+                    // cannot learn exists.
+                    if isFloaterTaskHomeScreen {
+                        Section {
+                            FloaterTaskHomeCompletedCard(onTap: onOpenCompleted, zoomRoute: .completed(origin: .floaterFeed))
+                                .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 10, trailing: TodoTimelineMetrics.horizontalPadding))
+                                .listRowBackground(colors.background)
+                                .listRowSeparator(.hidden)
+                        }
+                    }
+
+                    if !floaterTaskHomeListRows.isEmpty {
+                        Section {
+                            ForEach(floaterTaskHomeListRows, id: \.list.id) { row in
+                                FloaterTaskHomeListCard(
+                                    list: row.list,
+                                    count: row.count,
+                                    // The same list the onTap closure hands to `onOpenFloaterList`
+                                    // below — the id has to match the route AppRootView pushes or
+                                    // the card publishes an id no destination asks for.
+                                    zoomRoute: .floaterListTodos(listId: row.list.id, listName: row.list.name, origin: .floaterFeed),
+                                    onTap: {
+                                        onOpenFloaterList(row.list.id, row.list.name)
+                                    }
+                                )
+                                .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 10, trailing: TodoTimelineMetrics.horizontalPadding))
+                                .listRowBackground(colors.background)
+                                .listRowSeparator(.hidden)
+                            }
+                        } header: {
+                            Text("My Lists")
+                                .font(.tdayRounded(size: 24, weight: .heavy))
+                                .foregroundStyle(colors.onSurface)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.top, 4)
+                                .padding(.bottom, 10)
+                                .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                                .listRowSeparator(.hidden)
+                        }
+                    }
+                    }
+
+                    Color.clear
+                        .frame(height: minimalTimelineBottomSpacerHeight)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(colors.background)
+                        .listRowSeparator(.hidden)
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .background(colors.background)
+                .contentMargins(.top, 0, for: .scrollContent)
+                .listRowSpacing(0)
+                .listSectionSpacing(0)
+                .scrollBounceBehavior(pullRefreshEnabled ? .always : .basedOnSize, axes: .vertical)
+                // Freeze list scrolling while a task is being dragged so the drop
+                // target stays put under the finger (matches Calendar). Keyed on
+                // `draggedTodo`, which is set and cleared with the drag and holds
+                // still between — never on the finger's location, which would
+                // rebuild this whole List on every touch move (`TodoDragPreviewModel`).
+                .scrollDisabled(draggedTodo != nil)
+                .environment(\.defaultMinListRowHeight, 1)
+                .disableVerticalScrollBounce(!pullRefreshEnabled)
+                .animation(todoDropPlaceholderAnimation, value: activeDropSectionId)
+                // The placeholder's hand-over, on the List rather than on the
+                // branch that holds it: inside a `List` the modifiers written
+                // around an `if` are handed down to the rows themselves and leave
+                // with them, so the removal would have no transaction to run in.
+                //
+                // BELOW the travel, and that order is the whole of it. Both values
+                // change in the same update — the first page landing is what
+                // empties `showsTimelineSkeleton` and what fills
+                // `timelineItemAnimationKey` — and where two `.animation(_:value:)`
+                // both fire at once the one nearest the content wins. Written
+                // above, this modifier was the outer of the two and the travel
+                // overrode it, so the one frame it exists for ran at Emphasis: the
+                // dissolve took the long way round, which is exactly what the rung
+                // split is meant to stop. A modifier whose value did not change
+                // leaves the transaction alone, so the travel still carries every
+                // other update to this list.
+                .animation(
+                    tdayAnimation(TdayTaskRowSkeleton.crossfade),
+                    value: showsTimelineSkeleton
+                )
+                // The feed's travel, and only the travel: every row the key
+                // change merely moves rides this transaction, while the rows it
+                // adds and removes override it from their own transition legs
+                // (`timelineRowTransition`). This line carried the travel before
+                // the split too — but at a length of its own, against legs pinned
+                // to the drag placeholder's spring, so the three events were timed
+                // against two clocks that never agreed.
+                .animation(
+                    tdayAnimation(TdayFeedItemMotion.placement),
+                    value: timelineItemAnimationKey
+                )
+
+            }
+            .onAppear {
+                scrollToHighlightedTodo(using: scrollProxy)
+            }
+            // Set by `beginInAppDrag`. Minimal scroll, no animation and no
+            // anchor: it does nothing while the row is still on screen, and only
+            // pulls it back when the buckets that appeared above it pushed it out
+            // of the realized window — which would otherwise dismantle the row
+            // and cancel the drag.
+            .onChange(of: dragAnchorTodoID) { _, anchored in
+                guard let anchored else { return }
+                scrollProxy.scrollTo(timelineTodoScrollID(anchored))
+                dragAnchorTodoID = nil
+            }
+            .onChange(of: highlightedTodoId) {
+                scrollToHighlightedTodo(using: scrollProxy)
+            }
+            .onChange(of: viewModel.items) {
+                scrollToHighlightedTodo(using: scrollProxy)
+            }
+            .onChange(of: scrollToTopRequestID) { _, requestID in
+                guard requestID > 0, isFloaterTaskHomeScreen else { return }
+                closeFloaterTaskHomeSearch()
+                withAnimation(.easeInOut(duration: 0.34)) {
+                    scrollProxy.scrollTo(todoTimelineScrollTopID, anchor: .top)
+                }
+            }
+            // Tapping the header mark or title restores the feed's opened
+            // state: hero title, full-width search, big leaf.
+            .onChange(of: titleScrollToTopRequestID) { _, requestID in
+                guard requestID > 0 else { return }
+                closeFloaterTaskHomeSearch()
+                withAnimation(.easeInOut(duration: 0.34)) {
+                    scrollProxy.scrollTo(todoTimelineScrollTopID, anchor: .top)
+                }
+            }
+        }
+    }
+
+    /// Dim factor for a "resting" floater row: 1 = normal, lower = faded/dormant.
+    private func restingRowOpacity(for todo: TodoItem) -> Double {
+        guard viewModel.mode == .floater, !todo.completed, RestingFloatersStore().isEnabled else {
+            return 1
+        }
+        switch floaterRestingTier(updatedAt: todo.updatedAt, now: Date()) {
+        case .resting: return 0.45
+        case .fading: return 0.6
+        case .active: return 1
+        }
+    }
+
+    private func minimalTimelineRow(_ todo: TodoItem, in section: TodoTimelineSection, flashHighlight: Bool = false) -> some View {
+        let listMeta = todo.listId.flatMap { listId in
+            viewModel.lists.first(where: { $0.id == listId })
+        }
+        // The screen's own scope, which `mode` alone cannot express: `.floater` is both the
+        // Anytime home feed (no list id) and one Anytime list's detail (a list id). See
+        // `shouldShowListMark`.
+        let showListIndicator = shouldShowListMark(rowListId: listMeta?.id, scopedListId: viewModel.listId)
+        let priorityIcon = priorityIndicatorSymbolName(todo.priority)
+        let subtitleText = minimalTimelineSubtitle(for: todo, in: section)
+        let isOverdueTask = !todo.completed && (todo.due ?? .distantFuture) < Date()
+        let subtitleColor = isOverdueTask ? colors.error : colors.onSurfaceVariant.opacity(0.8)
+        let completionPhase = completionPhases[todo.id]
+        let isCompleting = completionPhase != nil
+        let isFading = completionPhase == .fading
+        let showCheckmark = completionPhase != nil || todo.completed
+        let showStrikethrough = completionPhase == .struck || completionPhase == .fading || todo.completed
+        let isSelected = selectedTodoIDs.contains(todo.id)
+
+        return VStack(spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: TodoTimelineMetrics.minimalRowContentSpacing) {
+                Button {
+                    if isSelecting {
+                        toggleSelection(of: todo)
+                    } else {
+                        completeTodoWithoutReflow(todo)
+                    }
+                } label: {
+                    minimalRowToggleGlyph(isSelected: isSelected, showCheckmark: showCheckmark)
+                        .frame(width: TodoTimelineMetrics.minimalRowToggleFrame, height: TodoTimelineMetrics.minimalRowToggleFrame)
+                }
+                .buttonStyle(
+                    TdayPressButtonStyle(
+                        shadowColor: Color.black,
+                        pressedShadowOpacity: 0,
+                        normalShadowOpacity: 0
+                    )
+                )
+                // Keep the toggle on the first line of a multi-line title.
+                .alignmentGuide(.firstTextBaseline) { dimension in
+                    dimension[VerticalAlignment.center] + TodoTimelineMetrics.minimalRowBaselineNudge
+                }
+
+                VStack(alignment: .leading, spacing: TodoTimelineMetrics.minimalRowTextSpacing) {
+                    TodoTimelineTaskTitle(
+                        text: todo.title,
+                        isCompleted: showStrikethrough,
+                        titleColor: showStrikethrough ? colors.onSurface.opacity(0.78) : colors.onSurface,
+                        strikeColor: colors.onSurface.opacity(0.65)
+                    )
+
+                    if let subtitleText {
+                        Text(subtitleText)
+                            .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .semibold))
+                            .foregroundStyle(subtitleColor)
+                    }
+
+                    let flattenedDescription = flattenNotesToPlainText(todo.description)
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !flattenedDescription.isEmpty {
+                        Text(flattenedDescription)
+                            .font(.tdayRounded(size: 12, weight: .semibold))
+                            .foregroundStyle(colors.onSurfaceVariant)
+                            // Struck alongside the title so the whole task reads
+                            // as done during the completion animation.
+                            .strikethrough(showStrikethrough, color: colors.onSurfaceVariant)
+                            .animation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis), value: showStrikethrough)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                if showListIndicator || priorityIcon != nil {
+                    HStack(spacing: 8) {
+                        if let listMeta, showListIndicator {
+                            TdayListIcon(iconKey: listMeta.iconKey, listName: listMeta.name, size: TodoTimelineMetrics.minimalRowIndicatorSize)
+                                .foregroundStyle(todoListAccentColor(for: listMeta.color, isFloater: viewModel.mode == .floater))
+                        }
+                        if let priorityIcon {
+                            Image(systemName: priorityIcon)
+                                .font(.system(size: TodoTimelineMetrics.minimalRowIndicatorSize, weight: .semibold))
+                                .foregroundStyle(priorityColor(todo.priority))
+                        }
+                    }
+                    .padding(.trailing, TodoTimelineMetrics.minimalRowTrailingIndicatorPadding)
+                    // Keep the trailing indicators on the first line too.
+                    .alignmentGuide(.firstTextBaseline) { dimension in
+                        dimension[VerticalAlignment.center] + TodoTimelineMetrics.minimalRowBaselineNudge
+                    }
+                }
+            }
+            .padding(.vertical, TodoTimelineMetrics.minimalRowVerticalPadding)
+            .contentShape(Rectangle())
+        }
+        .background {
+            if isSelecting && isSelected {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(modeAccentColor.opacity(colors.isDark ? 0.18 : 0.10))
+            }
+        }
+        .opacity((isFading ? 0 : (draggedTodo?.id == todo.id ? 0.7 : 1)) * restingRowOpacity(for: todo))
+        .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
+        .offset(y: isFading ? -10 : 0)
+        .animation(TdayMotion.standard(duration: TdayMotion.Durations.change), value: isFading)
+        .allowsHitTesting(!isCompleting)
+        .transition(.opacity.combined(with: .scale(scale: 0.985)))
+        .modifier(TimelineTaskFlashHighlight(active: flashHighlight))
+        // Inside the swipe modifier on purpose — see TodoSelectionTapModifier.
+        .modifier(TodoSelectionTapModifier(enabled: isSelecting) {
+            toggleSelection(of: todo)
+        })
+        .todoTrailingSwipeActions(
+            rowID: todo.id,
+            openRowID: $openSwipeTaskID,
+            enabled: !isCompleting && !isViewerList && !isSelecting,
+            extraAction: promoteOrFloatSwipeAction(for: todo),
+            onEdit: {
+                editingTodo = todo
+            },
+            onCopy: {
+                viewModel.copyToClipboard(todo)
+            },
+            onDelete: {
+                Task { await viewModel.delete(todo) }
+            }
+        )
+        .scheduledTodoDropTarget(
+            section: section,
+            draggedTodo: draggedTodo,
+            resolveTodo: resolveTodoForDrop,
+            onMove: { droppedTodo, _ in
+                performDrop(droppedTodo, into: section)
+            },
+            canMoveTodo: canDropTodo,
+            onSectionChange: { sectionId in
+                setActiveDropSection(sectionId)
+            }
+        )
+        .modifier(
+            TodoInAppDragModifier(
+                enabled: viewModel.mode.supportsTaskReschedule && !isViewerList && !isSelecting,
+                todo: todo,
+                onStart: beginInAppDrag,
+                onMove: updateInAppDrag,
+                onEnd: finishInAppDrag,
+                onCancel: cancelInAppDrag
+            )
+        )
+    }
+
+    /// While selecting, the complete toggle becomes the selection checkbox: a
+    /// plain tap must never tick a task off in the middle of picking a batch.
+    @ViewBuilder
+    private func minimalRowToggleGlyph(isSelected: Bool, showCheckmark: Bool) -> some View {
+        if isSelecting {
+            Image(isSelected ? "LucideCircleCheckBig" : "LucideCircle")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: TodoTimelineMetrics.minimalRowToggleSize, height: TodoTimelineMetrics.minimalRowToggleSize)
+                .foregroundStyle(isSelected ? modeAccentColor : colors.onSurfaceVariant.opacity(0.78))
+        } else {
+            Image(systemName: showCheckmark ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: TodoTimelineMetrics.minimalRowToggleSize, weight: .regular))
+                .foregroundStyle(showCheckmark ? Color.green : colors.onSurfaceVariant.opacity(0.78))
+        }
+    }
+
+    private func completeTodoWithoutReflow(_ todo: TodoItem) {
+        guard !isViewerList else { return }
+        guard completionPhases[todo.id] == nil else {
+            return
+        }
+        // Completing ANY task clears the slot, not only this row's, and the dropped
+        // `== todo.id` guard is the fix rather than a tidy-up. The toggle is a `Button` inside
+        // the row's own content, so it consumes the touch and the reveal modifier's
+        // `.onTapGesture` never runs — which made ticking a *different* task the one ordinary
+        // thing a user could do while an open row stayed open behind it. A tap anywhere outside
+        // the open row closes it now; a checkbox is not an exception to that, it was a hole in it.
+        openSwipeTaskID = nil
+        HapticManager.completion()
+        SoundManager.taskCompleted()
+        // Gated through `tdayAnimation` because nothing else gates it now: the
+        // completing ids left `timelineItemAnimationKey`, so the List's nil
+        // travel no longer overrides this under Reduce Motion, and the tick
+        // still has to be drawn finished on the tap frame there (rule 5).
+        withAnimation(tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick))) {
+            completionPhases[todo.id] = .checked
+        }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 160_000_000)
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis)) {
+                completionPhases[todo.id] = .struck
+            }
+            try? await Task.sleep(nanoseconds: 360_000_000)
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)) {
+                completionPhases[todo.id] = .fading
+            }
+            try? await Task.sleep(nanoseconds: 260_000_000)
+            await viewModel.complete(todo)
+            completionPhases[todo.id] = nil
+        }
+    }
+
+    /// `draggedSectionID` is the dragged task's own section, resolved once for the pass from
+    /// `sections` — see `canDrop(_:into:draggedSectionID:)`.
+    @ViewBuilder
+    private func minimalTimelineSection(
+        _ section: TodoTimelineSection,
+        sectionIndex: Int,
+        sections: [TodoTimelineSection],
+        isFirstSection: Bool,
+        draggedSectionID: String?
+    ) -> some View {
+        let canCollapseSection = canCollapseTimelineSection(section)
+        let isCollapsed = isTimelineSectionCollapsed(section)
+        let isDropEligibleSection = draggedTodo.map { canDrop($0, into: section, draggedSectionID: draggedSectionID) } ?? false
+        let isActiveDropSection = activeDropSectionId == section.id && isDropEligibleSection
+
+        Section {
+            if viewModel.mode.supportsTaskReschedule,
+               isActiveDropSection,
+               section.targetDate != nil {
+                TodoDropPlaceholder(isActive: isActiveDropSection)
+                    .todoInAppDropTargetFrame(
+                        targetID: "minimal-placeholder-\(section.id)",
+                        section: section,
+                        enabled: isDropEligibleSection
+                    )
+                    .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 8, trailing: TodoTimelineMetrics.horizontalPadding))
+                    .listRowBackground(colors.background)
+                    .listRowSeparator(.hidden)
+                    .transition(todoDropPlaceholderTransition())
+                    .scheduledTodoDropTarget(
+                        section: section,
+                        draggedTodo: draggedTodo,
+                        resolveTodo: resolveTodoForDrop,
+                        onMove: { todo, _ in
+                            performDrop(todo, into: section)
+                        },
+                        canMoveTodo: canDropTodo,
+                        onSectionChange: { sectionId in
+                            setActiveDropSection(sectionId)
+                        }
+                    )
+            }
+            if !isCollapsed {
+                ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, todo in
+                    minimalTimelineRow(todo, in: section, flashHighlight: shouldFlashTodo(todo))
+                        .id(timelineTodoScrollID(todo.id))
+                        .todoInAppDropTargetFrame(
+                            targetID: "minimal-row-\(section.id)-\(todo.id)",
+                            section: section,
+                            enabled: viewModel.mode.supportsTaskReschedule && !isViewerList && isDropEligibleSection
+                        )
+                        .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                        .listRowBackground(colors.background)
+                        .listRowSeparator(.hidden)
+                        .transition(timelineRowTransition())
+                    if shouldShowDateDivider(after: itemIndex, inSectionAt: sectionIndex, sections: sections) {
+                        TimelineRowDivider()
+                            .transition(timelineRowTransition())
+                    }
+                }
+            }
+        } header: {
+            if !usesRootFeedHeader {
+                TimelineSectionHeader(
+                    title: section.title,
+                    isActiveDropTarget: isActiveDropSection,
+                    isCollapsible: canCollapseSection,
+                    isCollapsed: isCollapsed,
+                    onTap: canCollapseSection ? {
+                        toggleTimelineSection(section)
+                    } : nil
+                )
+                .id(timelineSectionScrollID(section.id))
+                .padding(.top, isFirstSection ? 0 : TodoTimelineMetrics.sectionTopSpacing)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .todoInAppDropTargetFrame(
+                    targetID: "minimal-header-\(section.id)",
+                    section: section,
+                    enabled: viewModel.mode.supportsTaskReschedule && !isViewerList && isDropEligibleSection
+                )
+                .timelinePinnedSectionHeaderBackground()
+                .scheduledTodoDropTarget(
+                    section: section,
+                    draggedTodo: draggedTodo,
+                    resolveTodo: resolveTodoForDrop,
+                    onMove: { todo, _ in
+                        performDrop(todo, into: section)
+                    },
+                    canMoveTodo: canDropTodo,
+                    onSectionChange: { sectionId in
+                        setActiveDropSection(sectionId)
+                    }
+                )
+                // Overdue/Earlier is the one section that can still be on
+                // screen when the "all done" illustration shows — every
+                // other section is empty, and therefore unrendered, whenever
+                // `hasNoPendingItems` is true. Reports its rendered height so
+                // the illustration reserves this row rather than centring
+                // through it — see `EmptyStateReservedTopHeightPreferenceKey`.
+                .background {
+                    if section.id == "earlier" {
+                        GeometryReader { proxy in
+                            Color.clear.preference(
+                                key: EmptyStateReservedTopHeightPreferenceKey.self,
+                                value: proxy.size.height
+                            )
+                        }
+                    }
+                }
+                .listRowInsets(
+                    EdgeInsets(
+                        top: 0,
+                        leading: 0,
+                        bottom: 0,
+                        trailing: 0
+                    )
+                )
+                .listRowSeparator(.hidden)
+            }
+        }
+    }
+
+    private func canCollapseTimelineSection(_ section: TodoTimelineSection) -> Bool {
+        guard !section.items.isEmpty else {
+            return false
+        }
+        // A live query outranks a shut bucket: a list opens with Earlier closed,
+        // and a task the search turned up in there must not stay hidden behind
+        // its header. The buckets are therefore not the reader's to shut while
+        // the query stands — a header that still took a tap would flip the
+        // stored state behind a screen that could not show it.
+        guard !isSearchingList else {
+            return false
+        }
+        if viewModel.mode == .all {
+            return true
+        }
+        if viewModel.mode == .overdue {
+            return true
+        }
+        if viewModel.mode == .list {
+            return section.id == "earlier" && section.isCollapsible
+        }
+        if viewModel.mode == .today {
+            return section.id == "earlier" && section.isCollapsible
+        }
+        return viewModel.mode == .priority && section.isCollapsible
+    }
+
+    private func isTimelineSectionCollapsed(_ section: TodoTimelineSection) -> Bool {
+        canCollapseTimelineSection(section) && collapsedSectionIDs.contains(section.id)
+    }
+
+    private func toggleTimelineSection(_ section: TodoTimelineSection) {
+        // Earlier needs one extra beat over every other section's plain
+        // toggle whenever the "all done" illustration shares the screen with
+        // it — see `toggleEarlierSectionWithIllustrationHandoff`. Applies to
+        // every mode that can show that overlap (Today, Priority, All,
+        // List — see `modeHasEarlierAwareEmptyState`); every other section,
+        // on every mode, is a plain toggle.
+        if section.id == "earlier", modeHasEarlierAwareEmptyState {
+            toggleEarlierSectionWithIllustrationHandoff(section)
+            return
+        }
+        applyTimelineSectionCollapse(section.id)
+    }
+
+    private func applyTimelineSectionCollapse(_ id: String) {
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+            if collapsedSectionIDs.contains(id) {
+                collapsedSectionIDs.remove(id)
+            } else {
+                collapsedSectionIDs.insert(id)
+            }
+        }
+    }
+
+    /// Req. 3's choreography: while the "all done" illustration is up because
+    /// this screen has nothing pending in its own scope but Earlier is still
+    /// holding overdue tasks (`hasNoPendingItems`), Earlier's own
+    /// expand/collapse must never move on the same frames as the
+    /// illustration's arrival/departure — the exact lesson the floater
+    /// home's empty-state celebration fix (PR #122, Android: "smooth the
+    /// floater home's empty-state celebration" / "let the floater
+    /// celebration land on a settled feed") settled: don't let a celebratory
+    /// burst or scene coexist visually with something else still moving.
+    /// There it was the feed settling before the burst; here it's the
+    /// illustration exiting before Earlier's rows expand, and Earlier
+    /// settling before the illustration returns. First built for Today;
+    /// shared as-is (same constants, same choreography) by Priority, All,
+    /// and List, whose own Earlier sections have exactly the same overlap
+    /// now that `hasNoPendingItems` reads theirs too.
+    ///
+    /// Outside that specific overlap (nothing pending is showing, or the user
+    /// is mid-search so nothing is collapsed to begin with) this is exactly
+    /// `applyTimelineSectionCollapse` — one spring, no hand-off needed because
+    /// there is nothing sharing the frame with it.
+    private func toggleEarlierSectionWithIllustrationHandoff(_ section: TodoTimelineSection) {
+        guard hasNoPendingItems, !isSearchingList else {
+            applyTimelineSectionCollapse(section.id)
+            return
+        }
+        // A second tap mid hand-off is ignored rather than queued — see
+        // `earlierHandoffInFlight`'s doc comment.
+        guard !earlierHandoffInFlight else { return }
+        let isExpanding = collapsedSectionIDs.contains(section.id)
+        earlierHandoffInFlight = true
+        if isExpanding {
+            // The illustration exits under its own animation first; Earlier's
+            // rows only start expanding once that has had the frame to itself.
+            withAnimation(.easeIn(duration: EarlierIllustrationHandoff.exitDuration)) {
+                suppressEmptyStateForEarlierHandoff = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + EarlierIllustrationHandoff.exitDuration) {
+                applyTimelineSectionCollapse(section.id)
+                // Earlier is expanded now, so `isEarlierSectionExpanded` has
+                // taken over masking the illustration on its own — clear the
+                // hand-off flag rather than leaving it stuck true. Otherwise,
+                // clearing the last row from inside the now-expanded Earlier
+                // (without ever tapping its header again, so the collapse
+                // branch below never runs) would drop "earlier" out of
+                // `groupedSections` entirely, `isEarlierSectionExpanded`
+                // would go false with nothing left to mask, and this flag
+                // alone would keep the "all done" illustration from ever
+                // coming back.
+                suppressEmptyStateForEarlierHandoff = false
+                earlierHandoffInFlight = false
+            }
+        } else {
+            // Reverse hand-off: Earlier's own collapse spring settles first,
+            // and only then does the illustration fade back in — never across
+            // the same frames as the rows sliding shut. The onAppear this
+            // triggers is a return, not a fresh payoff, so it skips the Day
+            // Done haptic/sound on Today (see the `TdayEmptyState` call
+            // site) — and is simply unread on every other mode, which has no
+            // such onAppear to begin with.
+            suppressEmptyStateForEarlierHandoff = true
+            suppressDayDoneFeedbackOnReturn = true
+            applyTimelineSectionCollapse(section.id)
+            DispatchQueue.main.asyncAfter(deadline: .now() + EarlierIllustrationHandoff.collapseSettleDuration) {
+                withAnimation(.easeOut(duration: EarlierIllustrationHandoff.enterDuration)) {
+                    suppressEmptyStateForEarlierHandoff = false
+                }
+                earlierHandoffInFlight = false
+            }
+        }
+    }
+
+    private func shouldShowDateDivider(
+        after itemIndex: Int,
+        inSectionAt sectionIndex: Int,
+        sections: [TodoTimelineSection]
+    ) -> Bool {
+        guard sections.indices.contains(sectionIndex),
+              sections[sectionIndex].items.indices.contains(itemIndex) else {
+            return false
+        }
+
+        let currentTodo = sections[sectionIndex].items[itemIndex]
+        let nextTodoInSection = sections[sectionIndex].items.dropFirst(itemIndex + 1).first
+        if let nextTodoInSection {
+            guard let currentDue = currentTodo.due,
+                  let nextDue = nextTodoInSection.due else {
+                return false
+            }
+            return !Calendar.current.isDate(currentDue, inSameDayAs: nextDue)
+        }
+
+        let nextVisibleTodo = sections.dropFirst(sectionIndex + 1)
+            .first { !isTimelineSectionCollapsed($0) && !$0.items.isEmpty }?
+            .items.first
+
+        guard let nextVisibleTodo else {
+            return false
+        }
+        guard let currentDue = currentTodo.due,
+              let nextDue = nextVisibleTodo.due else {
+            return false
+        }
+        return !Calendar.current.isDate(currentDue, inSameDayAs: nextDue)
+    }
+
+    private func timelineRowTransition() -> AnyTransition {
+        TdayFeedItemMotion.row(reduceMotion: !tdayAnimation.isEnabled)
+    }
+
+    /// The drop placeholder's own transition, split out from
+    /// [timelineRowTransition] rather than sharing it.
+    ///
+    /// The gap that opens under a dragged task is not a feed item: nothing was
+    /// added to the list and nothing left it, and the thing it has to stay in step
+    /// with is the finger — which is why both its legs are pinned to
+    /// `todoDropPlaceholderAnimation`, the same spring the
+    /// `activeDropSectionId` transaction above runs on. Putting it on the feed's
+    /// arrival and departure rungs would time the affordance against a list
+    /// diffing event that is not happening.
+    private func todoDropPlaceholderTransition() -> AnyTransition {
+        let leg = AnyTransition.opacity
+            .combined(with: .move(edge: .top))
+            .animation(todoDropPlaceholderAnimation)
+        return .asymmetric(insertion: leg, removal: leg)
+    }
+
+    /// The "all done" illustration's own insertion/removal transition — see
+    /// the `showsEmptyStateIllustration` call site in `watermarkedModeContent`.
+    /// Deliberately asymmetric, and deliberately not `.opacity` both ways:
+    ///
+    /// - Removal fades it out via plain `.opacity`, taking its animation from
+    ///   whatever transaction is active when `showsEmptyStateIllustration`
+    ///   flips false — the Earlier hand-off wraps that flip in
+    ///   `withAnimation(.easeIn(duration: EarlierIllustrationHandoff.exitDuration))`
+    ///   (see `toggleEarlierSectionWithIllustrationHandoff`), so this is what
+    ///   actually turns that 0.22s window into a visible fade instead of the
+    ///   instant pop it was before: nothing here or in `TdayEmptyState` used
+    ///   to animate disappearance at all.
+    /// - Insertion is `.identity` — deliberately inert — because
+    ///   `TdayEmptyState` already gives itself a considered, purpose-built
+    ///   arrival (see its own doc comment: "it never cuts in", a 0.52s
+    ///   rise-and-fade driven by its own `onAppear`/`entered` state, entirely
+    ///   independent of SwiftUI's transition system). Pairing that with a
+    ///   second, external opacity transition on insertion would stack two
+    ///   independent fades on the same appearance — the exact "double
+    ///   animation stutter" this hand-off must not produce — without making
+    ///   the arrival read as any smoother.
+    private var emptyStateIllustrationTransition: AnyTransition {
+        .asymmetric(insertion: .identity, removal: .opacity)
+    }
+
+    private func minimalTimelineSubtitle(for todo: TodoItem, in section: TodoTimelineSection) -> String? {
+        guard let due = todo.due else {
+            return nil
+        }
+        let timeText = due.formatted(.dateTime.hour().minute().locale(AppLocale.current))
+        let dueBodyText = if section.id == "earlier" &&
+            (viewModel.mode == .all || viewModel.mode == .priority || viewModel.mode == .list) {
+            timelineDateTimeText(due)
+        } else {
+            timeText
+        }
+
+        switch viewModel.mode {
+        case .today:
+            if !todo.completed && due < Date() {
+                return L("Overdue, %@", dueBodyText)
+            }
+            return L("Due %@", dueBodyText)
+        case .overdue:
+            return L("Overdue, %@", dueBodyText)
+        case .scheduled:
+            return L("Due %@", dueBodyText)
+        case .all:
+            if !todo.completed && due < Date() {
+                return L("Overdue, %@", dueBodyText)
+            }
+            return L("Due %@", dueBodyText)
+        case .priority:
+            if !todo.completed && due < Date() {
+                return L("Overdue, %@", dueBodyText)
+            }
+            return L("Due %@", dueBodyText)
+        case .floater:
+            return nil
+        case .list:
+            if !todo.completed && due < Date() {
+                return L("Overdue, %@", dueBodyText)
+            }
+            return L("Due %@", dueBodyText)
+        }
+    }
+}
+
+struct TimelineTopBar: View {
+    let title: String
+    /// Drawn instead of `title` after dark — see `TodoTimelineTitleLabel.nightTitle`,
+    /// which is where the clock is actually read. Only Today passes one; the six
+    /// other screens that wear this bar default it away.
+    let nightTitle: String?
+    let accentColor: Color
+    let collapseProgress: CGFloat
+    let onBack: () -> Void
+    let actions: [TimelineTopBarAction]
+    let showsTimeOfDayIcon: Bool
+    let titleRevealStart: CGFloat
+    let titleRevealEnd: CGFloat
+    let titleRevealDistance: CGFloat
+    /// While set, the field takes the WHOLE row: the back chevron, the title and
+    /// the action cluster all give way to it, exactly as the root feeds' bar
+    /// does. Nothing else is on screen to compete with the keyboard, and the
+    /// capsule's own X is the way back out.
+    let searchActive: Bool
+    @Binding var searchText: String
+    let searchPlaceholder: String
+    let searchFieldFocused: FocusState<Bool>.Binding?
+    let onSearchClose: () -> Void
+    /// The multi-select takeover, built the same way `searchActive` is: while
+    /// set, the back chevron, the title and the action cluster all give way to
+    /// Cancel · the count · Select all. Leaving the screen is not what the user
+    /// means here, so the chevron is not merely hidden but replaced.
+    let selectionActive: Bool
+    let selectionTitle: String
+    let selectionAllSelected: Bool
+    let onSelectionCancel: () -> Void
+    let onSelectionToggleAll: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    init(
+        title: String,
+        nightTitle: String? = nil,
+        accentColor: Color,
+        collapseProgress: CGFloat,
+        onBack: @escaping () -> Void,
+        actions: [TimelineTopBarAction],
+        showsTimeOfDayIcon: Bool = false,
+        titleRevealStart: CGFloat = TodoTimelineMetrics.collapsedTitleRevealStart,
+        titleRevealEnd: CGFloat = TodoTimelineMetrics.collapsedTitleRevealEnd,
+        titleRevealDistance: CGFloat = TodoTimelineMetrics.collapsedTitleRevealDistance,
+        searchActive: Bool = false,
+        searchText: Binding<String> = .constant(""),
+        searchPlaceholder: String = "",
+        searchFieldFocused: FocusState<Bool>.Binding? = nil,
+        onSearchClose: @escaping () -> Void = {},
+        selectionActive: Bool = false,
+        selectionTitle: String = "",
+        selectionAllSelected: Bool = false,
+        onSelectionCancel: @escaping () -> Void = {},
+        onSelectionToggleAll: @escaping () -> Void = {}
+    ) {
+        self.title = title
+        self.nightTitle = nightTitle
+        self.accentColor = accentColor
+        self.collapseProgress = collapseProgress
+        self.onBack = onBack
+        self.actions = actions
+        self.showsTimeOfDayIcon = showsTimeOfDayIcon
+        self.titleRevealStart = titleRevealStart
+        self.titleRevealEnd = titleRevealEnd
+        self.titleRevealDistance = titleRevealDistance
+        self.searchActive = searchActive
+        _searchText = searchText
+        self.searchPlaceholder = searchPlaceholder
+        self.searchFieldFocused = searchFieldFocused
+        self.onSearchClose = onSearchClose
+        self.selectionActive = selectionActive
+        self.selectionTitle = selectionTitle
+        self.selectionAllSelected = selectionAllSelected
+        self.onSelectionCancel = onSelectionCancel
+        self.onSelectionToggleAll = onSelectionToggleAll
+    }
+
+    private var progress: CGFloat {
+        min(max(collapseProgress, 0), 1)
+    }
+
+    private var revealProgress: CGFloat {
+        TodoTimelineMetrics.progress(
+            progress,
+            from: titleRevealStart,
+            to: titleRevealEnd
+        )
+    }
+
+    private var titleOffsetY: CGFloat {
+        titleRevealDistance * (1 - revealProgress)
+    }
+
+    private var titleContent: some View {
+        TodoTimelineTitleLabel(
+            title: title,
+            nightTitle: nightTitle,
+            accentColor: accentColor,
+            showsTimeOfDayIcon: showsTimeOfDayIcon
+        )
+    }
+
+    private var isCrowded: Bool {
+        actions.count >= TodoTimelineMetrics.topBarCompactActionThreshold
+    }
+
+    private var actionFrame: CGFloat {
+        isCrowded ? TodoTimelineMetrics.topBarCompactButtonFrame : TodoTimelineMetrics.topBarButtonFrame
+    }
+
+    private var actionSpacing: CGFloat {
+        isCrowded ? TodoTimelineMetrics.topBarCompactButtonSpacing : TodoTimelineMetrics.topBarButtonSpacing
+    }
+
+    private var actionIconSize: CGFloat {
+        isCrowded ? TodoTimelineMetrics.topBarCompactButtonIconSize : TodoTimelineMetrics.topBarButtonIconSize
+    }
+
+    private var trailingActionReservedWidth: CGFloat {
+        let count = CGFloat(max(1, actions.count))
+        return count * actionFrame + max(0, count - 1) * actionSpacing
+    }
+
+    /// The capsule is exactly as tall as the bar's button row, so swapping it in
+    /// changes what the row holds and never how tall it is — every collapse
+    /// progress on these screens is measured from that height.
+    private var searchRow: some View {
+        TdaySearchCapsule(
+            text: $searchText,
+            placeholder: searchPlaceholder,
+            clearAccessibilityLabel: L("Cancel search"),
+            focused: searchFieldFocused,
+            // The one control in the row, so it carries both jobs the root
+            // feeds' capsule carries: the X leaves the search, and leaving
+            // clears the query on the way out.
+            onClose: onSearchClose
+        )
+    }
+
+    /// Cancel · "N selected" · Select all. Same height as the button row it
+    /// replaces, so the collapse progress every one of these screens is measured
+    /// from never changes underfoot.
+    private var selectionRow: some View {
+        HStack(spacing: 0) {
+            TimelineTopBarButton(
+                systemName: "xmark",
+                assetName: "NavClose",
+                chrome: .filled,
+                action: onSelectionCancel
+            )
+            .accessibilityLabel(Text(L("Cancel")))
+
+            Spacer(minLength: 8)
+
+            Text(selectionTitle)
+                .font(.tdayRounded(size: 14, weight: .heavy))
+                .foregroundStyle(colors.onSurface)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 8)
+
+            Button(action: onSelectionToggleAll) {
+                Text(selectionAllSelected ? BulkSelectionCopy.deselectAll : BulkSelectionCopy.selectAll)
+                    .font(.tdayRounded(size: 15, weight: .heavy))
+                    .foregroundStyle(accentColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .padding(.vertical, 8)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            if selectionActive {
+                selectionRow
+            } else {
+                HStack(spacing: 0) {
+                    // Not drawn at all while the field is up. A back chevron beside
+                    // an open search is a second way out that does the wrong thing —
+                    // it leaves the screen rather than the query — and it costs the
+                    // field the width that makes a placeholder readable.
+                    if !searchActive {
+                        TimelineTopBarButton(
+                            systemName: "chevron.left",
+                            assetName: "LucideChevronLeft",
+                            chrome: .filled,
+                            action: onBack
+                        )
+                        .accessibilityLabel(Text(L("Back")))
+                    }
+
+                    if searchActive {
+                        searchRow
+                    } else {
+                        Spacer(minLength: 0)
+                        if actions.isEmpty {
+                            Color.clear
+                                .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
+                        } else {
+                            // Same gap as the web list header's action cluster (gap-2
+                            // between the circular buttons).
+                            HStack(spacing: actionSpacing) {
+                                ForEach(actions.indices, id: \.self) { index in
+                                    let action = actions[index]
+                                    let button = TimelineTopBarButton(
+                                        systemName: action.systemName,
+                                        assetName: action.assetName,
+                                        chrome: action.usesCircularChrome ? .filled : .plain,
+                                        tint: action.tint,
+                                        frame: actionFrame,
+                                        filledIconSize: actionIconSize,
+                                        action: action.action
+                                    )
+                                    if let label = action.accessibilityLabel {
+                                        button.accessibilityLabel(Text(label))
+                                    } else {
+                                        button
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                // The collapsed title rides OVER the row, not beside it in the stack: an overlay is
+                // sized by the row and cannot widen it. As a stack sibling its side reserves were
+                // a minimum width, and once the reserves outgrew the screen the whole page was
+                // laid out wider than the phone.
+                .overlay {
+                    if !searchActive {
+                        titleContent
+                            .opacity(revealProgress)
+                            .offset(y: titleOffsetY)
+                            .scaleEffect(0.985 + (0.015 * revealProgress))
+                            // Reserve each side for what actually sits there (back button
+                            // left, action cluster right) instead of the larger side twice:
+                            // with three actions a symmetric reserve exceeds the screen
+                            // width and stretches the whole layout edge-to-edge.
+                            //
+                            // Android's twin of this bar reaches the same conclusion by
+                            // measuring (`tdayBarTitleReserve`), and then does one thing
+                            // more that this one does not: below the per-side reserve it
+                            // scales the title down to 0.72 before letting it clip, the
+                            // way `CalendarElasticTopBar` already does. Three actions on
+                            // a narrow phone is exactly where that matters — and this
+                            // `titleContent` carries only `lineLimit(1)`. Owed here.
+                            .padding(.leading, TodoTimelineMetrics.topBarButtonFrame + 12)
+                            .padding(.trailing, trailingActionReservedWidth + 12)
+                            .frame(maxWidth: .infinity)
+                            .allowsHitTesting(false)
+                    }
+                }
+            }
+        }
+        .frame(height: TodoTimelineMetrics.topBarRowHeight)
+        .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
+        .padding(.top, 2)
+        .padding(.bottom, 4)
+        .background(colors.background)
+        // Hung off the bar's own box and painted outside its bounds, so rows
+        // dissolve into it instead of being guillotined by its edge. NOT inside
+        // the bar's stack: that would add layout height, push every row down and
+        // shift adjustedContentInset, which every collapse-progress calculation
+        // on these screens is derived from.
+        //
+        // A `background` rather than an `overlay`. The two are the same
+        // rectangle in the same place — this one is still offset a whole
+        // `contentFadeHeight` below the bar — and they differ only in what they
+        // paint over. As an overlay the band covered the bar's OWN content, so
+        // once the collapse had taken the bar down to its docked height every
+        // pinned control's shadow crossed the bar's bottom edge and was cut off
+        // there in a straight horizontal line while the control went on drawing
+        // it. Nothing moves to fix that: the shadows simply fall on top of the
+        // band now and fade out with it.
+        //
+        // The cut is subtler here than on `CalendarElasticTopBar`, which carries
+        // the longer version of this note and the report that found it: this
+        // bar's buttons wear `TdayToolbarButtonStyle` — ambient 10pt radius at a
+        // 4pt drop and 0.045, key 3pt at 2pt — against the calendar's
+        // `TdayPressButtonStyle` at 16pt and a 10pt drop and 0.15, so the shadow
+        // reaching past the 4pt of padding below this row is a pale wash rather
+        // than a hard edge. It is the same defect and the same fix; only the
+        // contrast differs. Android's `TdayHeroTitleHeader` is this fix one
+        // client over.
+        //
+        // Off until the screen actually moves: painted at rest it would veil the
+        // top of whatever sits under the bar — the hero mark on a screen at the
+        // top, the first card on one that has settled — and there is nothing
+        // passing under the bar for it to dissolve.
+        .background(alignment: .bottom) {
+            LinearGradient(
+                colors: [colors.background, colors.background.opacity(0)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: TodoTimelineMetrics.contentFadeHeight)
+            .offset(y: TodoTimelineMetrics.contentFadeHeight)
+            .opacity(Double(min(1, progress * 8)))
+            .allowsHitTesting(false)
+        }
+    }
+}
+
+struct TimelineExpandedTitleRow: View {
+    let title: String
+    /// Drawn instead of `title` after dark — see `TodoTimelineTitleLabel.nightTitle`.
+    /// The hero and the collapsed bar hand the pair to the same label, which is what
+    /// keeps the two halves of the collapse from reading differently mid-scroll.
+    let nightTitle: String?
+    let accentColor: Color
+    let collapseProgress: CGFloat
+    let showsTimeOfDayIcon: Bool
+    /// The screen's own glyph, shown in a tinted circle above the title — and
+    /// the glyph the disc's oversized echo is drawn from.
+    let mark: Image?
+    /// Drawn instead of `mark` as the disc's front glyph, for a screen whose mark
+    /// is more than one glyph. `mark` still supplies the echo.
+    ///
+    /// The echo is deliberately the one part a composite cannot reach: the disc
+    /// clips it, and the clip runs through the middle of the glyph, so a
+    /// rectilinear calendar under that arc is cut into bars rather than arcs
+    /// while a check's round-capped tail merely bleeds. A screen that hands a
+    /// composite here therefore hands the check as its `mark` too.
+    ///
+    /// An `AnyView` rather than a generic because `mark` is concrete and this is
+    /// optional: the six callers that pass no composite must keep compiling
+    /// untouched.
+    let frontMark: AnyView?
+    /// Tint for the circle. Separate from `accentColor` because screens whose
+    /// title is plain onSurface — Settings, App Version — still want a coloured
+    /// mark rather than a grey disc.
+    let markAccentColor: Color
+    /// Tint for the oversized echo — the same glyph the mark draws, one size up
+    /// and dropped to `heroMarkEchoAlpha` behind it.
+    ///
+    /// It defaults to `markAccentColor`, which is right wherever the mark and the
+    /// disc's chrome are one colour. A screen whose mark is a different colour
+    /// from its chrome has to say so: the echo is a second drawing of the mark,
+    /// so leaving it on the chrome's colour puts one glyph on the disc in two
+    /// colours. The Completion history is that screen — its check is the green
+    /// the page is *about* while its chrome is slate.
+    let markEchoColor: Color
+
+    init(
+        title: String,
+        nightTitle: String? = nil,
+        accentColor: Color,
+        collapseProgress: CGFloat,
+        showsTimeOfDayIcon: Bool = false,
+        mark: Image? = nil,
+        frontMark: AnyView? = nil,
+        markAccentColor: Color? = nil,
+        markEchoColor: Color? = nil
+    ) {
+        self.title = title
+        self.nightTitle = nightTitle
+        self.accentColor = accentColor
+        self.collapseProgress = collapseProgress
+        self.showsTimeOfDayIcon = showsTimeOfDayIcon
+        self.mark = mark
+        self.frontMark = frontMark
+        self.markAccentColor = markAccentColor ?? accentColor
+        self.markEchoColor = markEchoColor ?? markAccentColor ?? accentColor
+    }
+
+    /// Clears out well before the title reaches the bar, so the two never
+    /// occupy the same space on the way past each other.
+    private var markFade: CGFloat {
+        1 - TodoTimelineMetrics.progress(progress, from: 0, to: TodoTimelineMetrics.heroMarkFadeEnd)
+    }
+
+    private var progress: CGFloat {
+        min(max(collapseProgress, 0), 1)
+    }
+
+    private var fadeProgress: CGFloat {
+        TodoTimelineMetrics.progress(
+            progress,
+            from: TodoTimelineMetrics.expandedTitleFadeStart,
+            to: TodoTimelineMetrics.expandedTitleFadeEnd
+        )
+    }
+
+    private var titleOffsetY: CGFloat {
+        -TodoTimelineMetrics.expandedTitleLiftDistance * fadeProgress
+    }
+
+    private var titleOpacity: Double {
+        Double(1 - fadeProgress)
+    }
+
+    var body: some View {
+        VStack(alignment: .center, spacing: 0) {
+            if let mark {
+                // Fixed spacers rather than Spacer(), so the block's height is
+                // exactly `titleCollapseDistance` and nothing can absorb slack
+                // and drift the title off the bottom edge.
+                Color.clear
+                    .frame(height: TodoTimelineMetrics.heroMarkTopGap)
+                heroMark(mark)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                Color.clear
+                    .frame(height: TodoTimelineMetrics.heroMarkBottomGap)
+            }
+
+            TodoTimelineTitleLabel(
+                title: title,
+                nightTitle: nightTitle,
+                accentColor: accentColor,
+                showsTimeOfDayIcon: showsTimeOfDayIcon
+            )
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: TodoTimelineMetrics.expandedTitleHeight,
+                    maxHeight: TodoTimelineMetrics.expandedTitleHeight,
+                    alignment: .bottom
+                )
+                .opacity(titleOpacity)
+                .offset(y: titleOffsetY)
+        }
+        .frame(
+            maxWidth: .infinity,
+            minHeight: TodoTimelineMetrics.titleCollapseDistance,
+            maxHeight: TodoTimelineMetrics.titleCollapseDistance,
+            alignment: .bottom
+        )
+        .clipped()
+        .padding(.bottom, TodoTimelineMetrics.settledContentGap)
+        .allowsHitTesting(false)
+    }
+
+    /// A flat glyph on a flat disc reads as a utility icon. The wash is a
+    /// gradient with an oversized echo of the same glyph bleeding out of the
+    /// bottom-right — the motif the category tiles already use.
+    private func heroMark(_ image: Image) -> some View {
+        ZStack {
+            image
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(
+                    width: TodoTimelineMetrics.heroMarkEchoGlyph,
+                    height: TodoTimelineMetrics.heroMarkEchoGlyph
+                )
+                .foregroundStyle(markEchoColor.opacity(TodoTimelineMetrics.heroMarkEchoAlpha))
+                .offset(x: 22, y: 26)
+
+            if let frontMark {
+                // The composite draws its own layers in its own colours — the
+                // disc's `markAccentColor` is the screen's chrome, not the accent
+                // its mark is about.
+                frontMark
+            } else {
+                image
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(
+                        width: TodoTimelineMetrics.heroMarkGlyph,
+                        height: TodoTimelineMetrics.heroMarkGlyph
+                    )
+                    .foregroundStyle(markAccentColor)
+            }
+        }
+        .frame(width: TodoTimelineMetrics.heroMarkBox, height: TodoTimelineMetrics.heroMarkBox)
+        .background(
+            LinearGradient(
+                colors: [
+                    markAccentColor.opacity(TodoTimelineMetrics.heroMarkWashTopAlpha),
+                    markAccentColor.opacity(TodoTimelineMetrics.heroMarkWashBottomAlpha),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            in: Circle()
+        )
+        .clipShape(Circle())
+        .opacity(Double(markFade))
+        .scaleEffect(0.85 + (0.15 * markFade))
+    }
+}
+
+private struct TodoTimelineTitleLabel: View {
+    let title: String
+    /// The title to draw after dark instead of `title`, or nil for a screen whose
+    /// name does not follow the clock.
+    ///
+    /// This is why the choice is made HERE and not by the screen that owns the
+    /// title: the `TimelineView` below already exists to redraw the sun/moon every
+    /// minute, so resolving the word in the same closure off the same `context.date`
+    /// is what makes "Today under a moon" unrepresentable. Resolved anywhere
+    /// upstream it would be a second read of the clock, taken at a different
+    /// moment, that nothing re-runs at 18:00 while the screen sits open — which is
+    /// exactly the bug `TodoListViewModel.title` has as a stored property.
+    let nightTitle: String?
+    let accentColor: Color
+    let showsTimeOfDayIcon: Bool
+
+    private func resolvedTitle(at date: Date) -> String {
+        guard let nightTitle, !TdayTimeOfDay.isDaytime(date) else { return title }
+        return nightTitle
+    }
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            HStack(spacing: 8) {
+                if showsTimeOfDayIcon {
+                    Image(systemName: todoTimeOfDaySystemImage(for: context.date))
+                        .font(.system(size: 26, weight: .regular))
+                        .foregroundStyle(todoTimeOfDayIconColor(for: context.date))
+                }
+
+                Text(resolvedTitle(at: context.date))
+                    .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
+                    .foregroundStyle(accentColor)
+                    .lineLimit(1)
+            }
+            .lineLimit(1)
+        }
+    }
+}
+
+private struct TimelineTopBarButton: View {
+    enum Chrome {
+        case plain
+        case filled
+        case outlined
+    }
+
+    let systemName: String
+    /// Preferred over `systemName` when set, so a bar can use the same drawn
+    /// glyph the root feeds do rather than the SF symbol that merely resembles it.
+    let assetName: String?
+    let chrome: Chrome
+    let tint: Color?
+    /// The circle's side, and a filled circle's glyph size: a crowded bar passes its compact
+    /// pair (see `TodoTimelineMetrics.topBarCompactActionThreshold`).
+    let frame: CGFloat
+    let filledIconSize: CGFloat
+    let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    init(
+        systemName: String,
+        assetName: String? = nil,
+        chrome: Chrome,
+        tint: Color? = nil,
+        frame: CGFloat = TodoTimelineMetrics.topBarButtonFrame,
+        filledIconSize: CGFloat = TodoTimelineMetrics.topBarButtonIconSize,
+        action: @escaping () -> Void
+    ) {
+        self.systemName = systemName
+        self.assetName = assetName
+        self.chrome = chrome
+        self.tint = tint
+        self.frame = frame
+        self.filledIconSize = filledIconSize
+        self.action = action
+    }
+
+    @ViewBuilder
+    private var glyph: some View {
+        if let assetName {
+            Image(assetName)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: iconSize, height: iconSize)
+        } else {
+            Image(systemName: systemName)
+                .font(.system(size: iconSize, weight: .semibold))
+        }
+    }
+
+    var body: some View {
+        Button(action: action) {
+            glyph
+                .frame(width: frame, height: frame)
+                .background {
+                    if chrome == .filled {
+                        // Fill AND hairline, both: `RootFeedHeaderCircleButton`
+                        // wears the ring at this opacity, and a filled circle
+                        // without it read as a different control one screen along.
+                        Circle()
+                            .fill(colors.surface)
+                            .overlay {
+                                Circle()
+                                    .stroke(
+                                        colors.onSurface.opacity(
+                                            RootFeedHeroHeaderMetrics.barControlBorderOpacity
+                                        ),
+                                        lineWidth: 1
+                                    )
+                            }
+                    } else if chrome == .outlined {
+                        Circle()
+                            .fill(outlinedFillColor)
+                            .overlay {
+                                Circle()
+                                    .stroke(outlinedBorderColor, lineWidth: 1)
+                            }
+                    }
+                }
+                .contentShape(Circle())
+        }
+        // The shared bar-button lift, rather than a fourth copy of it: this one
+        // was a shade heavier than the root feeds' and landed at a different
+        // offset, which is what left the two ⋯ reading as separate controls.
+        .buttonStyle(TdayToolbarButtonStyle(shadowsEnabled: chrome == .filled))
+        .foregroundStyle(foregroundColor)
+    }
+
+    private var iconSize: CGFloat {
+        chrome == .filled ? filledIconSize : 28
+    }
+
+    private var foregroundColor: Color {
+        switch chrome {
+        case .filled:
+            return colors.onSurface
+        case .outlined:
+            return tint ?? colors.onSurface
+        case .plain:
+            return tint ?? Color.accentColor
+        }
+    }
+
+    private var outlinedFillColor: Color {
+        if let tint {
+            return tint.opacity(0.12)
+        }
+        return colors.background
+    }
+
+    private var outlinedBorderColor: Color {
+        if let tint {
+            return tint.opacity(0.48)
+        }
+        return colors.onSurfaceVariant.opacity(0.28)
+    }
+}
+
+/// The pinned-bar screens' scroll offset, boxed so a scroll frame redraws only the two views
+/// that draw the title collapse: `TimelineTopBar` and `TimelineExpandedTitleRow`, each reached
+/// through `TimelineCollapseProgressReader`.
+///
+/// The same shape as `RootFeedHeaderScrollState`, for the same reason. The offset changes on
+/// every frame of a scroll, and the screens that own it have the largest bodies in the app:
+/// held as `@State` and read in `TodoListScreen.body`, each frame rebuilt the whole feed —
+/// every section, every realized row, the placement animation's key — while the title slid
+/// into the bar and the dock folded. Nothing in the owning body may read `offset`.
+///
+/// Stored clamped to `0...titleCollapseDistance`, and only written when it changes. The
+/// collapse is finished at that distance, so past it every frame carries the same value and
+/// there is nothing to redraw.
+@Observable
+final class TimelineTitleScrollState {
+    private(set) var offset: CGFloat = 0
+
+    /// How far the hero title has travelled into the bar, 0 to 1.
+    var collapseProgress: CGFloat {
+        let distance = TodoTimelineMetrics.titleCollapseDistance
+        guard distance > 0 else { return 0 }
+        return min(max(offset / distance, 0), 1)
+    }
+
+    func publish(_ rawOffset: CGFloat) {
+        let clamped = min(max(rawOffset, 0), TodoTimelineMetrics.titleCollapseDistance)
+        guard offset != clamped else { return }
+        offset = clamped
+    }
+}
+
+/// Reads `TimelineTitleScrollState` in a body of its own and hands the progress to `content`.
+///
+/// Its owner reads every other input in its own body and passes the values into `content`, so
+/// the owner keeps depending on them and this is the only view that depends on the scroll.
+struct TimelineCollapseProgressReader<Content: View>: View {
+    let scroll: TimelineTitleScrollState
+    private let content: (CGFloat) -> Content
+
+    init(
+        scroll: TimelineTitleScrollState,
+        @ViewBuilder content: @escaping (CGFloat) -> Content
+    ) {
+        self.scroll = scroll
+        self.content = content
+    }
+
+    var body: some View {
+        content(scroll.collapseProgress)
+    }
+}
+
+struct TimelineScrollOffsetObserver: UIViewRepresentable {
+    let onChange: (CGFloat) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onChange: onChange)
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.onChange = onChange
+        DispatchQueue.main.async {
+            context.coordinator.attach(to: uiView)
+        }
+    }
+
+    final class Coordinator {
+        var onChange: (CGFloat) -> Void
+        private weak var observedScrollView: UIScrollView?
+        private var observation: NSKeyValueObservation?
+
+        init(onChange: @escaping (CGFloat) -> Void) {
+            self.onChange = onChange
+        }
+
+        func attach(to view: UIView) {
+            guard let scrollView = view.enclosingScrollView() else {
+                return
+            }
+
+            guard observedScrollView !== scrollView else {
+                return
+            }
+
+            observedScrollView = scrollView
+            observation = scrollView.observe(\.contentOffset, options: [.initial, .new]) { [weak self] scrollView, _ in
+                let offset = max(scrollView.contentOffset.y + scrollView.adjustedContentInset.top, 0)
+                self?.onChange(offset)
+            }
+        }
+    }
+}
+
+private extension UIView {
+    func enclosingScrollView() -> UIScrollView? {
+        var current: UIView? = self
+        while let view = current {
+            if let scrollView = view as? UIScrollView {
+                return scrollView
+            }
+            current = view.superview
+        }
+        return nil
+    }
+}
+
+struct TimelineSectionHeader: View {
+    let title: String
+    let isActiveDropTarget: Bool
+    let isCollapsible: Bool
+    let isCollapsed: Bool
+    let onTap: (() -> Void)?
+
+    @Environment(\.tdayColors) private var colors
+
+    init(
+        title: String,
+        isActiveDropTarget: Bool,
+        isCollapsible: Bool = false,
+        isCollapsed: Bool = false,
+        onTap: (() -> Void)? = nil
+    ) {
+        self.title = title
+        self.isActiveDropTarget = isActiveDropTarget
+        self.isCollapsible = isCollapsible
+        self.isCollapsed = isCollapsed
+        self.onTap = onTap
+    }
+
+    var body: some View {
+        let content = VStack(alignment: .leading, spacing: TodoTimelineMetrics.sectionSpacing) {
+            HStack(spacing: 8) {
+                Text(title)
+                    .font(.tdayRounded(size: TodoTimelineMetrics.sectionTitleSize, weight: .bold))
+                    .foregroundStyle(isActiveDropTarget ? colors.error : colors.onSurfaceVariant.opacity(0.78))
+                    .textCase(nil)
+
+                if isCollapsible {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: TodoTimelineMetrics.sectionChevronSize, weight: .semibold))
+                        .foregroundStyle(colors.onSurfaceVariant.opacity(0.72))
+                        .rotationEffect(.degrees(isCollapsed ? -90 : 0))
+                        .animation(.easeInOut(duration: 0.18), value: isCollapsed)
+                }
+            }
+        }
+        .padding(.top, 2)
+        .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
+        .padding(.bottom, TodoTimelineMetrics.sectionHeaderBottomPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+
+        if let onTap {
+            Button(action: onTap) {
+                content
+            }
+            .buttonStyle(TimelineSectionHeaderButtonStyle())
+        } else {
+            content
+        }
+    }
+}
+
+/// Reads `TodoDragPreviewModel.drag` in a body of its own and floats the preview under the
+/// finger, so a touch move invalidates this layer and nothing else. `rootOrigin` is the
+/// overlay's global origin: the long-press bridge reports the finger in global coordinates.
+private struct TodoDragPreviewLayer: View {
+    let model: TodoDragPreviewModel
+    let rootOrigin: CGPoint
+
+    var body: some View {
+        if let drag = model.drag {
+            TodoDragPreview(todo: drag.todo)
+                .position(
+                    x: drag.location.x - rootOrigin.x,
+                    y: drag.location.y - rootOrigin.y
+                )
+                .zIndex(20)
+                .allowsHitTesting(false)
+        }
+    }
+}
+
+private struct TodoDragPreview: View {
+    let todo: TodoItem
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        let previewShape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+
+        HStack(spacing: 10) {
+            Image(systemName: "circle")
+                .font(.system(size: 22, weight: .regular))
+                .foregroundStyle(colors.onSurfaceVariant.opacity(0.76))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(todo.title)
+                    .font(.tdayRounded(size: 16, weight: .bold))
+                    .foregroundStyle(colors.onSurface)
+                    .lineLimit(1)
+                if let due = todo.due {
+                    Text(due.formatted(.dateTime.hour().minute().locale(AppLocale.current)))
+                        .font(.tdayRounded(size: 12, weight: .semibold))
+                        .foregroundStyle(colors.onSurfaceVariant)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            if let priorityIcon = priorityIndicatorSymbolName(todo.priority) {
+                Image(systemName: priorityIcon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(priorityColor(todo.priority))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .frame(width: 260, alignment: .leading)
+        .background(colors.surface)
+        .clipShape(previewShape)
+        .overlay(
+            previewShape.stroke(colors.onSurfaceVariant.opacity(0.14), lineWidth: 1)
+        )
+        .contentShape(previewShape)
+        .compositingGroup()
+        .shadow(color: Color.black.opacity(0.18), radius: 16, x: 0, y: 8)
+        .opacity(0.96)
+    }
+}
+
+private struct TodoDropPlaceholder: View {
+    let isActive: Bool
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .fill(isActive ? colors.error.opacity(0.10) : colors.surfaceVariant.opacity(0.18))
+            .overlay(
+                placeholderStroke
+            )
+            .frame(height: isActive ? 70 : 52)
+            .animation(.easeInOut(duration: 0.18), value: isActive)
+            .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private var placeholderStroke: some View {
+        if isActive {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(colors.error.opacity(0.72), lineWidth: 1.5)
+        } else {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(
+                    colors.onSurfaceVariant.opacity(0.18),
+                    style: StrokeStyle(lineWidth: 1, dash: [7, 7])
+                )
+        }
+    }
+}
+
+private struct TodoInAppDragModifier: ViewModifier {
+    let enabled: Bool
+    let todo: TodoItem
+    let onStart: (TodoItem, CGPoint) -> Void
+    let onMove: (TodoItem, CGPoint) -> Void
+    let onEnd: (TodoItem, CGPoint?) -> Void
+    let onCancel: () -> Void
+
+    func body(content: Content) -> some View {
+        if enabled {
+            content
+                .background {
+                    GeometryReader { _ in
+                        TodoInAppLongPressBridge(
+                            enabled: enabled,
+                            todo: todo,
+                            onStart: onStart,
+                            onMove: onMove,
+                            onEnd: onEnd,
+                            onCancel: onCancel
+                        )
+                        .allowsHitTesting(false)
+                    }
+                }
+        } else {
+            content
+        }
+    }
+}
+
+private struct TodoInAppLongPressBridge: UIViewRepresentable {
+    let enabled: Bool
+    let todo: TodoItem
+    let onStart: (TodoItem, CGPoint) -> Void
+    let onMove: (TodoItem, CGPoint) -> Void
+    let onEnd: (TodoItem, CGPoint?) -> Void
+    let onCancel: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(
+            enabled: enabled,
+            todo: todo,
+            onStart: onStart,
+            onMove: onMove,
+            onEnd: onEnd,
+            onCancel: onCancel
+        )
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.backgroundColor = .clear
+        view.isUserInteractionEnabled = false
+        context.coordinator.markerView = view
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.enabled = enabled
+        context.coordinator.todo = todo
+        context.coordinator.onStart = onStart
+        context.coordinator.onMove = onMove
+        context.coordinator.onEnd = onEnd
+        context.coordinator.onCancel = onCancel
+        DispatchQueue.main.async {
+            context.coordinator.attach(to: uiView.enclosingScrollView() ?? uiView.superview, markerView: uiView)
+        }
+    }
+
+    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+        coordinator.detach()
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var enabled: Bool
+        var todo: TodoItem
+        var onStart: (TodoItem, CGPoint) -> Void
+        var onMove: (TodoItem, CGPoint) -> Void
+        var onEnd: (TodoItem, CGPoint?) -> Void
+        var onCancel: () -> Void
+
+        weak var markerView: UIView?
+        private weak var attachedView: UIView?
+        private let recognizer: UILongPressGestureRecognizer
+        private var isDragging = false
+
+        init(
+            enabled: Bool,
+            todo: TodoItem,
+            onStart: @escaping (TodoItem, CGPoint) -> Void,
+            onMove: @escaping (TodoItem, CGPoint) -> Void,
+            onEnd: @escaping (TodoItem, CGPoint?) -> Void,
+            onCancel: @escaping () -> Void
+        ) {
+            self.enabled = enabled
+            self.todo = todo
+            self.onStart = onStart
+            self.onMove = onMove
+            self.onEnd = onEnd
+            self.onCancel = onCancel
+            self.recognizer = UILongPressGestureRecognizer()
+            super.init()
+
+            recognizer.minimumPressDuration = 0.22
+            recognizer.allowableMovement = 24
+            recognizer.cancelsTouchesInView = false
+            recognizer.delaysTouchesBegan = false
+            recognizer.delaysTouchesEnded = false
+            recognizer.delegate = self
+            recognizer.addTarget(self, action: #selector(handleLongPress(_:)))
+        }
+
+        func attach(to view: UIView?, markerView: UIView) {
+            self.markerView = markerView
+            guard enabled, let view else {
+                detach()
+                return
+            }
+
+            guard attachedView !== view else {
+                return
+            }
+
+            detach()
+            attachedView = view
+            view.addGestureRecognizer(recognizer)
+        }
+
+        func detach() {
+            if isDragging {
+                isDragging = false
+                onCancel()
+            }
+            attachedView?.removeGestureRecognizer(recognizer)
+            attachedView = nil
+        }
+
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard enabled, let markerView else {
+                return false
+            }
+
+            let localPoint = gestureRecognizer.location(in: markerView)
+            return markerView.bounds.insetBy(dx: -6, dy: -6).contains(localPoint)
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            guard enabled, let markerView else {
+                return false
+            }
+
+            let localPoint = touch.location(in: markerView)
+            return markerView.bounds.insetBy(dx: -6, dy: -6).contains(localPoint)
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            true
+        }
+
+        @objc private func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {
+            let location = globalLocation(for: recognizer)
+            switch recognizer.state {
+            case .began:
+                guard enabled else {
+                    return
+                }
+                isDragging = true
+                onStart(todo, location)
+            case .changed:
+                guard isDragging else {
+                    return
+                }
+                onMove(todo, location)
+            case .ended:
+                guard isDragging else {
+                    return
+                }
+                isDragging = false
+                onEnd(todo, location)
+            case .cancelled, .failed:
+                guard isDragging else {
+                    return
+                }
+                isDragging = false
+                onCancel()
+            default:
+                break
+            }
+        }
+
+        private func globalLocation(for recognizer: UILongPressGestureRecognizer) -> CGPoint {
+            guard let view = recognizer.view else {
+                return .zero
+            }
+
+            return view.convert(recognizer.location(in: view), to: nil)
+        }
+    }
+}
+
+private struct TodoInAppDropTargetFrameModifier: ViewModifier {
+    let targetID: String
+    let section: TodoTimelineSection
+    let enabled: Bool
+
+    func body(content: Content) -> some View {
+        content.background {
+            if enabled, section.targetDate != nil {
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: TodoDropTargetFramePreferenceKey.self,
+                        value: [
+                            targetID: TodoDropTargetFrame(
+                                sectionID: section.id,
+                                frame: proxy.frame(in: .global)
+                            )
+                        ]
+                    )
+                }
+            }
+        }
+    }
+}
+
+private extension View {
+    func todoInAppDropTargetFrame(
+        targetID: String,
+        section: TodoTimelineSection,
+        enabled: Bool
+    ) -> some View {
+        modifier(
+            TodoInAppDropTargetFrameModifier(
+                targetID: targetID,
+                section: section,
+                enabled: enabled
+            )
+        )
+    }
+}
+
+private struct TimelineSectionHeaderButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .brightness(configuration.isPressed ? -0.055 : 0)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+private let todoListSettingsColorKeys = [
+    "PINK",
+    "GOLD",
+    "DEEP_BLUE",
+    "CORAL",
+    "TEAL",
+    "SLATE",
+    "BLUE",
+    "PURPLE",
+    "ROSE",
+    "LIGHT_RED",
+    "BRICK",
+    "YELLOW",
+    "LIME",
+    "ORANGE",
+    "RED",
+]
+
+private let todoListSettingsIconKeys = [
+    "inbox",
+    "sun",
+    "calendar",
+    "schedule",
+    "flag",
+    "check",
+    "smile",
+    "list",
+    "bookmark",
+    "key",
+    "gift",
+    "cake",
+    "school",
+    "bag",
+    "edit",
+    "document",
+    "book",
+    "work",
+    "wallet",
+    "money",
+    "fitness",
+    "run",
+    "food",
+    "drink",
+    "health",
+    "monitor",
+    "music",
+    "computer",
+    "game",
+    "headphones",
+    "eco",
+    "pets",
+    "child",
+    "family",
+    "basket",
+    "cart",
+    "mall",
+    "inventory",
+    "soccer",
+    "baseball",
+    "basketball",
+    "football",
+    "tennis",
+    "train",
+    "flight",
+    "boat",
+    "car",
+    "umbrella",
+    "drop",
+    "snow",
+    "fire",
+    "tools",
+    "scissors",
+    "architecture",
+    "code",
+    "idea",
+    "chat",
+    "alert",
+    "star",
+    "heart",
+    "circle",
+    "square",
+    "triangle",
+    "home",
+    "city",
+    "bank",
+    "camera",
+    "palette",
+]
+
+/// The four verbs a multi-select can apply, and nothing else.
+private enum BulkTaskAction {
+    case complete
+    case delete
+    case priority
+    case move
+}
+
+/// Which centred picker the bulk action bar has open.
+private enum BulkSelectionSelector: String, Identifiable {
+    case priority
+    case list
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .priority:
+            return L("Priority")
+        case .list:
+            return L("List")
+        }
+    }
+}
+
+/// A row-wide tap that toggles selection, attached only while selecting so the
+/// swipe-reveal hint keeps the tap the rest of the time.
+///
+/// It is applied INSIDE `todoTrailingSwipeActions`, which installs a tap of its
+/// own: SwiftUI gives a gesture defined by the view precedence over one attached
+/// further out, so the inner one — this one — is what fires while selecting.
+private struct TodoSelectionTapModifier: ViewModifier {
+    let enabled: Bool
+    let onTap: () -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if enabled {
+            content
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onTap)
+        } else {
+            content
+        }
+    }
+}
+
+/// The house confirmation for something that cannot be taken back in one step,
+/// in the shape `ListDeleteConfirmationOverlay` already set: full-bleed scrim,
+/// one card, headline and body, Cancel in the primary colour beside the confirm.
+///
+/// Bulk delete always takes this — the undo toast that follows is the second
+/// guard, not a substitute for the first. Bulk move takes it only when the
+/// selection spans more than one source list, which is the one move a second
+/// bulk move cannot put back.
+private struct BulkSelectionConfirmationOverlay: View {
+    let title: String
+    let message: String
+    /// "Applies to N of M — repeating tasks are skipped", when the recurring
+    /// rule narrowed what the confirm button will actually touch.
+    let note: String?
+    let confirmTitle: String
+    let isDestructive: Bool
+    let onCancel: () -> Void
+    let onConfirm: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        ZStack {
+            colors.bottomSheetScrim
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onCancel)
+
+            TdaySheetOverlayCard {
+                VStack(alignment: .leading, spacing: 22) {
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text(title)
+                            .font(.tdayRounded(.title2, weight: .black))
+                            .foregroundStyle(colors.onSurface)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.82)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text(message)
+                            .font(.tdayRounded(.body, weight: .heavy))
+                            .foregroundStyle(colors.onSurfaceVariant)
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        if let note {
+                            Text(note)
+                                .font(.tdayRounded(size: 13, weight: .semibold))
+                                .foregroundStyle(colors.onSurfaceVariant.opacity(0.9))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+
+                    HStack(spacing: 24) {
+                        Spacer(minLength: 0)
+
+                        Button(action: onCancel) {
+                            Text(L("Cancel"))
+                                .font(.tdayRounded(.headline, weight: .heavy))
+                                .foregroundStyle(colors.primary)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button(role: isDestructive ? ButtonRole.destructive : nil, action: onConfirm) {
+                            Text(confirmTitle)
+                                .font(.tdayRounded(.headline, weight: .heavy))
+                                .foregroundStyle(isDestructive ? colors.error : colors.primary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
+                .padding(.bottom, 20)
+                .frame(maxWidth: 330, alignment: .leading)
+            }
+            .padding(.horizontal, 34)
+            .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+            .onTapGesture {}
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .contain)
+    }
+}
+
+private struct ListDeleteConfirmationOverlay: View {
+    let onCancel: () -> Void
+    let onDelete: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        ZStack {
+            colors.bottomSheetScrim
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onCancel)
+
+            TdaySheetOverlayCard {
+                VStack(alignment: .leading, spacing: 22) {
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text("Delete list?")
+                            .font(.tdayRounded(.title2, weight: .black))
+                            .foregroundStyle(colors.onSurface)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.82)
+
+                        Text("This will delete this list, every task in it, and completed history for those tasks.")
+                            .font(.tdayRounded(.body, weight: .heavy))
+                            .foregroundStyle(colors.onSurfaceVariant)
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    HStack(spacing: 24) {
+                        Spacer(minLength: 0)
+
+                        Button(action: onCancel) {
+                            Text("Cancel")
+                                .font(.tdayRounded(.headline, weight: .heavy))
+                                .foregroundStyle(colors.primary)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button(role: .destructive, action: onDelete) {
+                            Text("Delete")
+                                .font(.tdayRounded(.headline, weight: .heavy))
+                                .foregroundStyle(colors.error)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
+                .padding(.bottom, 20)
+                .frame(maxWidth: 330, alignment: .leading)
+            }
+            .padding(.horizontal, 34)
+            .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+            .onTapGesture {}
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .contain)
+    }
+}
+
+private enum ListSettingsSheetMetrics {
+    static let sheetHeight: CGFloat = 760
+    static let maximumHeightFraction: CGFloat = TdaySheetMetrics.maximumScreenHeightFraction
+    static let bottomContentPadding: CGFloat = 24
+}
+
+private struct ListSettingsSheet: View {
+    let list: ListSummary?
+    var shareText: String? = nil
+    var onMembersRequest: (() -> Void)? = nil
+    /// True on a floater list, which is the only kind that can be reused: a
+    /// scheduled list has no Reset to reveal, so the row is hidden and the save
+    /// submits nil (the shared UpdateFloaterListRequest reads that as "leave it").
+    var showsReusable: Bool = false
+    let onSubmit: (String, String?, String?, Bool?, String?) -> Void
+    let onDeleteRequest: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.tdayColors) private var tdayColors
+
+    @State private var name = ""
+    @State private var color = tdayDefaultScheduledListAccentColorKey
+    @State private var iconKey = "inbox"
+    /// Seeded from the SAVED list on open, and always submitted when the row is
+    /// shown — web's sheet posts `reusable` on every save, so an off-flip has to
+    /// reach the server or the Reset it reveals can never be retired.
+    @State private var reusable = false
+    /// Seeded from the SAVED list on open. Nil means "no default"; always sent on
+    /// save since this row, unlike `showsReusable`, is never hidden.
+    @State private var defaultPriority: String? = nil
+    /// Whether the picker below holds a CHOICE or only a PREVIEW.
+    ///
+    /// Without it this sheet cannot help destroying an unset icon: it seeds `iconKey` from
+    /// the list (falling back to the default), and submitting sent that seed back whatever
+    /// the user came here to do. Renaming a list would therefore have written "inbox" over
+    /// its never-chosen state and retired the name-derived glyph forever, from a screen that
+    /// says nothing about icons. Android models the same distinction as
+    /// `listSettingsIconTouched`.
+    @State private var iconTouched = false
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var canSave: Bool {
+        !trimmedName.isEmpty
+    }
+
+    private var accentColor: Color {
+        todoListAccentColor(for: color, isFloater: showsReusable)
+    }
+
+    private var maximumSheetHeight: CGFloat {
+        max(1, UIScreen.main.bounds.height * ListSettingsSheetMetrics.maximumHeightFraction)
+    }
+
+    private var stableSheetHeight: CGFloat {
+        min(max(ListSettingsSheetMetrics.sheetHeight, 1), maximumSheetHeight)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            TdaySheetHeader(
+                title: L("List settings"),
+                closeAccessibilityLabel: "Cancel",
+                confirmAccessibilityLabel: "Save",
+                isConfirmEnabled: canSave,
+                onClose: { dismiss() },
+                onConfirm: submit
+            )
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 14) {
+                    TdaySheetSectionTitle(text: "List")
+                    TdaySheetCard {
+                        VStack(spacing: 18) {
+                            ZStack {
+                                Circle()
+                                    .fill(accentColor)
+                                    .frame(width: 86, height: 86)
+
+                                TdayListIcon(iconKey: iconKey, size: 38)
+                                    .foregroundStyle(.white)
+                            }
+
+                            TextField(
+                                "",
+                                text: $name,
+                                prompt: Text("List name")
+                                    .foregroundStyle(tdayColors.onSurfaceVariant.opacity(0.78))
+                            )
+                            .textInputAutocapitalization(.words)
+                            .autocorrectionDisabled()
+                            .submitLabel(.done)
+                            .onSubmit {
+                                if canSave {
+                                    submit()
+                                }
+                            }
+                            .multilineTextAlignment(.center)
+                            .font(.tdayRounded(size: 22, weight: .bold))
+                            .foregroundStyle(accentColor)
+                            .padding(.horizontal, 14)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 62)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(tdayColors.bottomSheetControlSurface)
+                            )
+                        }
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 18)
+                    }
+
+                    TdaySheetSectionTitle(text: "Color")
+                    TdaySheetCard {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(todoListSettingsColorKeys, id: \.self) { colorKey in
+                                    let swatchColor = todoListAccentColor(for: colorKey)
+                                    let isSelected = colorKey == color
+                                    Button {
+                                        color = colorKey
+                                    } label: {
+                                        Circle()
+                                            .fill(swatchColor)
+                                            .frame(width: 42, height: 42)
+                                            .frame(width: 48, height: 48)
+                                            .overlay {
+                                                Circle()
+                                                    .stroke(
+                                                        isSelected ? tdayColors.onSurface.opacity(0.3) : .clear,
+                                                        lineWidth: 3
+                                                    )
+                                                    .frame(width: 42, height: 42)
+                                            }
+                                    }
+                                    .buttonStyle(
+                                        TdayPressButtonStyle(
+                                            shadowColor: Color.black,
+                                            pressedShadowOpacity: 0.04,
+                                            normalShadowOpacity: 0.08
+                                        )
+                                    )
+                                    .accessibilityLabel(formattedOptionName(colorKey))
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
+                        }
+                    }
+
+                    TdaySheetSectionTitle(text: "Icon")
+                    TdaySheetCard {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                ForEach(todoListSettingsIconKeys, id: \.self) { optionKey in
+                                    let isSelected = optionKey == iconKey
+                                    Button {
+                                        iconKey = optionKey
+                                        iconTouched = true
+                                    } label: {
+                                        Circle()
+                                            .fill(isSelected ? accentColor.opacity(0.2) : tdayColors.bottomSheetControlSurface)
+                                            .frame(width: 46, height: 46)
+                                            .overlay {
+                                                Circle()
+                                                    .stroke(
+                                                        isSelected ? accentColor.opacity(0.55) : .clear,
+                                                        lineWidth: 2
+                                                    )
+                                            }
+                                            .overlay {
+                                                TdayListIcon(iconKey: optionKey, size: 22)
+                                                    .foregroundStyle(isSelected ? accentColor : tdayColors.onSurfaceVariant)
+                                            }
+                                    }
+                                    .buttonStyle(
+                                        TdayPressButtonStyle(
+                                            shadowColor: Color.black,
+                                            pressedShadowOpacity: 0.04,
+                                            normalShadowOpacity: 0.08
+                                        )
+                                    )
+                                    .accessibilityLabel(formattedOptionName(optionKey))
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
+                        }
+                    }
+
+                    TdaySheetSectionTitle(text: L("Default priority"))
+                    TdaySheetCard {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                ListSettingsPriorityChip(
+                                    label: L("No default"),
+                                    swatchColor: tdayColors.onSurfaceVariant.opacity(0.35),
+                                    isSelected: defaultPriority == nil
+                                ) {
+                                    defaultPriority = nil
+                                }
+                                ForEach(Array(TaskPriorityDisplay.options.enumerated()), id: \.element.value) { _, option in
+                                    ListSettingsPriorityChip(
+                                        label: option.label,
+                                        swatchColor: priorityColor(option.value),
+                                        isSelected: defaultPriority == option.value
+                                    ) {
+                                        defaultPriority = option.value
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
+                        }
+                    }
+
+                    if showsReusable {
+                        // Web draws this card between the icon picker and the
+                        // sharing/delete actions, with the hint under the title.
+                        TdaySheetCard {
+                            Toggle(isOn: $reusable) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(L("Reusable list"))
+                                        .font(.tdayRounded(size: 17, weight: .heavy))
+                                        .foregroundStyle(tdayColors.onSurface)
+                                    Text(L("Show a Reset to un-check everything and run it again"))
+                                        .font(.tdayRounded(size: 12, weight: .bold))
+                                        .foregroundStyle(tdayColors.onSurfaceVariant.opacity(0.78))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            .tint(accentColor)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 14)
+                        }
+                    }
+
+                    if list != nil, shareText != nil || onMembersRequest != nil {
+                        TdaySheetSectionTitle(text: L("Sharing"))
+                        HStack(spacing: 10) {
+                            if let onMembersRequest {
+                                Button {
+                                    HapticManager.buttonPress()
+                                    onMembersRequest()
+                                } label: {
+                                    ListSettingsSheetActionTileLabel(
+                                        systemName: "person.2",
+                                        label: L("Members")
+                                    )
+                                }
+                                .buttonStyle(
+                                    TdayPressButtonStyle(
+                                        shadowColor: Color.black,
+                                        pressedShadowOpacity: 0.03,
+                                        normalShadowOpacity: 0
+                                    )
+                                )
+                            }
+                            if let list, let shareText {
+                                ShareLink(item: shareText, subject: Text(list.name)) {
+                                    ListSettingsSheetActionTileLabel(
+                                        systemName: "square.and.arrow.up",
+                                        label: L("Share")
+                                    )
+                                }
+                                .buttonStyle(
+                                    TdayPressButtonStyle(
+                                        shadowColor: Color.black,
+                                        pressedShadowOpacity: 0.03,
+                                        normalShadowOpacity: 0
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    if list != nil {
+                        ListSettingsSheetDeleteButton {
+                            dismiss()
+                            onDeleteRequest()
+                        }
+                    }
+                }
+                .padding(.horizontal, 18)
+                .padding(.top, 14)
+                .padding(.bottom, ListSettingsSheetMetrics.bottomContentPadding)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .disableVerticalScrollBounce()
+        }
+        .frame(maxWidth: .infinity, alignment: .top)
+        .background(tdayColors.bottomSheetBackground.ignoresSafeArea())
+        .presentationDetents([.height(stableSheetHeight)])
+        .presentationDragIndicator(.hidden)
+        .presentationCornerRadius(34)
+        .presentationBackground {
+            tdayColors.bottomSheetBackground
+                .ignoresSafeArea(.container, edges: .bottom)
+        }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .task {
+            name = list?.name ?? ""
+            color = normalizedTodoListColorKey(list?.color, isFloater: showsReusable)
+            // Seeded from the same two sources the row resolves in, and in the same order,
+            // so the sheet opens showing the glyph that is already on screen. Seeding from
+            // the inference does not persist it: `iconTouched` stays false, and `submit()`
+            // sends nil while it does.
+            iconKey = normalizedTodoListIconKey(
+                tdayResolvedListIconKey(list?.iconKey, listName: list?.name)
+            )
+            iconTouched = false
+            reusable = list?.reusable ?? false
+            defaultPriority = list?.defaultPriority
+        }
+    }
+
+    private func submit() {
+        guard canSave else { return }
+        // The landing, not the press: the header's ✓ gives the control tap every
+        // button gives, and the save that goes through earns the success pulse —
+        // the same order `CreateTaskSheet.submit` uses.
+        HapticManager.completion()
+        // An untouched picker submits nil, which every repository reads as "leave the icon
+        // alone" (`iconKey ?? list.iconKey`). Sending the seeded preview instead would turn
+        // a rename into an icon choice the user never made.
+        //
+        // `reusable` is the other way round: it is always sent when the row is
+        // shown, so switching it off is a change and not an omission.
+        onSubmit(trimmedName, color, iconTouched ? iconKey : nil, showsReusable ? reusable : nil, defaultPriority)
+        dismiss()
+    }
+
+    private func formattedOptionName(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: ".", with: " ")
+            .split(separator: " ")
+            .map { $0.capitalized }
+            .joined(separator: " ")
+    }
+}
+
+/// One option in the list settings sheet's "Default priority" row — a color
+/// dot plus label, styled like the sheet's color/icon swatches so the new row
+/// reads as part of the same family instead of a bolted-on control.
+private struct ListSettingsPriorityChip: View {
+    let label: String
+    let swatchColor: Color
+    let isSelected: Bool
+    let onSelect: () -> Void
+
+    @Environment(\.tdayColors) private var tdayColors
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(swatchColor)
+                    .frame(width: 12, height: 12)
+
+                Text(label)
+                    .font(.tdayRounded(size: 14, weight: .bold))
+                    .foregroundStyle(tdayColors.onSurface)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                Capsule()
+                    .fill(isSelected ? swatchColor.opacity(0.16) : tdayColors.bottomSheetControlSurface)
+            )
+            .overlay {
+                Capsule()
+                    .stroke(isSelected ? swatchColor.opacity(0.55) : .clear, lineWidth: 2)
+            }
+        }
+        .buttonStyle(
+            TdayPressButtonStyle(
+                shadowColor: Color.black,
+                pressedShadowOpacity: 0.04,
+                normalShadowOpacity: 0.08
+            )
+        )
+        .accessibilityLabel(label)
+    }
+}
+
+/// Half-width tile used by the Sharing section of the list settings sheet —
+/// "Members" (collaboration) and "Share" (external share sheet) side by side.
+private struct ListSettingsSheetActionTileLabel: View {
+    let systemName: String
+    let label: String
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: systemName)
+                .font(.system(size: 20, weight: .semibold))
+                .frame(width: 26, height: 26)
+
+            Text(label)
+                .font(.tdayRounded(size: 17, weight: .heavy))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .foregroundStyle(colors.onSurface)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(colors.bottomSheetControlSurface)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(colors.onSurfaceVariant.opacity(0.3), lineWidth: 1.5)
+        }
+    }
+}
+
+
+private struct ListSettingsSheetDeleteButton: View {
+    let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button(role: .destructive) {
+            HapticManager.destructive()
+            action()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "trash")
+                    .font(.system(size: 22, weight: .semibold))
+                    .frame(width: 28, height: 28)
+
+                Text("Delete list")
+                    .font(.tdayRounded(size: 18, weight: .heavy))
+
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(colors.error)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(colors.error.opacity(colors.isDark ? 0.14 : 0.04))
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(colors.error.opacity(0.45), lineWidth: 1.5)
+            }
+        }
+        .buttonStyle(
+            TdayPressButtonStyle(
+                shadowColor: Color.black,
+                pressedShadowOpacity: 0.03,
+                normalShadowOpacity: 0
+            )
+        )
+        .accessibilityLabel("Delete list")
+    }
+}
+
+private struct TodoTimelineSection: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let items: [TodoItem]
+    let isCollapsible: Bool
+    let targetDate: Date?
+    // Today buckets only: the hour a task is set to when dropped here (Morning 9 /
+    // Afternoon 15 / Tonight 20). nil for normal date sections, which reschedule
+    // by date instead.
+    var targetHour: Int? = nil
+}
+
+private struct TodoRescheduleDrop: Equatable {
+    let todo: TodoItem
+    let targetDate: Date?
+    let targetHour: Int?
+}
+
+private struct ScheduledTodoDropDelegate: DropDelegate {
+    let section: TodoTimelineSection
+    let draggedTodo: TodoItem?
+    let resolveTodo: (String) -> TodoItem?
+    let onMove: (TodoItem, Date) -> Void
+    let canMoveTodo: (TodoItem, TodoTimelineSection) -> Bool
+    let onSectionChange: (String?) -> Void
+
+    func validateDrop(info: DropInfo) -> Bool {
+        guard section.targetDate != nil,
+              info.hasItemsConforming(to: todoDragContentTypes) else {
+            return false
+        }
+        if let todo = draggedTodo ?? TodoTaskDragSession.shared.todo {
+            return canMoveTodo(todo, section)
+        }
+        return true
+    }
+
+    func dropEntered(info: DropInfo) {
+        if validateDrop(info: info) {
+            onSectionChange(section.id)
+        }
+    }
+
+    func dropExited(info: DropInfo) {
+        onSectionChange(nil)
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        defer {
+            onSectionChange(nil)
+        }
+        guard let todo = draggedTodo ?? TodoTaskDragSession.shared.todo,
+              let targetDate = section.targetDate else {
+            return performProviderDrop(info: info)
+        }
+        guard canMoveTodo(todo, section) else {
+            return false
+        }
+        onMove(todo, targetDate)
+        return true
+    }
+
+    private func performProviderDrop(info: DropInfo) -> Bool {
+        guard let targetDate = section.targetDate,
+              let provider = info.itemProviders(for: todoDragContentTypes).first else {
+            return false
+        }
+        provider.loadObject(ofClass: NSString.self) { object, _ in
+            guard let rawId = object as? NSString else {
+                return
+            }
+            let todoId = rawId as String
+            DispatchQueue.main.async {
+                if let todo = resolveTodo(todoId), canMoveTodo(todo, section) {
+                    onMove(todo, targetDate)
+                }
+            }
+        }
+        return true
+    }
+}
+
+private extension View {
+    func scheduledTodoDropTarget(
+        section: TodoTimelineSection,
+        draggedTodo: TodoItem?,
+        resolveTodo: @escaping (String) -> TodoItem?,
+        onMove: @escaping (TodoItem, Date) -> Void,
+        canMoveTodo: @escaping (TodoItem, TodoTimelineSection) -> Bool,
+        onSectionChange: @escaping (String?) -> Void
+    ) -> some View {
+        self
+            .onDrop(
+                of: todoDragContentTypes,
+                delegate: ScheduledTodoDropDelegate(
+                    section: section,
+                    draggedTodo: draggedTodo,
+                    resolveTodo: resolveTodo,
+                    onMove: onMove,
+                    canMoveTodo: canMoveTodo,
+                    onSectionChange: onSectionChange
+                )
+            )
+            .dropDestination(for: String.self) { ids, _ in
+                guard let targetDate = section.targetDate else {
+                    onSectionChange(nil)
+                    return false
+                }
+                let todo = draggedTodo
+                    ?? TodoTaskDragSession.shared.todo
+                    ?? ids.compactMap(resolveTodo).first
+                guard let todo else {
+                    onSectionChange(nil)
+                    return false
+                }
+                guard canMoveTodo(todo, section) else {
+                    onSectionChange(nil)
+                    return false
+                }
+                onSectionChange(nil)
+                onMove(todo, targetDate)
+                return true
+            } isTargeted: { active in
+                guard section.targetDate != nil else {
+                    if !active {
+                        onSectionChange(nil)
+                    }
+                    return
+                }
+                if active,
+                   let todo = draggedTodo ?? TodoTaskDragSession.shared.todo,
+                   !canMoveTodo(todo, section) {
+                    onSectionChange(nil)
+                    return
+                }
+                onSectionChange(active ? section.id : nil)
+            }
+    }
+}
+
+private func buildSections(
+    items: [TodoItem],
+    mode: TodoListMode,
+    showsEmptyDropTargets: Bool = false
+) -> [TodoTimelineSection] {
+    let calendar = Calendar.current
+    switch mode {
+    case .today:
+        let startOfToday = calendar.startOfDay(for: Date())
+        // `items` now carries overdue tasks alongside today's own (see
+        // `TodoRepository.buildTodos`'s `.today` case) so Today can render them
+        // in a collapsed Earlier section — they must NOT fall into the M/A/T
+        // grouping below, which buckets purely by hour-of-day and would
+        // otherwise mis-sort e.g. a task overdue from yesterday 3pm into
+        // today's Afternoon. Split on the actual calendar date first.
+        let datedItems = items.filter { $0.due != nil }
+        let todayItems = datedItems.filter { ($0.due ?? startOfToday) >= startOfToday }
+        // Oldest overdue day first, matching `.list`/`.priority`/`.all`'s own
+        // Earlier section: a flat sort by `todoTimelineSortPrecedes` alone
+        // would put every pinned overdue task at the top regardless of how
+        // overdue it is (pinned outranks due date there), so group by day
+        // first and only let that comparator order tasks within a day.
+        let earlierByDate = Dictionary(
+            grouping: datedItems.filter { ($0.due ?? startOfToday) < startOfToday }.sorted(by: todoTimelineSortPrecedes)
+        ) { item in
+            calendar.startOfDay(for: item.due ?? startOfToday)
+        }
+        let earlierItems = earlierByDate.keys.sorted().flatMap { earlierByDate[$0] ?? [] }
+        let grouped = Dictionary(grouping: todayItems) { item -> String in
+            let hour = calendar.component(.hour, from: item.due ?? .distantFuture)
+            if hour < 12 { return "Morning" }
+            if hour < 18 { return "Afternoon" }
+            return "Tonight"
+        }
+        // Canonical drop hour per bucket — lands inside the display boundaries
+        // (Morning < 12, Afternoon 12–18, Tonight ≥ 18). Matches web/Android.
+        let bucketHours: [String: Int] = ["Morning": 9, "Afternoon": 15, "Tonight": 20]
+        let todaySections = ["Morning", "Afternoon", "Tonight"].map { key in
+            TodoTimelineSection(
+                id: key,
+                title: key,
+                items: grouped[key, default: []].sorted(by: todoTimelineSortPrecedes),
+                isCollapsible: false,
+                targetDate: startOfToday,
+                targetHour: bucketHours[key]
+            )
+        }
+        let earlierSection = TodoTimelineSection(
+            id: "earlier",
+            title: L("Overdue"),
+            items: earlierItems,
+            isCollapsible: !earlierItems.isEmpty,
+            targetDate: timelineRescheduleTargetDate(sectionId: "earlier", today: startOfToday, calendar: calendar)
+        )
+        let hasTodayItems = todaySections.contains(where: { !$0.items.isEmpty })
+        // Morning / Afternoon / Tonight are the shape of the day itself rather
+        // than a scaffold of dates, and each one is where a quick-add lands, so
+        // Today keeps all three whenever the day holds anything of its own,
+        // even if e.g. Afternoon happens to be empty. But when there is
+        // nothing due today, the three headers are stray scaffolding — dropped
+        // whether or not Earlier still holds something, matching every other
+        // mode's "no items, no headers" behavior. Earlier itself stays,
+        // collapsed, whenever it holds anything: the "all done for today"
+        // illustration (`hasNoPendingItems` in `watermarkedModeContent`) reads
+        // only the M/A/T buckets, so nothing due today plus a non-empty
+        // Earlier still shows the illustration — with Earlier's own header
+        // sitting alongside it, tappable, for req. 2/3's coexistence.
+        guard hasTodayItems || !earlierItems.isEmpty else {
+            return []
+        }
+        var sections: [TodoTimelineSection] = []
+        if !earlierItems.isEmpty {
+            sections.append(earlierSection)
+        }
+        if hasTodayItems {
+            sections.append(contentsOf: todaySections)
+        }
+        return sections
+    case .overdue:
+        let now = Date()
+        let startOfToday = calendar.startOfDay(for: now)
+        let overdueItems = items.filter { ($0.due ?? .distantFuture) < now }
+        let grouped = Dictionary(grouping: overdueItems) { item in
+            calendar.startOfDay(for: item.due ?? now)
+        }
+
+        var sections: [TodoTimelineSection] = []
+        if let todaysItems = grouped[startOfToday], !todaysItems.isEmpty {
+            sections.append(
+                TodoTimelineSection(
+                    id: "today",
+                    title: L("Today"),
+                    items: todaysItems.sorted(by: todoTimelineSortPrecedes),
+                    isCollapsible: false,
+                    targetDate: nil
+                )
+            )
+        }
+
+        let pastDates = grouped.keys
+            .filter { $0 < startOfToday }
+            .sorted(by: >)
+
+        sections.append(
+            contentsOf: pastDates.map { date in
+                TodoTimelineSection(
+                    id: "overdue-\(date.timeIntervalSince1970)",
+                    title: date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().locale(AppLocale.current)),
+                    items: grouped[date]?.sorted(by: todoTimelineSortPrecedes) ?? [],
+                    isCollapsible: false,
+                    targetDate: nil
+                )
+            }
+        )
+
+        return sections
+    case .scheduled:
+        let startOfToday = calendar.startOfDay(for: Date())
+        let grouped = Dictionary(grouping: items.filter { ($0.due ?? .distantPast) >= startOfToday }) { item in
+            calendar.startOfDay(for: item.due ?? startOfToday)
+        }
+        return grouped.keys.sorted().map { date in
+                TodoTimelineSection(
+                    id: "scheduled-\(date.timeIntervalSince1970)",
+                    title: scheduledSectionTitle(for: date, calendar: calendar),
+                    items: grouped[date]?.sorted(by: todoTimelineSortPrecedes) ?? [],
+                    isCollapsible: false,
+                    targetDate: timelineRescheduleTargetDate(
+                        sectionId: "scheduled-\(date.timeIntervalSince1970)",
+                        calendar: calendar
+                    )
+                )
+            }
+    case .all:
+        return buildFutureTimelineSections(
+            items: items,
+            calendar: calendar,
+            placesEarlierBeforeToday: true,
+            showsEmptyDropTargets: showsEmptyDropTargets
+        )
+    case .priority:
+        return buildFutureTimelineSections(
+            items: items,
+            calendar: calendar,
+            placesEarlierBeforeToday: true,
+            showsEmptyDropTargets: showsEmptyDropTargets
+        )
+    case .floater:
+        return buildFloaterTimelineSections(items: items)
+    case .list:
+        return buildFutureTimelineSections(
+            items: items,
+            calendar: calendar,
+            placesEarlierBeforeToday: true,
+            showsEmptyDropTargets: showsEmptyDropTargets
+        )
+    }
+}
+
+private func buildFloaterTimelineSections(items: [TodoItem]) -> [TodoTimelineSection] {
+    let floaterItems = items
+        .sorted(by: floaterTodoSortPrecedes)
+
+    return [
+        TodoTimelineSection(
+            id: "floater-all",
+            title: "",
+            items: floaterItems,
+            isCollapsible: false,
+            targetDate: nil
+        ),
+    ]
+}
+
+// Fixed FLOATER ordering (pinned, priority High->Low, modified desc, id).
+private func floaterTodoSortPrecedes(_ lhs: TodoItem, _ rhs: TodoItem) -> Bool {
+    TaskSortEngine.precedesFloater(taskSortKey(lhs), taskSortKey(rhs))
+}
+
+private func scheduledSectionTitle(for date: Date, calendar: Calendar) -> String {
+    if calendar.isDateInToday(date) {
+        return L("Today")
+    }
+    if calendar.isDateInTomorrow(date) {
+        return L("Tomorrow")
+    }
+    return timelineDayTitle(for: date)
+}
+
+private func buildFutureTimelineSections(
+    items: [TodoItem],
+    calendar: Calendar,
+    placesEarlierBeforeToday: Bool,
+    showsEmptyDropTargets: Bool
+) -> [TodoTimelineSection] {
+    let now = Date()
+    let today = calendar.startOfDay(for: now)
+    let datedItems = items.filter { $0.due != nil }
+    let groupedByDate = Dictionary(grouping: datedItems.sorted(by: todoTimelineSortPrecedes)) { item in
+        calendar.startOfDay(for: item.due ?? today)
+    }
+    let currentYear = calendar.component(.year, from: today)
+    let currentMonth = calendar.component(.month, from: today)
+    let currentMonthIndex = monthIndex(for: today, calendar: calendar)
+    let horizonStart = calendar.date(byAdding: .day, value: 7, to: today) ?? today
+
+    func daySection(for date: Date, title: String) -> TodoTimelineSection {
+        let sectionId = "priority-\(date.timeIntervalSince1970)"
+        return TodoTimelineSection(
+            id: sectionId,
+            title: title,
+            items: groupedByDate[date] ?? [],
+            isCollapsible: false,
+            targetDate: timelineRescheduleTargetDate(sectionId: sectionId, calendar: calendar)
+        )
+    }
+
+    var sections: [TodoTimelineSection] = []
+
+    // The one rule every bucket answers to, Earlier and "Rest of <month>"
+    // included: it earns a header by holding tasks, or by being somewhere the
+    // drag in hand can land. A `targetDate` is what makes a bucket droppable —
+    // "Rest of <month>" loses its target date when the +7 horizon rolls into the
+    // next month — and an empty bucket that takes no drop is a stray header.
+    func appendIfRendered(_ section: TodoTimelineSection) {
+        // "earlier" is excluded from the drag-time restore on purpose: its target
+        // date is yesterday, and web never rebuilds an empty Earlier at all, so
+        // letting it back would make rescheduling INTO the past a thing you can
+        // do on two platforms out of three.
+        let isDropTarget = showsEmptyDropTargets
+            && section.targetDate != nil
+            && section.id != "earlier"
+        guard !section.items.isEmpty || isDropTarget else {
+            return
+        }
+        sections.append(section)
+    }
+
+    let earlierItems = groupedByDate.keys
+        .filter { $0 < today }
+        .sorted()
+        .flatMap { groupedByDate[$0] ?? [] }
+
+    let earlierSection = TodoTimelineSection(
+        id: "earlier",
+        title: L("Overdue"),
+        items: earlierItems,
+        isCollapsible: !earlierItems.isEmpty,
+        targetDate: timelineRescheduleTargetDate(sectionId: "earlier", today: today, calendar: calendar)
+    )
+
+    if placesEarlierBeforeToday {
+        appendIfRendered(earlierSection)
+    }
+
+    appendIfRendered(daySection(for: today, title: L("Today")))
+
+    if !placesEarlierBeforeToday {
+        appendIfRendered(earlierSection)
+    }
+
+    if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) {
+        appendIfRendered(daySection(for: tomorrow, title: L("Tomorrow")))
+    }
+
+    for offset in 2...6 {
+        guard let date = calendar.date(byAdding: .day, value: offset, to: today) else { continue }
+        appendIfRendered(daySection(for: date, title: timelineDayTitle(for: date)))
+    }
+
+    let restOfCurrentMonthItems = groupedByDate.keys
+        .filter { $0 >= horizonStart && monthIndex(for: $0, calendar: calendar) == currentMonthIndex }
+        .sorted()
+        .flatMap { groupedByDate[$0] ?? [] }
+
+    if let currentMonthStart = calendar.date(from: DateComponents(year: currentYear, month: currentMonth, day: 1)) {
+        appendIfRendered(
+            TodoTimelineSection(
+                id: "rest-\(currentMonthIndex)",
+                title: L("Rest of %@", monthTitle(for: currentMonthStart, currentYear: currentYear, calendar: calendar)),
+                items: restOfCurrentMonthItems,
+                isCollapsible: false,
+                targetDate: timelineRescheduleTargetDate(
+                    sectionId: "rest-\(currentMonthIndex)",
+                    calendar: calendar
+                )
+            )
+        )
+    }
+
+    let futureMonthIndexes = Set(
+        groupedByDate.keys
+            .filter { $0 >= horizonStart }
+            .map { monthIndex(for: $0, calendar: calendar) }
+    )
+    let minimumFinalMonthIndex = currentYear * 12 + 12
+    let finalMonthIndex = max(minimumFinalMonthIndex, futureMonthIndexes.max() ?? minimumFinalMonthIndex)
+
+    var targetYear = currentYear
+    var targetMonth = currentMonth + 1
+
+    while (targetYear * 12 + targetMonth) <= finalMonthIndex {
+        guard let monthStart = calendar.date(from: DateComponents(year: targetYear, month: targetMonth, day: 1)) else {
+            break
+        }
+
+        let targetMonthIndex = monthIndex(for: monthStart, calendar: calendar)
+        let monthItems = groupedByDate.keys
+            .filter { $0 >= horizonStart && monthIndex(for: $0, calendar: calendar) == targetMonthIndex }
+            .sorted()
+            .flatMap { groupedByDate[$0] ?? [] }
+
+        appendIfRendered(
+            TodoTimelineSection(
+                id: "month-\(targetMonthIndex)",
+                title: monthTitle(for: monthStart, currentYear: currentYear, calendar: calendar),
+                items: monthItems,
+                isCollapsible: false,
+                targetDate: timelineRescheduleTargetDate(
+                    sectionId: "month-\(targetMonthIndex)",
+                    calendar: calendar
+                )
+            )
+        )
+
+        if targetMonth == 12 {
+            targetYear += 1
+            targetMonth = 1
+        } else {
+            targetMonth += 1
+        }
+    }
+
+    return sections
+}
+
+private func timelineDayTitle(for date: Date) -> String {
+    TodoTimelineFormatters.dayTitle().string(from: date)
+}
+
+private func timelineDateTimeText(_ date: Date) -> String {
+    TodoTimelineFormatters.dateTime().string(from: date)
+}
+
+private func monthTitle(for date: Date, currentYear: Int, calendar: Calendar) -> String {
+    let formatter: DateFormatter
+    if calendar.component(.year, from: date) == currentYear {
+        formatter = TodoTimelineFormatters.month()
+    } else {
+        formatter = TodoTimelineFormatters.monthAndYear()
+    }
+    return formatter.string(from: date)
+}
+
+private enum TodoTimelineFormatters {
+    static func dayTitle() -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("EEE MMM d")
+        return formatter
+    }
+
+    static func dateTime() -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("MMM d jmm")
+        return formatter
+    }
+
+    static func month() -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("LLLL")
+        return formatter
+    }
+
+    static func monthAndYear() -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("LLLL yyyy")
+        return formatter
+    }
+}
+
+private func monthIndex(for date: Date, calendar: Calendar) -> Int {
+    let year = calendar.component(.year, from: date)
+    let month = calendar.component(.month, from: date)
+    return year * 12 + month
+}
+
+func priorityColor(_ priority: String) -> Color {
+    if TaskPriorityDisplay.isUrgent(priority) {
+        return .red
+    }
+    if TaskPriorityDisplay.isImportant(priority) {
+        return .orange
+    }
+    if TaskPriorityDisplay.isLowest(priority) {
+        return tdayPriorityLowestColor
+    }
+    return .blue
+}
+
+/// #8E8E93 light / #98989D dark — matches the widget's `tdayPriorityLowest(Dark)`
+/// and Android's parallel colors.xml addition exactly. `priorityColor(_:)` is a
+/// free function called from several screens with no `@Environment(\.colorScheme)`
+/// of its own, so this resolves via a `UIColor` dynamic provider (like the
+/// system does for its own semantic colors) rather than switching explicitly.
+private let tdayPriorityLowestColor = Color(uiColor: UIColor { traits in
+    traits.userInterfaceStyle == .dark
+        ? UIColor(red: 152.0 / 255.0, green: 152.0 / 255.0, blue: 157.0 / 255.0, alpha: 1)
+        : UIColor(red: 142.0 / 255.0, green: 142.0 / 255.0, blue: 147.0 / 255.0, alpha: 1)
+})
+
+func priorityIndicatorSymbolName(_ priority: String) -> String? {
+    if TaskPriorityDisplay.isImportant(priority) {
+        return "flag.fill"
+    }
+    if TaskPriorityDisplay.isUrgent(priority) {
+        return "flag.fill"
+    }
+    return nil
+}
+
+/// Today's line follows the clock for the same reason its title does — the sun
+/// behind this very scene has already become a moon by then, and "No tasks for
+/// today" under a moon reads as yesterday's screen. `date` is the caller's minute
+/// tick (`watermarkedModeContent`'s `TimelineView`), not a fresh `Date()`, so the
+/// sentence and the watermark cross the boundary on the same frame.
+private func emptyTimelineMessage(for mode: TodoListMode, at date: Date = Date()) -> String {
+    switch mode {
+    case .today:
+        return TdayTimeOfDay.isDaytime(date) ? L("No tasks for today") : L("No tasks for tonight")
+    case .overdue:
+        return L("No overdue tasks")
+    case .scheduled:
+        return L("No scheduled tasks")
+    case .all:
+        return L("No tasks yet")
+    case .priority:
+        return L("No priority tasks")
+    case .floater:
+        return L("No floater tasks")
+    case .list:
+        return L("No tasks in this list")
+    }
+}
+
+/// The empty scene's title. Floater splits on whether a list is open: the root
+/// feed speaks about floaters at large, a list about its own.
+private func emptyTimelineTitle(for mode: TodoListMode, isListDetail: Bool, at date: Date = Date()) -> String {
+    if mode == .floater, isListDetail {
+        return L("No floaters in this list")
+    }
+    return emptyTimelineMessage(for: mode, at: date)
+}
+
+/// The line under it — what to do about the emptiness, phrased per screen so an
+/// empty screen still says where you are.
+private func emptyTimelineDescription(for mode: TodoListMode, isListDetail: Bool) -> String {
+    switch mode {
+    case .today:
+        return L("Add something for today and it will show up right here.")
+    case .overdue:
+        return L("Nothing has slipped past its due date.")
+    case .scheduled:
+        return L("Give a task a date and it will line up here.")
+    case .all:
+        return L("Everything you add shows up here, whatever its date.")
+    case .priority:
+        return L("Flag a task as priority and it will move up here.")
+    case .floater:
+        return isListDetail
+            ? L("Add a floater and it will wait right here.")
+            : L("Floaters have no due date — write one down and it will wait until you are ready.")
+    case .list:
+        return L("Add your first task and it will show up right here.")
+    }
+}
+
+/// The glyph on the empty scene's badge. Every mode but Today already owns a
+/// template asset; Today's watermark is an SF Symbol that follows the time of
+/// day, and the badge takes an asset only — so it takes the sun web's scope
+/// config gives Today at every hour.
+private func emptyTimelineBadgeAssetName(for mode: TodoListMode, listIconKey: String?, listName: String?) -> String {
+    emptyTimelineAssetName(for: mode, listIconKey: listIconKey, listName: listName) ?? "LucideSun"
+}
+
+/// Lucide template-asset watermark for the scheduled task home category modes, mirroring web.
+/// Returns nil for modes that keep their SF Symbol watermark (today/floater/list).
+///
+/// Resolves through `tdayResolvedListIconKey` — key first, name-inferred second — the same
+/// two-step the row-level `TdayListIcon` uses, rather than the raw `iconKey` alone. The
+/// `.floater` branch's blank-`listName` case is still special: that is the ROOT Anytime feed,
+/// where no list is selected at all, and it keeps the leaf that is the feed's own identity
+/// rather than falling through to inference on a name that doesn't exist. A CUSTOM Floater
+/// list's own detail screen passes its `listName` and infers exactly like `.list` mode does —
+/// this used to skip that and show the leaf for every custom Floater list with no chosen
+/// glyph, which was the bug this comment used to justify.
+private func emptyTimelineAssetName(for mode: TodoListMode, listIconKey: String?, listName: String?) -> String? {
+    switch mode {
+    case .overdue:
+        return "TileOverdue"
+    case .scheduled:
+        return "TileScheduled"
+    case .all:
+        return "TileAll"
+    case .priority:
+        return "TilePriority"
+    case .list:
+        return tdayLucideListAsset(tdayResolvedListIconKey(listIconKey, listName: listName))
+    case .floater:
+        guard let listName, !listName.isEmpty else {
+            return "LucideLeaf"
+        }
+        return tdayLucideListAsset(tdayResolvedListIconKey(listIconKey, listName: listName))
+    default:
+        return nil
+    }
+}
+
+private func emptyTimelineSystemImage(for mode: TodoListMode, listIconKey: String?, listName: String?, date: Date = Date()) -> String {
+    switch mode {
+    case .today:
+        return todoTimeOfDaySystemImage(for: date)
+    case .overdue:
+        return "exclamationmark.circle"
+    case .scheduled:
+        return "clock"
+    case .all:
+        return "tray.fill"
+    case .priority:
+        return "flag.fill"
+    case .floater:
+        guard let listName, !listName.isEmpty else {
+            return "leaf"
+        }
+        return todoListSymbolName(for: tdayResolvedListIconKey(listIconKey, listName: listName))
+    case .list:
+        return todoListSymbolName(for: tdayResolvedListIconKey(listIconKey, listName: listName))
+    }
+}
+
+private func todoModeAccentColor(_ mode: TodoListMode, listColorKey: String?) -> Color {
+    switch mode {
+    case .today:
+        return todoHexColor(0x5C9FE7)
+    case .overdue:
+        return todoHexColor(0xDA7661)
+    case .scheduled:
+        return todoHexColor(0xF29F38)
+    case .all:
+        return todoHexColor(0x5E6878)
+    case .priority:
+        return todoHexColor(0xE65E52)
+    case .floater:
+        if let listColorKey, !listColorKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return todoListAccentColor(for: listColorKey, isFloater: true)
+        }
+        return todoHexColor(0x4D8F83)
+    case .list:
+        return todoListAccentColor(for: listColorKey)
+    }
+}
+
+/// The list accent for a colour key, as every list-bearing screen draws it.
+///
+/// A thin name over `tdayListAccentColor(colorKey:)` rather than a table of its own. It used to
+/// carry its own copy of all fifteen values plus the two legacy aliases, and so did the Scheduled
+/// board's swatch picker, and so does the widget — three transcriptions of one palette, which is
+/// three chances for a list to be one colour in the app and another on the home screen. The shared
+/// table is the one the widget extension compiles, so this is now the same answer by construction
+/// instead of by a test refereeing three copies.
+///
+/// Kept as a function rather than replaced at its call sites because the name says WHAT is being
+/// asked for at thirty-odd of them, and `for:` reads better there than `colorKey:`.
+func todoListAccentColor(for key: String?, isFloater: Bool = false) -> Color {
+    tdayListAccentColor(colorKey: key, isFloater: isFloater)
+}
+
+private func todoBlendColor(_ lhs: Color, _ rhs: Color, amount: CGFloat) -> Color {
+    let lhsColor = UIColor(lhs)
+    let rhsColor = UIColor(rhs)
+    var lhsRed: CGFloat = 0
+    var lhsGreen: CGFloat = 0
+    var lhsBlue: CGFloat = 0
+    var lhsAlpha: CGFloat = 0
+    var rhsRed: CGFloat = 0
+    var rhsGreen: CGFloat = 0
+    var rhsBlue: CGFloat = 0
+    var rhsAlpha: CGFloat = 0
+    lhsColor.getRed(&lhsRed, green: &lhsGreen, blue: &lhsBlue, alpha: &lhsAlpha)
+    rhsColor.getRed(&rhsRed, green: &rhsGreen, blue: &rhsBlue, alpha: &rhsAlpha)
+    let mix = min(max(amount, 0), 1)
+    return Color(
+        uiColor: UIColor(
+            red: lhsRed + ((rhsRed - lhsRed) * mix),
+            green: lhsGreen + ((rhsGreen - lhsGreen) * mix),
+            blue: lhsBlue + ((rhsBlue - lhsBlue) * mix),
+            alpha: lhsAlpha + ((rhsAlpha - lhsAlpha) * mix)
+        )
+    )
+}
+
+private func normalizedTodoListColorKey(_ key: String?, isFloater: Bool = false) -> String {
+    switch key {
+    case "GREEN":
+        return "LIME"
+    case "GRAY":
+        return "SLATE"
+    case let value? where todoListSettingsColorKeys.contains(value):
+        return value
+    default:
+        return tdayDefaultListAccentColorKey(isFloater: isFloater)
+    }
+}
+
+private func normalizedTodoListIconKey(_ key: String?) -> String {
+    guard let key, todoListSettingsIconKeys.contains(key) else {
+        return "inbox"
+    }
+    return key
+}
+
+private func todoListSymbolName(for key: String?) -> String {
+    switch key {
+    case "sun":
+        return "sun.max.fill"
+    case "calendar":
+        return "calendar"
+    case "schedule":
+        return "clock"
+    case "flag":
+        return "flag.fill"
+    case "check":
+        return "checkmark"
+    case "smile":
+        return "face.smiling"
+    case "list":
+        return "list.bullet"
+    case "bookmark":
+        return "bookmark.fill"
+    case "key":
+        return "key.fill"
+    case "gift":
+        return "gift.fill"
+    case "cake":
+        return "birthday.cake.fill"
+    case "school":
+        return "graduationcap.fill"
+    case "bag":
+        return "backpack.fill"
+    case "edit":
+        return "pencil"
+    case "document":
+        return "doc.text.fill"
+    case "book":
+        return "book.closed.fill"
+    case "work":
+        return "briefcase.fill"
+    case "wallet":
+        return "wallet.pass.fill"
+    case "money":
+        return "dollarsign.circle.fill"
+    case "fitness":
+        return "dumbbell.fill"
+    case "run":
+        return "figure.run"
+    case "food":
+        return "fork.knife"
+    case "drink":
+        return "wineglass.fill"
+    case "health":
+        return "cross.case.fill"
+    case "monitor":
+        return "display"
+    case "music":
+        return "music.note"
+    case "computer":
+        return "desktopcomputer"
+    case "game":
+        return "gamecontroller.fill"
+    case "headphones":
+        return "headphones"
+    case "eco":
+        return "leaf.fill"
+    case "pets":
+        return "pawprint.fill"
+    case "child":
+        return "figure.2.and.child.holdinghands"
+    case "family":
+        return "person.3.fill"
+    case "basket":
+        return "basket.fill"
+    case "cart":
+        return "cart.fill"
+    case "mall":
+        return "bag.fill"
+    case "inventory":
+        return "archivebox.fill"
+    case "soccer":
+        return "soccerball"
+    case "baseball":
+        return "baseball.fill"
+    case "basketball":
+        return "basketball.fill"
+    case "football":
+        return "football.fill"
+    case "tennis":
+        return "tennis.racket"
+    case "train":
+        return "tram.fill"
+    case "flight":
+        return "airplane"
+    case "boat":
+        return "ferry.fill"
+    case "car":
+        return "car.fill"
+    case "umbrella":
+        return "umbrella.fill"
+    case "drop":
+        return "drop.fill"
+    case "snow":
+        return "snowflake"
+    case "fire":
+        return "flame.fill"
+    case "tools":
+        return "hammer.fill"
+    case "scissors":
+        return "scissors"
+    case "architecture", "bank":
+        return "building.columns.fill"
+    case "code":
+        return "chevron.left.forwardslash.chevron.right"
+    case "idea":
+        return "lightbulb.fill"
+    case "chat":
+        return "bubble.left.fill"
+    case "alert":
+        return "exclamationmark.triangle.fill"
+    case "star":
+        return "star.fill"
+    case "heart":
+        return "heart.fill"
+    case "circle":
+        return "circle.fill"
+    case "square":
+        return "square.fill"
+    case "triangle":
+        return "triangle.fill"
+    case "home":
+        return "house.fill"
+    case "city":
+        return "building.2.fill"
+    case "camera":
+        return "camera.fill"
+    case "palette":
+        return "paintpalette.fill"
+    default:
+        return "tray.fill"
+    }
+}
+
+private func todoHexColor(_ hex: UInt) -> Color {
+    Color(
+        .sRGB,
+        red: Double((hex >> 16) & 0xFF) / 255,
+        green: Double((hex >> 8) & 0xFF) / 255,
+        blue: Double(hex & 0xFF) / 255,
+        opacity: 1
+    )
+}

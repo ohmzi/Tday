@@ -1,0 +1,488 @@
+package com.ohmz.tday.compose.core.data.list
+
+import android.util.Log
+import com.ohmz.tday.compose.core.data.CachedCompletedRecord
+import com.ohmz.tday.compose.core.data.CachedListRecord
+import com.ohmz.tday.compose.core.data.CachedTodoRecord
+import com.ohmz.tday.compose.core.data.MutationKind
+import com.ohmz.tday.compose.core.data.OfflineSyncState
+import com.ohmz.tday.compose.core.data.PendingMutationRecord
+import com.ohmz.tday.compose.core.data.SecureConfigStore
+import com.ohmz.tday.compose.core.data.cache.LOCAL_LIST_PREFIX
+import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.cache.listFromCache
+import com.ohmz.tday.compose.core.data.cache.orderListsLikeWeb
+import com.ohmz.tday.compose.core.data.cache.parseOptionalInstant
+import com.ohmz.tday.compose.core.data.cache.replaceLocalListId
+import com.ohmz.tday.compose.core.data.isLikelyUnrecoverableMutationError
+import com.ohmz.tday.compose.core.data.requireApiBody
+import com.ohmz.tday.compose.core.data.sync.SyncManager
+import com.ohmz.tday.compose.core.model.CreateListRequest
+import com.ohmz.tday.compose.core.model.DeleteListRequest
+import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.UpdateListRequest
+import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
+import com.ohmz.tday.compose.core.network.TdayApiService
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class ListRepository @Inject constructor(
+    private val api: TdayApiService,
+    private val cacheManager: OfflineCacheManager,
+    private val secureConfigStore: SecureConfigStore,
+    private val syncManager: SyncManager,
+) {
+    suspend fun fetchLists(): List<ListSummary> {
+        return buildListsForState(cacheManager.loadOfflineState())
+    }
+
+    fun fetchListsSnapshot(): List<ListSummary> {
+        return buildListsForState(cacheManager.loadOfflineStateBlocking())
+    }
+
+    suspend fun createList(
+        name: String,
+        color: String? = null,
+        iconKey: String? = null,
+        defaultPriority: String? = null,
+    ) {
+        val normalizedName = capitalizeFirstListLetter(name).trim()
+        if (normalizedName.isBlank()) return
+
+        val localListId = "$LOCAL_LIST_PREFIX${UUID.randomUUID()}"
+        val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
+        cacheManager.updateOfflineState { state ->
+            val newList = CachedListRecord(
+                id = localListId,
+                name = normalizedName,
+                color = color,
+                iconKey = iconKey,
+                todoCount = 0,
+                createdAtEpochMs = timestampMs,
+                updatedAtEpochMs = timestampMs,
+                defaultPriority = defaultPriority,
+            )
+            state.copy(
+                lists = state.lists + newList,
+                pendingMutations = state.pendingMutations + PendingMutationRecord(
+                    mutationId = mutationId,
+                    kind = MutationKind.CREATE_LIST,
+                    targetId = localListId,
+                    timestampEpochMs = timestampMs,
+                    name = normalizedName,
+                    color = color,
+                    iconKey = iconKey,
+                    defaultPriority = defaultPriority,
+                    defaultPriorityChanged = true,
+                ),
+            )
+        }
+
+        if (syncManager.isLocalMode()) return
+
+        // Held for the whole request-plus-remap: a realtime self-echo of this
+        // very create can otherwise trigger a background sync whose fetch
+        // already contains the new server row while the placeholder above
+        // still carries its local_ id (see mergeRemoteWithLocal's doc
+        // comment) -- the union merge would then keep both. Sharing
+        // syncCachedData's lock means that fetch-and-merge can only run
+        // fully before this starts or fully after it finishes, never
+        // interleaved with it.
+        cacheManager.withSyncLock {
+            runCatching {
+                requireApiBody(
+                    api.createList(
+                        CreateListRequest(
+                            name = normalizedName,
+                            color = color,
+                            iconKey = iconKey,
+                            defaultPriority = defaultPriority,
+                        ),
+                    ),
+                    "Could not create list",
+                ).list
+            }.onSuccess { createdList ->
+                if (createdList == null) return@onSuccess
+                val createdAt =
+                    parseOptionalInstant(createdList.createdAt)?.toEpochMilli() ?: timestampMs
+                val updatedAt =
+                    parseOptionalInstant(createdList.updatedAt)?.toEpochMilli() ?: timestampMs
+                cacheManager.updateOfflineState { state ->
+                    val remapped = replaceLocalListId(
+                        state = state,
+                        localListId = localListId,
+                        serverListId = createdList.id,
+                    )
+                    val todoCount = remapped.todos.count { !it.completed && it.listId == createdList.id }
+                    remapped.copy(
+                        lists = remapped.lists.map { list ->
+                            if (list.id == createdList.id) {
+                                list.copy(
+                                    name = createdList.name,
+                                    color = createdList.color,
+                                    iconKey = createdList.iconKey ?: list.iconKey,
+                                    todoCount = todoCount,
+                                    updatedAtEpochMs = updatedAt,
+                                    createdAtEpochMs = createdAt,
+                                    defaultPriority = createdList.defaultPriority,
+                                )
+                            } else {
+                                list
+                            }
+                        },
+                        pendingMutations = remapped.pendingMutations.filterNot { it.mutationId == mutationId },
+                    )
+                }
+            }
+        }
+    }
+
+    suspend fun updateList(
+        listId: String,
+        name: String,
+        color: String? = null,
+        iconKey: String? = null,
+        defaultPriority: String? = null,
+        defaultPriorityChanged: Boolean = false,
+    ) {
+        val trimmedName = capitalizeFirstListLetter(name).trim()
+        if (listId.isBlank()) return
+        require(trimmedName.isNotBlank()) { "List name is required" }
+        Log.d(LOG_TAG, "updateList start hasColor=${color != null} hasIcon=${iconKey != null}")
+
+        val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
+        if (listId.startsWith(LOCAL_LIST_PREFIX)) {
+            cacheManager.updateOfflineState { state ->
+                state.copy(
+                    lists = state.lists.map { list ->
+                        if (list.id == listId) {
+                            list.copy(
+                                name = trimmedName,
+                                color = color ?: list.color,
+                                iconKey = iconKey ?: list.iconKey,
+                                updatedAtEpochMs = timestampMs,
+                                defaultPriority = if (defaultPriorityChanged) defaultPriority else list.defaultPriority,
+                            )
+                        } else {
+                            list
+                        }
+                    },
+                    pendingMutations = state.pendingMutations.map { mutation ->
+                        if (mutation.kind == MutationKind.CREATE_LIST && mutation.targetId == listId) {
+                            mutation.copy(
+                                name = trimmedName,
+                                color = color ?: mutation.color,
+                                iconKey = iconKey ?: mutation.iconKey,
+                                timestampEpochMs = timestampMs,
+                                defaultPriority = if (defaultPriorityChanged) defaultPriority else mutation.defaultPriority,
+                            )
+                        } else {
+                            mutation
+                        }
+                    },
+                )
+            }
+            iconKey?.takeIf { it.isNotBlank() }?.let {
+                secureConfigStore.saveListIcon(listId, it)
+            }
+            if (syncManager.isLocalMode()) return
+            syncManager.syncCachedData(force = true, replayPendingMutations = true)
+            Log.d(LOG_TAG, "updateList local-list path finished")
+            return
+        }
+
+        cacheManager.updateOfflineState { state ->
+            state.copy(
+                lists = state.lists.map { list ->
+                    if (list.id == listId) {
+                        list.copy(
+                            name = trimmedName,
+                            color = color ?: list.color,
+                            iconKey = iconKey ?: list.iconKey,
+                            updatedAtEpochMs = timestampMs,
+                            defaultPriority = if (defaultPriorityChanged) defaultPriority else list.defaultPriority,
+                        )
+                    } else {
+                        list
+                    }
+                },
+                pendingMutations = state.pendingMutations
+                    .filterNot { it.kind == MutationKind.UPDATE_LIST && it.targetId == listId } +
+                    PendingMutationRecord(
+                        mutationId = mutationId,
+                        kind = MutationKind.UPDATE_LIST,
+                        targetId = listId,
+                        timestampEpochMs = timestampMs,
+                        name = trimmedName,
+                        color = color,
+                        iconKey = iconKey,
+                        defaultPriority = defaultPriority,
+                        defaultPriorityChanged = defaultPriorityChanged,
+                    ),
+            )
+        }
+
+        if (syncManager.isLocalMode()) {
+            iconKey?.takeIf { it.isNotBlank() }?.let {
+                secureConfigStore.saveListIcon(listId, it)
+            }
+            return
+        }
+
+        Log.d(LOG_TAG, "updateList patch /api/list")
+        val pendingMutation = PendingMutationRecord(
+            mutationId = mutationId,
+            kind = MutationKind.UPDATE_LIST,
+            targetId = listId,
+            timestampEpochMs = timestampMs,
+            name = trimmedName,
+            color = color,
+            iconKey = iconKey,
+            defaultPriority = defaultPriority,
+            defaultPriorityChanged = defaultPriorityChanged,
+        )
+        val immediateError = runCatching {
+            requireApiBody(
+                api.patchListByBody(
+                    UpdateListRequest(
+                        id = listId,
+                        name = trimmedName,
+                        color = color,
+                        iconKey = iconKey,
+                        defaultPriority = defaultPriority,
+                        defaultPriorityChanged = defaultPriorityChanged,
+                    ),
+                ),
+                "Could not update list",
+            )
+        }.exceptionOrNull()
+
+        if (immediateError != null && isLikelyUnrecoverableMutationError(immediateError, pendingMutation)) {
+            throw immediateError
+        }
+
+        iconKey?.takeIf { it.isNotBlank() }?.let {
+            secureConfigStore.saveListIcon(listId, it)
+        }
+
+        if (immediateError == null) {
+            cacheManager.updateOfflineState { state ->
+                state.copy(
+                    pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId },
+                )
+            }
+            Log.d(LOG_TAG, "updateList success")
+        } else {
+            Log.w(LOG_TAG, "updateList deferred reason=${immediateError.javaClass.simpleName}")
+        }
+    }
+
+    /**
+     * Stage step of the delayed-commit list delete: prunes the list, its tasks and
+     * its completed items from the local cache exactly like the prune-half of
+     * [deleteList]. Nothing is sent to the server here — the real DELETE_LIST
+     * mutation is added by the commit step — but a non-replayable *staged* marker
+     * of the same kind is written in its place so a sync's merge (a pull-to-refresh
+     * racing the undo window) still treats the list as deleted instead of writing
+     * it back from the server response; see [PendingMutationRecord.staged] and
+     * SyncManager's replay/merge handling of it. The removed records are captured
+     * so [undoStagedListDeletion] can restore them exactly; the commit step is the
+     * existing [deleteList], whose prune-half re-runs as a no-op on the
+     * already-pruned state and whose own DELETE_LIST mutation naturally replaces
+     * this marker (same targetId).
+     *
+     * Runs inside [OfflineCacheManager.withSyncLock] — the same mutex a sync holds
+     * for its whole read-fetch-merge-save span (see [SyncManager.syncCachedData])
+     * — so this write can never land between a concurrent sync's pre-network
+     * state read and its post-network save. Without that, the sync's merge would
+     * be computed from a snapshot that still has the list, and its final save
+     * unconditionally overwrites the `lists` table with that stale merge,
+     * resurrecting the list this call just pruned (the staged marker survives
+     * via [mergeConcurrentlyQueuedMutations], but `lists` itself does not).
+     */
+    suspend fun stageDeleteList(listId: String): StagedListDeletion {
+        val normalizedListId = listId.trim()
+        if (normalizedListId.isBlank()) return StagedListDeletion()
+
+        var staged = StagedListDeletion()
+        cacheManager.withSyncLock {
+            cacheManager.updateOfflineState { state ->
+                val deletedTodoIds = state.todos
+                    .filter { it.listId == normalizedListId }
+                    .map { it.canonicalId }
+                    .toSet()
+
+                fun matchesMutation(mutation: PendingMutationRecord): Boolean =
+                    mutation.targetId == normalizedListId ||
+                        mutation.listId == normalizedListId ||
+                        deletedTodoIds.contains(mutation.targetId)
+
+                fun matchesCompleted(completed: CachedCompletedRecord): Boolean =
+                    completed.listId == normalizedListId ||
+                        completed.originalTodoId?.let(deletedTodoIds::contains) == true
+
+                val stagedMutationId = UUID.randomUUID().toString()
+                staged = StagedListDeletion(
+                    removedLists = state.lists.filter { it.id == normalizedListId },
+                    removedTodos = state.todos.filter { it.listId == normalizedListId },
+                    removedCompletedItems = state.completedItems.filter(::matchesCompleted),
+                    removedPendingMutations = state.pendingMutations.filter(::matchesMutation),
+                    stagedMutationId = stagedMutationId,
+                )
+                state.copy(
+                    lists = state.lists.filterNot { it.id == normalizedListId },
+                    todos = state.todos.filterNot { it.listId == normalizedListId },
+                    completedItems = state.completedItems.filterNot(::matchesCompleted),
+                    pendingMutations = state.pendingMutations.filterNot(::matchesMutation) +
+                        PendingMutationRecord(
+                            mutationId = stagedMutationId,
+                            kind = MutationKind.DELETE_LIST,
+                            targetId = normalizedListId,
+                            timestampEpochMs = System.currentTimeMillis(),
+                            staged = true,
+                        ),
+                )
+            }
+        }
+        return staged
+    }
+
+    /** Undo step: re-inserts the records captured by [stageDeleteList] and drops its
+     * staged marker mutation. Idempotent. */
+    suspend fun undoStagedListDeletion(staged: StagedListDeletion) {
+        cacheManager.updateOfflineState { state ->
+            val listIds = state.lists.map { it.id }.toSet()
+            val todoIds = state.todos.map { it.id }.toSet()
+            val completedIds = state.completedItems.map { it.id }.toSet()
+            val mutationIds = state.pendingMutations.map { it.mutationId }.toSet()
+            state.copy(
+                lists = state.lists +
+                    staged.removedLists.filterNot { it.id in listIds },
+                todos = state.todos +
+                    staged.removedTodos.filterNot { it.id in todoIds },
+                completedItems = state.completedItems +
+                    staged.removedCompletedItems.filterNot { it.id in completedIds },
+                pendingMutations = state.pendingMutations.filterNot { it.mutationId == staged.stagedMutationId } +
+                    staged.removedPendingMutations.filterNot { it.mutationId in mutationIds },
+            )
+        }
+    }
+
+    suspend fun deleteList(
+        listId: String,
+        onOptimisticDelete: () -> Unit = {},
+    ) {
+        val normalizedListId = listId.trim()
+        if (normalizedListId.isBlank()) return
+
+        val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
+        val pendingMutation = PendingMutationRecord(
+            mutationId = mutationId,
+            kind = MutationKind.DELETE_LIST,
+            targetId = normalizedListId,
+            timestampEpochMs = timestampMs,
+        )
+        val isLocalOnly = normalizedListId.startsWith(LOCAL_LIST_PREFIX)
+
+        cacheManager.updateOfflineState { state ->
+            val deletedTodoIds = state.todos
+                .filter { it.listId == normalizedListId }
+                .map { it.canonicalId }
+                .toSet()
+            val prunedMutations = state.pendingMutations.filterNot { mutation ->
+                mutation.targetId == normalizedListId ||
+                        mutation.listId == normalizedListId ||
+                        deletedTodoIds.contains(mutation.targetId)
+            }
+
+            state.copy(
+                lists = state.lists.filterNot { it.id == normalizedListId },
+                todos = state.todos.filterNot { it.listId == normalizedListId },
+                completedItems = state.completedItems.filterNot { completed ->
+                    completed.listId == normalizedListId ||
+                            completed.originalTodoId?.let(deletedTodoIds::contains) == true
+                },
+                pendingMutations = if (isLocalOnly) {
+                    prunedMutations
+                } else {
+                    prunedMutations + pendingMutation
+                },
+            )
+        }
+
+        onOptimisticDelete()
+
+        if (syncManager.isLocalMode()) return
+
+        if (isLocalOnly) {
+            syncManager.syncCachedData(force = true, replayPendingMutations = true)
+            return
+        }
+
+        val immediateError = runCatching {
+            requireApiBody(
+                api.deleteListByBody(DeleteListRequest(id = normalizedListId)),
+                "Could not delete list",
+            )
+        }.exceptionOrNull()
+
+        if (immediateError != null && isLikelyUnrecoverableMutationError(
+                immediateError,
+                pendingMutation
+            )
+        ) {
+            throw immediateError
+        }
+
+        if (immediateError == null) {
+            cacheManager.updateOfflineState { state ->
+                state.copy(
+                    pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId },
+                )
+            }
+            Log.d(LOG_TAG, "deleteList success")
+        } else {
+            Log.w(
+                LOG_TAG,
+                "deleteList deferred reason=${immediateError.javaClass.simpleName}"
+            )
+        }
+    }
+
+    private fun buildListsForState(state: OfflineSyncState): List<ListSummary> {
+        val todoCountsByList = state.todos
+            .asSequence()
+            .filterNot { it.completed }
+            .groupingBy { it.listId }
+            .eachCount()
+        return orderListsLikeWeb(state.lists).map {
+            listFromCache(cache = it, todoCountOverride = todoCountsByList[it.id] ?: 0)
+        }
+    }
+
+    private companion object {
+        const val LOG_TAG = "ListRepository"
+    }
+}
+
+/**
+ * Local cache records removed by [ListRepository.stageDeleteList], retained so an
+ * Undo within the delete-toast window can restore the exact pre-delete state
+ * (the list plus its cascaded tasks/completed items). Nothing here has been sent
+ * to the server. [stagedMutationId] identifies the non-replayable staged
+ * DELETE_LIST marker [ListRepository.stageDeleteList] wrote (see
+ * [PendingMutationRecord.staged]), so [ListRepository.undoStagedListDeletion] can
+ * remove it on Undo instead of leaving it stranded in the pending queue.
+ */
+data class StagedListDeletion(
+    val removedLists: List<CachedListRecord> = emptyList(),
+    val removedTodos: List<CachedTodoRecord> = emptyList(),
+    val removedCompletedItems: List<CachedCompletedRecord> = emptyList(),
+    val removedPendingMutations: List<PendingMutationRecord> = emptyList(),
+    val stagedMutationId: String? = null,
+)

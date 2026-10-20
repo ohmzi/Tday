@@ -1,0 +1,359 @@
+import { useMemo, useState } from "react";
+import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
+import { getDateFnsLocale } from "@/lib/date/dateFnsLocale";
+import {
+  Sun,
+} from "lucide-react";
+import ScreenWatermark from "@/components/app/ScreenWatermark";
+import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
+import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
+import TodoGroup from "@/components/todo/component/TodoGroup";
+import TodoMutationProvider from "@/providers/TodoMutationProvider";
+import {
+  type NativeRouteId,
+  scheduledTaskHomeCategoryRoutes,
+  isNativeRouteActive,
+  useNativeRouteCounts,
+} from "@/components/app/nativeRouteConfig";
+import { getDisplayDate } from "@/lib/date/displayDate";
+import { Link, useLocale, usePathname, useRouter } from "@/lib/navigation";
+import { cn } from "@/lib/utils";
+import { getListIconForList } from "@/lib/listIcons";
+import { DEFAULT_SCHEDULED_LIST_COLOR } from "@/lib/listColorMap";
+import type { ListColor } from "@/types";
+import { useRowPlacement } from "@/hooks/useRowPlacement";
+import { useSkeletonCrossfade } from "@/hooks/useSkeletonCrossfade";
+import { TaskRowSkeletonGroup } from "@/components/ui/TaskRowSkeleton";
+import { useUserTimezone } from "@/features/user/query/get-timezone";
+import { useTodo } from "@/features/todayTodos/query/get-todo";
+import { useTodoTimeline } from "@/features/todayTodos/query/get-todo-timeline";
+import { useCompleteTodo } from "@/features/todayTodos/query/complete-todo";
+import { useDeleteTodo } from "@/features/todayTodos/query/delete-todo";
+import { useEditTodo } from "@/features/todayTodos/query/update-todo";
+import { useEditTodoInstance } from "@/features/todayTodos/query/update-todo-instance";
+import { usePrioritizeTodo } from "@/features/todayTodos/query/prioritize-todo";
+import { useReorderTodo } from "@/features/todayTodos/query/reorder-todo";
+import { flattenNotesToPlainText } from "@/lib/richNotes";
+import { tileSurface } from "@/lib/tileSurface";
+
+import RootFeedHeroHeader from "@/components/app/RootFeedHeroHeader";
+const todayTileColor = "#6EA8E1";
+
+// Tile color + the i18n key (in the `scheduledTaskHome` namespace) for its label. Several of
+// these reuse the same wording as elsewhere in the app, but the scheduled task home grid uses
+// shorter forms (e.g. "All" rather than "All Tasks"), so they get their own keys.
+const scheduledTaskHomeTileConfig: Partial<
+  Record<NativeRouteId, { color: string; labelKey: string }>
+> = {
+  scheduled: { color: "#D98F4B", labelKey: "tileScheduled" },
+  priority: { color: "#C97880", labelKey: "tilePriority" },
+  overdue: { color: "#E06F66", labelKey: "tileOverdue" },
+  all: { color: "#68717A", labelKey: "tileAll" },
+  completed: { color: "#719F84", labelKey: "tileCompleted" },
+  calendar: { color: "#9A89D2", labelKey: "tileCalendar" },
+};
+
+const scheduledTaskHomeTileOrder: NativeRouteId[] = [
+  "scheduled",
+  "priority",
+  "overdue",
+  "all",
+  "completed",
+  "calendar",
+];
+
+const listColorCss: Record<ListColor, string> = {  RED: "hsl(var(--accent-red))",
+  ORANGE: "hsl(var(--accent-orange))",
+  YELLOW: "hsl(var(--accent-yellow))",
+  LIME: "hsl(var(--accent-lime))",
+  BLUE: "hsl(var(--accent-blue))",
+  PURPLE: "hsl(var(--accent-purple))",
+  PINK: "hsl(var(--accent-pink))",
+  TEAL: "hsl(var(--accent-teal))",
+  CORAL: "hsl(var(--accent-coral))",
+  GOLD: "hsl(var(--accent-gold))",
+  DEEP_BLUE: "hsl(var(--accent-deep-blue))",
+  ROSE: "hsl(var(--accent-rose))",
+  LIGHT_RED: "hsl(var(--accent-light-red))",
+  BRICK: "hsl(var(--accent-brick))",
+  SLATE: "hsl(var(--accent-slate))",
+};
+
+function renderTileOverlay() {
+  return (
+    <>
+      <div className="pointer-events-none absolute -left-14 -top-20 h-44 w-52 rounded-full bg-white/20 blur-2xl" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.12),rgba(231,243,255,0.10)_45%,rgba(255,242,250,0.08)_68%,transparent)]" />
+    </>
+  );
+}
+
+function formatListName(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
+export default function NativeScheduledTaskHomeDashboard() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const locale = useLocale();
+  const { t: scheduledTaskHomeDict } = useTranslation("scheduledTaskHome");
+  const { t: appDict } = useTranslation("app");
+  const { t: sidebarDict } = useTranslation("sidebar");
+  const userTimeZone = useUserTimezone();
+  const counts = useNativeRouteCounts();
+  const { todos: todayTodos, todoLoading } = useTodo();
+  const { todos: timelineTodos } = useTodoTimeline();
+  const { listMetaData } = useListMetaData();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [createListOpen, setCreateListOpen] = useState(false);
+  const placementRef = useRowPlacement<HTMLDivElement>();
+  // This screen drew nothing at all while its tasks were in flight — the tiles
+  // simply sat above an empty column until the rows appeared under them. Its
+  // sibling root feed (`NativeFloaterTaskHomeDashboard`) has always shown a
+  // placeholder, and two root feeds that load differently are two root feeds.
+  const { showSkeleton, skeletonClassName } = useSkeletonCrossfade(todoLoading);
+  const titleDate = format(new Date(), "EEE, MMM d", {
+    locale: getDateFnsLocale(locale),
+  });
+
+  // Per-list active task counts, derived live from the task cache (the server's
+  // todoCount can be stale/0). Mirrors native, which shows real counts.
+  const listCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const todo of timelineTodos) {
+      if (todo.completed || !todo.listID) continue;
+      counts[todo.listID] = (counts[todo.listID] ?? 0) + 1;
+    }
+    return counts;
+  }, [timelineTodos]);
+
+  const lists = useMemo(() => {
+    return Object.entries(listMetaData)
+      .filter(([, list]) => Boolean(list.name?.trim()))
+      .map(([id, list]) => ({ id, ...list, count: listCounts[id] ?? 0 }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+  }, [listMetaData, listCounts]);
+
+  // Today's incomplete tasks, shown inline on the scheduled task home screen (same data as the
+  // Today screen), sorted by due time.
+  const todayIncomplete = useMemo(
+    () =>
+      todayTodos
+        .filter((todo) => !todo.completed)
+        .slice()
+        .sort((a, b) => a.due.getTime() - b.due.getTime()),
+    [todayTodos],
+  );
+
+  const searchableTodos = useMemo(() => {
+    return timelineTodos
+      .filter((todo) => {
+        const query = searchQuery.trim().toLowerCase();
+        if (!query) return false;
+        const listName = todo.listID ? listMetaData[todo.listID]?.name ?? "" : "";
+        return (
+          todo.title.toLowerCase().includes(query) ||
+          flattenNotesToPlainText(todo.description).toLowerCase().includes(query) ||
+          listName.toLowerCase().includes(query)
+        );
+      })
+      .slice(0, 8);
+  }, [listMetaData, searchQuery, timelineTodos]);
+
+  return (
+    <TodoMutationProvider
+      useCompleteTodo={useCompleteTodo}
+      useDeleteTodo={useDeleteTodo}
+      useEditTodo={useEditTodo}
+      useEditTodoInstance={useEditTodoInstance}
+      usePrioritizeTodo={usePrioritizeTodo}
+      useReorderTodo={useReorderTodo}
+    >
+      <ScreenWatermark icon={Sun} />
+      {/* The column's children travel when one of them leaves. The Today section below
+          is the reason: it is conditional on there being an incomplete task left, so
+          checking off the last one unmounts the whole wrapper — and a flex child takes
+          the column's `gap` with it, which the row's own collapse never accounts for
+          because that collapse happens inside the section. The tile grid and the list
+          rows below were dropped by that gap in the frame after the row had finished
+          closing neatly. */}
+      <div ref={placementRef} className="flex w-full flex-col gap-4 sm:gap-5">
+        <RootFeedHeroHeader
+          title="T'Day"
+          mark="timeOfDay"
+          searchOpen={searchOpen}
+          searchQuery={searchQuery}
+          searchPlaceholder={scheduledTaskHomeDict("searchScheduledPlaceholder")}
+          searchPlaceholderShort={appDict("searchShort")}
+          searchAriaLabel={appDict("searchTasks")}
+          createListAriaLabel={appDict("newList")}
+          settingsAriaLabel={sidebarDict("settings")}
+          onSearchQueryChange={setSearchQuery}
+          onSearchOpenChange={(open) => {
+            setSearchOpen(open);
+            setSearchQuery("");
+          }}
+          onCreateList={() => setCreateListOpen(true)}
+          onOpenSettings={() => router.push("/app/settings")}
+          results={
+            searchQuery.trim() ? (
+              <div className="max-h-72 overflow-y-auto rounded-[28px] border border-white/70 bg-card/95 p-2 shadow-[0_16px_36px_-30px_hsl(var(--shadow)/0.55)] dark:border-white/10">
+                {searchableTodos.length === 0 ? (
+                  <p className="px-3 py-4 text-sm font-extrabold text-muted-foreground">
+                    {scheduledTaskHomeDict("noMatchingTasks")}
+                  </p>
+                ) : (
+                  searchableTodos.map((todo) => (
+                    <button
+                      type="button"
+                      key={todo.id}
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-muted/65"
+                      onClick={() => router.push(`/app/todo?todo=${encodeURIComponent(todo.id)}`)}
+                    >
+                      <span className="h-2.5 w-2.5 rounded-full bg-accent" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-black text-foreground">
+                          {todo.title}
+                        </span>
+                        <span className="block truncate text-xs font-extrabold text-muted-foreground">
+                          {getDisplayDate(todo.due, true, locale, userTimeZone?.timeZone)}
+                        </span>
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : null
+          }
+        />
+
+        <Link
+          href="/app/today"
+          className="relative flex h-[70px] items-center justify-between overflow-hidden rounded-[26px] px-5 text-foreground shadow-[0_14px_30px_-18px_rgba(50,90,130,0.62)] transition-transform duration-enter hover:-translate-y-0.5 active:translate-y-0.5"
+          style={{ background: tileSurface(todayTileColor) }}
+        >
+          {renderTileOverlay()}
+          <span className="relative truncate text-[1.38rem] font-black leading-none tracking-tight">
+            {titleDate}
+          </span>
+          <span className="relative text-[2.1rem] font-black leading-none">
+            {counts.today ?? todayTodos.length}
+          </span>
+        </Link>
+
+        {/* One column child for the whole Today block, placeholder and rows alike, so the
+            fading placeholder never buys a second `gap` from the column above it — the
+            exiting skeleton releases its height immediately and keeps painting, and a
+            second flex item would have held 16 px open for the length of the fade and then
+            dropped it. The wrapper goes when both halves are gone, which is the same single
+            departure the column's own comment above describes. */}
+        {(showSkeleton || todayIncomplete.length > 0) && (
+          <div>
+            {showSkeleton && (
+              <div className={skeletonClassName}>
+                <TaskRowSkeletonGroup />
+              </div>
+            )}
+            {todayIncomplete.length > 0 && (
+              <section className="tday-content-enter space-y-1">
+                <TodoGroup
+                  todos={todayIncomplete}
+                  reorderable={false}
+                  perTaskOverdue
+                  showOverdueTag={false}
+                />
+              </section>
+            )}
+          </div>
+        )}
+
+        <section className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
+          {[...scheduledTaskHomeCategoryRoutes]
+            .sort((a, b) => scheduledTaskHomeTileOrder.indexOf(a.id) - scheduledTaskHomeTileOrder.indexOf(b.id))
+            .map((route) => {
+            const Icon = route.icon;
+            const active = isNativeRouteActive(pathname, route);
+            const count = counts[route.id];
+            const tile = scheduledTaskHomeTileConfig[route.id];
+            const tileLabel = tile ? scheduledTaskHomeDict(tile.labelKey) : route.label;
+
+            return (
+              <Link
+                key={route.id}
+                href={route.path}
+                className={cn(
+                  "group relative min-h-[94px] overflow-hidden rounded-[26px] p-3 text-foreground",
+                  "shadow-[0_14px_30px_-18px_rgba(60,70,90,0.55)] transition-transform duration-enter",
+                  "hover:-translate-y-0.5 active:translate-y-0.5",
+                  active && "ring-2 ring-foreground/25",
+                )}
+                style={{ background: tileSurface(tile?.color) }}
+              >
+                {renderTileOverlay()}
+                <Icon className="pointer-events-none absolute -bottom-6 -right-5 h-24 w-24 text-foreground/15 stroke-[1.8]" />
+                <div className="relative flex h-full flex-col justify-between">
+                  <div className="flex items-start justify-between gap-3">
+                    <Icon className="h-6 w-6 text-foreground stroke-[2.5]" />
+                    {count != null && (
+                      <span className="text-[1.72rem] font-black leading-none">
+                        {count}
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-[1.28rem] font-black leading-6 tracking-tight">
+                      {tileLabel}
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </section>
+
+        {lists.length > 0 && (
+          <section className="space-y-2 pb-2 pt-12 sm:pt-0">
+            <h2 className="px-1 text-[1.75rem] font-black leading-8 text-foreground">
+              {appDict("myFloaterLists")}
+            </h2>
+            <div className="space-y-2">
+              {lists.map((list) => {
+                const accent = listColorCss[list.color ?? DEFAULT_SCHEDULED_LIST_COLOR];
+                const ListIcon = getListIconForList(list);
+
+                return (
+                  <Link
+                    key={list.id}
+                    href={`/app/list/${list.id}`}
+                    aria-label={scheduledTaskHomeDict("openList", { name: formatListName(list.name) })}
+                    className="relative flex h-[70px] items-center gap-3 overflow-hidden rounded-[26px] px-5 text-foreground shadow-[0_14px_30px_-18px_rgba(60,70,90,0.45)] transition-transform duration-enter hover:-translate-y-0.5 active:translate-y-0.5"
+                    style={{
+                      background: tileSurface(accent),
+                    }}
+                  >
+                    {renderTileOverlay()}
+                    <ListIcon className="pointer-events-none absolute -bottom-9 -right-7 h-28 w-28 text-foreground/15 stroke-[1.75]" />
+                    <ListIcon className="relative h-6 w-6 shrink-0 text-foreground stroke-[2.5]" />
+                    <span className="relative min-w-0 flex-1 truncate text-[1.38rem] font-black leading-none tracking-tight">
+                      {formatListName(list.name)}
+                    </span>
+                    <span className="relative text-[1.5rem] font-black leading-none">
+                      {list.count}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+      </div>
+
+      <ListFormSheet open={createListOpen} onOpenChange={setCreateListOpen} />
+    </TodoMutationProvider>
+  );
+}

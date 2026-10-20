@@ -1,0 +1,546 @@
+package com.ohmz.tday.compose.feature.scheduledtaskhome
+
+import android.content.Context
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.list.ListRepository
+import com.ohmz.tday.compose.core.data.settings.SettingsRepository
+import com.ohmz.tday.compose.core.data.sync.SyncManager
+import com.ohmz.tday.compose.core.data.todo.StagedTodoCompletion
+import com.ohmz.tday.compose.core.data.todo.StagedTodoDeletion
+import com.ohmz.tday.compose.core.data.todo.TodoRepository
+import com.ohmz.tday.compose.core.model.CreateTaskPayload
+import com.ohmz.tday.compose.core.model.DashboardSummary
+import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.core.model.TodoListMode
+import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
+import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
+import com.ohmz.tday.compose.core.ui.SnackbarManager
+import com.ohmz.tday.compose.core.ui.UndoableDeleteCoordinator
+import com.ohmz.tday.compose.core.ui.userFacingMessage
+import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import javax.inject.Inject
+
+data class ScheduledTaskHomeUiState(
+    val isLoading: Boolean = true,
+    val summary: DashboardSummary = DashboardSummary(
+        todayCount = 0,
+        scheduledCount = 0,
+        allCount = 0,
+        priorityCount = 0,
+        completedCount = 0,
+        lists = emptyList(),
+    ),
+    val searchableTodos: List<TodoItem> = emptyList(),
+    val todayTodos: List<TodoItem> = emptyList(),
+    val errorMessage: String? = null,
+    val aiSummaryEnabled: Boolean = true,
+    val aiSummaryConfigured: Boolean = false,
+    val summaryText: String? = null,
+    val summarySource: String? = null,
+    val summaryGeneratedAt: String? = null,
+    val summaryError: String? = null,
+    val isSummarizing: Boolean = false,
+)
+
+private data class ScheduledTaskHomeSnapshot(
+    val summary: DashboardSummary,
+    val searchableTodos: List<TodoItem>,
+    val todayTodos: List<TodoItem>,
+    val aiSummaryEnabled: Boolean,
+    val aiSummaryConfigured: Boolean,
+)
+
+@HiltViewModel
+class ScheduledTaskHomeViewModel @Inject constructor(
+    private val todoRepository: TodoRepository,
+    private val completedRepository: com.ohmz.tday.compose.core.data.completed.CompletedRepository,
+    private val listRepository: ListRepository,
+    private val settingsRepository: SettingsRepository,
+    private val syncManager: SyncManager,
+    private val cacheManager: OfflineCacheManager,
+    private val reminderScheduler: TaskReminderScheduler,
+    private val snackbarManager: SnackbarManager,
+    private val undoableDeleteCoordinator: UndoableDeleteCoordinator,
+    @ApplicationContext private val appContext: Context,
+) : ViewModel() {
+    private var activeLoadingRefreshes = 0
+
+    /// Resolves the user-facing message for a failed mutation and surfaces it as
+    /// an error toast (in addition to the inline error state callers still set).
+    /**
+     * Surfaces a failed user action as an error toast only — matching the unified
+     * toast policy (and the iOS app). Returns null so callers clear the inline
+     * error card; the toast is the single surface for action failures.
+     */
+    private fun mutationFailureMessage(
+        error: Throwable,
+        @androidx.annotation.StringRes fallbackRes: Int,
+    ): String? {
+        snackbarManager.showError(error.userFacingMessage(appContext, fallbackRes))
+        return null
+    }
+
+    private val _uiState = MutableStateFlow(
+        runCatching {
+            ScheduledTaskHomeUiState(
+                isLoading = false,
+                summary = todoRepository.fetchDashboardSummarySnapshot(),
+                searchableTodos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL),
+                todayTodos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.TODAY),
+                errorMessage = null,
+                aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot(),
+                aiSummaryConfigured = settingsRepository.aiSummaryConfiguredSnapshot(),
+            )
+        }.getOrElse { ScheduledTaskHomeUiState() },
+    )
+    val uiState: StateFlow<ScheduledTaskHomeUiState> = _uiState.asStateFlow()
+
+    init {
+        observeCacheChanges()
+    }
+
+    private fun observeCacheChanges() {
+        viewModelScope.launch {
+            cacheManager.cacheDataVersion
+                .collect {
+                    refreshFromCache()
+                }
+        }
+    }
+
+    fun refreshFromCache() {
+        runCatching {
+            ScheduledTaskHomeSnapshot(
+                summary = todoRepository.fetchDashboardSummarySnapshot(),
+                searchableTodos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL),
+                todayTodos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.TODAY),
+                aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot(),
+                aiSummaryConfigured = settingsRepository.aiSummaryConfiguredSnapshot(),
+            )
+        }.onSuccess { snapshot ->
+            _uiState.update { current ->
+                current.copy(
+                    isLoading = activeLoadingRefreshes > 0,
+                    summary = if (current.summary == snapshot.summary) current.summary else snapshot.summary,
+                    searchableTodos = if (current.searchableTodos == snapshot.searchableTodos) {
+                        current.searchableTodos
+                    } else {
+                        snapshot.searchableTodos
+                    },
+                    todayTodos = if (current.todayTodos == snapshot.todayTodos) current.todayTodos else snapshot.todayTodos,
+                    aiSummaryEnabled = snapshot.aiSummaryEnabled,
+                    aiSummaryConfigured = snapshot.aiSummaryConfigured,
+                    errorMessage = null,
+                )
+            }
+        }.onFailure { error ->
+            _uiState.update { current ->
+                current.copy(
+                    isLoading = activeLoadingRefreshes > 0,
+                    errorMessage = error.userFacingMessage(appContext, R.string.error_load_dashboard_failed),
+                )
+            }
+        }
+    }
+
+    fun refresh(userInitiated: Boolean = false) {
+        refreshInternal(forceSync = true, showLoading = true, userInitiated = userInitiated)
+    }
+
+    private fun refreshInternal(
+        forceSync: Boolean,
+        showLoading: Boolean,
+        userInitiated: Boolean = false,
+    ) {
+        viewModelScope.launch {
+            if (showLoading) activeLoadingRefreshes += 1
+            try {
+                if (showLoading) {
+                    _uiState.update { current ->
+                        if (current.isLoading && current.errorMessage == null) current
+                        else current.copy(isLoading = true, errorMessage = null)
+                    }
+                } else {
+                    _uiState.update { current ->
+                        if (current.errorMessage == null) current else current.copy(errorMessage = null)
+                    }
+                }
+                runCatching {
+                    if (forceSync) {
+                        syncManager.syncCachedData(
+                            force = true,
+                            replayPendingMutations = true,
+                            userInitiated = userInitiated,
+                            connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+                        )
+                            .onFailure { /* fall back to local cache */ }
+                    }
+                    ScheduledTaskHomeSnapshot(
+                        summary = todoRepository.fetchDashboardSummary(),
+                        searchableTodos = todoRepository.fetchTodos(mode = TodoListMode.ALL),
+                        todayTodos = todoRepository.fetchTodos(mode = TodoListMode.TODAY),
+                        aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot(),
+                        aiSummaryConfigured = settingsRepository.aiSummaryConfiguredSnapshot(),
+                    )
+                }.onSuccess { snapshot ->
+                    _uiState.update { current ->
+                        val keepLoading = activeLoadingRefreshes > if (showLoading) 1 else 0
+                        current.copy(
+                            isLoading = keepLoading,
+                            summary = if (current.summary == snapshot.summary) current.summary else snapshot.summary,
+                            searchableTodos = if (current.searchableTodos == snapshot.searchableTodos) {
+                                current.searchableTodos
+                            } else {
+                                snapshot.searchableTodos
+                            },
+                            todayTodos = if (current.todayTodos == snapshot.todayTodos) current.todayTodos else snapshot.todayTodos,
+                            aiSummaryEnabled = snapshot.aiSummaryEnabled,
+                            aiSummaryConfigured = snapshot.aiSummaryConfigured,
+                            errorMessage = null,
+                        )
+                    }
+                }.onFailure { error ->
+                    _uiState.update { current ->
+                        val keepLoading = activeLoadingRefreshes > if (showLoading) 1 else 0
+                        current.copy(
+                            isLoading = keepLoading,
+                            errorMessage = error.userFacingMessage(appContext, R.string.error_load_dashboard_failed),
+                        )
+                    }
+                }
+            } finally {
+                if (showLoading) activeLoadingRefreshes = maxOf(activeLoadingRefreshes - 1, 0)
+            }
+        }
+    }
+
+    fun summarizeToday() {
+        val current = _uiState.value
+        if (current.isSummarizing) return
+        if (!current.aiSummaryEnabled) {
+            _uiState.update {
+                it.copy(summaryError = appContext.getString(R.string.todos_summary_admin_disabled))
+            }
+            return
+        }
+        _uiState.update {
+            it.copy(
+                isSummarizing = true,
+                summaryText = null,
+                summarySource = null,
+                summaryGeneratedAt = null,
+                summaryError = null,
+            )
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                todoRepository.summarizeTodos(mode = TodoListMode.TODAY)
+            }.onSuccess { response ->
+                _uiState.update {
+                    it.copy(
+                        isSummarizing = false,
+                        summaryText = response.summary,
+                        summarySource = response.source,
+                        summaryGeneratedAt = response.generatedAt,
+                        summaryError = null,
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isSummarizing = false,
+                        summaryError = error.userFacingMessage(
+                            appContext,
+                            R.string.error_summarize_tasks_failed,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    fun createList(name: String, color: String? = null, iconKey: String? = null) {
+        val normalizedName = capitalizeFirstListLetter(name).trim()
+        if (normalizedName.isBlank()) return
+        viewModelScope.launch {
+            runCatching { listRepository.createList(normalizedName, color = color, iconKey = iconKey) }
+                .onSuccess { refreshInternal(forceSync = false, showLoading = false) }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            errorMessage = mutationFailureMessage(
+                                error,
+                                R.string.error_create_list_failed
+                            )
+                        )
+                    }
+                }
+        }
+    }
+
+    fun createTask(payload: CreateTaskPayload) {
+        if (payload.title.isBlank()) return
+        viewModelScope.launch {
+            // Schedule OFF in the sheet asks for an unscheduled task, and an unscheduled
+            // task is a Floater — a todo's due is not nullable. Creating a todo here let
+            // the repository supply a due an hour out, so the toggle appeared to do nothing.
+            // The list picker offers scheduled lists and the two list types are separate,
+            // so membership stays behind (the server would refuse the id as a floater list).
+            runCatching {
+                if (payload.due == null) {
+                    todoRepository.createFloater(payload.copy(listId = null))
+                } else {
+                    todoRepository.createTodo(payload)
+                }
+            }
+                .onSuccess {
+                    rescheduleReminders()
+                    runCatching { todoRepository.fetchDashboardSummaryCached() }
+                        .onSuccess { summary ->
+                            val todos = runCatching {
+                                todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL)
+                            }.getOrDefault(emptyList())
+                            _uiState.update { current ->
+                                current.copy(
+                                    summary = if (current.summary == summary) current.summary else summary,
+                                    searchableTodos = if (current.searchableTodos == todos) {
+                                        current.searchableTodos
+                                    } else {
+                                        todos
+                                    },
+                                    errorMessage = null,
+                                )
+                            }
+                        }
+                        .onFailure { refreshInternal(forceSync = false, showLoading = false) }
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            errorMessage = mutationFailureMessage(
+                                error,
+                                R.string.error_create_task_failed
+                            )
+                        )
+                    }
+                }
+        }
+    }
+
+    fun updateTask(todo: TodoItem, payload: CreateTaskPayload) {
+        val normalizedTitle = payload.title.trim()
+        if (normalizedTitle.isBlank()) return
+
+        val normalizedPriority = canonicalPriorityValue(payload.priority)
+        val normalizedDescription = payload.description?.trim()?.ifBlank { null }
+        val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
+        val normalizedPayload = CreateTaskPayload(
+            title = normalizedTitle,
+            description = normalizedDescription,
+            priority = normalizedPriority,
+            due = payload.due,
+            rrule = payload.rrule,
+            listId = normalizedListId,
+        )
+
+        val previousState = _uiState.value
+        val updatedTodo = todo.copy(
+            title = normalizedTitle,
+            description = normalizedDescription,
+            priority = normalizedPriority,
+            due = payload.due,
+            rrule = payload.rrule,
+            listId = normalizedListId,
+        )
+
+        _uiState.update { current ->
+            current.copy(
+                searchableTodos = current.searchableTodos.map { item ->
+                    if (item.id == todo.id) updatedTodo else item
+                },
+                errorMessage = null,
+            )
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                todoRepository.updateTodo(todo = todo, payload = normalizedPayload)
+            }.onSuccess {
+                refreshAfterMutation()
+            }.onFailure { error ->
+                _uiState.value = previousState.copy(
+                    errorMessage = mutationFailureMessage(error, R.string.error_update_task_failed),
+                )
+            }
+        }
+    }
+
+    private fun rescheduleReminders() {
+        viewModelScope.launch(Dispatchers.Default) {
+            runCatching { reminderScheduler.rescheduleAll() }
+        }
+    }
+
+    suspend fun parseTaskTitleNlp(
+        text: String,
+        referenceDueEpochMs: Long,
+    ): TodoTitleNlpResponse? {
+        return todoRepository.parseTodoTitleNlp(
+            text = text,
+            referenceDueEpochMs = referenceDueEpochMs,
+        )
+    }
+
+    /** "Make this repeat?" — a preset RRULE when the completed history shows a steady
+     * cadence for [title], else null. Feeds the create-sheet suggestion chip. */
+    suspend fun suggestRepeatRrule(title: String): String? {
+        // The history mapping (`fetchCompletedItems` maps every row on the caller's thread after
+        // its own IO hop) and the suggestion engine (one grammar parse per completion) are pure
+        // CPU work over the whole completed history; keep them off the caller's (Main) thread.
+        return withContext(Dispatchers.Default) {
+            val completions = completedRepository.fetchCompletedItems().mapNotNull { item ->
+                item.completedAt?.let {
+                    com.ohmz.tday.shared.nlp.RepeatSuggestionEngine.Completion(item.title, it.toEpochMilli())
+                }
+            }
+            com.ohmz.tday.shared.nlp.RepeatSuggestionEngine.suggest(title, completions)
+        }
+    }
+
+    fun completeTodo(todo: TodoItem) {
+        val previousToday = _uiState.value.todayTodos
+        _uiState.update { current ->
+            current.copy(todayTodos = current.todayTodos.filterNot { it.id == todo.id })
+        }
+        stageComplete(todo) {
+            _uiState.update { it.copy(todayTodos = previousToday) }
+        }
+    }
+
+    /**
+     * Delayed-commit complete. Staged into the CACHE, not just into the screen's
+     * own list: this ViewModel re-hydrates from that cache on every
+     * `cacheDataVersion` bump, so a UI-only removal is restored by the next sync
+     * (which still reads the row as pending until the commit lands) — the
+     * reappear-then-leave the user reported. Mirrors [deleteTodo], which stages
+     * for the same reason.
+     */
+    private fun stageComplete(todo: TodoItem, onUndo: () -> Unit) {
+        viewModelScope.launch {
+            runCatching { todoRepository.stageTodoCompletions(listOf(todo)) }
+                .onSuccess { staged ->
+                    showUndoableTaskComplete(todo, staged, onUndo)
+                    refreshInternal(forceSync = false, showLoading = false)
+                }
+                .onFailure { error ->
+                    onUndo()
+                    _uiState.update {
+                        it.copy(
+                            errorMessage = mutationFailureMessage(
+                                error,
+                                R.string.error_update_task_failed
+                            )
+                        )
+                    }
+                }
+        }
+    }
+
+    // Delayed-commit complete: the staged write is already in the cache; show an
+    // undoable toast, release the staged marker after the window, or reverse the
+    // write on Undo. Mirrors [showUndoableTaskDelete].
+    private fun showUndoableTaskComplete(
+        todo: TodoItem,
+        staged: StagedTodoCompletion,
+        onUndo: () -> Unit,
+    ) {
+        undoableDeleteCoordinator.showUndoableComplete(
+            message = appContext.getString(R.string.task_completed_toast),
+            onCommit = {
+                todoRepository.commitStagedTodoCompletions(listOf(todo))
+                // Runs on the coordinator scope: this ViewModel may be gone.
+                runCatching { reminderScheduler.rescheduleAllOffMain() }
+            },
+            onUndo = {
+                todoRepository.undoStagedTodoCompletion(staged)
+                runCatching { reminderScheduler.rescheduleAllOffMain() }
+                onUndo()
+            },
+        )
+    }
+
+    fun deleteTodo(todo: TodoItem) {
+        _uiState.update { current ->
+            current.copy(todayTodos = current.todayTodos.filterNot { it.id == todo.id })
+        }
+        viewModelScope.launch {
+            // Delayed-commit delete; also gives ScheduledTaskHomeScreen deletes the same
+            // "Task deleted" toast as every other surface.
+            runCatching { todoRepository.stageDeleteTodo(todo) }
+                .onSuccess { staged ->
+                    showUndoableTaskDelete(todo, staged)
+                    refreshInternal(forceSync = false, showLoading = false)
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            errorMessage = mutationFailureMessage(
+                                error,
+                                R.string.error_delete_task_failed
+                            )
+                        )
+                    }
+                    refreshFromCache()
+                }
+        }
+    }
+
+    private fun showUndoableTaskDelete(todo: TodoItem, staged: StagedTodoDeletion) {
+        undoableDeleteCoordinator.showUndoableDelete(
+            message = appContext.getString(R.string.task_deleted_toast),
+            onCommit = { todoRepository.deleteTodo(todo) },
+            onUndo = {
+                todoRepository.undoStagedTodoDeletion(staged)
+                // Runs on the coordinator scope: this ViewModel may be gone by
+                // the time Undo restores a reminder-bearing task.
+                runCatching { reminderScheduler.rescheduleAllOffMain() }
+            },
+        )
+    }
+
+    val lists: List<ListSummary>
+        get() = _uiState.value.summary.lists
+
+    private fun refreshAfterMutation() {
+        runCatching {
+            val summary = todoRepository.fetchDashboardSummarySnapshot()
+            val todos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL)
+            summary to todos
+        }.onSuccess { (summary, todos) ->
+            _uiState.update { current ->
+                current.copy(
+                    summary = if (current.summary == summary) current.summary else summary,
+                    searchableTodos = if (current.searchableTodos == todos) current.searchableTodos else todos,
+                    errorMessage = null,
+                )
+            }
+        }.onFailure {
+            refreshInternal(forceSync = false, showLoading = false)
+        }
+    }
+}

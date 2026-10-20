@@ -1,0 +1,380 @@
+import Foundation
+
+protocol AuthRepositoryServicing: AnyObject {
+    func restoreSession() async -> SessionUser?
+    func login(username: String, password: String) async -> AuthResult
+    func register(firstName: String, lastName: String, username: String, password: String, securityAnswers: [SecurityAnswerInput]) async -> RegisterOutcome
+    func fetchAllSecurityQuestions() async throws -> [SecurityQuestion]
+    func lookupQuestions(_ username: String) async -> LookupQuestionsOutcome
+    func verifyAnswers(username: String, answers: [SecurityAnswerInput]) async -> VerifyAnswersOutcome
+    func resetPassword(username: String, answers: [SecurityAnswerInput], newPassword: String) async -> PasswordResetResult
+    func requestAdminReset(_ username: String) async -> Bool
+    func setSecurityQuestions(_ answers: [SecurityAnswerInput]) async -> Bool
+    func logout() async
+    func syncTimezone() async
+    func savePendingApproval(username: String, password: String)
+    func loadPendingApproval() -> (username: String, password: String)?
+    func clearPendingApproval()
+    @MainActor func clearSessionOnly()
+    @MainActor func clearAllLocalUserDataForUnauthenticatedState()
+    func getLastUsername() -> String?
+}
+
+struct RestoredSession {
+    let user: SessionUser
+    let usedCachedSession: Bool
+}
+
+final class AuthRepository: AuthRepositoryServicing {
+    private let api: TdayAPIService
+    private let secureStore: SecureStore
+    private let serverConfigRepository: ServerConfigRepository
+    private let cacheManager: OfflineCacheManager
+    private let cookieStore: CookieStore
+    private let themeStore: ThemeStore
+    private let reminderPreferenceStore: ReminderPreferenceStore
+
+    init(
+        api: TdayAPIService,
+        secureStore: SecureStore,
+        serverConfigRepository: ServerConfigRepository,
+        cacheManager: OfflineCacheManager,
+        cookieStore: CookieStore,
+        themeStore: ThemeStore,
+        reminderPreferenceStore: ReminderPreferenceStore
+    ) {
+        self.api = api
+        self.secureStore = secureStore
+        self.serverConfigRepository = serverConfigRepository
+        self.cacheManager = cacheManager
+        self.cookieStore = cookieStore
+        self.themeStore = themeStore
+        self.reminderPreferenceStore = reminderPreferenceStore
+    }
+
+    func restoreSession() async -> SessionUser? {
+        do {
+            let user = try await restoreSessionFromServer()
+            cacheSessionUser(user)
+            return user
+        } catch {
+            return nil
+        }
+    }
+
+    func restoreSessionForBootstrap() async -> RestoredSession? {
+        do {
+            guard let user = try await restoreSessionFromServer(), user.id != nil else {
+                return nil
+            }
+            cacheSessionUser(user)
+            return RestoredSession(user: user, usedCachedSession: false)
+        } catch {
+            // The server didn't hand us a fresh session. Only a genuine 401 means the
+            // session was actually rejected — that's a real logout. ANY other failure
+            // (offline, timeout, 5xx, or a reverse-proxy error/maintenance page while the
+            // backend is down) means the server is unreachable or unhealthy, and we must
+            // NOT throw the user out: fall back to the last cached session and run offline.
+            // The online sync-recovery path (recoverSessionAndRetrySyncIfNeeded) re-validates
+            // and expires the session later if it's genuinely dead.
+            if isSessionAuthenticationIssue(error) {
+                return nil
+            }
+            if let cached = loadCachedSessionUser(), cached.id != nil {
+                return RestoredSession(user: cached, usedCachedSession: true)
+            }
+            guard let fallback = await loadLastKnownOfflineSessionUser(), fallback.id != nil else {
+                return nil
+            }
+            return RestoredSession(user: fallback, usedCachedSession: true)
+        }
+    }
+
+    private func restoreSessionFromServer() async throws -> SessionUser? {
+        let user = try await api.getSession()?.user
+        if user?.id == nil {
+            secureStore.clearCachedSessionUser()
+        }
+        return user
+    }
+
+    func login(username: String, password: String) async -> AuthResult {
+        guard serverConfigRepository.hasServerConfigured() else {
+            return .error("Server URL is not configured")
+        }
+
+        do {
+            let normalizedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let key = try await api.getCredentialKey()
+            let envelope = try CredentialEnvelopeBuilder.build(username: normalizedUsername, password: password, credentialKey: key)
+            let csrf = try await api.getCsrfToken().csrfToken
+            let callbackURL = serverConfigRepository.buildAbsoluteAppURL("app/tday")?.absoluteString
+                ?? "/app/tday"
+            let callback = try await api.signInWithCredentials(
+                payload: CredentialsCallbackRequest(
+                    username: nil,
+                    password: nil,
+                    encryptedPayload: envelope.encryptedPayload,
+                    encryptedKey: envelope.encryptedKey,
+                    encryptedIv: envelope.encryptedIv,
+                    credentialKeyId: envelope.keyId,
+                    credentialEnvelopeVersion: envelope.version,
+                    passwordProof: nil,
+                    passwordProofChallengeId: nil,
+                    passwordProofVersion: nil,
+                    csrfToken: csrf,
+                    redirect: "false",
+                    callbackUrl: callbackURL
+                )
+            )
+
+            let queryItems = URLComponents(string: callback.response.url ?? "")?.queryItems ?? []
+            let code = callback.response.code ?? queryItems.first(where: { $0.name == "code" })?.value
+            let errorCode = queryItems.first(where: { $0.name == "error" })?.value
+
+            if code == "pending_approval" {
+                return .pendingApproval
+            }
+            if let errorCode, !errorCode.isEmpty {
+                return .error(mapAuthError(errorCode))
+            }
+            if !(200 ..< 300).contains(callback.statusCode) && !(300 ..< 400).contains(callback.statusCode) {
+                if isLikelyServerUnavailableStatusCode(callback.statusCode) {
+                    return .error(ConnectionFailureMessage.serverUnavailable)
+                }
+                let responseMessage = callback.response.message?.trimmingCharacters(in: .whitespacesAndNewlines)
+                if let responseMessage, !responseMessage.isEmpty {
+                    return .error(mapAuthError(responseMessage))
+                }
+                return .error("Unable to sign in")
+            }
+
+            if let user = await restoreSession(), user.id != nil {
+                secureStore.saveLastUsername(normalizedUsername)
+                serverConfigRepository.persistRuntimeServerURL()
+                await syncTimezone()
+                // Hand the widget a fresh backend session so a check-ring tap can
+                // sync to the backend instantly (widgets v2 instant sync).
+                if let baseURL = try? api.currentBaseURL() {
+                    WidgetBackendSession.save(
+                        baseURL: baseURL,
+                        pinnedFingerprint: api.trustedFingerprint(for: baseURL)
+                    )
+                }
+                return .success
+            }
+            return .error("Sign in failed. Please check backend URL and credentials.")
+        } catch {
+            return .error(connectionFailureMessage(for: error) ?? mapAuthError(error.localizedDescription))
+        }
+    }
+
+    func register(firstName: String, lastName: String, username: String, password: String, securityAnswers: [SecurityAnswerInput]) async -> RegisterOutcome {
+        do {
+            let response = try await api.register(
+                payload: RegisterRequest(
+                    fname: firstName.trimmingCharacters(in: .whitespacesAndNewlines),
+                    lname: lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : lastName.trimmingCharacters(in: .whitespacesAndNewlines),
+                    username: username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+                    password: password,
+                    securityAnswers: securityAnswers
+                )
+            )
+            return RegisterOutcome(
+                success: true,
+                requiresApproval: response.requiresApproval,
+                message: response.message ?? "Account created"
+            )
+        } catch {
+            return RegisterOutcome(success: false, requiresApproval: false, message: connectionFailureMessage(for: error) ?? mapAuthError(error.localizedDescription))
+        }
+    }
+
+    func fetchAllSecurityQuestions() async throws -> [SecurityQuestion] {
+        try await api.getAllSecurityQuestions().questions
+    }
+
+    func resetPassword(username: String, answers: [SecurityAnswerInput], newPassword: String) async -> PasswordResetResult {
+        do {
+            _ = try await api.resetPassword(
+                payload: SelfServiceResetRequest(
+                    username: username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+                    answers: answers,
+                    newPassword: newPassword
+                )
+            )
+            return .success
+        } catch let apiError as APIError {
+            switch apiError.reason {
+            case "reset_locked":
+                return .locked(apiError.message)
+            case "reset_failed":
+                return .failed(apiError.message)
+            default:
+                return .error(connectionFailureMessage(for: apiError) ?? apiError.message)
+            }
+        } catch {
+            return .error(connectionFailureMessage(for: error) ?? error.localizedDescription)
+        }
+    }
+
+    func lookupQuestions(_ username: String) async -> LookupQuestionsOutcome {
+        do {
+            let questions = try await api.getSecurityQuestions(
+                username: username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            ).questions
+            return .found(questions)
+        } catch let apiError as APIError {
+            if apiError.reason == "user_not_found" { return .notFound }
+            return .error(connectionFailureMessage(for: apiError) ?? apiError.message)
+        } catch {
+            return .error(connectionFailureMessage(for: error) ?? error.localizedDescription)
+        }
+    }
+
+    func verifyAnswers(username: String, answers: [SecurityAnswerInput]) async -> VerifyAnswersOutcome {
+        do {
+            let response = try await api.verifySecurityAnswers(
+                payload: VerifySecurityAnswersRequest(
+                    username: username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+                    answers: answers
+                )
+            )
+            return response.valid ? .valid : .invalid(response.results)
+        } catch let apiError as APIError {
+            if apiError.reason == "reset_locked" { return .locked }
+            return .error(connectionFailureMessage(for: apiError) ?? apiError.message)
+        } catch {
+            return .error(connectionFailureMessage(for: error) ?? error.localizedDescription)
+        }
+    }
+
+    func requestAdminReset(_ username: String) async -> Bool {
+        do {
+            _ = try await api.requestAdminReset(
+                payload: RequestAdminResetRequest(
+                    username: username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                )
+            )
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    func setSecurityQuestions(_ answers: [SecurityAnswerInput]) async -> Bool {
+        do {
+            _ = try await api.setUserSecurityQuestions(payload: SetSecurityQuestionsRequest(answers: answers))
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    func logout() async {
+        _ = try? await api.signOut()
+        await clearAllLocalUserDataForUnauthenticatedState(preservingServerConfiguration: true)
+    }
+
+    func syncTimezone() async {
+        _ = try? await api.syncTimezone(TimeZone.current.identifier)
+    }
+
+    @MainActor
+    func savePendingApproval(username: String, password: String) {
+        secureStore.savePendingApproval(username: username, password: password)
+    }
+
+    func loadPendingApproval() -> (username: String, password: String)? {
+        secureStore.loadPendingApproval()
+    }
+
+    func clearPendingApproval() {
+        secureStore.clearPendingApproval()
+    }
+
+    func clearSessionOnly() {
+        secureStore.clearCachedSessionUser()
+        cacheManager.clearSessionOnly()
+        cookieStore.clearAll()
+        // The widget's shared session mirrors the auth cookie — drop it in lockstep
+        // so the widget can't fire completions with a now-invalid cookie.
+        WidgetBackendSession.clear()
+    }
+
+    @MainActor
+    func clearAllLocalUserDataForUnauthenticatedState() {
+        clearAllLocalUserDataForUnauthenticatedState(preservingServerConfiguration: false)
+    }
+
+    @MainActor
+    private func clearAllLocalUserDataForUnauthenticatedState(preservingServerConfiguration: Bool) {
+        cacheManager.clearAllLocalData()
+        cookieStore.clearAll()
+        // Logout / entering local mode / unauthenticated reset all funnel here — drop
+        // the widget's shared backend session so it stops firing instant completions.
+        WidgetBackendSession.clear()
+        secureStore.clearAllUserValues(preservingServerURL: preservingServerConfiguration)
+        themeStore.clear()
+        reminderPreferenceStore.clear()
+        if !preservingServerConfiguration {
+            serverConfigRepository.clearServerConfiguration()
+        }
+    }
+
+    func getLastUsername() -> String? {
+        secureStore.loadLastUsername()
+    }
+
+    private func cacheSessionUser(_ user: SessionUser?) {
+        guard let user, user.id != nil, let data = try? JSONEncoder().encode(user) else {
+            return
+        }
+        secureStore.saveCachedSessionUserData(data)
+    }
+
+    private func loadCachedSessionUser() -> SessionUser? {
+        guard let data = secureStore.loadCachedSessionUserData() else {
+            return nil
+        }
+        return try? JSONDecoder().decode(SessionUser.self, from: data)
+    }
+
+    private func loadLastKnownOfflineSessionUser() async -> SessionUser? {
+        guard let username = secureStore.loadLastUsername() else {
+            return nil
+        }
+        let hasCachedData = await MainActor.run {
+            cacheManager.hasCachedData()
+        }
+        guard hasCachedData else {
+            return nil
+        }
+        return SessionUser(
+            id: username,
+            name: nil,
+            username: username,
+            image: nil,
+            timeZone: nil,
+            role: nil,
+            approvalStatus: nil
+        )
+    }
+
+    private func mapAuthError(_ value: String) -> String {
+        switch value {
+        case "CredentialsSignin":
+            return "Incorrect username or password"
+        case "Invalid credentials":
+            return "Incorrect username or password"
+        case "AccessDenied":
+            return "Your account does not have access"
+        case "SessionRequired":
+            return "Please sign in again"
+        case "Account approval required":
+            return "Account pending admin approval."
+        default:
+            return value
+        }
+    }
+}

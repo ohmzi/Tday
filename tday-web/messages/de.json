@@ -1,0 +1,1266 @@
+{
+  "terms": {
+    "title": "Nutzungsbedingungen",
+    "lastUpdated": "Zuletzt aktualisiert: 19. Januar 2026",
+    "intro": "Durch die Nutzung von T'Day (dem „Dienst“) erklären Sie sich mit diesen Nutzungsbedingungen einverstanden.",
+    "sections": {
+      "1": {
+        "title": "Nutzung des Dienstes",
+        "content": "T'Day ist eine kostenlose Produktivitäts-App zur Verwaltung von Aufgaben, Notizen und Dateien. Sie stimmen zu, den Dienst rechtmäßig zu nutzen und ihn nicht zu missbrauchen oder zu stören."
+      },
+      "2": {
+        "title": "Konten",
+        "content": "Sie sind dafür verantwortlich, Ihr Konto sicher zu halten, sowie für alle Aktivitäten unter Ihrem Konto. Informationen müssen korrekt sein."
+      },
+      "3": {
+        "title": "Ihre Inhalte",
+        "content": "Sie behalten das Eigentum an Ihren Inhalten. Durch die Nutzung von T'Day gewähren Sie die Erlaubnis, diese ausschließlich für den Betrieb des Dienstes zu speichern und zu verarbeiten."
+      },
+      "4": {
+        "title": "Zulässige Nutzung",
+        "content": [
+          "Keine illegalen, schädlichen oder bösartigen Inhalte",
+          "Kein Zugriff auf Daten anderer Nutzer",
+          "Kein Missbrauch der Infrastruktur",
+          "Keine rechtswidrige Nutzung des Dienstes"
+        ]
+      },
+      "5": {
+        "title": "Verfügbarkeit",
+        "content": "T'Day ist ein persönliches Projekt, das auf Best-Effort-Basis bereitgestellt wird. Der Dienst kann sich jederzeit ändern, offline gehen oder eingestellt werden."
+      },
+      "6": {
+        "title": "Beendigung",
+        "content": "Sie können die Nutzung von T'Day jederzeit beenden. Wir können den Zugriff sperren, wenn diese Bedingungen verletzt werden."
+      },
+      "7": {
+        "title": "Haftungsausschluss",
+        "content": "T'Day wird „wie besehen“ bereitgestellt. Wir sind nicht verantwortlich für Datenverlust, Unterbrechungen oder Schäden, die aus der Nutzung des Dienstes resultieren."
+      },
+      "8": {
+        "title": "Änderungen",
+        "content": "Wir können diese Bedingungen aktualisieren. Die fortgesetzte Nutzung bedeutet, dass Sie die Änderungen akzeptieren."
+      },
+      "9": {
+        "title": "Kontakt",
+        "content": "Fragen? E-Mail an support"
+      }
+    }
+  },
+  "privacy": {
+    "title": "Datenschutzbestimmungen",
+    "lastUpdated": "Zuletzt aktualisiert: 4. Oktober 2026",
+    "intro": "T'Day („wir“, „unser“ oder „uns“) ist eine persönliche Produktivitäts-App. Diese Datenschutzbestimmung erklärt, welche Daten wir sammeln und wie wir sie verwenden.",
+    "sections": {
+      "1": {
+        "title": "Informationen, die wir sammeln",
+        "content": [
+          "Kontodaten: E-Mail-Adresse und Zeitzone",
+          "Nutzerinhalte: Aufgaben, Notizen und verschlüsselte Dateien",
+          "Technische Daten, die der Server beim Verbinden sieht (nicht Teil von Absturzberichten): IP-Adresse, Browser- und Sitzungsinformationen",
+          "Cookies und lokaler Speicher für die Authentifizierung"
+        ]
+      },
+      "2": {
+        "title": "Wie wir Ihre Daten verwenden",
+        "content": [
+          "Bereitstellung und Betrieb von T'Day",
+          "Authentifizierung von Nutzern",
+          "Speicherung und Synchronisierung Ihrer Inhalte",
+          "Aufrechterhaltung der Sicherheit und Missbrauchsprävention"
+        ]
+      },
+      "3": {
+        "title": "Datenspeicherung & Sicherheit",
+        "content": "T'Day wird selbst gehostet: Ein Kotlin-Backend speichert Ihre Daten in einer PostgreSQL-Datenbank auf dem Server, den Sie oder Ihr Hoster betreiben. Sensible Felder können im Ruhezustand verschlüsselt werden und der Datenverkehr läuft über HTTPS. Obwohl kein System perfekt sicher ist, werden angemessene Schritte zum Schutz Ihrer Daten unternommen."
+      },
+      "4": {
+        "title": "Weitergabe von Daten",
+        "content": "Wir geben Daten nur an Dienstleister weiter, die für den Betrieb von T'Day erforderlich sind, und, nur mit Zustimmung, an Sentry für Absturz- und Problemberichte. Wir verkaufen Ihre persönlichen Daten nicht."
+      },
+      "5": {
+        "title": "Cookies",
+        "content": "Cookies und lokaler Speicher werden für Login-Sitzungen, Präferenzen und Sicherheit verwendet. Das Deaktivieren von Cookies kann die Funktionalität beeinträchtigen."
+      },
+      "6": {
+        "title": "Datenspeicherung",
+        "content": "Wir bewahren Ihre Daten auf, solange Ihr Konto aktiv ist. Sie können Ihr Konto jederzeit löschen, und Ihre Inhalte werden innerhalb eines angemessenen Zeitraums entfernt."
+      },
+      "7": {
+        "title": "Ihre Rechte",
+        "content": "Sie können über die App-Funktionen auf Ihre Daten zugreifen, sie korrigieren, löschen oder exportieren."
+      },
+      "8": {
+        "title": "Änderungen",
+        "content": "Wir können diese Bestimmungen von Zeit zu Zeit aktualisieren. Aktualisierungen werden auf dieser Seite veröffentlicht."
+      },
+      "9": {
+        "title": "Absturz- und Problemberichte",
+        "content": [
+          "Standardmäßig ausgeschaltet. In der Web-App entscheidet ein Admin für den ganzen Server; auf dem Gerät entscheidest du selbst. Berichte werden nur in dem Moment gesendet, in dem etwas fehlschlägt",
+          "Ein Bericht enthält die App-Version, das Gerätemodell und das Betriebssystem, den Fehler und die Stelle, an der er aufgetreten ist. Er enthält nie Ihren Namen, Ihr Konto, Ihre IP-Adresse, Ihren Standort, Ihre Serveradresse oder Inhalte von Aufgaben oder Listen",
+          "Berichte werden an Sentry gesendet, 30 Tage lang aufbewahrt und ausschließlich zur Behebung von Fehlern verwendet, nie für Analysen oder Werbung. Sentry sieht die Netzwerkadresse jeder Verbindung, ist aber so eingestellt, dass sie nicht gespeichert wird"
+        ]
+      },
+      "10": {
+        "title": "Kontakt",
+        "content": "Fragen? E-Mail an support"
+      }
+    }
+  },
+  "app": {
+    "agenda": "Agenda",
+    "scheduledTaskHome": "Geplant",
+    "more": "Mehr",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "clearSearch": "Suche löschen",
+    "versionAvailableTitle": "Update verfügbar",
+    "versionAvailableBody": "Eine neue Version kann geladen werden.",
+    "versionAvailableReload": "Neu laden",
+    "unresponsiveTitle": "T'Day reagierte nicht",
+    "unresponsiveBody": "T'Day reagierte {{seconds}} s lang nicht.",
+    "unresponsiveReload": "Neu laden",
+    "releaseUpdateTitle": "Update verfügbar",
+    "releaseUpdateVersion": "Version {{version}}",
+    "today": "Heute",
+    "tonight": "Heute Abend",
+    "yesterday": "Gestern",
+    "tomorrow": "Morgen",
+    "nextWeek": "Nächste Woche",
+    "day": "Tag",
+    "week": "Woche",
+    "month": "Monat",
+    "duration": "Dauer",
+    "date": "Datum",
+    "durationMenu": {
+      "error": "Ungültiger Datumsbereich: Die Endzeit muss nach der Startzeit liegen."
+    },
+    "priority": "Priorität",
+    "list": "Projekt",
+    "overdue": "Überfällig",
+    "low": "Niedrig",
+    "normal": "Normal",
+    "important": "Wichtig",
+    "urgent": "Dringend",
+    "floater": "Floater",
+    "root_feed_tab_floater": "Floater",
+    "newFloater": "Neuer Floater",
+    "editFloater": "Floater bearbeiten",
+    "floaterList": "Floater-Liste",
+    "newFloaterList": "Neue Floater-Liste",
+    "deleteFloaterList": "Floater-Liste löschen",
+    "floaterListName": "Name der Floater-Liste",
+    "floaterTitlePlaceholder": "Aufgabe für jederzeit",
+    "floaterEmpty": "Noch keine Floater",
+    "floaterListEmpty": "Keine Floater in dieser Liste",
+    "myFloaterLists": "Meine Listen",
+    "searchFloaters": "Floater suchen",
+    "searchFloatersPlaceholder": "Floater suchen...",
+    "noMatchingFloaters": "Keine passenden Floater",
+    "searchIn": "Suchen in",
+    "repeat": "Wiederholen",
+    "everyDay": "Täglich",
+    "everyWeek": "Wöchentlich",
+    "everyMonth": "Monatlich",
+    "everyYear": "Jährlich",
+    "weekdaysOnly": "Nur an Wochentagen",
+    "custom": "Benutzerdefiniert",
+    "descPlaceholder": "Beschreibung",
+    "schedule": "Planen",
+    "scheduleOnHint": "Aufgabe hat ein Fälligkeitsdatum",
+    "scheduleOffHint": "Floater-Aufgabe",
+    "details": "Details",
+    "due": "Fällig",
+    "notes": "Notizen",
+    "clearFormatting": "Formatierung entfernen",
+    "bold": "Fett",
+    "italic": "Kursiv",
+    "underline": "Unterstrichen",
+    "strikethrough": "Durchgestrichen",
+    "bulletedList": "Aufzählungsliste",
+    "numberedList": "Nummerierte Liste",
+    "noList": "Keine Liste",
+    "noRepeat": "Keine Wiederholung",
+    "color": "Farbe",
+    "icon": "Symbol",
+    "defaultPriority": "Standardpriorität",
+    "noDefaultPriority": "Kein Standard",
+    "listName": "Listenname",
+    "newTask": "Neue Aufgabe",
+    "editTask": "Aufgabe bearbeiten",
+    "newList": "Neue Liste",
+    "listSettings": "Listeneinstellungen",
+    "deleteList": "Liste löschen",
+    "undo": "Rückgängig",
+    "taskDeleted": "Aufgabe gelöscht",
+    "taskCompleted": "Aufgabe erledigt",
+    "listDeleted": "Liste gelöscht",
+    "listsDeleted": "{{count}} Listen gelöscht",
+    "done": "Fertig",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "searchTasks": "Aufgaben suchen",
+    "taskCount": "{{count}} Aufgaben",
+    "shareList": "Liste teilen",
+    "sharing": "Teilen",
+    "share": "Teilen",
+    "shareListCopied": "Liste in die Zwischenablage kopiert",
+    "taskCopied": "Aufgabe in die Zwischenablage kopiert",
+    "taskCopyFailed": "Aufgabe konnte nicht in die Zwischenablage kopiert werden",
+    "shareDueLabel": "Fällig: {{date}}",
+    "sharePriorityLabel": "Priorität: {{priority}}",
+    "shareTaskCount_one": "{{count}} Aufgabe",
+    "shareTaskCount_few": "{{count}} Aufgaben",
+    "shareTaskCount_many": "{{count}} Aufgaben",
+    "shareTaskCount_other": "{{count}} Aufgaben",
+    "members": "Mitglieder",
+    "sharedBy": "Geteilt von {{name}}",
+    "addMember": "Mitglied hinzufügen",
+    "searchUsersPlaceholder": "Nach Name oder Benutzername suchen",
+    "roleOwner": "Inhaber",
+    "roleEditor": "Bearbeiter",
+    "roleViewer": "Betrachter",
+    "removeMember": "Mitglied entfernen",
+    "leaveList": "Liste verlassen",
+    "leaveListConfirm": "„{{name}}“ verlassen? Die Aufgaben verschwinden aus deinen Feeds.",
+    "noUsersFound": "Keine Benutzer gefunden",
+    "alreadyAMember": "Bereits Mitglied",
+    "tasksDueOn": "Fällige Aufgaben am {{date}}",
+    "noTasksDueThisDay": "Keine Aufgaben an diesem Tag fällig",
+    "selectAnotherDate": "Wählen Sie ein anderes Datum im Kalender.",
+    "quickDefer": "Verschieben",
+    "quickDeferLaterToday": "Später heute",
+    "quickDeferTonight": "Heute Abend",
+    "quickDeferTomorrow": "Morgen früh",
+    "quickDeferNextWeek": "Nächste Woche",
+    "allDoneToday": "Alles erledigt für heute",
+    "allDoneTonight": "Alles erledigt für heute Abend",
+    "sweep": "Aufräumen",
+    "sweepTitle": "Morgendliches Aufräumen",
+    "sweepToday": "Heute",
+    "sweepTomorrow": "Morgen",
+    "sweepPickDate": "Datum wählen",
+    "sweepFloat": "Zum Floater machen",
+    "sweepLetGo": "Loslassen",
+    "sweepSkip": "Überspringen",
+    "sweepAllToToday": "Alles auf heute schieben",
+    "sweptToast": "{{count}} Aufgaben verschoben",
+    "sweepDone": "Alles aufgeholt",
+    "reusableList": "Wiederverwendbare Liste",
+    "reusableListHint": "Zeigt Zurücksetzen, um alles abzuwählen und erneut zu nutzen",
+    "resetFloaterList": "Liste zurücksetzen",
+    "floaterListReset": "Liste zurückgesetzt – alles abgewählt",
+    "steps": "Schritte",
+    "add": "Hinzufügen",
+    "addStep": "Schritt hinzufügen",
+    "stepsCreateHint": "Speichere die Aufgabe zuerst, um Schritte hinzuzufügen.",
+    "searchFloaterTasksPlaceholder": "Floater-Aufgaben suchen",
+    "searchShort": "Suchen",
+    "listEmpty": "Hier ist noch nichts",
+    "listEmptyBody": "Füge deine erste Aufgabe hinzu, dann erscheint sie genau hier.",
+    "floaterEmptyBody": "Floater haben kein Fälligkeitsdatum – notiere einen, er wartet, bis du bereit bist.",
+    "floaterListEmptyBody": "Füge einen Floater hinzu, er wartet genau hier.",
+    "noMatchingTasks": "Keine passenden Aufgaben",
+    "searchEmptyBody": "Probiere ein anderes Wort oder lösche die Suche.",
+    "scrollForMore": "Weiter scrollen für mehr",
+    "tasksShownOfTotal": "{{shown}} von {{total}} Aufgaben werden angezeigt",
+    "todayEmpty": "Keine Aufgaben für heute",
+    "todayEmptyBody": "Füge etwas für heute hinzu, dann erscheint es genau hier.",
+    "tonightEmpty": "Keine Aufgaben für heute Abend",
+    "tonightEmptyBody": "Füge etwas für heute Abend hinzu, dann erscheint es genau hier.",
+    "overdueEmpty": "Keine überfälligen Aufgaben",
+    "overdueEmptyBody": "Nichts hat sein Fälligkeitsdatum überschritten.",
+    "priorityEmpty": "Keine Prioritätsaufgaben",
+    "priorityEmptyBody": "Markiere eine Aufgabe als Priorität, dann rückt sie hierher.",
+    "scheduledEmpty": "Keine geplanten Aufgaben",
+    "scheduledEmptyBody": "Gib einer Aufgabe ein Datum, dann reiht sie sich hier ein.",
+    "allTasksEmpty": "Noch keine Aufgaben",
+    "allTasksEmptyBody": "Alles, was du hinzufügst, erscheint hier – egal an welchem Datum.",
+    "noMatchingSettings": "Keine passenden Einstellungen",
+    "noMatchingTopics": "Keine passenden Themen",
+    "bulkSelect": "Auswählen",
+    "bulkSelected": "{{count}} ausgewählt",
+    "bulkSelectedCapped": "{{count}} ausgewählt – mehr schafft eine Aktion nicht",
+    "bulkSelectAll": "Alle auswählen",
+    "bulkDeselectAll": "Auswahl aufheben",
+    "bulkAppliesTo": "Gilt für {{count}} von {{total}} – wiederkehrende Aufgaben werden übersprungen.",
+    "bulkComplete": "Erledigen",
+    "bulkPriority": "Priorität",
+    "bulkMove": "Verschieben",
+    "bulkDelete": "Löschen",
+    "tasksCompleted_one": "Aufgabe erledigt",
+    "tasksCompleted_few": "{{count}} Aufgaben erledigt",
+    "tasksCompleted_many": "{{count}} Aufgaben erledigt",
+    "tasksCompleted_other": "{{count}} Aufgaben erledigt",
+    "tasksDeleted_one": "Aufgabe gelöscht",
+    "tasksDeleted_few": "{{count}} Aufgaben gelöscht",
+    "tasksDeleted_many": "{{count}} Aufgaben gelöscht",
+    "tasksDeleted_other": "{{count}} Aufgaben gelöscht",
+    "bulkDeleteTitle_one": "Diese Aufgabe löschen?",
+    "bulkDeleteTitle_few": "{{count}} Aufgaben löschen?",
+    "bulkDeleteTitle_many": "{{count}} Aufgaben löschen?",
+    "bulkDeleteTitle_other": "{{count}} Aufgaben löschen?",
+    "bulkDeleteBody": "Sie verschwinden aus allen Listen, samt ihrem Verlauf erledigter Aufgaben. Du hast ein paar Sekunden zum Rückgängigmachen.",
+    "bulkDeleteConfirm_one": "Aufgabe löschen",
+    "bulkDeleteConfirm_few": "{{count}} Aufgaben löschen",
+    "bulkDeleteConfirm_many": "{{count}} Aufgaben löschen",
+    "bulkDeleteConfirm_other": "{{count}} Aufgaben löschen",
+    "bulkMoveTitle": "{{count}} Aufgaben verschieben?",
+    "bulkMoveBody": "Diese Aufgaben kommen aus verschiedenen Listen. Das Verschieben lässt sich nicht in einem Schritt rückgängig machen – du müsstest jede einzeln zurücklegen.",
+    "bulkMoveConfirm": "{{count}} Aufgaben verschieben",
+    "bulkDeleteFailed_one": "Eine Aufgabe konnte nicht gelöscht werden",
+    "bulkDeleteFailed_few": "{{count}} Aufgaben konnten nicht gelöscht werden",
+    "bulkDeleteFailed_many": "{{count}} Aufgaben konnten nicht gelöscht werden",
+    "bulkDeleteFailed_other": "{{count}} Aufgaben konnten nicht gelöscht werden",
+    "bulkUpdateFailed_one": "Eine Aufgabe konnte nicht aktualisiert werden",
+    "bulkUpdateFailed_few": "{{count}} Aufgaben konnten nicht aktualisiert werden",
+    "bulkUpdateFailed_many": "{{count}} Aufgaben konnten nicht aktualisiert werden",
+    "bulkUpdateFailed_other": "{{count}} Aufgaben konnten nicht aktualisiert werden",
+    "floaterCompletedTile": "Erledigt"
+  },
+  "today": {
+    "saveInstance": "Instanz speichern",
+    "nextRepeatText": "Diese Aufgabe ist als Nächstes geplant für am",
+    "addATask": "Aufgabe hinzufügen",
+    "titlePlaceholder": "Titel",
+    "menu": {
+      "pinToTop": "Oben anheften",
+      "edit": "Bearbeiten",
+      "editAsInstance": "Als Instanz bearbeiten",
+      "copy": "Kopieren",
+      "delete": "Löschen",
+      "Move to": "Verschieben nach..."
+    },
+    "repeatSuggestion": {
+      "prompt": "{{cadence}} wiederholen?",
+      "dismiss": "Verwerfen",
+      "everyDay": "täglich",
+      "everyWeek": "wöchentlich",
+      "everyMonth": "monatlich",
+      "everyYear": "jährlich"
+    },
+    "weekInReview": {
+      "title": "Wochenrückblick",
+      "dismiss": "Verwerfen"
+    },
+    "brainDump": {
+      "title": "Gedanken-Dump",
+      "blurb": "Füge alles ein, was dir im Kopf ist — T'Day teilt es in Aufgaben zur Prüfung.",
+      "placeholder": "Milch kaufen\nZahnarzt morgen 15 Uhr anrufen\nPflanzen jede Woche gießen",
+      "parse": "In Aufgaben aufteilen",
+      "parseFailed": "Konnte nicht verarbeitet werden — versuch es erneut",
+      "reviewHint": "Hake ab, was du nicht willst. Mit Datum → geplant, ohne → Anytime.",
+      "empty": "Nichts hinzuzufügen.",
+      "back": "Zurück",
+      "add": "{{count}} hinzufügen",
+      "created": "{{count}} Aufgaben hinzugefügt"
+    }
+  },
+  "sidebar": {
+    "completed": "Abgeschlossen",
+    "calendar": "Kalender",
+    "note": "Notiz",
+    "settings": "Einstellungen",
+    "admin": "Admin",
+    "settingMenu": {
+      "logout": "Abmelden",
+      "theme": "Design",
+      "shortcuts": "Shortcuts"
+    },
+    "noteMenu": {
+      "rename": "umbenennen",
+      "delete": "löschen"
+    }
+  },
+  "completed": {
+    "title": "Verlauf der Erledigungen",
+    "empty": "Noch nichts erledigt",
+    "emptyBody": "Hake etwas ab, dann landet es hier.",
+    "tabTasks": "Geplant",
+    "floaterEmpty": "Noch keine erledigten Floater",
+    "floaterEmptyBody": "Hake etwas in Floater ab und es landet hier.",
+    "listDeletedSuffix": "Liste gelöscht",
+    "floaterRestoredIntoRecreatedList": "Wiederhergestellt — „{{listName}}“ wurde neu angelegt"
+  },
+  "modal": {
+    "confirm": "Bestätigen",
+    "cancel": "Abbrechen",
+    "delete": {
+      "title": "Aufgabe löschen?",
+      "subtitle": "Diese Aktion kann nicht rückgängig gemacht werden. Dies löscht dauerhaft",
+      "button": "Löschen"
+    },
+    "deleteAll": {
+      "title": "Alle Wiederholungen löschen?",
+      "subtitle": "Dies ist eine wiederkehrende Aufgabe. Sollen alle anderen Wiederholungen ebenfalls gelöscht werden?",
+      "deleteInstance": "Nur dieses Vorkommen löschen",
+      "deleteAll": "Alle Wiederholungen löschen"
+    },
+    "cancelEdit": {
+      "title": "Bearbeitung abbrechen?",
+      "subtitle": "Ihre Änderungen werden verworfen"
+    },
+    "editAll": {
+      "title": "Alle Wiederholungen bearbeiten?",
+      "subtitle": "Dies ist eine wiederkehrende Aufgabe. Soll die Bearbeitung für alle anderen Wiederholungen übernommen werden?",
+      "editInstance": "Nur dieses Vorkommen bearbeiten",
+      "editAll": "Alle Wiederholungen bearbeiten"
+    }
+  },
+  "shortcuts": {
+    "title": "Shortcuts",
+    "todo": {
+      "title": "Aufgaben-Shortcuts",
+      "submitAndOpen": "Formular absenden und weiteres öffnen",
+      "openForm": "Formular öffnen",
+      "exitForm": "Formular schließen",
+      "editForm": "Formular bearbeiten",
+      "submit": "Formular absenden"
+    },
+    "calendar": {
+      "markComplete": "Marcar como completada",
+      "title": "Kalender-Shortcuts",
+      "previous": "Vorheriger Monat/Woche/Tag",
+      "next": "Nächster Monat/Woche/Tag",
+      "todayView": "Heutige Ansicht",
+      "viewModes": "Monat/Woche/Tag-Ansicht"
+    },
+    "navigation": {
+      "title": "Navigation",
+      "then": "dann",
+      "today": "Heute",
+      "calendar": "Kalender",
+      "completed": "Abgeschlossen"
+    },
+    "global": {
+      "title": "Überall",
+      "newTask": "Neue Aufgabe",
+      "openPalette": "Befehlspalette",
+      "showShortcuts": "Diese Übersicht"
+    }
+  },
+  "scheduledTaskHome": {
+    "tileScheduled": "Geplant",
+    "tilePriority": "Priorität",
+    "tileOverdue": "Überfällig",
+    "tileAll": "Alle",
+    "tileCompleted": "Erledigt",
+    "tileCalendar": "Kalender",
+    "searchTasksPlaceholder": "Aufgaben suchen...",
+    "noMatchingTasks": "Keine passenden Aufgaben",
+    "openList": "{{name}} öffnen",
+    "searchScheduledPlaceholder": "Geplante Aufgaben suchen"
+  },
+  "settings": {
+    "themeLight": "Hell",
+    "themeDark": "Dunkel",
+    "themeSystem": "System",
+    "systemDefault": "Systemstandard",
+    "profile": {
+      "title": "Profil",
+      "unknownUser": "Unbekannter Benutzer",
+      "description": "Aktualisieren Sie Ihren Anzeigenamen",
+      "name": "Name",
+      "namePlaceholder": "Geben Sie Ihren Namen ein",
+      "username": "Benutzername",
+      "saving": "Speichern...",
+      "save": "Speichern",
+      "edit": "Bearbeiten",
+      "cancel": "Abbrechen"
+    },
+    "appearance": {
+      "title": "Darstellung",
+      "description": "Wählen Sie hell, dunkel oder folgen Sie Ihrer Systemeinstellung.",
+      "descriptionSystem": "Folgen Sie Ihrem Gerät, hell oder dunkel. Aktuell: {{theme}}."
+    },
+    "behavior": {
+      "title": "Verhalten",
+      "defaultHomeScreen": "Standard-Startbildschirm"
+    },
+    "language": {
+      "title": "Sprache",
+      "description": "Wählen Sie Ihre App-Sprache",
+      "appLanguage": "Sprache"
+    },
+    "notifications": {
+      "title": "Benachrichtigungen",
+      "push": "Push-Benachrichtigungen",
+      "description": "Lassen Sie sich über wichtige Dinge benachrichtigen, auch wenn die App nicht geöffnet ist.",
+      "blocked": "In Ihren Browsereinstellungen blockiert. Aktualisieren Sie die Browserberechtigungen, um sie zu aktivieren.",
+      "toggle": "Push-Benachrichtigungen umschalten"
+    },
+    "password": {
+      "title": "Passwort",
+      "description": "Aktualisieren Sie Ihr Kontopasswort",
+      "current": "Aktuelles Passwort",
+      "currentPlaceholder": "Geben Sie Ihr aktuelles Passwort ein",
+      "new": "Neues Passwort",
+      "newPlaceholder": "Geben Sie Ihr neues Passwort ein",
+      "requirement": "Das Passwort muss mindestens 8 Zeichen lang sein und einen Großbuchstaben sowie ein Sonderzeichen enthalten.",
+      "confirm": "Neues Passwort bestätigen",
+      "confirmPlaceholder": "Bestätigen Sie Ihr neues Passwort",
+      "changing": "Speichern...",
+      "change": "Speichern",
+      "changeAction": "Ändern",
+      "cancel": "Abbrechen",
+      "forgot": "Passwort vergessen?"
+    },
+    "dashboard": {
+      "title": "Dashboard-Zugriff",
+      "enabled": "API-Zugriff aktiviert",
+      "disabled": "API-Zugriff deaktiviert",
+      "activeKeyEnding": "Aktiver Schlüssel endet auf …{{preview}}",
+      "activeKeyExists": "Es existiert ein aktiver Schlüssel",
+      "noKey": "Es wurde kein Schlüssel generiert",
+      "revoking": "Widerrufen...",
+      "generating": "Generieren...",
+      "revokeKey": "Schlüssel widerrufen",
+      "generateKey": "Schlüssel generieren",
+      "copyNow": "Kopieren Sie Ihren API-Schlüssel jetzt — er wird nicht erneut angezeigt.",
+      "labelPlaceholder": "Schlüsselname (optional)",
+      "scopeRead": "Nur Lesen",
+      "scopeFull": "Vollzugriff",
+      "scopeReadHint": "Kann deine Aufgaben lesen, aber nicht ändern – sicher für Dashboards.",
+      "scopeFullHint": "Kann dein Konto lesen und ändern. Nur bei vertrauenswürdigen Apps verwenden.",
+      "unnamedKey": "Unbenannter Schlüssel",
+      "expired": "Abgelaufen",
+      "createdAt": "Erstellt am {{date}}",
+      "lastUsedAt": "Zuletzt verwendet am {{date}}",
+      "neverUsed": "Nie verwendet",
+      "newKeyTitle": "Neuer API-Schlüssel",
+      "cancel": "Abbrechen",
+      "done": "Fertig"
+    },
+    "toast": {
+      "apiKeyGenerated": "API-Schlüssel generiert. Kopieren Sie ihn jetzt — er wird nicht erneut angezeigt.",
+      "apiKeyGenerateFailed": "API-Schlüssel konnte nicht generiert werden",
+      "apiKeyRevoked": "API-Schlüssel widerrufen",
+      "apiKeyRevokeFailed": "API-Schlüssel konnte nicht widerrufen werden",
+      "apiKeyCopied": "API-Schlüssel in die Zwischenablage kopiert",
+      "apiKeyCopyFailed": "API-Schlüssel konnte nicht kopiert werden",
+      "pushDisabled": "Push-Benachrichtigungen deaktiviert",
+      "pushEnabled": "Push-Benachrichtigungen aktiviert",
+      "pushUpdateFailed": "Benachrichtigungseinstellungen konnten nicht aktualisiert werden",
+      "noChanges": "Keine Änderungen zu speichern",
+      "nameUpdated": "Name erfolgreich aktualisiert",
+      "nameUpdateFailed": "Aktualisierung fehlgeschlagen",
+      "passwordTooShort": "Das Passwort muss mindestens 8 Zeichen lang sein",
+      "passwordsDoNotMatch": "Passwörter stimmen nicht überein",
+      "passwordChanged": "Passwort erfolgreich geändert",
+      "passwordChangeFailed": "Passwort konnte nicht geändert werden",
+      "securityQuestionsUpdated": "Security questions updated",
+      "securityQuestionsUpdateFailed": "Could not update security questions",
+      "securityQuestionsLoadFailed": "Could not load security questions"
+    },
+    "signOut": "Abmelden",
+    "featureToggle": {
+      "title": "Funktionsschalter"
+    },
+    "aiSummary": {
+      "title": "Zusammenfassung"
+    },
+    "securityQuestions": {
+      "title": "Security questions",
+      "changeAction": "Change",
+      "configured": "Eingerichtet",
+      "notConfigured": "Not configured",
+      "questionLabel": "Question {{index}}",
+      "answerPlaceholder": "Antwort",
+      "save": "Speichern",
+      "saving": "Saving...",
+      "errorSelectAll": "Please choose three questions",
+      "errorDistinct": "Wähle drei unterschiedliche Fragen",
+      "errorAnswersRequired": "Please answer all three questions",
+      "errorPasswordRequired": "Enter your current password"
+    },
+    "data": {
+      "title": "Deine Daten",
+      "summary": "{{tasks}} Aufgaben · {{lists}} Listen · {{completed}} abgeschlossen",
+      "download": "Meine Daten herunterladen",
+      "import": "Importieren",
+      "exportDone": "Deine Datendatei wurde heruntergeladen.",
+      "exportFailed": "Deine Daten konnten nicht exportiert werden.",
+      "importInvalid": "Diese Datei ist kein gültiger T'Day-Export.",
+      "importDone": "Import abgeschlossen — {{count}} Einträge hinzugefügt.",
+      "importFailed": "Diese Datei konnte nicht importiert werden.",
+      "confirmTitle": "Daten importieren?",
+      "confirmBody": "Das fügt {{count}} Einträge zu deinem Konto hinzu. Vorhandenes wird nicht geändert oder entfernt.",
+      "confirmRemapped": "{{count}} Einträge mit kollidierenden IDs werden als neue Kopien hinzugefügt.",
+      "confirmCancel": "Abbrechen",
+      "confirmImport": "Importieren",
+      "summaryLocal": "{{tasks}} Aufgaben · {{lists}} Listen · {{completed}} abgeschlossen, alles in diesem Browser."
+    },
+    "restingFloaters": {
+      "title": "Ruhende Floater",
+      "toggle": "Unberührte Anytime-Aufgaben ausblenden"
+    },
+    "sound": {
+      "title": "Ton",
+      "toggle": "Beim Abschließen einer Aufgabe einen Ton abspielen"
+    },
+    "haptics": {
+      "title": "Vibration",
+      "toggle": "Bei Tippen und Ziehen vibrieren"
+    },
+    "workspace": {
+      "title": "Arbeitsbereich",
+      "localTitle": "Lokaler Arbeitsbereich",
+      "localDetail": "Nur in diesem Browser gespeichert – ohne Konto, ohne Synchronisierung.",
+      "encryptedDetail": "Mit deiner Passphrase verschlüsselt.",
+      "unencryptedDetail": "Unverschlüsselt gespeichert – wer dieses Browserprofil hat, kann alles lesen.",
+      "encrypt": "Diesen Arbeitsbereich verschlüsseln",
+      "encryptTitle": "Diesen Arbeitsbereich verschlüsseln?",
+      "encryptBody": "Deine Aufgaben werden in diesem Browser mit einer Passphrase verschlüsselt, die nur du kennst. Es geht nichts verloren – dieselben Aufgaben bleiben, nur in einer Form, die ohne sie niemand lesen kann. Es gibt keine Wiederherstellung: keinen Zurücksetzungslink, keinen Ersatzschlüssel, keinen Support. Schreib die Passphrase an einem sicheren Ort auf.",
+      "encryptPassphrase": "Passphrase",
+      "encryptRepeat": "Passphrase wiederholen",
+      "encryptAcknowledge": "Mir ist klar, dass der Verlust dieser Passphrase den Verlust dieses Arbeitsbereichs bedeutet.",
+      "encryptAction": "Verschlüsseln",
+      "encryptCancel": "Abbrechen",
+      "encryptDone": "Dieser Arbeitsbereich ist jetzt verschlüsselt.",
+      "encryptTooShort": "Verwende mindestens {{count}} Zeichen.",
+      "encryptMismatch": "Die beiden Passphrasen stimmen nicht überein.",
+      "encryptFailed": "Dieser Arbeitsbereich konnte nicht verschlüsselt werden.",
+      "leave": "Lokalen Arbeitsbereich verlassen",
+      "delete": "Lokale Daten löschen",
+      "deleteConfirmTitle": "Lokale Daten löschen?",
+      "deleteConfirmBody": "Damit werden alle in diesem Browser gespeicherten Aufgaben, Listen und abgeschlossenen Einträge endgültig entfernt. Es gibt keine Kopie auf einem Server – lade deine Daten vorher herunter, wenn du sie behalten möchtest.",
+      "deleteConfirmCancel": "Abbrechen",
+      "deleteConfirmAction": "Löschen",
+      "deleteDone": "Lokale Daten gelöscht."
+    },
+    "about": {
+      "title": "Info",
+      "appVersion": "App-Version",
+      "server": "Server",
+      "updateAvailable": "v{{version}} verfügbar"
+    },
+    "troubleshooting": {
+      "reset": "App-Cache zurücksetzen",
+      "confirmTitle": "App-Cache zurücksetzen?",
+      "confirmBody": "Löscht den Offline-Cache dieses Geräts und lädt die neueste Version. Deine Aufgaben, Listen und Anmeldung bleiben erhalten.",
+      "confirmAction": "Zurücksetzen",
+      "confirmCancel": "Abbrechen",
+      "resetFailed": "Cache konnte nicht zurückgesetzt werden. Schließe die App, öffne sie erneut und versuche es nochmal."
+    },
+    "privacy": {
+      "title": "Privatsphäre"
+    },
+    "serverTelemetry": {
+      "title": "Server-Fehlerberichte",
+      "toggle": "Fehlerberichte für diesen Server und die Web-App senden",
+      "description": "Sendet die eigenen Fehler dieses Servers sowie Zeitmessungen für eine kleine Stichprobe von Anfragen an das in SENTRY_DSN gesetzte Sentry-Projekt. Die Web-App folgt demselben Schalter. Enthält nie Aufgaben, Listen oder Kontodaten.",
+      "helpLabel": "Über Fehlerberichte",
+      "stateOn": "An",
+      "stateOff": "Aus",
+      "stateDetail": "Das entscheidet ein Admin für den ganzen Server.",
+      "updateFailed": "Die Servereinstellung konnte nicht geändert werden. Bitte erneut versuchen."
+    }
+  },
+  "crashReports": {
+    "card": {
+      "title": "Fehlerberichte senden?",
+      "intro": "Wenn etwas schiefgeht, kann T'Day einen kurzen technischen Bericht senden, um es zu beheben. Eine Antwort gilt für diesen ganzen Server und alle, die ihn nutzen.",
+      "neverSent": "Nie gesendet: Namen, Konten oder Inhalte von Aufgaben und Listen.",
+      "share": "Berichte senden",
+      "notNow": "Nicht senden",
+      "saveFailed": "Speichern fehlgeschlagen. Bitte erneut versuchen.",
+      "readFaq": "Die ganze FAQ lesen"
+    }
+  },
+  "summary": {
+    "untitledTask": "Unbenannte Aufgabe",
+    "and": "und",
+    "windowMorning": "am Morgen",
+    "windowAfternoon": "am Nachmittag",
+    "windowNight": "in der Nacht",
+    "window_morning": "Morgen",
+    "window_afternoon": "Nachmittag",
+    "night": "Nacht",
+    "dueTonight": "heute Abend fällig",
+    "dueTodayWindow": "heute fällig {{window}}",
+    "dueTomorrowWindow": "morgen fällig {{window}}",
+    "dueYesterdayWindow": "gestern fällig {{window}}",
+    "targetToday": "heute",
+    "targetTomorrow": "morgen",
+    "targetYesterday": "gestern",
+    "targetOnDate": "am {{date}}",
+    "dueOnDate": "fällig {{target}}",
+    "dueOnDateWindow": "fällig {{target}} {{window}}",
+    "taskPhrasePast": "{{title}}, die {{due}} war",
+    "taskPhrasePresent": "{{title}}, die {{due}} ist",
+    "thenSeparator": ", dann ",
+    "qualifierBoth": "beide",
+    "qualifierAll": "alle",
+    "dayGroupedPast": "{{tasks}}, {{qualifier}} waren fällig {{target}}",
+    "dayGroupedPresent": "{{tasks}}, {{qualifier}} sind fällig {{target}}",
+    "startWith": "Beginnen Sie mit {{task}}.",
+    "nextUp": "Als Nächstes: {{tasks}}.",
+    "overdueCatchUp": "Sie haben außerdem {{count}} überfällige Aufgabe(n) aufzuholen.",
+    "clearForNow": "Im Moment haben Sie alles im Griff. In dieser Ansicht gibt es keine Aufgaben, die Aufmerksamkeit erfordern.",
+    "floaterClear": "Hier wartet noch nichts.",
+    "floaterPileOne": "Hier wartet eine einzige Sache, ganz ohne Datum.",
+    "floaterPileFew": "Hier warten ein paar Dinge ohne Datum.",
+    "floaterPileSome": "Hier haben sich einige Dinge ohne Datum angesammelt.",
+    "floaterPileMany": "Hier hat sich eine lange Liste von Dingen ohne Datum angesammelt.",
+    "floaterStartWith": "Beginnen Sie mit {{title}}.",
+    "floaterPinnedOne": "Nur {{title}} ist angeheftet.",
+    "floaterPinnedMany": "{{title}} ist angeheftet, und nicht nur das.",
+    "floaterPriorityOne": "Nur {{title}} hat hohe Priorität.",
+    "floaterPriorityMany": "{{title}} hat hohe Priorität, und nicht nur das.",
+    "floaterMediumOne": "Nur {{title}} hat mittlere Priorität.",
+    "floaterMediumMany": "{{title}} hat mittlere Priorität, und nicht nur das.",
+    "floaterRestingOne": "Eines davon ist seit Monaten unberührt.",
+    "floaterRestingMany": "Einiges davon ist seit Monaten unberührt.",
+    "floaterRestingAll": "Hier ist seit Monaten nichts angerührt worden.",
+    "floaterRestingAllOne": "Es ist seit Monaten nicht angerührt worden.",
+    "title": "Summary",
+    "loading": "Generating summary…",
+    "error": "Couldn't generate a summary. Please try again.",
+    "sourceServer": "Server model",
+    "sourceLocal": "Local model",
+    "dateMonthDay": "{{day}} {{month}}",
+    "dateMonthDayYear": "{{day}} {{month}} {{year}}",
+    "dueAnytime": "jederzeit",
+    "monthsShort": [
+      "Jan",
+      "Feb",
+      "Mär",
+      "Apr",
+      "Mai",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Okt",
+      "Nov",
+      "Dez"
+    ],
+    "weekNone": "Diese Woche noch keine Aufgaben erledigt.",
+    "weekCleared": "Du hast diese Woche {{count}} Aufgaben erledigt.",
+    "weekBusiest": "Aktivster Tag war {{day}} ({{count}}).",
+    "weekOldest": "Die älteste endlich erledigte: {{title}}.",
+    "weekdaysShort": [
+      "Mo",
+      "Di",
+      "Mi",
+      "Do",
+      "Fr",
+      "Sa",
+      "So"
+    ]
+  },
+  "guide": {
+    "title": "Anleitung & Tipps",
+    "subtitle": "Alles, was T'Day kann — das Offensichtliche und das Verborgene.",
+    "searchPlaceholder": "Funktionen suchen…",
+    "searchAria": "Anleitung durchsuchen",
+    "whatsNew": "Neuigkeiten",
+    "tryIt": "Ausprobieren",
+    "clearSearch": "Löschen",
+    "noResults": "Keine Treffer. Versuch ein anderes Wort.",
+    "results": "{{count}} Ergebnisse",
+    "badges": {
+      "hiddenGem": "Geheimtipp",
+      "proTip": "Profi-Tipp",
+      "new": "Neu",
+      "server": "Servermodus"
+    },
+    "sections": {
+      "gettingStarted": "Erste Schritte",
+      "captureAndDates": "Erfassen & Termine",
+      "gestures": "Gesten",
+      "organizing": "Organisieren",
+      "recurrenceAndReminders": "Wiederholung & Erinnerungen",
+      "widgetsAndSurfaces": "Widgets & Oberflächen",
+      "modesAndSync": "Modi & Sync",
+      "integrations": "Integrationen",
+      "keyboardShortcuts": "Tastenkürzel"
+    },
+    "topics": {
+      "root-feeds": {
+        "title": "Geplant und Jederzeit",
+        "summary": "Zwei ruhige Hauptfeeds, zwischen denen du über das Dock wechselst.",
+        "keywords": "geplant, jederzeit, feed, dock, hauptfeed, navigieren, tabs, wechseln",
+        "body": "T'Day hat zwei verwandte Feeds. Geplant enthält deine terminierten Aufgaben für heute und darüber hinaus. Jederzeit enthält Floater — Aufgaben ohne Datum. Wechsle über das Dock unten zwischen ihnen und lege aus jedem von beiden eine Aufgabe an."
+      },
+      "default-home-screen": {
+        "title": "Standard-Startbildschirm",
+        "summary": "Wähle, ob T'Day mit Geplant oder Jederzeit startet.",
+        "keywords": "standard, startbildschirm, start, launch, geplant, jederzeit, verhalten, einstellungen",
+        "body": "In den Einstellungen gibt es einen Bereich „Verhalten“, in dem du festlegst, welcher Feed zuerst geöffnet wird — Geplant oder Jederzeit. Das legt nur fest, was dich beim Start begrüßt; über das Dock wechselst du weiterhin jederzeit zwischen beiden."
+      },
+      "create-task": {
+        "title": "Aufgabe erstellen",
+        "summary": "Füge mit wenigen Tipps eine geplante Aufgabe oder einen Floater ohne Datum hinzu.",
+        "keywords": "erstellen, hinzufügen, neu, aufgabe, plus, fab, verfassen",
+        "body": "Tippe auf die Erstellen-Schaltfläche, um eine Aufgabe hinzuzufügen. Gib ihr einen Titel und, falls sie ein Datum hat, eine Fälligkeitszeit. Lass das Datum weg, und sie wird stattdessen zu einem Floater in deinem Jederzeit-Feed.",
+        "tip": "Tippe ein Datum direkt in den Titel — T'Day liest es für dich aus. Siehe „Das Datum eintippen“."
+      },
+      "nlp-date-syntax": {
+        "title": "Das Datum eintippen",
+        "summary": "Schreib das Datum in den Titel, und T'Day plant es für dich ein.",
+        "keywords": "natürliche sprache, datum, morgen, nächste woche, erkennen, schnell, smart, nlp, auf dem gerät",
+        "body": "Keine Auswahlfelder nötig. Tippe ein Datum (\"morgen 15 Uhr\"), eine Wiederholung (\"every day\", \"weekly\", \"every weekday\") oder eine Priorität (\"!\", \"!!\" oder \"high\"/\"low\" am Ende) direkt in den Titel. T'Day wertet das auf dem Gerät aus — ohne Konto oder Netz —, hebt das erkannte Datum hervor und füllt Termin, Wiederholung und Priorität aus.",
+        "example": "Zahnarzt Dienstag 15 Uhr every weekday !!"
+      },
+      "calendar-views": {
+        "title": "Kalenderansichten",
+        "summary": "Sieh deine geplanten Aufgaben nach Monat, Woche oder Tag.",
+        "keywords": "kalender, monat, woche, tag, agenda, ansicht, termine",
+        "body": "Öffne den Kalender, um geplante Aufgaben nach Monat, Woche oder Tag angeordnet zu sehen. Wische oder nutze die Pfeile, um zwischen den Zeiträumen zu wechseln; die Schaltfläche oben rechts bringt dich zu heute zurück, ohne die Ansicht zu ändern."
+      },
+      "priorities": {
+        "title": "Prioritäten",
+        "summary": "Markiere Wichtiges mit Niedrig, Mittel oder Hoch.",
+        "keywords": "priorität, hoch, mittel, niedrig, wichtig, dringend, markieren",
+        "body": "Gib einer Aufgabe eine Priorität, um zu kennzeichnen, wie wichtig sie ist. Die Priorität erscheint als kleiner Akzentpunkt an der Aufgabe und hilft dabei, zu sortieren, was zuerst Aufmerksamkeit verdient."
+      },
+      "pin-task": {
+        "title": "Aufgabe anheften",
+        "summary": "Halte eine wichtige Aufgabe oben in ihrer Liste.",
+        "keywords": "anheften, angeheftet, festhalten, oben, wichtig, behalten",
+        "body": "Hefte eine Aufgabe an, um sie über der normalen Reihenfolge ganz oben in ihrem Feed zu halten. Löse die Anheftung, damit sie wieder an ihren Platz rutscht."
+      },
+      "swipe-actions": {
+        "title": "Wischaktionen",
+        "summary": "Wische über eine Aufgabenzeile für schnelle Aktionen, ohne sie zu öffnen.",
+        "keywords": "wischen, geste, streichen, abschließen, löschen, schnell, zeile",
+        "body": "Wische über eine Aufgabenzeile, um schnelle Aktionen einzublenden — sie abschließen oder entfernen —, ohne die Aufgabe überhaupt zu öffnen.",
+        "tip": "Eine abgeschlossene Aufgabe zeigt für ein paar Sekunden einen Rückgängig-Hinweis, sodass ein versehentliches Wischen nie endgültig ist."
+      },
+      "copy-task-text": {
+        "title": "Aufgabendetails kopieren",
+        "summary": "Kopiere Titel, Notizen, Fälligkeitsdatum und Priorität einer Aufgabe als Text.",
+        "keywords": "kopieren, zwischenablage, teilen, text, wischen",
+        "body": "Wische eine Aufgabe und tippe auf Kopieren — oder nutze die Kopieren-Schaltfläche am Desktop —, um Titel, Notizen, Fälligkeitsdatum und Priorität als reinen Text zu kopieren, bereit zum Einfügen überall.",
+        "tip": "Praktisch, um eine Aufgabe in eine Nachricht, E-Mail oder eine andere App einzufügen, ohne sie neu zu tippen."
+      },
+      "long-press-actions": {
+        "title": "Aufgabe gedrückt halten",
+        "summary": "Drücken und halten für weitere Optionen und zum Umsortieren.",
+        "keywords": "gedrückt halten, halten, kontextmenü, optionen, umsortieren, ziehen",
+        "body": "Halte eine Aufgabe gedrückt, um ihre Optionen zu öffnen oder um sie aufzunehmen und an eine neue Position in der Liste zu ziehen."
+      },
+      "drag-reorder": {
+        "title": "Per Ziehen umsortieren",
+        "summary": "Zieh Aufgaben in die Reihenfolge, die du willst.",
+        "keywords": "ziehen, umsortieren, verschieben, sortieren, reihenfolge, anordnen",
+        "body": "Deine Listen behalten die Reihenfolge, die du ihnen gibst. Zieh eine Aufgabe nach oben oder unten, um deinen Tag so anzuordnen, wie du ihn dir vorstellst."
+      },
+      "swipe-sheet-away": {
+        "title": "Karte nach unten wegziehen",
+        "summary": "Zieh die Karte für neue Aufgaben nach unten, um sie zu schließen.",
+        "keywords": "wischen, ziehen, schließen, verwerfen, karte, blatt, griff, geste, nach unten",
+        "body": "Der kleine Balken oben auf der Karte für neue Aufgaben heißt: Du kannst sie nach unten ziehen. Zieh sie, und sie folgt deinem Finger; lass etwa ab einem Viertel des Weges los, und sie schließt sich — genau so, als hättest du auf den abgedunkelten Bereich dahinter getippt. Ein kurzer Schwung zählt ebenfalls: Entscheidend ist, wohin du unterwegs warst, nicht wo du losgelassen hast. Und ein Zug, den du dir anders überlegst, federt an seinen Platz zurück.",
+        "tip": "Wenn sich der Inhalt einer Karte scrollen lässt, zieh sie oben an: Die Mitte gehört der Liste."
+      },
+      "sound-and-vibration": {
+        "title": "Ton und Vibration",
+        "summary": "Schalte den Abschlusston, die Vibration oder beides aus.",
+        "keywords": "ton, sound, stumm, lautlos, audio, lautstärke, vibration, vibrieren, haptik, rückmeldung, barrierefreiheit",
+        "body": "Beim Abhaken einer Aufgabe erklingt ein kurzer Ton, und auf dem Handy antwortet die App auf dein Tippen und Ziehen mit einer kleinen Vibration. In den Einstellungen gibt es für beides einen Schalter — schalte einen aus, alles andere bleibt, wie es war.",
+        "tip": "Die Schalter gehören zu diesem Browser und nicht zu deinem Konto: Ein stiller Laptop und ein vibrierendes Handy können jeweils ihre eigene Antwort haben."
+      },
+      "reduce-motion": {
+        "title": "Bewegung reduzieren",
+        "summary": "Schalte die Animationen von T'Day aus, ohne den Rest des Telefons zu ändern.",
+        "keywords": "bewegung, animation, animationen, reduzieren, barrierefreiheit, still, übergänge, schwindel",
+        "body": "In den Einstellungen gibt es einen Schalter „Bewegung reduzieren“. Ist er an, spielt T'Day die Animationen, die es selbst schreibt, nicht mehr ab: Eine Aufgabe wird abgehakt, durchgestrichen und verschwindet auf einmal statt in drei Schritten, der Wischhinweis und das Konfetti bleiben aus, und die Illustration für den leeren Tag ist einfach da, statt hereinzufahren. Jede Wartezeit, die nur eine davon überbrückt hat, entfällt mit ihr – die App wird dadurch schneller, nicht langsamer. Das Gleiten zwischen Bildschirmen und die aufsteigenden Blätter sind Animationen von Android und nicht von T'Day; die richten sich weiterhin nach der Animationseinstellung deines Telefons.",
+        "tip": "Er nimmt Bewegung nur weg. Sind Animationen in den Android-Einstellungen bereits aus, ist T'Day schon still – und der Schalter sagt das, statt anzubieten, es rückgängig zu machen."
+      },
+      "floaters-vs-todos": {
+        "title": "Floater vs. geplante Aufgaben",
+        "summary": "Aufgaben ohne Datum leben in Jederzeit; Aufgaben mit Datum in Geplant.",
+        "keywords": "floater, jederzeit, ungeplant, ohne datum, todo, geplant, unterschied",
+        "body": "Eine terminierte Aufgabe hat ein Fälligkeitsdatum und erscheint in Geplant und im Kalender. Ein Floater hat kein Datum — er wartet still in deinem Jederzeit-Feed, bis du bereit bist. Nutze Floater für „irgendwann“-Vorhaben, die den heutigen Tag nicht überladen sollen.",
+        "tip": "Floater erscheinen nie im Kalender — dieser Platz ist nur für datierte Vorhaben."
+      },
+      "promote-and-float": {
+        "title": "Hochstufen & treiben lassen",
+        "summary": "Plane einen Floater als echte Aufgabe ein – oder lass eine liegengebliebene Aufgabe treiben.",
+        "keywords": "hochstufen, floater planen, herabstufen, treiben lassen, umwandeln, jederzeit, verschieben, überfällig",
+        "body": "Wenn ein Floater zu echter Arbeit werden soll, nutze seine Planen-Aktion: Wähle eine Zeit, und er wandert als terminierte Aufgabe zu Geplant. Auch andersherum: Eine überfällige Aufgabe, die du immer wieder verschiebst, kann leise treiben – stufe sie herab und sie kehrt ohne Datum zu Jederzeit zurück, mit Titel, Notizen und Priorität.",
+        "tip": "Wiederholende Aufgaben können nicht treiben – beende zuerst die Serie, wenn sie datumslos sein soll."
+      },
+      "quick-defer": {
+        "title": "Schnell verschieben",
+        "summary": "Ein Tipp verschiebt eine Aufgabe auf später heute, heute Abend, morgen oder nächste Woche.",
+        "keywords": "verschieben, aufschieben, später, heute abend, morgen, nächste woche, umplanen",
+        "body": "Wenn eine Aufgabe wandern muss, aber nicht weit, spare dir den Datumswähler: Die Verschieben-Aktion bietet Später heute (+3 Stunden), Heute Abend (19:00), Morgen früh (09:00) und Nächste Woche (Montag 09:00) mit einem Tipp. Es ist dieselbe Änderung wie im Bearbeiten-Blatt – nur schneller.",
+        "tip": "Wiederholende Aufgaben verschiebst du pro Termin über das Bearbeiten-Blatt; das Ein-Tipp-Menü bleibt ihnen fern."
+      },
+      "day-done": {
+        "title": "Tag geschafft",
+        "summary": "Erledige alles für heute und der Heute-Bildschirm feiert leise mit.",
+        "keywords": "tag geschafft, alles erledigt, fertig, alles abgeschlossen, heute leer",
+        "body": "Wenn jede für heute geplante Aufgabe erledigt ist — und nicht bloß fehlt — tauscht der Heute-Bildschirm seine „Keine Aufgaben“-Meldung gegen einen ruhigen Geschafft-Zustand: ein sanftes Doppelhäkchen, die Worte „Alles erledigt für heute“ und das Datum. Keine Serien, keine Punkte; nur die kleine Belohnung eines wirklich beendeten Tages."
+      },
+      "floater-lists": {
+        "title": "Floater-Listen",
+        "summary": "Gruppiere deine Jederzeit-Aufgaben in eigene Listen.",
+        "keywords": "floater-liste, jederzeit, gruppieren, liste, kategorie, einkauf, packen",
+        "body": "Organisiere Floater in getrennte Listen — Einkäufe, Packliste, Ideen — jede mit eigenem Namen und eigener Farbe und eigener abgeschlossener Historie."
+      },
+      "scheduled-lists": {
+        "title": "Listen für geplante Aufgaben",
+        "summary": "Sortiere datierte Aufgaben in benannte, farbige Listen.",
+        "keywords": "liste, projekt, gruppieren, farbe, geplant, kategorie",
+        "body": "Gib geplanten Aufgaben eine Liste, damit Zusammengehöriges beisammen bleibt. Listen tragen einen Namen und eine Farbe und lassen sich filtern."
+      },
+      "completed-history": {
+        "title": "Abgeschlossene Historie",
+        "summary": "Alles, was du erledigt hast, aufbewahrt zum Zurückblicken.",
+        "keywords": "abgeschlossen, erledigt, historie, fertig, archiv, vergangenheit",
+        "body": "Erledigte Aufgaben werden nicht verworfen — sie wandern in deine abgeschlossene Historie, nach Tag gruppiert, sodass du sehen kannst, was du tatsächlich geschafft hast."
+      },
+      "overdue-view": {
+        "title": "Überfällig",
+        "summary": "Ein eigener Ort für Aufgaben, deren Zeit verstrichen ist.",
+        "keywords": "überfällig, verspätet, fällig, verpasst, übertragen, rückstand",
+        "body": "Aufgaben, deren Fälligkeitszeit verstrichen ist, sammeln sich in der Ansicht Überfällig, damit nichts stillschweigend durchrutscht. Plane sie neu ein, wenn du bereit bist."
+      },
+      "morning-sweep": {
+        "title": "Morgendliches Aufräumen",
+        "summary": "Sortiere liegengebliebene Aufgaben Karte für Karte.",
+        "keywords": "aufräumen, überfällig, sortieren, liegengeblieben, aufholen, rückstand, morgen",
+        "body": "Rückstand tut nicht mehr weh: Der Aufräumen-Knopf auf dem Überfällig-Bildschirm geht deine liegengebliebenen Aufgaben Karte für Karte durch — Heute, Morgen, Datum wählen, Zum Floater machen oder Loslassen. In Eile? „Alles auf heute schieben“ verschiebt alles auf einmal, mit einem einzigen Rückgängig.",
+        "tip": "Wiederholende Aufgaben bleiben außen vor; ihre Termine planst du im Bearbeiten-Blatt um, damit die Serie intakt bleibt."
+      },
+      "search-tasks": {
+        "title": "Aufgaben durchsuchen",
+        "summary": "Finde jede Aufgabe nach Titel, Notiz oder Listenname.",
+        "keywords": "suchen, finden, filtern, nachschlagen, abfrage",
+        "body": "Nutze das Suchfeld, um deine Aufgaben sofort nach Titel, Beschreibung oder Listenname zu filtern — ganz ohne Scrollen."
+      },
+      "recurrence-presets": {
+        "title": "Wiederkehrende Aufgaben",
+        "summary": "Lass eine Aufgabe täglich, wöchentlich und mehr wiederkehren.",
+        "keywords": "wiederholen, wiederkehrend, wiederholung, jeden tag, wöchentlich, monatlich, rrule, zeitplan",
+        "body": "Stell eine Aufgabe auf Wiederholung, und sie kommt nach ihrem eigenen Zeitplan zurück. Wähle aus den Vorlagen — jeden Tag, Wochentag, jede Woche oder jeden Monat —, und das Abschließen eines Termins lässt den Rest der Serie unberührt.",
+        "example": "Pflanzen gießen · jede Woche"
+      },
+      "reminders": {
+        "title": "Erinnerungen",
+        "summary": "Erhalte eine Benachrichtigung, bevor eine Aufgabe fällig ist.",
+        "keywords": "erinnerung, benachrichtigung, hinweis, wecker, benachrichtigen, vorher",
+        "body": "Füge einer geplanten Aufgabe eine Erinnerung hinzu, und dein Gerät benachrichtigt dich zur richtigen Zeit. Erinnerungen werden auf deinem Gerät geplant, sodass sie auch im lokalen Modus funktionieren.",
+        "tip": "Die Optionen für die Vorlaufzeit einer Erinnerung variieren je nach Aufgabe leicht — wähle die, die dir genug Vorwarnung gibt."
+      },
+      "reminder-snooze": {
+        "title": "Erinnerung später wiederholen",
+        "summary": "Erinnerungs-Benachrichtigungen bieten „1 Std. später“ und „Heute Abend“.",
+        "keywords": "später erinnern, erinnerung, benachrichtigung, snooze, heute abend, verschieben",
+        "body": "Kommt eine Erinnerung ungelegen, musst du die App nicht öffnen: „1 Std. später“ stellt dieselbe Erinnerung eine Stunde später erneut zu, „Heute Abend“ verschiebt die Aufgabe selbst auf 19:00 heute. Heute Abend gilt für einmalige Aufgaben — wiederkehrende Termine planst du in der App um, damit die Serie intakt bleibt.",
+        "tip": "Später wiederholen verzögert nur die Benachrichtigung; die Aufgabe behält ihre ursprüngliche Zeit, bis du sie verschiebst."
+      },
+      "day-ahead": {
+        "title": "Tagesüberblick",
+        "summary": "Eine leise Morgenbenachrichtigung mit den Zahlen des Tages.",
+        "keywords": "tagesüberblick, digest, morgens, tägliche benachrichtigung, überblick",
+        "body": "In den Einstellungen aktivieren und eine Uhrzeit wählen: Jeden Morgen sagt dir eine Benachrichtigung, wie der Tag aussieht — „4 Aufgaben heute, 2 liegengeblieben“ — und öffnet Heute, oder springt direkt ins morgendliche Aufräumen, wenn etwas liegengeblieben ist. Vollständig auf dem Gerät: Nichts verlässt dein Telefon.",
+        "tip": "An aufgabenfreien Tagen bleibt der Überblick stumm — keine Nachrichten sind gute Nachrichten."
+      },
+      "push-notifications": {
+        "title": "Web-Erinnerungen (Push)",
+        "summary": "Lass die Web-App dich benachrichtigen, wenn eine Aufgabe fällig ist, selbst wenn sie geschlossen ist.",
+        "keywords": "push, benachrichtigung, web, browser, erinnerung, vapid, abonnieren, fällig",
+        "body": "In der Web-App kannst du Push-Benachrichtigungen in den Einstellungen aktivieren. Dein selbst gehosteter Server sendet dann eine Erinnerung, wenn die Fälligkeitszeit einer Aufgabe erreicht ist — so kann die Web-App dich auch dann erreichen, wenn der Tab geschlossen ist. Du kannst die Aufgabe direkt aus der Benachrichtigung abschließen."
+      },
+      "notifications": {
+        "title": "Benachrichtigungen",
+        "summary": "Ein Schalter entscheidet, ob T'Day dich überhaupt unterbrechen darf.",
+        "keywords": "benachrichtigungen, berechtigung, schalter, erlauben, stumm, stummschalten, erinnerung, übersicht, systemeinstellungen",
+        "body": "In den Einstellungen gibt es einen einzigen Schalter für Benachrichtigungen, und alles, was dich erreicht, läuft darüber — Aufgabenerinnerungen und die Tagesvorschau. Ausschalten leert die Warteschlange, statt sie nur stummzuschalten: Beim Wiedereinschalten kommt also nichts verspätet an. Zusätzlich wird die Systemberechtigung gebraucht: Solange Benachrichtigungen für T'Day auf deinem Gerät blockiert sind, bleibt der Schalter aus und bietet an, die Systemeinstellungen zu öffnen.",
+        "tip": "Beide Hälften müssen an sein. Fehlt die Systemberechtigung, zeigt der Schalter Aus — egal, wie du ihn hier hinterlassen hast."
+      },
+      "home-widget": {
+        "title": "Startbildschirm-Widget",
+        "summary": "Sieh die heutigen Aufgaben, ohne die App zu öffnen.",
+        "keywords": "widget, startbildschirm, blick, heute, sperrbildschirm",
+        "body": "Füge das T'Day-Widget zu deinem Startbildschirm hinzu, um einen Blick auf die heutigen Aufgaben zu werfen. Ein Tipp auf das Widget öffnet die App an der richtigen Stelle."
+      },
+      "widget-list-selection": {
+        "title": "Liste für dein Widget wählen",
+        "summary": "Ein Widget auf eine bestimmte Liste statt den ganzen Feed richten.",
+        "keywords": "widget, liste, konfigurieren, widget bearbeiten, pro liste, startbildschirm, ios",
+        "body": "Widget lange gedrückt halten und „Widget bearbeiten\" wählen, um genau festzulegen, welche Liste es zeigt – jede deiner geplanten Listen oder Floater-Listen. Eine geplante Liste zeigt Fälligkeitszeiten und markiert Überfälliges; eine Floater-Liste zeigt eine offene Liste ohne Fälligkeitszeiten. Bleibt die Auswahl leer, zeigt das Widget weiterhin den vollständigen Today- oder Floater-Feed.",
+        "tip": "Füge mehrere Widgets hinzu, jedes auf eine andere Liste ausgerichtet, um sie alle gleichzeitig auf deinem Startbildschirm zu sehen."
+      },
+      "list-widgets": {
+        "title": "Listen-Widget",
+        "summary": "Ein drittes Widget, für eine eingebaute Ansicht oder eine Liste deiner Wahl.",
+        "keywords": "widget, startbildschirm, liste, einrichtung, auswahl, jederzeit, geplant, hinzufügen",
+        "body": "Neben Heute und Jederzeit gibt es ein Listen-Widget. Platziere es, und es fragt, was es zeigen soll — die eingebauten Ansichten Geplant und Überfällig oder jede geplante Liste oder Jederzeit-Liste. Danach zeigt es nur diese Auswahl, und sein + legt eine Aufgabe an: in der Liste, wenn du eine gewählt hast. Platziere ein weiteres für eine andere Ansicht oder Liste; jedes behält seine eigene.",
+        "tip": "Um ein Listen-Widget auf eine andere Liste umzustellen, halte es gedrückt und wähle Bearbeiten (auf dem iPhone: Widget bearbeiten)."
+      },
+      "widget-quick-add": {
+        "title": "Schnell hinzufügen aus dem Widget",
+        "summary": "Starte eine neue Aufgabe direkt aus dem Widget.",
+        "keywords": "widget, schnell hinzufügen, erstellen, verknüpfung, startbildschirm",
+        "body": "Das Widget hat eine Erstellen-Schaltfläche, sodass du eine Aufgabe von deinem Startbildschirm erfassen kannst, ohne zuerst die App zu öffnen — und das funktioniert auch im lokalen Modus."
+      },
+      "interactive-widgets": {
+        "title": "Direkt im Widget abhaken",
+        "summary": "Hake Aufgaben direkt im Widget auf dem Startbildschirm ab.",
+        "keywords": "widget, abhaken, erledigen, startbildschirm, interaktiv, tippen",
+        "body": "Die Today- und Floater-Widgets reagieren jetzt auf Tippen: Tippe auf den Ring am Anfang einer Zeile, um die Aufgabe abzuschließen, ohne die App zu öffnen. Die Zeile verschwindet sofort und der Abschluss synchronisiert wie jeder andere — offline getippte Häkchen warten in der Warteschlange und werden übernommen, sobald du wieder online bist.",
+        "tip": "Vertippt? Öffne in der App die Abgeschlossene Historie und stelle die Aufgabe von dort wieder her."
+      },
+      "today-widget-progress": {
+        "title": "Das Heute-Widget auf einen Blick",
+        "summary": "Sieh, wie weit du im Tag bist, was überfällig ist und was als Nächstes kommt.",
+        "keywords": "Widget, heute, Fortschritt, Ring, erledigt, überfällig, morgen, Datum, Startbildschirm",
+        "body": "Das Heute-Widget beginnt mit dem Datum und einem Fortschrittsring: wie viele der heute fälligen Aufgaben erledigt sind, von allen. Überfälliges steht in einem eigenen Abschnitt unter den heutigen Aufgaben, mit dem Tag, an dem es fällig war. Ist heute nichts fällig, zeigt das Widget, was am nächsten Tag mit Aufgaben ansteht. Eine abgehakte Aufgabe bleibt kurz abgehakt und durchgestrichen, bevor sie verschwindet.",
+        "tip": "Der Ring zählt nur heute fällige Aufgaben. Etwas von einem anderen Tag zu erledigen, füllt ihn nicht."
+      },
+      "share-into-tday": {
+        "title": "In T'Day teilen",
+        "summary": "Schicke Text aus jeder App direkt in eine neue Aufgabe.",
+        "keywords": "teilen, share sheet, senden an, erfassen, import, aus anderer app",
+        "body": "Etwas in einer anderen App gefunden? Öffne das System-Teilen-Menü und wähle T'Day. Der geteilte Text landet in einem Neue-Aufgabe-Formular — bei einer geteilten Seite wird ihr Titel zum Aufgabennamen und der Link wandert in die Notizen. Auf Android und im Web öffnet sich das Formular sofort; auf iOS wird die Aufnahme sofort gespeichert und das vorausgefüllte Formular erscheint beim nächsten Öffnen der App.",
+        "tip": "Teile Text mit einer Datumsangabe — der Parser setzt das Fälligkeitsdatum für dich."
+      },
+      "android-shortcuts": {
+        "title": "Schnelleinstellungen-Kachel & Verknüpfungen",
+        "summary": "Lege Aufgaben aus den Schnelleinstellungen oder per langem Druck aufs App-Symbol an.",
+        "keywords": "schnelleinstellungen, kachel, verknüpfung, langes drücken, app-symbol, schnell hinzufügen",
+        "body": "Zwei Abkürzungen auf Android. Füge die T'Day-Kachel den Schnelleinstellungen hinzu (Kachelraster bearbeiten und hineinziehen) — ein Tipp öffnet das Neue-Aufgabe-Formular von überall, sogar über einer anderen App. Ein langer Druck aufs App-Symbol bietet außerdem Verknüpfungen: Neue Aufgabe, Heute und Floater springen direkt ans Ziel.",
+        "tip": "Verknüpfungen lassen sich als eigene Symbole auf den Startbildschirm ziehen — ein eigener Ein-Tipp-Knopf für neue Aufgaben."
+      },
+      "carplay": {
+        "title": "T'Day auf CarPlay",
+        "summary": "Aufgaben sicher im Blick behalten und erfassen, während du fährst.",
+        "keywords": "carplay, auto, fahren, sprache, apple, freihändig",
+        "body": "Auf CarPlay zeigt T'Day eine fokussierte, überschaubare Liste, die für das Auto gemacht ist, sodass du prüfen kannst, was als Nächstes ansteht, oder per Sprache eine Aufgabe hinzufügst, ohne zum Telefon zu greifen."
+      },
+      "android-car": {
+        "title": "T'Day-Autobildschirm",
+        "summary": "Ein vereinfachter In-App-Bildschirm, gemacht fürs Auto.",
+        "keywords": "auto, fahren, android, sprache, freihändig, bildschirm",
+        "body": "T'Day enthält einen vereinfachten Autobildschirm mit großen Zielflächen und Spracherfassung, sodass du unterwegs mit minimalem Aufwand eine Aufgabe hinzufügen kannst."
+      },
+      "local-mode": {
+        "title": "Lokaler Modus",
+        "summary": "Nutze T'Day vollständig offline, ohne Server oder Konto.",
+        "keywords": "lokaler modus, offline, privat, kein konto, kein server, auf dem gerät",
+        "body": "Der lokale Modus behält alles auf deinem Gerät — kein Login, kein Server, kein Upload. Es ist eine vollwertige Art, T'Day privat zu nutzen, und deine lokalen Daten werden von sich aus nirgendwohin gesendet. Im Browser liegt er im Speicher dieses Browsers – wer Cookies und Websitedaten löscht, löscht den Arbeitsbereich mit. Exportiere ihn vorher, wenn du ihn behalten möchtest. Wenn du Absturzberichte aktivierst, wird nur dann ein kurzer technischer Bericht gesendet, wenn etwas fehlschlägt, nie deine Aufgaben oder Listen.",
+        "tip": "Nur im Servermodus verfügbare Funktionen sind hier mit einem „Servermodus“-Abzeichen gekennzeichnet, damit du weißt, was sich beim Anmelden ändert."
+      },
+      "server-mode": {
+        "title": "Servermodus",
+        "summary": "Synchronisiere über deinen eigenen privaten Server geräteübergreifend.",
+        "keywords": "servermodus, sync, selbst gehostet, konto, login, geräte, echtzeit",
+        "body": "Melde dich an deinem selbst gehosteten Server an, um Aufgaben in Echtzeit geräteübergreifend zu synchronisieren. Änderungen geschehen sofort auf deinem Gerät und werden an den Server übertragen, sodass die App auch bei wackliger Verbindung flott bleibt."
+      },
+      "offline-sync": {
+        "title": "Offline-Sync",
+        "summary": "Arbeite offline weiter; Änderungen werden bei erneuter Verbindung übertragen.",
+        "keywords": "offline, sync, ausstehend, warteschlange, übertragen, verbindung, konflikt",
+        "body": "Im Servermodus werden deine Änderungen zuerst lokal gespeichert und in die Warteschlange gestellt, wenn du offline bist. Sobald du wieder verbunden bist, überträgt T'Day sie der Reihe nach an den Server."
+      },
+      "export-your-data": {
+        "title": "Deine Daten exportieren",
+        "summary": "Lade alles als eine portable Datei herunter — und hol es jederzeit zurück.",
+        "keywords": "export, import, herunterladen, backup, meine daten, portabel, wiederherstellen, migrieren",
+        "body": "In den Einstellungen kannst du dein ganzes Konto — Aufgaben, Listen, abgeschlossene Historie und Einstellungen — als einzelne JSON-Datei herunterladen. Importiere sie in ein anderes T'Day (einen Server oder ein Gerät im lokalen Modus), und alles landet als neue Einträge: Der Import fügt immer hinzu und überschreibt nie, sodass nichts Vorhandenes verloren geht. Auf einem Server werden Beschreibungen in die Datei entschlüsselt, damit sie lesbar bleibt, selbst wenn du zu einem anders verschlüsselten Server wechselst.",
+        "tip": "Die Datei ist einfaches, lesbares JSON — bewahre eine Kopie als persönliches Backup auf."
+      },
+      "local-to-server-migration": {
+        "title": "Von diesem Gerät auf einen Server umziehen",
+        "summary": "Nimm deine Aufgaben vom Gerät mit, wenn du in den Server-Modus wechselst.",
+        "keywords": "migration, lokal zu server, daten umziehen, modus wechseln, hochladen, anmelden, übertragen",
+        "body": "Im lokalen Modus gestartet und später einen Server eingerichtet? Es wird nie etwas von selbst hochgeladen. So ziehst du deine Daten um: Exportiere sie zuerst in den Einstellungen, melde dich an deinem Server an und importiere dort die Datei. Aufgaben, Listen und Historie ziehen in einem bewussten Schritt um — du wählst den Moment, und deine Gerätedaten bleiben bis dahin unberührt.",
+        "tip": "Behalte die exportierte Datei nach dem Import, bis du geprüft hast, dass alles angekommen ist — dann dient sie zugleich als Backup."
+      },
+      "crash-reports": {
+        "title": "Absturz- und Problemberichte",
+        "summary": "Standardmäßig aus. Wer entscheidet, hängt von der Plattform ab.",
+        "keywords": "absturz, abstürze, crash, fehler, fehlerbericht, bericht, problembericht, sentry, privatsphäre, datenschutz, diagnose, telemetrie, einfrieren, hänger, anr, speicher, arbeitsspeicher, analyse, nutzungsdaten",
+        "body": "Absturz- und Problemberichte sind optional und standardmäßig ausgeschaltet. Wer entscheidet, ist je nach Plattform anders: In der Web-App gilt eine einzige Admin-Antwort für den ganzen Server – die Website, die Fehler des Servers selbst und alle, die ihn nutzen – und einzelne Nutzer werden nicht gefragt. Auf Android und iOS wird jede Person im Anmeldeablauf gefragt; die Antwort gilt also pro Gerät und die Frage kommt bei jeder Anmeldung zurück. Das funktioniert wie Crashlytics: Es dient dazu, Fehler zu beheben, nicht dazu, zu messen, wie du die App nutzt. Solange alles normal läuft, gibt es auf deinem Gerät keine Nutzungsanalyse, kein Sitzungs-Tracking und keine Leistungsüberwachung.",
+        "body2": "Ein Bericht enthält die App-Version, dein Gerätemodell und die Version deines Betriebssystems (oder Browser und Version), den Fehler und die Stelle im Code, an der er aufgetreten ist, ein paar benannte Schritte davor, Namen von Bildschirmen oder API-Routen ohne jegliche IDs, Statuscodes sowie auf Mobilgeräten grobe Gerätezustände wie freien Arbeitsspeicher, Akkustand und ob du online warst. Außerdem enthält er deinen Zeitzonenversatz (zum Beispiel UTC+2) und deine Sprache, weil Datumsangaben für einen Aufgabenplaner zentral sind.",
+        "body3": "Nie enthalten sind: dein Name, Benutzername, deine E-Mail-Adresse oder sonstige Kontodetails; deine IP-Adresse oder dein Standort; die Adresse deines Servers; Titel und Inhalte von Aufgaben, Listen oder Notizen; der Inhalt deiner Datenbank; Passwörter, Cookies oder Tokens; Screenshots oder Aufzeichnungen. Fehlermeldungen werden auf deinem Gerät von Adressen, Kennungen und zitiertem Text bereinigt, bevor sie gesendet werden, nach bestem Bemühen. Berichte enthalten keine Nutzer-ID, sodass sie nicht auf dich zurückgeführt und auch nicht pro Person gelöscht werden können.",
+        "body4": "Berichte werden nur gesendet, wenn etwas fehlschlägt, und nur, wenn Berichte für die jeweilige Plattform eingeschaltet sind: in der Web-App, nachdem ein Admin sie für den Server einschaltet; auf dem Gerät, nachdem du dort zugestimmt hast. Schlägt etwas fehl, während Berichte aus sind, wird nichts gespeichert oder in eine Warteschlange gestellt, und wenn du sie später einschaltest, werden frühere Fehler nicht nachgesendet. Was als Fehler gilt, hängt von der Plattform ab: Android meldet Abstürze, Einfrieren und Abstürze wegen Speichermangels; iOS meldet Abstürze, Einfrieren und das Beenden der App durch das System wegen zu hohen Speicherverbrauchs; die Web-App meldet nur unerwartete Fehler. T'Day erkennt keine Speicherlecks.",
+        "body5": "Berichte gehen über Sentry, einen Dienst für Absturzberichte, an den Maintainer von T'Day. Sie werden 30 Tage lang aufbewahrt und ausschließlich zur Fehlerbehebung verwendet, nie verkauft oder für Werbung weitergegeben. Sie werden direkt an Sentry gesendet, nicht über deinen Server. Sentry sieht die Netzwerkadresse jeder Verbindung, wie jeder Onlinedienst, ist aber so eingestellt, dass sie nicht gespeichert wird, und die Web-App teilt Sentry außerdem mit, von welcher Website der Bericht stammt. Betreibst du einen eigenen Server, deckt dieselbe Admin-Antwort auch dessen eigene Fehlerberichte ab, plus Zeitmessungen für eine kleine Stichprobe von Anfragen; deine Aufgaben sind darin nie enthalten. Builds ohne Endpunkt für Berichte, etwa selbst gebaute, zeigen diese Einstellung nicht an.",
+        "step0": "Öffne die Einstellungen.",
+        "step1": "In der Web-App schaltet ein Admin unter Privatsphäre „Server-Fehlerberichte“ aus; auf dem Gerät schaltest du selbst „Absturz- und Problemberichte“ aus.",
+        "step2": "Es werden sofort keine Berichte mehr gesendet, und alles, was noch auf das Senden wartet, wird gelöscht.",
+        "tip": "Nein zu sagen kostet nichts. Die Antwort lässt sich jederzeit unter Einstellungen → Privatsphäre ändern – in der Web-App durch einen Admin, auf dem Gerät von dir. Technische Details: docs/TELEMETRY.md im Repository von T'Day."
+      },
+      "in-app-update": {
+        "title": "In-App-Updates",
+        "summary": "Installiere den neuesten T'Day-Build aus der App heraus.",
+        "keywords": "update, aktualisieren, version, installieren, apk, neueste version",
+        "body": "Wenn ein neuer Build verfügbar ist, kann T'Day ihn für dich vom Bildschirm Neueste Version herunterladen und installieren, sodass du aktuell bleibst, ohne nach einer Datei zu suchen."
+      },
+      "api-key-homarr": {
+        "title": "API-Schlüssel & Homarr",
+        "summary": "Zeig deine Aufgaben mit einem persönlichen API-Schlüssel auf einem Dashboard.",
+        "keywords": "api-schlüssel, homarr, dashboard, integration, token, widget, homelab",
+        "body": "Erstelle in den Einstellungen einen persönlichen API-Schlüssel, um deine Aufgaben in einem Dashboard wie Homarr anzuzeigen. Wähle für Dashboards einen Nur-Lese-Schlüssel, damit er deine Daten nie ändern kann, gib ihm einen Namen zur Unterscheidung und halte ihn privat. Du kannst mehrere Schlüssel anlegen und jeden einzeln widerrufen.",
+        "step0": "Öffne die Einstellungen und finde die API-Schlüssel-Karte.",
+        "step1": "Wähle für Dashboards den Nur-Lese-Bereich, erstelle den Schlüssel und kopiere ihn – er wird nur einmal angezeigt.",
+        "step2": "Füge ihn in das T'Day-Widget deines Dashboards ein."
+      },
+      "ai-summary": {
+        "title": "Aufgaben-Zusammenfassungen",
+        "summary": "Ein kurzer, ruhiger Blick auf deinen Tag — mit optionaler lokaler KI.",
+        "keywords": "zusammenfassung, ki, ollama, überblick, digest, lokal, privat",
+        "body": "T'Day kann deinen Tag in ein, zwei Sätzen zusammenfassen. Mit einem lokalen Ollama-Modell liest es sich natürlich; ohne eines greift es auf eine warme, deterministische Zusammenfassung zurück — so oder so verlässt nichts deinen Server.",
+        "tip": "Die Zusammenfassung hängt nie von einem Cloud-KI-Dienst ab — sie ist lokal oder gar nicht."
+      },
+      "keyboard-submit": {
+        "title": "Mit der Tastatur absenden",
+        "summary": "Speichere eine Aufgabe, ohne zur Maus zu greifen.",
+        "keywords": "tastatur, tastenkürzel, absenden, enter, speichern, hotkey",
+        "body": "In der Web-App kannst du das Aufgabenformular direkt über die Tastatur absenden, sodass schnelles Erfassen deinen Fluss nie unterbricht.",
+        "kbd": "Strg / ⌘ + Enter"
+      },
+      "keyboard-shortcuts": {
+        "title": "Tastaturkürzel",
+        "summary": "Steuere die Web-App per Tastatur: Schnelleingabe, Palette, Übersicht.",
+        "keywords": "tastatur, kürzel, hotkey, befehlspalette, cmd+k, schnell hinzufügen",
+        "body": "Die Web-App hat eine globale Tastatur-Ebene. Drücke überall N für eine neue Aufgabe, Ctrl / ⌘ + K für die Befehlspalette — tippe, um zu einer Ansicht oder Liste zu springen oder eine Aktion auszuführen — und ? für die Kürzel-Übersicht. Während du in einem Feld tippst, werden die Tasten ignoriert.",
+        "tip": "In der Palette bewegen die Pfeiltasten die Auswahl, Enter führt sie aus.",
+        "kbd": "N",
+        "kbd2": "Ctrl / ⌘ + K",
+        "kbd3": "?"
+      },
+      "device-calendar-sync": {
+        "title": "Aufgaben im Gerätekalender",
+        "summary": "Spiegle deine terminierten Aufgaben in einen T'Day-Kalender auf deinem Handy.",
+        "keywords": "kalender, gerätekalender, synchronisieren, google kalender, apple kalender, eventkit, handykalender, spiegeln",
+        "body": "Wenn du das aktivierst, wird jede Aufgabe mit Datum in einen Kalender namens T'Day auf deinem Handy kopiert – neben deinen anderen Kalendern. Anytime-Aufgaben bleiben außen vor, weil sie kein Datum haben. Die Synchronisierung läuft nur in eine Richtung: T'Day schreibt in diesen Kalender, deine dortigen Änderungen werden beim nächsten Abgleich überschrieben.",
+        "step0": "Aktiviere in den Einstellungen „Terminierte Aufgaben zu meinem Kalender hinzufügen“.",
+        "step1": "Erlaube den Kalenderzugriff, wenn dein Handy danach fragt.",
+        "step2": "Öffne deine Kalender-App – deine terminierten Aufgaben stehen im T'Day-Kalender."
+      },
+      "unifiedpush": {
+        "title": "UnifiedPush (Android)",
+        "summary": "Server-Push ohne Google, über deinen eigenen Distributor.",
+        "keywords": "unifiedpush, ntfy, push, benachrichtigungen, selfhost, distributor, fcm",
+        "body": "Im Server-Modus stellt T'Day Server-Benachrichtigungen über UnifiedPush statt über Googles FCM zu — deine Daten bleiben auf deinem Server und deinem Distributor. Es gibt nichts zu aktivieren: Installiere eine Distributor-App (z. B. ntfy), und T'Day meldet sich von selbst dort an. Lokale Erinnerungen funktionieren weiterhin.",
+        "step0": "Installiere einen UnifiedPush-Distributor wie ntfy aus deinem App-Store.",
+        "step1": "Öffne T'Day — es findet den Distributor und registriert sich von selbst. Sind mehrere installiert, fragt Einstellungen → Erinnerungen, welcher es sein soll.",
+        "step2": "Zum Abschalten: Distributor deinstallieren oder abmelden — lokale Erinnerungen bleiben davon unberührt."
+      },
+      "repeat-suggestions": {
+        "title": "Wiederholungs-Vorschläge",
+        "summary": "T'Day erkennt Aufgaben mit Rhythmus und bietet an, sie zu wiederholen.",
+        "keywords": "wiederholen, vorschlag, wiederkehrend, rhythmus, gewohnheit, muster, automatisch",
+        "body": "Wenn du dieselbe Aufgabe in gleichmäßigem Rhythmus erledigst – Pflanzen jede Woche gießen, Miete monatlich zahlen – bemerkt T'Day das und bietet einen Ein-Tipp-Chip zum Wiederholen an. Es liest nur deinen lokalen Erledigt-Verlauf; nichts verlässt das Gerät.",
+        "tip": "Kein Interesse? Tippe auf das ✕ und dieser Titel fragt nicht wieder."
+      },
+      "week-in-review": {
+        "title": "Wochenrückblick",
+        "summary": "Ein ruhiger Sonntags-Rückblick auf deine erledigten Aufgaben.",
+        "keywords": "woche, rückblick, zusammenfassung, sonntag, erledigt, retrospektive",
+        "body": "Sonntags zeigt T'Day einen kurzen Rückblick in deinem Heute-Feed: wie viele Aufgaben du diese Woche erledigt hast, dein aktivster Tag und die älteste endlich erledigte Aufgabe. Er stammt aus deinem Erledigt-Verlauf.",
+        "tip": "Keine Lust? Schließe ihn – bis nächste Woche bleibt er weg."
+      },
+      "quiet-hours": {
+        "title": "Ruhezeiten",
+        "summary": "Halte Erinnerungen nachts zurück, damit nichts im Schlaf summt.",
+        "keywords": "ruhe, zeiten, nicht stören, nacht, schlaf, erinnerungen, zeitplan",
+        "body": "Lege ein Fenster fest – etwa 22:00 bis 07:00 – und jede Erinnerung, die darin ausgelöst würde, wird bis zum Ende gehalten. Nur auf dem Gerät; lokale Erinnerungen warten bis zum Morgen.",
+        "tip": "Das Fenster darf Mitternacht überschreiten (22:00 → 07:00); die Berechnung passt."
+      },
+      "resting-floaters": {
+        "title": "Ruhende Floater",
+        "summary": "Unberührte Anytime-Aufgaben verblassen und ruhen, damit die Liste ruhig bleibt.",
+        "keywords": "ruhen, floater, anytime, verblassen, altern, inaktiv, alt, ruhe",
+        "body": "Anytime-Aufgaben, die du einen Monat nicht angefasst hast, verblassen sanft, und nach drei Monaten sammeln sie sich in einer ruhigen Gruppe „Ruhend“ unten. Nichts wird gelöscht – sie fordern nur keine Aufmerksamkeit mehr.",
+        "tip": "Nur ein Anzeigehinweis; ein Tippen weckt einen Floater sofort."
+      },
+      "reusable-lists": {
+        "title": "Wiederverwendbare Listen",
+        "summary": "Setze eine Liste zurück, um sie erneut zu nutzen: Packen, Aufgaben, Einkauf.",
+        "keywords": "wiederverwendbar, zurücksetzen, liste, floater, wiederholen, vorlage",
+        "body": "Markiere eine Anytime-Liste als wiederverwendbar, und ein Zurücksetzen erscheint. Ein Tippen hebt alle Häkchen auf, sodass du dieselbe Liste erneut durchgehen kannst – ohne sie neu zu erstellen.",
+        "step0": "Öffne eine Floater-Liste und aktiviere „Wiederverwendbar“ in den Einstellungen.",
+        "step1": "Arbeite sie ab und hake Punkte wie gewohnt ab.",
+        "step2": "Wenn du sie wieder brauchst, tippe auf Zurücksetzen."
+      },
+      "brain-dump": {
+        "title": "Gedanken-Dump",
+        "summary": "Leere deinen Kopf in ein Feld; T'Day sortiert es in Aufgaben.",
+        "keywords": "gedanken-dump, erfassen, einfügen, aufteilen, aufgaben, prüfen, gtd",
+        "body": "Wenn dein Kopf voll ist, öffne Gedanken-Dump (⌘K → Gedanken-Dump), füge alles ein — ein Gedanke pro Zeile, Aufzählungen oder „und dann“ — und T'Day teilt es in Aufgaben-Kandidaten. Notierte Daten werden geplante Aufgaben; der Rest wird zu Anytime-Floatern. Die Analyse läuft auf deinem Server; nichts wird erfunden.",
+        "step0": "Öffne die Befehlspalette (⌘K) und wähle Gedanken-Dump.",
+        "step1": "Füge deine Gedanken ein und tippe In Aufgaben aufteilen.",
+        "step2": "Hake ab, was du nicht willst, dann Hinzufügen."
+      },
+      "task-steps": {
+        "title": "Schritte",
+        "summary": "Zerlege eine Aufgabe in eine flache Checkliste und sieh zu, wie sie sich füllt.",
+        "keywords": "schritte, checkliste, teilaufgaben, aufteilung, fortschritt, kontrollkästchen, teilschritte",
+        "body": "Öffne eine Aufgabe und füge Schritte hinzu, um sie in eine flache Checkliste zu zerlegen – keine Verschachtelung, keine separaten Termine. Ein kleiner Zähler wie 2/5 zeigt, wie weit du bist, und die gesamte Aufgabe bleibt eine einzige Zeile in deinem Tag. Hake Schritte ab, während du vorankommst; ist die Aufgabe erledigt, bleiben ihre Schritte in ihrem Verlauf erhalten.",
+        "step0": "Öffne eine Aufgabe und füge unter Schritte deinen ersten Schritt hinzu.",
+        "step1": "Füge so viele hinzu, wie du brauchst, und ziehe sie zum Umsortieren.",
+        "step2": "Hake sie ab – der 2/5-Zähler verfolgt deinen Fortschritt."
+      },
+      "focus-filters": {
+        "title": "Fokus-Filter",
+        "summary": "Lass einen iOS-Fokus entscheiden, welche Listen in deinem Heute-Feed erscheinen.",
+        "keywords": "fokus, filter, ios, arbeit, privat, nicht stören, listen, ausblenden, konzentrieren, focus",
+        "body": "T'Day nutzt den iOS-Fokus. Wähle einen Fokus wie Arbeit oder Privat, lege fest, welche deiner Listen er anzeigen soll, und während dieser Fokus aktiv ist, blenden dein Heute-Feed und das Home-Bildschirm-Widget alles andere still aus. Schalte den Fokus aus, und jede Aufgabe kommt zurück – nichts wird gelöscht.",
+        "step0": "Öffne Einstellungen ▸ Fokus auf dem iPhone und wähle einen Fokus.",
+        "step1": "Füge einen Fokusfilter hinzu, wähle T'Day und dann deine Listen.",
+        "step2": "Aktiviere den Fokus – Heute und das Widget zeigen jetzt nur diese Listen."
+      },
+      "apple-watch": {
+        "title": "Apple Watch",
+        "summary": "Deine Heute-Aufgaben am Handgelenk, live von deinem iPhone gespiegelt.",
+        "keywords": "apple watch, watch, uhr, handgelenk, komplikation, watchos, heute, blick, spiegeln",
+        "body": "Installiere T'Day auf der Apple Watch, und die heutigen Aufgaben wandern mit ans Handgelenk. Die Watch spiegelt genau die Heute-Liste, die dein iPhone erstellt – ohne separate Anmeldung – und eine Komplikation auf dem Zifferblatt zeigt, wie viele Aufgaben noch offen sind, sodass du sie mit einem Blick siehst, ohne die App zu öffnen. Sie aktualisiert sich, sobald dein iPhone synchronisiert.",
+        "step0": "Öffne die Watch-App auf dem iPhone und installiere T'Day.",
+        "step1": "Füge die T'Day-Komplikation zu deinem Zifferblatt hinzu.",
+        "step2": "Wirf einen Blick auf die Anzahl oder öffne die App für die vollständige Liste."
+      },
+      "bulk-actions": {
+        "title": "Sammelaktionen",
+        "summary": "Mehrere Aufgaben auf einmal auswählen und gemeinsam bearbeiten.",
+        "keywords": "sammelaktion, mehrfachauswahl, alle auswählen, stapel, mehrere, erledigen, löschen, priorität, verschieben, auswahl",
+        "body": "Tippe in der Kopfzeile einer Aufgabenliste auf Auswählen, um in den Auswahlmodus zu wechseln. Wähle Aufgaben einzeln oder tippe auf Alle auswählen und wende dann eine einzige Aktion auf alles an: als erledigt markieren, Priorität ändern, in eine andere Liste verschieben oder löschen.",
+        "step0": "Öffne eine Aufgabenliste und tippe in der Kopfzeile auf Auswählen.",
+        "step1": "Tippe Aufgaben an, um sie zu wählen, oder nutze Alle auswählen für alles auf dem Bildschirm.",
+        "step2": "Wähle unten in der Leiste Erledigen, Priorität, Verschieben oder Löschen.",
+        "tip": "Beim Löschen musst du zuerst die genaue Anzahl bestätigen — und danach bleibt trotzdem ein Hinweis zum Rückgängigmachen. Wiederkehrende Aufgaben bleiben bei Sammelaktionen komplett außen vor, damit nie versehentlich eine ganze Serie geändert wird — öffne sie einzeln, um sie zu erledigen, zu verschieben oder zu löschen."
+      },
+      "list-icons": {
+        "title": "Automatische Listensymbole",
+        "summary": "Eine Liste ohne eigenes Symbol erhält eines, das zu ihrem Namen passt.",
+        "keywords": "listensymbol, automatisch, vorgeschlagen, glyphe, name, einkauf, fitness, arbeit",
+        "body": "Nenne eine Liste Groceries und sie trägt einen Einkaufswagen; Gym bekommt eine Hantel, Work einen Aktenkoffer. T'Day rät nur, wenn du selbst kein Symbol gewählt hast, und behält das Standardsymbol, sobald der Name nicht eindeutig genug ist. Namen werden vorerst auf Englisch erkannt.",
+        "tip": "Wähle jederzeit ein Symbol in den Listeneinstellungen – einmal gewählt, bleibt es erhalten und wird nie überraten."
+      }
+    }
+  },
+  "palette": {
+    "title": "Befehlspalette",
+    "placeholder": "Befehl eingeben oder suchen…",
+    "empty": "Keine Treffer",
+    "actions": "Aktionen",
+    "navigation": "Gehe zu",
+    "lists": "Listen",
+    "newTask": "Neue Aufgabe",
+    "brainDump": "Gedanken-Dump"
+  },
+  "release": {
+    "loading": "Versionsinformationen werden geladen…",
+    "error": "Versionsinformationen konnten nicht abgerufen werden. Prüfe deine Verbindung und versuche es erneut.",
+    "retry": "Erneut versuchen",
+    "statusLatest": "Aktuell",
+    "statusUpdateAvailable": "Update verfügbar",
+    "messageLatest": "Du verwendest die neueste Version",
+    "messageUpdateReady": "Version {{version}} ist installationsbereit.",
+    "installed": "Installiert",
+    "installedVersion": "Installierte Version",
+    "latest": "Neueste",
+    "whatsNew": "Neu in {{version}}",
+    "noNotes": "Für diese Version sind keine Versionshinweise verfügbar",
+    "viewOnGithub": "Auf GitHub ansehen",
+    "published": "Veröffentlicht am {{date}}",
+    "serverUnavailable": "Nicht verfügbar"
+  }
+}

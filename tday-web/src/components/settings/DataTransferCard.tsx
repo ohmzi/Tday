@@ -1,0 +1,256 @@
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
+import { Download, Loader2, Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { SheetCard } from "@/components/ui/sheet-chrome";
+import {
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalTitle,
+  ModalDescription,
+  ModalFooter,
+} from "@/components/ui/Modal";
+import { GuideHelpLink } from "@/features/guide/GuideHelpLink";
+import { CardDivider, SettingsOptionRow } from "./SettingsControls";
+import { useToast } from "@/hooks/use-toast";
+import { useIsLocalMode } from "@/hooks/useAppMode";
+import { api } from "@/lib/api-client";
+import { getErrorMessage } from "@/lib/error-message";
+import { downloadJson, fileTimestamp, readJsonFile } from "@/lib/fileTransfer";
+import { useTodo } from "@/features/todayTodos/query/get-todo";
+import { useFloater } from "@/features/floater/query/get-floater";
+import { useCompletedTodo } from "@/features/completed/query/get-completedTodo";
+import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
+
+type ImportCounts = {
+  lists: number;
+  floaterLists: number;
+  todos: number;
+  floaters: number;
+  todoInstances: number;
+  completedTodos: number;
+  completedFloaters: number;
+  remappedIds: number;
+  preferencesApplied: boolean;
+};
+
+type ImportResponse = {
+  dryRun: boolean;
+  imported: ImportCounts;
+  message?: string;
+};
+
+// Query keys any import can touch — invalidated after a real (non-dry-run) run
+// so every feed refetches the merged data.
+const IMPORT_TOUCHED_KEYS = [
+  ["todo"],
+  ["floater"],
+  ["completedTodo"],
+  ["listMetaData"],
+  ["list"],
+  ["floaterListMeta"],
+  ["floaterList"],
+  ["calendarTodo"],
+  ["todoTimeline"],
+  ["overdueTodo"],
+];
+
+/**
+ * "Your data" trust card: shows what lives in this workspace, downloads it as
+ * one portable JSON file, and imports a bundle back (with an additive-merge
+ * preview the user confirms first). Works in both modes — in Local Mode the
+ * same bundle is read from and written to browser storage, which is also the
+ * only way to carry a local workspace off this device.
+ */
+export default function DataTransferCard() {
+  const { t } = useTranslation("settings");
+  const isLocalMode = useIsLocalMode();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { todos } = useTodo();
+  const { floaters } = useFloater();
+  const { completedTodos } = useCompletedTodo();
+  const { listMetaData } = useListMetaData();
+
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  // Holds the parsed bundle + its dry-run preview until the user confirms.
+  const [pending, setPending] = useState<{ bundle: unknown; preview: ImportCounts } | null>(null);
+  // The confirmation card outlives `pending` by MODAL_EXIT_MS: `ModalOverlay` holds its portal
+  // in the document for that long so the exit has frames to play in (`useModalPresence` in
+  // Modal.tsx). `pending` is cleared the instant a button is pressed, so a body reading it
+  // directly repaints the card the user is watching leave — the item count drops to zero and the
+  // remapped-ids sentence disappears, one frame into the fade. Retaining the last non-null
+  // bundle keeps those frames showing the dialog that was actually answered. This is the same
+  // shape `ConfirmRescheduleRecurring` carries, and for the same reason.
+  const [retained, setRetained] = useState(pending);
+  useEffect(() => {
+    if (pending) setRetained(pending);
+  }, [pending]);
+
+  const taskCount = (todos?.length ?? 0) + (floaters?.length ?? 0);
+  const listCount = Object.keys(listMetaData ?? {}).length;
+  const completedCount = completedTodos?.length ?? 0;
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const bundle = await api.GET({ url: "/api/export" });
+      downloadJson(`tday-export-${fileTimestamp()}.json`, bundle);
+      toast({ description: t("data.exportDone") });
+    } catch (err) {
+      toast({ description: getErrorMessage(err, t("data.exportFailed")), variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleFilePicked(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    // Reset so picking the same file again re-fires onChange.
+    event.target.value = "";
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      const bundle = await readJsonFile(file);
+      const result = (await api.POST({
+        url: "/api/import",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ export: bundle, dryRun: true }),
+      })) as ImportResponse;
+      setPending({ bundle, preview: result.imported });
+    } catch (err) {
+      toast({ description: getErrorMessage(err, t("data.importInvalid")), variant: "destructive" });
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  async function handleConfirmImport() {
+    if (!pending) return;
+    setImporting(true);
+    try {
+      const result = (await api.POST({
+        url: "/api/import",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ export: pending.bundle, dryRun: false }),
+      })) as ImportResponse;
+      setPending(null);
+      IMPORT_TOUCHED_KEYS.forEach((queryKey) => queryClient.invalidateQueries({ queryKey }));
+      const added = importedItemTotal(result.imported);
+      toast({ description: t("data.importDone", { count: added }) });
+    } catch (err) {
+      toast({ description: getErrorMessage(err, t("data.importFailed")), variant: "destructive" });
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  const previewTotal = retained ? importedItemTotal(retained.preview) : 0;
+
+  return (
+    <SheetCard className="space-y-4 p-[18px] shadow-[0_16px_34px_-24px_hsl(var(--shadow)/0.5)]">
+      <div className="space-y-1">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-[1.4rem] font-black leading-tight text-foreground">{t("data.title")}</h2>
+          <GuideHelpLink topic="export-your-data" />
+        </div>
+        <p className="text-sm font-extrabold text-muted-foreground">
+          {t(isLocalMode ? "data.summaryLocal" : "data.summary", {
+            tasks: taskCount,
+            lists: listCount,
+            completed: completedCount,
+          })}
+        </p>
+      </div>
+
+      {/* Icon rows, not filled buttons — these two act in place, exactly like
+          the encrypt and reset rows, and native draws them the same way
+          (iOS: showChevron false, LucideDownload / LucideUpload). */}
+      <div className="space-y-4">
+        <SettingsOptionRow
+          icon={Download}
+          label={t("data.download")}
+          disabled={exporting}
+          onClick={handleExport}
+          trailing={
+            exporting ? (
+              <Loader2 className="h-5 w-5 shrink-0 animate-spin text-muted-foreground" />
+            ) : null
+          }
+        />
+        <CardDivider />
+        <SettingsOptionRow
+          icon={Upload}
+          label={t("data.import")}
+          disabled={importing}
+          onClick={() => fileInputRef.current?.click()}
+          trailing={
+            importing && !pending ? (
+              <Loader2 className="h-5 w-5 shrink-0 animate-spin text-muted-foreground" />
+            ) : null
+          }
+        />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={handleFilePicked}
+        />
+      </div>
+
+      <Modal open={pending !== null} onOpenChange={(open) => !open && setPending(null)}>
+        <ModalOverlay>
+          <ModalContent>
+            <ModalHeader>
+              <ModalTitle>{t("data.confirmTitle")}</ModalTitle>
+              <ModalDescription>
+                {t("data.confirmBody", { count: previewTotal })}
+                {retained && retained.preview.remappedIds > 0
+                  ? " " + t("data.confirmRemapped", { count: retained.preview.remappedIds })
+                  : ""}
+              </ModalDescription>
+            </ModalHeader>
+            <ModalFooter className="mt-4">
+              <Button
+                variant="outline"
+                className="bg-popover w-full sm:w-auto"
+                disabled={importing}
+                onClick={() => setPending(null)}
+              >
+                {t("data.confirmCancel")}
+              </Button>
+              <Button
+                variant="default"
+                className="w-full sm:w-auto"
+                disabled={importing}
+                onClick={handleConfirmImport}
+              >
+                {importing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {t("data.confirmImport")}
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </ModalOverlay>
+      </Modal>
+    </SheetCard>
+  );
+}
+
+function importedItemTotal(counts: ImportCounts): number {
+  return (
+    counts.lists +
+    counts.floaterLists +
+    counts.todos +
+    counts.floaters +
+    counts.completedTodos +
+    counts.completedFloaters
+  );
+}

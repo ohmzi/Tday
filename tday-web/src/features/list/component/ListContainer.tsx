@@ -1,0 +1,376 @@
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import TodoListLoading from "@/components/todo/component/TodoListLoading";
+import TimelineSections from "@/components/todo/dnd/TimelineSections";
+import ListScopeProvider from "@/providers/ListScopeProvider";
+import TimelineEmptyState from "@/features/todayTodos/component/TimelineEmptyState";
+import {
+    earlierIsExpanding,
+    emptySceneLeavesOnCancel,
+} from "@/features/todayTodos/lib/todayEarlierIllustration";
+import { useListSearch } from "../lib/useListSearch";
+import { useListEarlierSection } from "../lib/useListEarlierSection";
+import { useListEmptyState } from "../lib/useListEmptyState";
+import { useCompleteListTodo } from "../query/complete-list-todo";
+import { useDeleteListTodo } from "../query/delete-list-todo";
+import { usePrioritizeListTodo } from "../query/prioritize-list-todo";
+import { useEditListTodo } from "../query/update-list-todo";
+import { useEditListTodoInstance } from "../query/update-list-todo-instance";
+import { useReorderListTodo } from "../query/reorder-list-todo";
+import TodoMutationProvider from "@/providers/TodoMutationProvider";
+import TaskSelectionProvider from "@/providers/TaskSelectionProvider";
+import BulkSelectButton from "@/components/todo/bulk/BulkSelectButton";
+import { useList } from "../query/get-list-todos";
+import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
+import NativePageHeader, { useNativePageBarSlots } from "@/components/app/NativePageHeader";
+import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
+import ScreenWatermark from "@/components/app/ScreenWatermark";
+import EmptyState from "@/components/app/EmptyState";
+import { getListIconForList } from "@/lib/listIcons";
+import { listColorAccentColors, nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
+import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
+import ManageMembersSheet from "@/features/list/component/ManageMembersSheet";
+import SummaryButton from "@/features/summary/SummaryButton";
+import { useShareListAsText } from "@/hooks/use-share-list";
+import { useIsLocalMode } from "@/hooks/useAppMode";
+import { useFadeUnmount } from "@/hooks/useFadeUnmount";
+import { useRowPlacement } from "@/hooks/useRowPlacement";
+import { DELAY_MS, DURATION_MS } from "@/lib/motion";
+import { Button } from "@/components/ui/button";
+import { useLocale } from "@/lib/navigation";
+import { useUserTimezone } from "@/features/user/query/get-timezone";
+import { Pencil, Search, Users } from "lucide-react";
+
+const ListContainer = ({ id }: { id: string }) => {
+    const locale = useLocale();
+    const isLocalMode = useIsLocalMode();
+    const userTZ = useUserTimezone();
+    const { t: appDict } = useTranslation("app");
+    const { listMetaData } = useListMetaData();
+    const { listTodos, listTodosLoading } = useList({ id });
+    const [searchQuery, setSearchQuery] = useState("");
+    const [editListOpen, setEditListOpen] = useState(false);
+    const [membersOpen, setMembersOpen] = useState(false);
+    // Empty date buckets are drop targets and nothing else, so they exist only
+    // for the length of a drag.
+    const [dragActive, setDragActive] = useState(false);
+
+    const { filteredTodos, isSearching } = useListSearch({ listTodos, searchQuery });
+
+    // Earlier empty-state parity with Today/All/Priority/Scheduled: this
+    // list's own Earlier bucket (`buildTimelineSections`'s `kind: "earlier"`)
+    // is exactly the same display-time subset of `listTodos` those screens
+    // already read — see `useListEarlierSection`'s own doc comment for the
+    // two Earlier/current readings it hands back and why they stay separate.
+    const { timelineSections, hasEarlierItems, hasNonEarlierListTodos, hasNonEarlierRawListTodos } =
+        useListEarlierSection({
+            listTodos,
+            filteredTodos,
+            locale,
+            timeZone: userTZ?.timeZone,
+            todayLabel: appDict("today"),
+            tomorrowLabel: appDict("tomorrow"),
+            earlierLabel: appDict("overdue"),
+            dragActive,
+        });
+
+    // Requirements 1-4's empty/celebration/hand-off decisions, plus the same
+    // hand-off state machine (`useEarlierExpandHandoff`'s own doc comment)
+    // Today/All/Priority/Scheduled use — see `useListEmptyState`'s own doc
+    // comment for why the two Earlier/current readings above must stay fed to
+    // exactly the parameters they are here.
+    const { showEmpty, earlierExpanded, earlierHandoff, earlierSlotChangesHands, toggleEarlierExpanded, celebrate, showEmptyIllustration } =
+        useListEmptyState({
+            listTodosLoading,
+            isSearching,
+            hasEarlierItems,
+            hasNonEarlierListTodos,
+            hasNonEarlierRawListTodos,
+            // The RAW list, every bucket: Earlier's overdue rows are what an undo
+            // most often puts back, and they are exactly what the two booleans
+            // above are written to subtract out. See `useArrivalCancel`.
+            pendingRowCount: listTodos.length,
+        });
+    // The burst leaves over a fade rather than between two frames, and on the
+    // plain path — no overdue rows, so the restored task makes this list
+    // non-empty — the scene it flies over is leaving in that same frame. Held in
+    // the tree for the length of that fade, or the paper is cut by its own
+    // parent. `useFadeUnmount` already returns false outright under reduced
+    // motion, where nothing was painted and no wait may survive.
+    //
+    // Scoped to the refill (`!showEmpty`) and not to every way the scene can
+    // leave: the Earlier hand-off takes it off this slot while the list is still
+    // empty, and that departure has its own longer beat already.
+    const sceneLingers = useFadeUnmount(showEmptyIllustration, DURATION_MS.quick);
+    const sceneLeavingOnCancel = emptySceneLeavesOnCancel({
+        sceneStillMounted: sceneLingers,
+        showEmptyIllustration,
+        showEmpty,
+    });
+    // This page keeps its search field as the pinned bar, so the header below
+    // renders only the block that scrolls away and docks its title into it —
+    // the same split the floater list uses.
+    const barSlots = useNativePageBarSlots();
+
+    const listName = listMetaData[id]?.name?.trim() || "";
+    const listColor = listMetaData[id]?.color;
+    const listAccent = listColor
+        ? listColorAccentColors[listColor]
+        : nativeScreenAccentColors.all;
+    const editableList = listMetaData[id]
+        ? {
+            id,
+            name: listMetaData[id].name,
+            color: listMetaData[id].color,
+            iconKey: listMetaData[id].iconKey,
+            defaultPriority: listMetaData[id].defaultPriority,
+        }
+        : null;
+    const myRole = listMetaData[id]?.myRole ?? "OWNER";
+    const isViewer = myRole === "VIEWER";
+    const sharedByLabel = listMetaData[id]?.ownerUsername;
+    const shareListAsText = useShareListAsText({ listName, todos: listTodos });
+    const placementRef = useRowPlacement<HTMLDivElement>();
+
+    return (
+        <TodoMutationProvider
+            useCompleteTodo={useCompleteListTodo}
+            useDeleteTodo={useDeleteListTodo}
+            useEditTodo={useEditListTodo}
+            useEditTodoInstance={useEditListTodoInstance}
+            usePrioritizeTodo={usePrioritizeListTodo}
+            useReorderTodo={useReorderListTodo}
+            readOnly={isViewer}
+        >
+            {/* `filteredTodos`, not the rendered sections: Select all covers
+                everything the current search leaves standing, including rows
+                inside a collapsed Earlier bucket. */}
+            <TaskSelectionProvider
+                rows={filteredTodos}
+                readOnly={isViewer}
+                // Belt and braces for a bulk move's source list: `get-list-todos` now
+                // stamps every row with this id (`listID: todo.listID ?? listId`), but
+                // a row that arrived before that normalisation, or from a cache written
+                // by an older build, still has none.
+                scopeListId={id}
+            >
+                {/* The page's children travel when one of them takes a new slot — the
+                    leg of this the three scoped feeds already had. The empty scene is
+                    `min-h-[42vh]`, so the frame that prunes the last CURRENT task also
+                    hands that block of the screen to a scene that was not there before,
+                    and the `TimelineSections` block below it — which goes on rendering
+                    for as long as the list holds overdue tasks, because `showEmpty`
+                    counts only the non-Earlier ones (`useListEmptyState`) — was put in
+                    its new place in that same frame. The scene's own arrival is
+                    unchanged and stays on the Scene rung; this is the Emphasis one the
+                    geometry asks for, because a slot is a position. */}
+                <div ref={placementRef} className="mb-20">
+                    <ScreenWatermark icon={getListIconForList(listMetaData[id])} color={listAccent} />
+                    {/* The list's own icon leads the header, so the edit/members
+                        control moves into the pinned bar where the other screens
+                        keep their actions. */}
+                    <MobileSearchHeader
+                        searchQuery={searchQuery}
+                        onSearchChange={setSearchQuery}
+                        placeholder={
+                            listName
+                                ? `${appDict("searchIn")} ${listName}...`
+                                : `${appDict("searchTasks")}...`
+                        }
+                        pageCollapse={{ ...barSlots, title: listName, accentColor: listAccent }}
+                        // Same gate as the summary beside it, for the same reason: an
+                        // empty list has nothing for a query to narrow, and the button
+                        // would only raise a keyboard over the empty-state scene. The
+                        // unsearched set, so a word that matches nothing keeps the field.
+                        searchUnavailable={!listTodosLoading && listTodos.length === 0}
+                        trailingAction={
+                            <div className="flex shrink-0 items-center gap-2">
+                                {/* Selection mode is entered from an explicit button
+                                    in the header cluster, never a long-press — that
+                                    gesture belongs to drag-to-reschedule on the
+                                    native clients and parity means one entry point. */}
+                                <BulkSelectButton />
+                                {/* Same gate the native list screens use: a summary is
+                                    only offered where there is something to summarize. */}
+                                {listTodos.length > 0 ? (
+                                    <SummaryButton mode="list" listId={id} />
+                                ) : null}
+                                {editableList ? (
+                                    // One entry point per role: owners get the edit sheet
+                                    // (which hosts the Sharing section); members go straight
+                                    // to the members sheet.
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-14 w-14 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-all duration-enter hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
+                                        onClick={() =>
+                                            myRole === "OWNER" ? setEditListOpen(true) : setMembersOpen(true)
+                                        }
+                                        aria-label={
+                                            myRole === "OWNER" ? `Edit ${listName || "list"}` : appDict("members")
+                                        }
+                                    >
+                                        {myRole === "OWNER" ? (
+                                            <Pencil className="h-6 w-6 stroke-[2.6]" />
+                                        ) : (
+                                            <Users className="h-6 w-6 stroke-[2.6]" />
+                                        )}
+                                    </Button>
+                                ) : null}
+                            </div>
+                        }
+                    />
+
+                    <NativePageHeader
+                        title={listName}
+                        accentColor={listAccent}
+                        icon={getListIconForList(listMetaData[id])}
+                        barSlots={barSlots}
+                        beneathTitle={
+                            sharedByLabel ? (
+                                <p className="mt-1 flex items-center gap-1.5 px-1 text-xs font-black text-muted-foreground">
+                                    <Users className="h-3.5 w-3.5" />
+                                    {appDict("sharedBy", { name: sharedByLabel })}
+                                </p>
+                            ) : null
+                        }
+                    />
+
+                    {/* Rendered rather than gated: the flag goes down to the
+                        placeholder so it can fade out over the rows, instead of
+                        being unmounted in the frame it is supposed to fade in. */}
+                    <TodoListLoading loading={listTodosLoading} />
+
+                    {/* Empty state — no search results */}
+                    {!listTodosLoading && isSearching && filteredTodos.length === 0 && (
+                        <EmptyState
+                            icon={Search}
+                            accentColor={listAccent}
+                            title={appDict("noMatchingTasks")}
+                            description={appDict("searchEmptyBody")}
+                            action={
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchQuery("")}
+                                    className="rounded-full border border-border/60 bg-card px-5 py-2.5 text-sm font-black text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-transform hover:-translate-y-0.5"
+                                >
+                                    {appDict("clearSearch")}
+                                </button>
+                            }
+                        />
+                    )}
+
+                    {/* The only rows this screen renders, and every one of them was
+                        filtered to this list before it was built — so the screen has
+                        already said which list each task is in, and the per-row mark
+                        would just reprint the heading beside every title.
+                        `shouldShowListMark` reads this; a row outside a scope provider
+                        keeps its mark, which is the safe direction to default in. */}
+                    <ListScopeProvider listId={id}>
+                        {/* Date-bucketed timeline with drag-and-drop — renders
+                            whenever the list holds anything at all, Earlier's own
+                            overdue tasks included, so a list with only overdue
+                            tasks left still shows its (collapsed) Earlier header —
+                            above the illustration, which renders below this block. */}
+                        {!listTodosLoading && !(isSearching && filteredTodos.length === 0) && listTodos.length > 0 && (
+                            <TimelineSections
+                                sections={timelineSections}
+                                timeZone={userTZ?.timeZone}
+                                // A live query outranks a shut bucket: a list opens
+                                // with Earlier closed, and a task the search turns up in
+                                // there must not stay hidden behind its header. Native
+                                // makes the same call. `earlierExpanded` alone is
+                                // the whole sequencing signal: the hand-off holds it
+                                // false until the scene below has finished
+                                // exiting, and on the way back it goes false first
+                                // and the rows linger on their own fade.
+                                earlierExpanded={earlierExpanded || isSearching}
+                                // The one thing `earlierExpanded` cannot say: on
+                                // the way open it stays false for the whole
+                                // hand-off, so the header the finger just landed
+                                // on has nothing to show for the tap. See
+                                // `earlierIsExpanding`.
+                                earlierExpanding={earlierIsExpanding({ earlierHandoff })}
+                                // Passes `earlierSlotChangesHands` through exactly
+                                // like Today/All/Priority/Scheduled do: a tap that
+                                // trades the slot between the scene and Earlier's
+                                // rows is sequenced whichever way it goes, and stays
+                                // the plain immediate toggle otherwise.
+                                onToggleEarlier={() => toggleEarlierExpanded(earlierSlotChangesHands)}
+                                onDragActiveChange={setDragActive}
+                            />
+                        )}
+                    </ListScopeProvider>
+
+                    {/* Empty state — no current tasks.
+
+                        Rendered AFTER the Earlier-holding `TimelineSections`
+                        above, not before it. The comment here used to say the
+                        opposite and point at `AllTasksTimelineContainer`'s
+                        matching claim as the authority; both were wrong in the
+                        same way, and both are rewritten. Earlier's header is
+                        not a separable node — it is a collapsible section
+                        inside the section loop — so putting the header above
+                        the scene means putting the whole Earlier block above
+                        it, and `placesEarlierBeforeToday` makes Earlier the
+                        first section a list builds, so this lands directly
+                        under its header. With the scene above, expanding
+                        Earlier shrank a 42vh box sitting ABOVE the header and
+                        threw the header to the top of the screen mid-tap; with
+                        it below, the rows grow downward from a header that does
+                        not move. See `AllTasksTimelineContainer` for the full
+                        argument and for the one cost (a drag restores empty day
+                        buckets, which can sit between the header and the
+                        scene for the length of the gesture). */}
+                    {(showEmptyIllustration || sceneLeavingOnCancel) && (
+                        <TimelineEmptyState
+                            icon={getListIconForList(listMetaData[id])}
+                            accentColor={listAccent}
+                            isDayDone={false}
+                            celebrate={celebrate}
+                            // Drawn inline — a sibling in the flow, not an overlay — so
+                            // mounting it still puts whatever follows it into a new slot
+                            // (the travel the wrapper above owns). Earlier's block is no
+                            // longer one of those, which is the point of the order. The
+                            // burst waits the travel out instead of firing across it, and
+                            // the scene's own lead is added on top — travel, then burst,
+                            // then scene. Passed unconditionally, as the scoped screens pass
+                            // it: whether anything is left below is a fact about what the
+                            // list happens to hold, and timing the celebration off that
+                            // would make the same tick celebrate at two different speeds.
+                            celebrationStartDelayMs={DELAY_MS.placementLead}
+                            leavingOnCancel={sceneLeavingOnCancel}
+                            earlierHandoff={earlierHandoff}
+                            locale={locale}
+                            emptyTitle="listEmpty"
+                            emptyBody="listEmptyBody"
+                            appDict={appDict}
+                        />
+                    )}
+                </div>
+
+                <ListFormSheet
+                    open={editListOpen}
+                    onOpenChange={setEditListOpen}
+                    list={editableList}
+                    // Collaborators need accounts; a local workspace has none, so the
+                    // Members entry disappears while plain-text sharing stays.
+                    onManageMembers={isLocalMode ? undefined : () => setMembersOpen(true)}
+                    onShareList={() => shareListAsText()}
+                />
+                <ManageMembersSheet
+                    open={membersOpen}
+                    onOpenChange={setMembersOpen}
+                    listId={id}
+                    listType="list"
+                    listName={listName}
+                    myRole={myRole}
+                    onShareExternal={() => shareListAsText()}
+                />
+            </TaskSelectionProvider>
+        </TodoMutationProvider>
+    );
+};
+
+export default ListContainer;

@@ -1,0 +1,95 @@
+import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
+import { todoSchema } from "@/schema";
+import { canonicalTodoId } from "@/lib/todo/todo-id";
+import { TodoItemType } from "@/types";
+import z from "zod";
+
+async function patchTodo({ ghostTodo }: { ghostTodo: TodoItemType }) {
+  if (!ghostTodo.id) {
+    throw new Error("this todo is missing");
+  }
+  //validate input
+  const parsedObj = todoSchema.extend({ instanceDate: z.date() }).safeParse({
+    title: ghostTodo.title,
+    description: ghostTodo.description,
+    priority: ghostTodo.priority,
+    due: ghostTodo.due,
+    rrule: ghostTodo.rrule,
+    instanceDate: ghostTodo.instanceDate,
+  });
+  if (!parsedObj.success) {
+    console.error(parsedObj.error.issues[0]);
+    return;
+  }
+
+  await api.PATCH({
+    url: "/api/todo/instance",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      // `todoId`, not `id`: TodoInstancePatchRequest names the field todoId,
+      // and a missing required field 400s before the handler runs. `rrule` from
+      // todoSchema rides along unused — an instance override can't change the
+      // series, so the backend ignores it (ignoreUnknownKeys).
+      todoId: canonicalTodoId(ghostTodo.id),
+      ...parsedObj.data,
+      instanceDate: parsedObj.data.instanceDate,
+    }),
+  });
+}
+
+export const useEditCalendarTodoInstance = () => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { mutate: editCalendarTodoInstance, status: editTodoInstanceStatus } =
+    useMutation({
+      mutationFn: (params: TodoItemType) => patchTodo({ ghostTodo: params }),
+      onMutate: async (newTodo: TodoItemType) => {
+        await queryClient.cancelQueries({
+          queryKey: ["calendarTodo"],
+        });
+        const oldTodosBackup = queryClient.getQueriesData({
+          queryKey: ["calendarTodo"],
+        });
+        queryClient.setQueryData<TodoItemType[]>(
+          ["calendarTodo"],
+          (oldTodos) => {
+            return oldTodos?.map((oldTodo) => {
+              if (oldTodo.id === newTodo.id) {
+                //only overwrite the overwritable fields from overriden instance
+                return {
+                  ...oldTodo,
+                  title: newTodo.title,
+                  description: newTodo.description,
+                  priority: newTodo.priority,
+                  due: newTodo.due,
+                };
+              }
+              return oldTodo;
+            });
+          },
+        );
+        return { oldTodosBackup };
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
+        queryClient.invalidateQueries({
+          queryKey: ["todo"],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["todoTimeline"],
+        });
+      },
+
+      onError: (error, _newTodo, context) => {
+        queryClient.setQueryData(["calendarTodo"], context?.oldTodosBackup);
+        toast({
+          description: error.message,
+          variant: "destructive",
+        });
+      },
+    });
+
+  return { editCalendarTodoInstance, editTodoInstanceStatus };
+};

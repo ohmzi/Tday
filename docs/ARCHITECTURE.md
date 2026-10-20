@@ -1,0 +1,627 @@
+# Architecture
+
+This document describes the high-level system design, domain boundaries, and key technical decisions for T'Day. Product intent lives in [`PRODUCT_DIRECTION.md`](PRODUCT_DIRECTION.md); durable data shape lives in [`DATA_MODEL.md`](DATA_MODEL.md).
+
+## System Overview
+
+T'Day is a **monorepo application** with a Kotlin/Ktor backend, a React SPA frontend, shared Kotlin Multiplatform code, and native local-first mobile clients:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Clients                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │  Web (React)  │  │ Android App  │  │    iOS App      │  │
+│  │  Vite SPA     │  │ Compose/Room │  │ SwiftUI/Data   │  │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────────┘  │
+│         │                 │                  │               │
+└─────────┼─────────────────┼──────────────────┼───────────────┘
+          │ HTTPS/WS        │ HTTPS            │ HTTPS
+          ▼                 ▼                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Ktor Backend (Kotlin/JVM, Netty)               │
+│  ┌──────────┐  ┌──────────────┐  ┌───────────────────────┐ │
+│  │ Security │→ │  Ktor Plugins │→ │  Route Handlers       │ │
+│  │ Intercept│  │  (Headers,    │  │  (REST + WebSocket)   │ │
+│  │          │  │   Serializer) │  │                       │ │
+│  └──────────┘  └──────────────┘  └───────────┬───────────┘ │
+│                                               │             │
+│  ┌──────────────────┐  ┌─────────────────────┐│            │
+│  │  JWE Sessions     │  │  Exposed ORM        ││            │
+│  │  (Nimbus JOSE)    │  │  (DSL + Tables)     ││            │
+│  └──────────────────┘  └─────────┬───────────┘│            │
+│                                   │            │            │
+│  ┌──────────────────┐             │            │            │
+│  │  Koin DI          │             │            │            │
+│  └──────────────────┘             │            │            │
+└───────────────────────────────────┼────────────┘            │
+                                    ▼                         │
+                          ┌─────────────────┐  ┌─────────────┐
+                          │  PostgreSQL 15   │  │  Ollama     │
+                          │  (data store)    │  │  (local AI) │
+                          └─────────────────┘  └─────────────┘
+```
+
+### Architectural Direction
+
+- Web is the desktop/admin/broad-access client.
+- Backend owns auth, persistence, tenant isolation, server compatibility, AI summaries, and realtime events.
+- Android and iOS own the primary mobile experience and render from local cache first.
+- Car surfaces are platform-native mobile extensions: iOS uses CarPlay templates and App Intents,
+  while Android keeps an internal `tday://car` adaptive surface until Google Play supports or
+  approves a fitting task/calendar productivity car category.
+- Local Mode is a workspace with no server dependency, available on Android, iOS, and the web (where it lives in browser storage).
+- Server Mode uses optimistic local writes plus pending mutation replay.
+- Scheduled tasks and floaters are separate concepts; do not make `Todo.due` nullable to represent Anytime work.
+- Boundaries should stay readable and directional: clients render state, presentation layers coordinate work, repositories/services own domain/data operations, and transport/storage details sit at the edges.
+- Shared abstractions are introduced only when they reduce real duplication or clarify a cross-platform contract.
+
+### Shared Kotlin Multiplatform Module
+
+The `shared/` module is a Kotlin Multiplatform (KMP) library targeting JVM, Android, and iOS frameworks. It provides the source of truth for:
+
+- Serializable DTOs (request/response models)
+- Domain enums (`Priority`, `UserRole`, `ApprovalStatus`, `SortBy`, `GroupBy`, `ProjectColor`, etc.)
+- Contract validators
+
+| Consumer | Target | How it's consumed |
+|----------|--------|-------------------|
+| Backend (`tday-backend`) | JVM | Gradle `project(":shared")` |
+| Android (`android-compose`) | Android | Gradle `project(":shared")` |
+| iOS (`ios-swiftUI`) | Swift models | Mirrored manually in `Core/Model/ApiModels.swift` and checked with contract tests |
+
+## Repository Layout
+
+```
+Tday/
+├── tday-web/                  # Vite SPA (React + TypeScript + Tailwind)
+│   ├── src/
+│   │   ├── components/        # Shared React components
+│   │   ├── features/          # Feature modules (calendar, completed, list, release, today)
+│   │   ├── hooks/             # Shared React hooks
+│   │   ├── lib/               # Client utilities (security, dates, API, todo helpers)
+│   │   ├── pages/             # Route pages
+│   │   ├── providers/         # React context providers
+│   │   └── types/             # Web-only TypeScript domain/UI types
+│   ├── messages/              # Locale files, bundled into the build
+│   ├── public/                # Static assets, PWA manifest, and release metadata
+│   └── tests/                 # Vitest guardrail and unit suites
+├── tday-backend/              # Ktor backend (Kotlin)
+│   └── src/main/kotlin/
+│       └── com/ohmz/tday/
+│           ├── config/        # App configuration
+│           ├── db/            # Exposed tables and migrations
+│           ├── di/            # Koin dependency injection
+│           ├── domain/        # Domain types and validation
+│           ├── models/        # Request/response DTOs
+│           ├── observability/ # Sentry init + gate, scrubber, telemetry helpers
+│           ├── plugins/       # Ktor plugins (routing, auth, headers)
+│           ├── routes/        # API route handlers
+│           ├── security/      # Auth, encryption, throttling
+│           └── services/      # Business logic
+├── shared/                    # KMP DTOs, enums, validators, route constants, guide and motion tokens
+├── android-compose/           # Native Android client (Compose, Room, Hilt, RemoteViews widgets)
+├── ios-swiftUI/               # Native iOS client (SwiftUI, SwiftData, Observation)
+│   ├── Tday/                  # Main iOS app
+│   ├── TdayWidget/            # WidgetKit extension and snapshots
+│   ├── TdayShareExtension/    # Share sheet extension
+│   ├── TdayWatch/             # Apple Watch app
+│   ├── TdayWatchWidget/       # Watch complication
+│   └── Tests/                 # iOS test target
+├── scripts/                   # Git hooks, version sync, deploy, backup/restore helpers
+├── version.json               # Global app/server version and compatibility manifest
+├── docker/                    # Container runtime helper config
+├── docs/                      # Product, architecture, data, coding, testing, deployment
+├── Dockerfile.backend         # Multi-stage Docker build (Vite + Ktor)
+├── docker-compose.yaml        # Full stack orchestration (pulls the released backend image)
+├── docker-compose.build.yaml  # Opt-in override: build the backend image from this checkout
+└── docker-compose.gpu.yaml    # Opt-in override: NVIDIA-accelerated Ollama
+```
+
+## Domain Model
+
+The application is organized around these core domains:
+
+| Domain | Description | Models |
+|--------|------------|--------|
+| **Auth** | Registration, login, sessions, approval, admin | `User`, `Account`, `AuthThrottle`, `AuthSignal` |
+| **Todos** | Scheduled task CRUD, RFC 5545 recurrence, priorities, ordering | `Todo`, `TodoInstance`, `CompletedTodo` |
+| **Floaters** | Unscheduled Anytime task CRUD, priorities, ordering | `Floater`, `CompletedFloater` |
+| **Lists** | Scheduled-task project grouping with colors and icons | `List` |
+| **Floater Lists** | Floater project grouping with colors and icons | `FloaterList` |
+| **Files** | Reserved/legacy file metadata retained for cleanup paths; no active upload/download API | `File` |
+| **Preferences** | Sort/group/direction settings per user | `UserPreferences` |
+| **Admin** | App configuration, user management | `AppConfig` |
+| **Operations** | Cron jobs, event logging | `CronLog`, `eventLog` |
+| **Mobile Sync** | Local cache metadata and pending replay state | Android Room entities, iOS SwiftData entities, `PendingMutationRecord` |
+
+## Backend Architecture (Ktor)
+
+### Request Flow
+
+```
+Client Request
+    │
+    ▼
+Ktor Pipeline Intercept (Security.kt)
+    ├── Read Bearer token or session cookie
+    ├── Decode JWE → validate claims (expiry, tokenVersion)
+    ├── Check AuthUserCache (30s TTL) → DB lookup on miss
+    └── Attach AuthUser to call attributes
+    │
+    ▼
+Ktor Plugins
+    ├── SecurityHeaders (CSP, HSTS, X-Frame-Options, COOP, CORP)
+    ├── ContentNegotiation (kotlinx.serialization JSON)
+    ├── StatusPages (AppError → ApiError JSON mapping)
+    └── WebSockets (ping/timeout/frame config)
+    │
+    ▼
+Route Handlers (routes/*.kt)
+    ├── call.withAuth { } → require authenticated user
+    ├── Validate input via Konform validateOrFail() → Either<AppError, T>
+    ├── Delegate to service layer
+    └── Respond with JSON or WebSocket frames
+    │
+    ▼
+Services (services/*.kt)
+    ├── Return Either<AppError, T> (Arrow)
+    └── newSuspendedTransaction(Dispatchers.IO) { } for DB access
+    │
+    ▼
+Exposed ORM → PostgreSQL (via HikariCP)
+```
+
+### Package Structure (Backend)
+
+```
+tday-backend/src/main/kotlin/com/ohmz/tday/
+├── Application.kt          # main(), module(): wires all plugins and DI; starts the gated Sentry client
+├── config/
+│   ├── AppConfig.kt        # Loads all env vars (and optional _FILE secret paths)
+│   └── DatabaseConfig.kt   # HikariCP pool, Flyway migrate, Exposed connect
+├── db/
+│   ├── enums/PgEnums.kt    # PostgreSQL enum ↔ shared Kotlin enum mapping
+│   ├── tables/             # Exposed Table definitions (Users, Todos, etc.)
+│   └── util/               # Database utility helpers
+├── di/AppModule.kt         # Koin modules: config, security, services
+├── observability/          # BackendSentry (the only Sentry.init), TelemetryGate, GatedTransport, scrubber, TdayObservability helper
+├── domain/
+│   ├── AppError.kt         # Sealed error hierarchy → HTTP status codes
+│   ├── AuthContext.kt      # withAuth { } helper for authenticated routes
+│   ├── DomainEvent.kt      # Sealed WebSocket event types
+│   └── Validations.kt      # Konform validators for shared DTOs
+├── models/
+│   ├── request/            # Mostly typealiases to shared models
+│   └── response/           # Response-specific DTOs
+├── plugins/
+│   ├── Routing.kt          # /health, /api/*, /ws, static SPA serving
+│   ├── CallLogging.kt      # Structured request logging
+│   ├── Cors.kt             # CORS policy
+│   ├── RateLimiting.kt     # App-layer request throttling
+│   ├── Security.kt         # JWE bearer + cookie auth, pipeline intercept
+│   ├── SecurityHeaders.kt  # CSP, HSTS, X-Frame-Options, etc.
+│   ├── SentryPlugin.kt     # Per-request Sentry scope, request transactions, client-build tags
+│   ├── Serialization.kt    # kotlinx.serialization JSON config
+│   └── StatusPages.kt      # AppError → JSON ApiError mapping
+├── routes/                 # HTTP route handlers by domain
+│   └── auth/               # Auth-specific routes
+├── security/               # JWT, passwords, throttling, encryption
+└── services/               # Business logic (todo, list, user, admin, instance settings, etc.)
+```
+
+### Installed Ktor Plugins
+
+| Plugin | Purpose |
+|--------|---------|
+| **Koin** | Dependency injection (config, security, service modules) |
+| **WebSockets** | Real-time domain event streaming per authenticated user |
+| **ContentNegotiation** | JSON request/response via kotlinx.serialization |
+| **DefaultHeaders / SecurityHeaders** | Security headers (CSP, HSTS in production, X-Frame-Options, etc.) |
+| **StatusPages** | Maps `AppError` / generic errors to JSON `ApiError` responses |
+| **Authentication** | Bearer token provider + pipeline intercept for JWE/cookie auth |
+| **Routing** | API routes, health check, WebSocket, optional static SPA |
+| **CallLogging** | Structured request logging without sensitive payloads |
+| **RateLimiting** | App-layer request throttling before handlers |
+
+### Error Handling (Backend)
+
+```
+Route Handler
+    │
+    ├── withAuth { } → business logic
+    │       │
+    │       ├── Returns Either<AppError, T>
+    │       └── AppError → respondAppError with HTTP status
+    │
+    └── StatusPages plugin catches exceptions
+            │
+            ├── Malformed request body → 400 "Invalid request body"
+            └── Unknown error → 500 + generic message
+```
+
+The primary error path uses the `AppError` sealed interface with `Either<AppError, T>` from Arrow. `StatusPages.kt` handles malformed requests and unhandled exceptions. Internal details are never exposed to clients.
+
+## Web Architecture (Vite + React)
+
+### Stack
+
+- **React 19** with **TypeScript 6** bundled by **Vite 8** (Rolldown), tested with **Vitest 4**
+- **React Router 7** with locale-prefixed URLs (`/:locale/app/*`)
+- **TanStack React Query 5** for server state
+- **Tailwind CSS 4** with Radix UI primitives (shadcn-style)
+- Shared `fetch` API client wrapper with cookie-based auth
+
+### Directory Structure
+
+```
+tday-web/src/
+├── main.tsx              # React DOM entry point; starts Sentry only if this browser opted in (initSentryIfConsented)
+├── App.tsx               # Provider tree: Theme → Query → Auth → Tooltip → ErrorBoundary → Router + Toaster
+├── router.tsx            # Route definitions (public, protected, calendar layouts)
+├── globals.css           # Tailwind @theme tokens, CSS variables
+├── i18n.ts               # i18next configuration (10 locales, all bundled; path-based detection)
+├── components/           # Shared UI (ui/* primitives, native app shell, auth, todo pieces)
+├── features/             # Feature modules (calendar, completed, scheduledTaskHome, list, release, todayTodos, user)
+├── hooks/                # Shared React hooks
+├── lib/                  # Utilities (api-client, navigation, cache, performance, security, dates, todo, observability, privacy)
+├── pages/                # Route-level screens and layouts
+├── providers/            # React context providers (Auth, Theme, Query, Menu, etc.)
+└── types/                # TypeScript type definitions
+```
+
+### State Management (Web)
+
+- **Server state**: TanStack React Query (`useQuery`, `useMutation`) for all API-fetched data. Default `staleTime: 60_000`. Global `QueryCache.onError` shows destructive toasts for all query failures.
+- **Auth state**: Custom `AuthProvider` context managing session fetch/refresh via the shared `api-client` (`api.GET`/`api.POST`).
+- **UI state**: React `useState`/`useReducer` within components. React Context for cross-cutting state (menu, preferences, todo form/mutations).
+- **Theme**: `next-themes` provider with system/light/dark modes via CSS `class` strategy.
+- **Toasts**: Sonner `<Toaster />` mounted at the app root. Components use `useToast()` hook; the `QueryCache` uses the imperative `toast` API directly.
+
+### App Shell and Navigation (Web)
+
+- Authenticated web routes render through a native-style app shell rather than the legacy visible sidebar. The shell owns the bottom `Scheduled / Floater / More` dock, circular create action, and More sheet.
+- `Scheduled` routes to `/app/tday`, `Floater` routes to `/app/floater`, and `More` exposes existing secondary web routes such as Overdue, Scheduled, Priority, All Tasks, Completed, Calendar, Lists, Settings, and user controls.
+- The web scheduled task home screen is a dashboard-style scheduled root feed backed by the existing todo/list queries. The floater task home screen is a sibling root feed backed by `/api/floater` and `/api/floaterList`, with floater list detail at `/app/floater-list/:id`.
+- The shell, scheduled task home tiles, and floater task home tab share web-only route metadata and counts, while feature pages continue to own their own query/mutation behavior.
+
+### API Communication (Web)
+
+The web SPA communicates with the Ktor backend via a thin `fetch` wrapper:
+
+- `api.GET/POST/PATCH/DELETE` functions in `lib/api-client.ts` with `ApiError` typing
+- All HTTP calls (including auth and preferences) route through the shared API client
+- `credentials: "same-origin"` for cookie-based sessions
+- Browser `fetch` cache mode set to `no-store` on all private API requests
+- Dev: Vite proxy forwards `/api` to `http://localhost:8080`
+- Production: Ktor serves the SPA as static files from `STATIC_FILES_DIR`
+
+### Local Mode (Web)
+
+The web has the same two workspaces as the native apps. The onboarding wizard opens
+on a Mode step — **Self-hosted** (accounts and sync) or **This device** (no login) —
+and records the choice in `localStorage` under `tday.appMode`, so a returning browser
+skips straight to the step it left off at. The wizard's Server step is implicit on
+web: the page is served by the very backend it would otherwise ask for, so
+Self-hosted goes directly to Login with the Server chip already completed.
+
+In Local Mode the browser is the workspace:
+
+- `lib/local/appMode.ts` holds the mode flag; `hooks/useAppMode.ts` exposes it to React (`useIsLocalMode`).
+- `lib/api-client.ts` routes every `/api/*` call to `lib/local/localApi.ts` instead of
+  `fetch`. The local handlers answer with the *same* DTO shapes the Ktor routes return,
+  so React Query, the feature hooks, and the optimistic-update paths are untouched by
+  the mode. Failures are rethrown as the same `ApiError` the network path throws.
+- `lib/local/localDb.ts` persists one JSON document in `localStorage`
+  (`tday.local.workspace.v1`) whose rows mirror the backend tables. Clearing the
+  browser's cookies/site data drops it — that is the documented contract, not a bug.
+- Recurrence, summaries, and brain-dump splitting reuse the code the app already
+  ships (`rrule`, `lib/todoSummary.ts`, `lib/todoNlp.ts`); summaries always report
+  `source: "logic"` because a browser workspace can't reach a model.
+- Server-only surfaces are hidden the way the native settings screens hide them:
+  account/password/security questions, push, dashboard API
+  keys, admin, list members, and the realtime WebSocket. A stray call to one of those
+  routes fails as a plain 404 rather than silently pretending to succeed.
+- Settings gains a Workspace card with "Leave local workspace" (a mode switch that
+  keeps the browser's tasks) and "Delete local data" (the only destructive action).
+  Export/import work in both modes and are the only way to carry a local workspace
+  off the device.
+- Local Mode is reachable while the backend is unreachable, so `AuthLayout` only
+  blocks on the initial session probe, not on an `unavailable` session.
+
+## Android Architecture
+
+### Pattern: MVVM with Domain Repositories
+
+```
+┌───────────────────────────────────────────────────┐
+│  Composable Screens (UI Layer)                    │
+│  Observe StateFlow → render → invoke ViewModel    │
+└──────────────────────┬────────────────────────────┘
+                       │
+┌──────────────────────┴────────────────────────────┐
+│  @HiltViewModel classes (Presentation Layer)      │
+│  MutableStateFlow + viewModelScope.launch         │
+│  Coordinate repositories + app services directly  │
+└──────────────────────┬────────────────────────────┘
+                       │
+┌──────────────────────┴────────────────────────────┐
+│  Data / App Services                              │
+│  TodoRepository, ListRepository, FloaterListRepo, │
+│  CompletedRepo, AuthRepository, SettingsRepo,     │
+│  SyncManager, OfflineCacheManager, Reminder APIs  │
+└──────┬───────────────────────────────┬────────────┘
+       │                               │
+┌──────┴──────┐              ┌─────────┴─────────┐
+│ Retrofit    │              │ Room + Encrypted    │
+│ (Network)   │              │ prefs for secrets   │
+└─────────────┘              └───────────────────┘
+```
+
+### Key Design Decisions (Android)
+
+- **MVVM without an Android use-case layer**: ViewModels coordinate repositories and app services directly instead of routing through Android-specific `UseCase` wrappers.
+- **Domain-specific repositories**: Data access is split by concern (`TodoRepository`, `ListRepository`, `CompletedRepository`, `AuthRepository`, `SettingsRepository`) instead of a single catch-all repository.
+- **Local-first sync**: `OfflineCacheManager` stores the local source of truth in Room, while `SyncManager` replays pending mutations and refreshes remote snapshots in Server Mode.
+- **Local Mode**: Mobile can run without server setup. Server-only operations are hidden or disabled and pending mutations are not retained for replay.
+- **Cache invalidation**: `OfflineCacheManager.cacheDataVersion` is observed by ViewModels so screens can hydrate from cache when local data changes.
+- **Auth compatibility**: The Android client implements the JWE credential flow (CSRF token fetch → credential callback → session cookie) using Retrofit + an encrypted cookie store.
+- **Navigation**: Programmatic Compose Navigation (`NavHost`) with `sealed class AppRoute` — no XML navigation graphs.
+- **Server discovery**: Runtime server URL configuration with optional certificate fingerprint pinning for self-hosted instances.
+- **Root feeds**: `RootFeedDock` switches between the scheduled task home and floater task home screens, with a shared root create action.
+
+### Package Structure (Android)
+
+```
+com.ohmz.tday.compose/
+├── core/
+│   ├── data/          # Repositories, OfflineCacheManager, SyncManager, stores
+│   │   └── db/        # Room entities, DAOs, and database
+│   ├── model/         # ApiModels (DTOs), DomainModels (UI types)
+│   ├── navigation/    # AppRoute sealed class
+│   ├── network/       # Hilt NetworkModule, TdayApiService, EncryptedCookieStore
+│   ├── notification/  # Alarms, WorkManager, receivers
+│   ├── observability/ # Crash reporting: TelemetryBootstrap (the only SentryAndroid.init), consent store, options, scrubber, TdayTelemetry
+│   ├── security/      # Probe/decryption helpers
+│   └── ui/            # Shared non-feature app UI helpers
+├── feature/
+│   ├── app/           # AppViewModel (bootstrap, sync, session)
+│   ├── auth/          # AuthViewModel
+│   ├── scheduledtaskhome/ # ScheduledTaskHomeScreen + ScheduledTaskHomeViewModel
+│   ├── todos/         # Todo/Floater list screens + ViewModel
+│   ├── completed/     # CompletedScreen + CompletedViewModel
+│   ├── calendar/      # CalendarScreen + CalendarViewModel
+│   ├── car/           # Internal Today/Floater car-mode surface
+│   ├── settings/      # SettingsScreen
+│   ├── release/       # In-app update and latest release
+│   ├── telemetry/     # Crash-reports consent card and its ViewModel
+│   ├── widget/        # Today/Floater/List widgets (RemoteViews) and refresh coordinator
+│   └── onboarding/    # OnboardingWizardOverlay
+└── ui/
+    ├── component/     # Shared composables (PullRefresh, CreateTaskBottomSheet, RootFeedDock)
+    └── theme/         # Material 3 theme, colors, typography, dimensions
+```
+
+## iOS Architecture
+
+### Stack
+
+- **SwiftUI** targeting iOS 17+
+- **SwiftData** for local persistence
+- **Observation** for ViewModels
+- `AppRootView` using `NavigationStack`, root-feed state, onboarding overlay, update gating, deep links, and Local/Server Mode checks
+
+### Structure
+
+```
+ios-swiftUI/Tday/
+├── Feature/
+│   ├── App/          # AppRootView + AppViewModel
+│   ├── ScheduledTaskHome/ # Scheduled task home root feed
+│   ├── Todos/        # Todo/Floater management
+│   ├── Calendar/     # Calendar views
+│   ├── CarPlay/      # CarPlay templates, presenter, and App Intents
+│   ├── Completed/    # Completion history
+│   ├── Settings/     # User settings
+│   ├── Auth/         # Login/register
+│   ├── Telemetry/    # Crash-reports consent card
+│   └── Onboarding/   # First-launch flow
+├── Core/
+│   ├── Data/         # AppContainer, repositories, SwiftData cache, sync
+│   ├── Domain/       # Focused use cases
+│   ├── Model/        # API/domain/offline models
+│   ├── Navigation/   # AppRoute
+│   ├── Network/      # TdayAPIService, RealtimeClient (URLSession + cookies)
+│   ├── Notification/ # Deep links and reminders
+│   ├── Security/     # Probe/decryption helpers
+│   ├── Telemetry/    # Crash reporting: consent store and model, lifecycle (grant/revoke/purge), scrubber, slow-operation helper
+│   ├── UI/           # Shared app UI helpers
+│   └── Widget/       # TodayTasks snapshot store
+├── UI/
+│   ├── Component/    # Shared SwiftUI controls and sheets
+│   └── Theme/        # Colors and rounded typography
+└── AppRootView.swift # NavigationStack, root feed state, overlays, deep links
+```
+
+The WidgetKit extension lives beside the app target at `ios-swiftUI/TdayWidget/` and is wired as the `TdayWidget` app-extension target in both `project.yml` and the Xcode project. It shares snapshots with the app through the App Group suite `group.com.ohmz.tday`. The CarPlay surface lives in the app target under `ios-swiftUI/Tday/Feature/CarPlay/` and uses system templates plus App Intents; real distribution is gated on Apple granting the CarPlay entitlement. iOS tests live in `ios-swiftUI/Tests/`. Sentry Cocoa is the only notable third-party runtime dependency, and it starts only for a person who opted in to crash reports (see [Crash Reporting](#crash-reporting)); core app behavior uses native frameworks.
+
+## Crash Reporting
+
+Crash reporting is opt-in and failures-only on the three clients, and operator-gated on the backend.
+[`TELEMETRY.md`](TELEMETRY.md) is the contract (what is and is not collected); this section is the
+shape of the code. The decision is recorded in
+[ADR 009](adr/009-opt-in-failure-only-crash-reporting.md).
+
+### Client Data Flow
+
+```
+Consent card / Settings → Privacy switch
+    │  one writer per platform: consent store (per device; unanswered | granted | denied)
+    ▼
+Consent-gated initializer (the only SDK init call in the app)
+    ├── no DSN in the build  → never starts, no card, no row
+    ├── not granted          → never starts, purges what the SDK left on disk
+    └── granted              → starts with a failures-only option set
+    │
+    ▼
+Sentry SDK  → scrubber (beforeSend / beforeBreadcrumb: allow-list, redaction)
+            → in-memory gate + timestamp guard (drops anything older than the grant)
+            → transport → the maintainer's Sentry (direct, not through the user's server)
+```
+
+| Platform | Consent store | Initializer | Other pieces |
+|----------|---------------|-------------|--------------|
+| Web | `lib/privacy/telemetryConsent.ts` (`localStorage`, `useSyncExternalStore` hook) | `lib/observability/sentryInit.ts`, called from `main.tsx` before React renders | `webScrub.ts`, `slowOperation.ts`, `CrashReportsConsentGate` mounted in `AppLayout` |
+| Android | `core/observability/TelemetryConsentStore.kt` (plain `SharedPreferences`) | `TelemetryBootstrap`, started first in `TdayApplication.onCreate` so every process is covered | `TelemetryOptions`, `TelemetryScrubber`, `GatedTransportFactory`, `TelemetryConsentManager` (Hilt singleton), `TelemetryConsentGate` in `ScheduledTaskHomeRoute` |
+| iOS | `Core/Telemetry/TelemetryConsentStore.swift` (`UserDefaults`) | `SentryConfiguration.start()` from `TdayApp.init`, before `AppContainer` exists | `TelemetryConsentModel` (owned by `AppContainer`), `TelemetryLifecycle`, `TelemetryScrubber`, `TelemetryConsentCard` overlay in `AppRootView` |
+
+The consent store has to be readable before the dependency graph exists, because the decision to
+start the SDK is made in `main.tsx`, `Application.onCreate`, and `TdayApp.init`. That is why none of
+the stores is the Keychain, `EncryptedSharedPreferences`, or an app-level service.
+
+### Backend
+
+The SDK starts once at process start (`Application.kt` to `BackendSentry.init`) and is never closed or
+re-initialised. An in-memory `TelemetryGate`, loaded from the `instance_settings` table after
+migrations and updated by `PATCH /api/admin/telemetry`, is checked at every exit: the transport
+wrapper, `beforeSend`, `beforeSendTransaction`, `beforeBreadcrumb`, and `tracesSampler`. The admin
+route is `AdminRoutes.kt` to `InstanceSettingsService`. Web is the only client of that route. With the
+toggle on, the backend also sends a sample of requests (default `0.1` in production, none for `/health`,
+`/api/mobile/probe`, `/ws`, `/calendar/*`) as `http.server` transactions; the clients send no traces.
+
+### Delivery
+
+The DSNs are public build-time constants injected by CI (`release.yml`, `ios-testflight.yml`);
+`SENTRY_AUTH_TOKEN` uploads the symbolication artifacts. The web CSP allows the browser's ingest
+origin from `TDAY_CLIENT_SENTRY_DSN`. See [DEPLOYMENT.md](DEPLOYMENT.md#crash-reporting-sentry) and
+[SENTRY_RUNBOOK.md](SENTRY_RUNBOOK.md).
+
+## Database Design
+
+### Entity Relationships
+
+```
+User ──┬── Todo ──── TodoInstance
+       │      └──── List (scheduled-task project)
+       ├── Floater ─── FloaterList
+       ├── CompletedTodo
+       ├── CompletedFloater
+       ├── File
+       ├── UserPreferences
+       ├── Account (OAuth)
+       └── (approved by) User
+```
+
+### ORM and Migrations
+
+- **ORM**: JetBrains Exposed 1.5.0 (`org.jetbrains.exposed.v1.*` packages; DSL/Table API with `newSuspendedTransaction(Dispatchers.IO) {}` for coroutine-safe DB access)
+- **Connection pool**: HikariCP 7.1.0 (max 10 connections, auto-commit off)
+- **Migrations**: Flyway 13.8.1 with `baselineOnMigrate=true` and a baseline version of `2` for legacy databases. Migration files live in `tday-backend/src/main/resources/db/migration/`, with `V2__full_schema.sql` serving as the clean-install schema snapshot.
+- **Driver**: PostgreSQL JDBC 42.7.4
+
+### PostgreSQL Enums
+
+`UserRole`, `ApprovalStatus`, `SortBy`, `GroupBy`, `Direction`, `Priority`, `ProjectColor` — defined as Kotlin enums in `shared/` and mapped to PostgreSQL enums via `PgEnums.kt`.
+
+### Key Patterns
+
+- **Soft completion**: Completed todos are moved to `CompletedTodo` with metadata (completion time, on-time status, days to complete).
+- **Floater completion**: Completed floaters are moved to `CompletedFloater` with completion time, days-to-complete metadata, and floater-list metadata.
+- **RFC 5545 recurrence**: Todos support `rrule`, `due`, `exdates`, and `durationMinutes`. Instances are materialized in `TodoInstance` for per-occurrence overrides.
+- **Tenant isolation**: All data queries filter by `userID`. There are no shared/public data models.
+- **Audit fields**: All major models include `createdAt` and `updatedAt`.
+
+## Authentication Flow
+
+### Web and Mobile (JWE Sessions)
+
+```
+Client → GET /api/auth/csrf (fetch CSRF token)
+       → POST /api/auth/callback/credentials
+              │
+              ├── Rate limit check (AuthThrottle)
+              ├── Optional credential envelope decryption (RSA)
+              ├── PBKDF2 password verification (or rehash if iterations changed)
+              ├── Approval status check
+              └── JWE token issued → set as HTTP-only cookie
+```
+
+Tokens are encrypted JWTs (JWE) via Nimbus JOSE JWT + BouncyCastle. The Ktor pipeline intercept reads tokens from `Authorization: Bearer` headers or session cookies, decodes the JWE, and validates claims (`tokenVersion`, expiry, role, approval).
+
+### Session Revocation
+
+`SessionControl` bumps `tokenVersion` on the `User` row. Existing tokens fail on the next request when the intercept detects the version mismatch.
+
+### Mobile Auth and Workspace Flow
+
+```
+App launch → Probe server (GET /api/mobile/probe)
+           → Optional cert fingerprint check
+           → GET /api/auth/csrf
+           → POST /api/auth/callback/credentials (with CSRF + encrypted envelope)
+           → Session cookie stored in EncryptedCookieStore
+           → Subsequent requests include cookie automatically
+```
+
+Local Mode skips server probe/auth and enters a local-only workspace immediately.
+
+## Real-Time Communication
+
+The backend exposes a `WS /ws` WebSocket endpoint for authenticated users. Domain events (`DomainEvent` sealed class) are streamed as JSON frames — covering todo and list changes. Each user has their own WebSocket channel.
+
+## Internationalization
+
+- 10 locales: `en`, `es`, `fr`, `de`, `it`, `pt`, `ru`, `zh`, `ja`, `ms` (`SUPPORTED_LOCALES` in `tday-web/src/i18n.ts`).
+- Managed via **i18next** + **react-i18next** with path-based locale detection.
+- All ten bundles are imported statically from `tday-web/messages/<lng>.json` and handed to i18next as `resources`, so every locale is translated offline with no locale HTTP fetch. English is the `fallbackLng`.
+- Routes are prefixed with `/:locale/` via React Router.
+
+## AI Integration
+
+- **Summary** is served by the backend and remains available without local AI by using deterministic task logic.
+- **Ollama** is an optional local AI enhancement for task summaries.
+- Model: `qwen3.5:0.8b` by default when Ollama is enabled.
+- The feature is toggled globally via `AppConfig.aiSummaryEnabled` (admin setting).
+- AI calls are timeout-protected with `OLLAMA_TIMEOUT_MS`; failures fall back to backend logic.
+
+## Caching Strategy
+
+- **Web**: No application-level persistence cache. The shared API client uses browser `fetch` with `cache: "no-store"` for private API requests. TanStack React Query provides in-memory client-side cache with 60-second stale time.
+- **Web asset/version cache (build-keyed invalidation)**: Each build stamps a unique `__BUILD_ID__` into the bundle and emits `/version.json`. The backend serves HTML and `version.json` as `no-store` and content-hashed `/assets/**` as `immutable`; the service worker serves navigations NetworkFirst; a client poller (`useVersionGate`) reloads into a new build (silently when idle, otherwise via a toast). This makes deploys self-healing and prevents stale-chunk crashes. Full design and developer guidance: [DEPLOYMENT.md → Web Cache Invalidation & Client Updates](DEPLOYMENT.md#web-cache-invalidation--client-updates).
+- **Android**: Room-backed local cache for todos, floaters, lists, completed history, pending mutations, and sync metadata. Encrypted preferences still protect credentials, cookies, server config, trust data, theme/reminder preferences, and legacy cache migration input. Cache is the source of truth for screens; network sync updates it periodically, on foreground reconnect, realtime events, and user refresh in Server Mode. The periodic in-app resync backs off while syncs keep failing (doubling from 20 s with pending mutations or 5 min without, capped at 15 min), and while the activity is stopped it makes no timed retries against a failing server and does not reconnect a dropped realtime socket on a timer. A network change still triggers one attempt, and any sync that reaches the server reconnects the socket and ends the pause; returning to the foreground restarts the backoff. Background freshness is otherwise `WidgetSyncWorker`'s. `OfflineCacheManager` separates task-data change signals from sync-metadata change signals so Settings can refresh pending counts and sync timestamps without forcing list reloads.
+- **iOS**: SwiftData-backed local cache with mirrored `OfflineSyncState` records. Keychain-backed stores protect server config, cookies, credentials, mode state, theme, and reminders. Cache changes notify ViewModels, Settings sync status, and widget snapshot storage, which writes the Today widget payload into the App Group defaults suite.
+
+## Background Jobs
+
+- **Android reminders**: `AlarmManager` for exact-time reminders, `WorkManager` for periodic reminder rescheduling, `BootRescheduleReceiver` for device restart recovery.
+- **iOS reminders**: `UserNotifications` scheduling and notification deep-link routing.
+- **Widgets**: Android RemoteViews widgets and iOS WidgetKit expose matching Today Tasks and Floater Tasks contracts. Today widgets show pending scheduled tasks due today and add through `tday://todos/create?target=today`; Floater widgets show active unscheduled floaters and add through `tday://todos/create?target=floater`. Android task bodies can scroll; iOS system-family widgets use a static best-fit fallback because WidgetKit does not support true scrolling lists.
+- **Car task surfaces**: Android exposes an internal `tday://car` route with a Compose Today/Floater
+  task surface and speech-recognition create flow. iOS exposes the same task surface through CarPlay
+  templates plus App Intents/Siri voice creation. Both use existing repositories so Local Mode,
+  optimistic writes, pending replay, widget refreshes, and completion behavior remain shared with
+  the main mobile app.
+
+## Mobile Widgets
+
+The v1 mobile widget surface is intentionally narrow and action-oriented. Widgets do not complete tasks inline; they take users into the app through deep links so Local Mode, optimistic writes, validation, and create/edit sheets remain owned by the main clients.
+
+- **Android**: `TodayTasksWidget` and `FloaterTasksWidget` render plain RemoteViews through one shared builder (`TaskWidgetRemoteViews`, XML layouts with real view ids) for responsive compact, wide, medium, and tall layouts, published directly with `AppWidgetManager.updateAppWidget` — no Glance session or WorkManager job on the render path. Small, medium, and large picker choices are separate AppWidget providers backed by matching RemoteViews-compatible preview XML, but they are starting sizes only; each placed entry shares the same 2x2-to-4x4 resize range and adapts as it is stretched or compressed. Android 15+ generated previews are pushed from app startup. The widget models build setup, empty, and tasks states from cached scheduled todos or floaters, keep subtle empty-list-style watermarks behind every widget state, and refresh after Local Mode and optimistic cache changes. The Today watermark mirrors the app title icon by switching from sun to moon at night. Task states keep the header/add row fixed and use a scrollable RemoteViews collection body with priority-colored bullets and capped rows. The widget add deep link opens a dedicated widget-create activity in the main app task so the matching create sheet appears without walking the app navigation stack. A third kind, `ListTasksWidget`, is per-instance configurable: it is placed unconfigured (`configuration_optional`) with a setup picture, and a tap — or the launcher's reconfigure, via its `android:configure` activity `WidgetListPickerActivity` — lets each placed widget pick any single scheduled or floater list. It then shows that whole list, due-date-shaped or undated-shaped per the list's type, and its "+" creates straight into it. Unlike Today/Floater's one snapshot file shared by every instance of a kind, its selection (`WidgetListSelectionStore`) and snapshot are keyed per `appWidgetId`, and `WidgetSnapshotWriter` rebuilds every configured instance on each cache write. See `android-compose/README.md`'s "List widget" section for the full design.
+- **iOS**: `TdayWidget` is a WidgetKit bundle of three widget kinds — Today, Floater and List (`ListTasksWidget`, which asks for its list as it is added on iOS 18+ and otherwise shows the same setup picture as Android's until one is picked in Edit Widget) — supporting configurations for `.systemSmall`, `.systemMedium`, and `.systemLarge`, rendered through a shared WidgetKit visual layer. The app writes schema-versioned snapshots to App Group defaults under `tday.widget.todayTasksSnapshot` and `tday.widget.floaterTasksSnapshot`; payloads include status, task count, generation time, and up to 50 capped task rows. System-family widgets stay snapshot/glanceable, render a static family-specific best-fit row set, show compact overflow text when more rows exist than the family can show or the stored cap includes, keep subtle Today/Floater watermarks behind every state, and schedule Today refreshes around the same sun/moon day-night boundary as the app title icon.
+- **Visual system fit**: each platform owns widget chrome, margins, background removal, tinting/accent rendering, and launch transitions. T'Day identity comes from rounded typography, native plus add icons, readable task rows, and calm persistent watermarks; empty/setup text can come and go independently of the background motif. Today/Floater accent treatment is reserved for the plus add button so counts, priority markers, overflow rows, due times, and task rows stay neutral. Dense buckets prioritize readable titles first; due-time detail is reserved for widget sizes with enough height.
+
+## Production Deployment
+
+In production, `Dockerfile.backend` produces a single container:
+
+1. **Stage 1** (Node 24, which Vite 8 and Vitest 5 require at 22.12+): Builds `tday-web` static assets (`npm ci && npm run build`)
+2. **Stage 2** (JDK 21): Builds Ktor fat JAR (`./gradlew :tday-backend:buildFatJar`)
+3. **Stage 3** (JRE 21 Alpine): Runs the JAR with static files at `STATIC_FILES_DIR=/app/static`
+
+One JVM process serves both the REST API and the SPA. Docker Compose orchestrates PostgreSQL and the backend container by default, with Ollama available through the optional `ai` profile.
+
+## Future Considerations
+
+- Keep ViewModel orchestration focused on presentation concerns; if shared mobile workflows become complex, prefer extracting them into repositories, platform services, or focused use cases before adding broad abstractions.
+- Define an explicit import/export or migration experience before moving Local Mode data into a server workspace.
+- Consider Redis or in-memory caching if web API latency becomes a concern under load.
+- Evaluate SSE as an alternative to WebSocket for clients that don't need bidirectional streaming.

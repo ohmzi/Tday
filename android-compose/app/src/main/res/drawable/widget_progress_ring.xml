@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Today widget's progress ring: a ProgressBar's two layers drawn as rings, the progress one
+     swept from twelve o'clock by its level. The layout tints both, so these colours only stand in. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@android:id/background">
+        <shape
+            android:innerRadiusRatio="2.8"
+            android:shape="ring"
+            android:thicknessRatio="9"
+            android:useLevel="false">
+            <solid android:color="@color/tday_widget_progress_track" />
+        </shape>
+    </item>
+    <item android:id="@android:id/progress">
+        <rotate
+            android:fromDegrees="270"
+            android:pivotX="50%"
+            android:pivotY="50%"
+            android:toDegrees="270">
+            <shape
+                android:innerRadiusRatio="2.8"
+                android:shape="ring"
+                android:thicknessRatio="9"
+                android:useLevel="true">
+                <solid android:color="@color/tday_widget_today_accent" />
+            </shape>
+        </rotate>
+    </item>
+</layer-list>

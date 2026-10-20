@@ -1,0 +1,41 @@
+<resources>
+    <style name="Theme.Tday" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:fontFamily">@font/nunito_app</item>
+        <item name="fontFamily">@font/nunito_app</item>
+        <item name="android:textViewStyle">@style/TdayTextViewStyle</item>
+    </style>
+
+    <style name="Theme.Tday.Starting" parent="Theme.Tday">
+        <item name="android:windowBackground">@drawable/window_splash</item>
+    </style>
+
+    <style name="Theme.Tday.WidgetCreate" parent="Theme.Tday">
+        <item name="android:windowAnimationStyle">@style/TdayWidgetCreateWindowAnimation</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:colorBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
+    <!-- WidgetTaskActionActivity: a widget row tap that must never show a window. -->
+    <style name="Theme.Tday.WidgetTrampoline" parent="@android:style/Theme">
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
+    <style name="TdayWidgetCreateWindowAnimation">
+        <item name="android:activityOpenEnterAnimation">@anim/widget_create_enter</item>
+        <item name="android:activityOpenExitAnimation">@anim/widget_create_hold</item>
+        <item name="android:activityCloseEnterAnimation">@anim/widget_create_hold</item>
+        <item name="android:activityCloseExitAnimation">@anim/widget_create_exit</item>
+    </style>
+
+    <style name="TdayTextViewStyle" parent="@android:style/Widget.TextView">
+        <item name="android:fontFamily">@font/nunito_app</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+</resources>

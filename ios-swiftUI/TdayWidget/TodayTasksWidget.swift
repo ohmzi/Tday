@@ -1,0 +1,2969 @@
+#if canImport(WidgetKit) && canImport(SwiftUI)
+import AppIntents
+import CryptoKit
+import Security
+import SwiftUI
+import WidgetKit
+
+/// Inline widget completions (widgets v2). The widget process has no cache or
+/// SwiftData access, so a tapped check ring only queues a `{kind, id}`
+/// descriptor in the app group; the app drains the queue through the normal
+/// repository complete path on next activation. Until then both providers hide
+/// queued ids so the row disappears immediately.
+enum WidgetPendingCompletionStore {
+    static let queueKey = "tday.widget.pendingCompletions"
+    static let checkingKey = "tday.widget.checkingCompletions"
+    static let appGroupSuiteName = "group.com.ohmz.tday"
+    static let todoKind = "todo"
+    static let floaterKind = "floater"
+
+    struct Entry: Codable, Equatable {
+        let kind: String
+        let id: String
+    }
+
+    /// A row mid check-off animation: shown as checked + struck-through until it
+    /// expires, then the pending queue hides it. Timestamped so a process killed
+    /// mid-animation can't strand a row in the struck state — a stale entry is
+    /// simply ignored (the row falls back to the pending-hide / normal rendering).
+    struct CheckEntry: Codable, Equatable {
+        let kind: String
+        let id: String
+        let atEpochMs: Int64
+    }
+
+    /// The checked-and-struck frame lasts this long before the pending queue removes
+    /// the row. Also the staleness cutoff for a crashed animation. The shared
+    /// `WidgetCheckHold` token, which Android's widget holds its check for too.
+    static let checkingWindowMs = Int64((TdayMotionGenerated.Delays.widgetCheckHold * 1_000).rounded())
+
+    static func load() -> [Entry] {
+        guard let data = store().data(forKey: queueKey),
+              let entries = try? JSONDecoder().decode([Entry].self, from: data) else {
+            return []
+        }
+        return entries
+    }
+
+    static func append(kind: String, id: String) {
+        var entries = load()
+        guard !entries.contains(Entry(kind: kind, id: id)) else {
+            return
+        }
+        entries.append(Entry(kind: kind, id: id))
+        guard let data = try? JSONEncoder().encode(entries) else {
+            return
+        }
+        store().set(data, forKey: queueKey)
+    }
+
+    static func pendingIds(kind: String) -> Set<String> {
+        Set(load().filter { $0.kind == kind }.map(\.id))
+    }
+
+    // MARK: Check-off animation
+
+    private static func loadChecking() -> [CheckEntry] {
+        guard let data = store().data(forKey: checkingKey),
+              let entries = try? JSONDecoder().decode([CheckEntry].self, from: data) else {
+            return []
+        }
+        return entries
+    }
+
+    static func beginChecking(kind: String, id: String, nowEpochMs: Int64) {
+        var entries = loadChecking().filter { $0.id != id || $0.kind != kind }
+        entries.append(CheckEntry(kind: kind, id: id, atEpochMs: nowEpochMs))
+        if let data = try? JSONEncoder().encode(entries) {
+            store().set(data, forKey: checkingKey)
+        }
+    }
+
+    static func endChecking(kind: String, id: String) {
+        let entries = loadChecking().filter { $0.id != id || $0.kind != kind }
+        if let data = try? JSONEncoder().encode(entries) {
+            store().set(data, forKey: checkingKey)
+        }
+    }
+
+    /// Ids currently in the (non-stale) checked+struck frame.
+    static func checkingIds(kind: String, nowEpochMs: Int64) -> Set<String> {
+        Set(
+            loadChecking()
+                .filter { $0.kind == kind && (nowEpochMs - $0.atEpochMs) < checkingWindowMs }
+                .map(\.id)
+        )
+    }
+
+    private static func store() -> UserDefaults {
+        UserDefaults(suiteName: appGroupSuiteName) ?? .standard
+    }
+}
+
+/// Widget-side reader for the widget CONTENT snapshots (task titles, notes, due times).
+/// The app writes these into the App Group container with
+/// `.completeUntilFirstUserAuthentication` protection instead of UserDefaults, which is
+/// unencrypted and backed up. That protection class is what keeps the widget renderable on
+/// a locked device; the writer is `WidgetSnapshotFileStore` in
+/// Tday/Core/Widget/TodayTasksWidgetSnapshotStore.swift and the file names must stay in
+/// lockstep with it.
+enum WidgetSnapshotFileStore {
+    static let appGroupSuiteName = "group.com.ohmz.tday"
+    static let todayFileName = "widget-today-snapshot.json"
+    static let floaterFileName = "widget-floater-snapshot.json"
+    /// Lightweight list catalog (id/name/kind, no task content) backing the widget
+    /// CONFIGURATION picker — see `TdayWidgetListEntityQuery` below. Written by
+    /// `WidgetConfigurableListsStore` in Tday/Core/Widget/TodayTasksWidgetSnapshotStore.swift;
+    /// the name must stay in lockstep with it.
+    static let listsFileName = "widget-lists-snapshot.json"
+
+    static func read(_ fileName: String) -> Data? {
+        guard let fileURL = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupSuiteName)?
+            .appendingPathComponent(fileName) else {
+            return nil
+        }
+        return try? Data(contentsOf: fileURL)
+    }
+}
+
+/// Widget-side twin of the app's `WidgetConfigurableListEntry` — decodes the same
+/// `widget-lists-snapshot.json` rows. `kind` is the raw string ("todo" / "floater"); see
+/// `TdayWidgetListKind`.
+private struct TdayWidgetConfigurableListEntry: Codable {
+    let id: String
+    let name: String
+    let kind: String
+    /// The list's own glyph and colour keys ("work", "TEAL"), resolved on this side — see the
+    /// writer's comment for why keys travel and values do not. Optional so a catalog the app
+    /// wrote before these fields existed still decodes: the synthesized decoder reads an absent
+    /// optional as nil, and nil means "fall back to this widget kind's accent", which is exactly
+    /// what the widget showed before. An already-placed widget therefore never goes blank on
+    /// upgrade; it keeps its old look until the app next writes the catalog.
+    let iconKey: String?
+    let colorKey: String?
+}
+
+/// A picked list is either a todo list (due-date-shaped widget content) or a floater list
+/// (undated widget content) — see `TaskWidgetMode`, which this maps onto 1:1. There is no
+/// third shape: whichever kind of list the user picks, the widget renders in THAT list
+/// type's native shape, regardless of which widget (Today vs Floater) they dragged out of
+/// the gallery.
+enum TdayWidgetListKind: String, Codable {
+    case todo
+    case floater
+    /// The app's own two scheduled views, offered only by the List widget's picker (see
+    /// `TdayListWidgetTargetEntity`). They are not lists in the catalog, so nothing in the app
+    /// writes entries for them and the widget must never look one up.
+    case scheduled
+    case overdue
+
+    /// True for the two kinds that stand for one of the app's built-in scheduled views rather than
+    /// a list the user made: there is nothing to look up in the catalog and nothing that can go
+    /// missing, so the deleted-list check must skip them.
+    var isPseudo: Bool { self == .scheduled || self == .overdue }
+
+    // fileprivate, not internal: TaskWidgetMode (below) is `private`, i.e. file-scoped, and a
+    // property can be no more visible than the types in its own signature. Every call site
+    // (TodayTasksProvider, FloaterTasksProvider, PerListWidgetContentLoader) lives in this same
+    // file, so fileprivate costs nothing here.
+    fileprivate var mode: TaskWidgetMode {
+        switch self {
+        // Both pseudo views hold scheduled tasks, so both render in the todo shape.
+        case .todo, .scheduled, .overdue: return .today
+        case .floater: return .floater
+        }
+    }
+}
+
+/// A todo list OR floater list, offered by the widget's "Edit Widget" configuration picker so
+/// the user can choose which specific list a widget instance shows (R7 per-list widgets).
+///
+/// This is a WIDGET-EXTENSION-ONLY sibling of `TdayListAppEntity`
+/// (Feature/CarPlay/CarTaskIntents.swift, app target only) rather than a reuse of that exact
+/// type: `TdayListAppEntity`'s query reads `AppContainer.shared.cacheManager` in-process,
+/// which only exists in the app target — the widget extension is deliberately lightweight
+/// (see the file-header comment on `WidgetSnapshotFileStore` above) and has neither
+/// AppContainer nor SwiftData linked in. This type follows the identical AppEntity/EntityQuery
+/// pattern, just reading the App-Group-file handoff the rest of this extension already uses,
+/// and additionally spans BOTH todo and floater lists (`TdayListAppEntity` is todo-only, for
+/// the unrelated Focus Filter feature) since the widget picker must offer both.
+struct TdayWidgetListEntity: AppEntity {
+    let listId: String
+    let name: String
+    let kind: TdayWidgetListKind
+    /// The list's stored glyph and colour keys, carried so a list-scoped widget can draw the
+    /// list's own accent rather than its kind's. Not persisted with the configuration — iOS
+    /// stores only `id` and re-resolves through `TdayWidgetListEntityQuery`, so these are as
+    /// fresh as the catalog every time the widget renders, and recolouring a list in the app
+    /// recolours its widget on the next reload with no migration anywhere.
+    var iconKey: String? = nil
+    var colorKey: String? = nil
+
+    /// Namespaced so a todo list and a floater list can never collide even if their raw ids
+    /// ever did (local-mode ids already differ by prefix; server ids are independent UUID
+    /// spaces per table). Also what `TdayWidgetListEntityQuery.entities(for:)` parses back.
+    var id: String { "\(kind.rawValue):\(listId)" }
+
+    static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "List")
+    static var defaultQuery = TdayWidgetListEntityQuery()
+
+    var displayRepresentation: DisplayRepresentation {
+        DisplayRepresentation(title: "\(name)")
+    }
+}
+
+struct TdayWidgetListEntityQuery: EntityQuery {
+    func entities(for identifiers: [String]) async throws -> [TdayWidgetListEntity] {
+        let wanted = Set(identifiers)
+        return Self.allLists().filter { wanted.contains($0.id) }
+    }
+
+    func suggestedEntities() async throws -> [TdayWidgetListEntity] {
+        Self.allLists()
+    }
+
+    /// Every list the app last wrote to the catalog, or nil when the catalog cannot be read at
+    /// all (before the first unlock, or before the app has ever written it) — which is not the
+    /// same as "no lists", so the List widget does not call its list deleted on that.
+    fileprivate static func catalog() -> [TdayWidgetListEntity]? {
+        guard WidgetSnapshotFileStore.read(WidgetSnapshotFileStore.listsFileName) != nil else {
+            return nil
+        }
+        return allLists()
+    }
+
+    fileprivate static func allLists() -> [TdayWidgetListEntity] {
+        guard let data = WidgetSnapshotFileStore.read(WidgetSnapshotFileStore.listsFileName),
+              let entries = try? JSONDecoder().decode([TdayWidgetConfigurableListEntry].self, from: data) else {
+            return []
+        }
+        return entries.compactMap { entry in
+            guard let kind = TdayWidgetListKind(rawValue: entry.kind) else { return nil }
+            return TdayWidgetListEntity(
+                listId: entry.id,
+                name: entry.name,
+                kind: kind,
+                iconKey: entry.iconKey,
+                colorKey: entry.colorKey
+            )
+        }
+    }
+}
+
+/// What the LIST widget's picker offers: the same lists as `TdayWidgetListEntityQuery`, plus the
+/// app's two scheduled views, so a widget can be pointed at "Scheduled" or "Overdue" without a list
+/// existing for it.
+///
+/// A separate entity TYPE rather than two more entries in the shared query, because
+/// `AppEntity.defaultQuery` is per-type: adding them there would also offer Scheduled and Overdue
+/// to the Today and Floater widgets, which already ARE those views and have no list dimension to
+/// scope by. Every field is converted back to `TdayWidgetListEntity` before anything is loaded, so
+/// the whole render path stays on one type.
+struct TdayListWidgetTargetEntity: AppEntity {
+    let listId: String
+    let name: String
+    let kind: TdayWidgetListKind
+    var iconKey: String? = nil
+    var colorKey: String? = nil
+
+    var id: String { "\(kind.rawValue):\(listId)" }
+
+    static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "List")
+    static var defaultQuery = TdayListWidgetTargetQuery()
+
+    var displayRepresentation: DisplayRepresentation {
+        DisplayRepresentation(title: "\(name)")
+    }
+
+    var asListEntity: TdayWidgetListEntity {
+        TdayWidgetListEntity(listId: listId, name: name, kind: kind, iconKey: iconKey, colorKey: colorKey)
+    }
+}
+
+struct TdayListWidgetTargetQuery: EntityQuery {
+    func entities(for identifiers: [String]) async throws -> [TdayListWidgetTargetEntity] {
+        let wanted = Set(identifiers)
+        return Self.allTargets().filter { wanted.contains($0.id) }
+    }
+
+    func suggestedEntities() async throws -> [TdayListWidgetTargetEntity] {
+        Self.allTargets()
+    }
+
+    /// The user's lists come from the shared query's own reader of the catalog rather than a second
+    /// one here, so the two pickers can never disagree about which lists exist.
+    static func allTargets() -> [TdayListWidgetTargetEntity] {
+        let lists = TdayWidgetListEntityQuery.allLists().map { entity in
+            TdayListWidgetTargetEntity(
+                listId: entity.listId,
+                name: entity.name,
+                kind: entity.kind,
+                iconKey: entity.iconKey,
+                colorKey: entity.colorKey
+            )
+        }
+        return lists + pseudoTargets
+    }
+
+    /// The two pseudo views, with the ids the app writes their slices under (see
+    /// `TodayTasksWidgetSnapshotStore`'s `openByList`) and names from the string catalog.
+    static let pseudoTargets: [TdayListWidgetTargetEntity] = [
+        TdayListWidgetTargetEntity(
+            listId: "scheduled",
+            name: String(localized: "Scheduled"),
+            kind: .scheduled
+        ),
+        TdayListWidgetTargetEntity(
+            listId: "overdue",
+            name: String(localized: "Overdue"),
+            kind: .overdue
+        ),
+    ]
+}
+
+/// One list's accent as the widget draws it: the glyph for the watermark, and the colour that
+/// tints every accented element — watermark, "+" button, progress ring, weekday label.
+///
+/// The colour is `Color?` and not a defaulted `Color` on purpose. Nil here means "this list has
+/// no colour of its own", and the view then falls back to the widget KIND's accent — the Today
+/// blue or the floater green it already showed. Defaulting to pink inside this type would make
+/// a colourless list indistinguishable from a pink one and silently repaint every widget whose
+/// list predates list colours.
+///
+/// The glyph has no such nil case: `tdayLucideListAsset` answers the inbox for an unknown or
+/// absent key, which is a real glyph and a reasonable picture of "a list".
+private struct TdayWidgetListAccent {
+    let glyphAsset: String
+    let color: Color?
+
+    /// A list's name feeds `tdayResolvedListIconKey`, which guesses a glyph for a list whose
+    /// owner never picked one — the same resolution the app's own list rows use, so the glyph
+    /// on the home screen is the glyph in the app. Display only, as that function's doc
+    /// requires: nothing here is written back anywhere.
+    init(list: TdayWidgetListEntity) {
+        glyphAsset = tdayLucideListAsset(tdayResolvedListIconKey(list.iconKey, listName: list.name))
+        color = tdayListAccentColorOrNil(colorKey: list.colorKey)
+    }
+}
+
+/// Widget configuration (R7): which list, if any, this widget instance shows. `list == nil`
+/// (the default — both when the user leaves it unset from the picker, and for every widget
+/// placed before this update, which iOS resolves against a config intent's declared default)
+/// means "no specific list" and falls back to the ORIGINAL global behavior — the same
+/// due-today Today feed / same all-floaters Floater feed this widget kind always showed. That
+/// fallback is what keeps every already-placed widget working unchanged after this ships.
+struct SelectTaskListIntent: WidgetConfigurationIntent {
+    static var title: LocalizedStringResource = "Select List"
+    static var description = IntentDescription("Choose which T'Day list this widget shows. Leave unset for the default feed.")
+
+    @Parameter(title: "List")
+    var list: TdayWidgetListEntity?
+
+    init() {}
+
+    init(list: TdayWidgetListEntity?) {
+        self.list = list
+    }
+}
+
+/// The List widget's configuration: the one list this instance shows. iOS asks for it as the
+/// widget is added (`promptsForUserConfiguration`), so `nil` means that was skipped — the widget
+/// then asks for a list itself. Its own intent rather than `SelectTaskListIntent`, whose unset
+/// state means "the default feed" — a List widget has no default feed to fall back on.
+struct SelectListWidgetListIntent: WidgetConfigurationIntent {
+    static var title: LocalizedStringResource = "Choose List"
+    static var description = IntentDescription("Choose which T'Day list this widget shows.")
+
+    // The target entity, not `TdayWidgetListEntity`, so this picker also offers the app's
+    // Scheduled and Overdue views — see `TdayListWidgetTargetEntity`.
+    @Parameter(title: "List")
+    var list: TdayListWidgetTargetEntity?
+
+    init() {}
+}
+
+/// Widget-side reader for the shared backend session the app writes after auth/sync
+/// (widgets v2 instant sync). Lets the check-ring intent fire an authenticated
+/// completion straight to the backend without opening the app. The app-side writer
+/// (`WidgetBackendSession.save/clear`) is duplicated in
+/// Tday/Core/Widget/TodayTasksWidgetSnapshotStore.swift; the file/key shapes must
+/// stay in lockstep. Stored with `.completeUntilFirstUserAuthentication`, so the
+/// widget can read it after the device's first unlock.
+enum WidgetBackendSession {
+    static let appGroupSuiteName = "group.com.ohmz.tday"
+    static let fileName = "widget-backend-session.json"
+
+    struct Payload: Codable {
+        let baseURL: String
+        let cookieHeader: String
+        /// The host's TOFU-pinned fingerprint when the app pinned one (self-signed /
+        /// privately-issued cert). Decoded leniently so a session written by an older
+        /// build (before pinning was shared) still loads.
+        let pinnedFingerprint: String?
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            baseURL = try container.decode(String.self, forKey: .baseURL)
+            cookieHeader = try container.decode(String.self, forKey: .cookieHeader)
+            pinnedFingerprint = try container.decodeIfPresent(String.self, forKey: .pinnedFingerprint)
+        }
+    }
+
+    private static func fileURL() -> URL? {
+        FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupSuiteName)?
+            .appendingPathComponent(fileName)
+    }
+
+    static func load() -> (baseURL: URL, cookieHeader: String, pinnedFingerprint: String?)? {
+        guard let fileURL = fileURL(),
+              let data = try? Data(contentsOf: fileURL),
+              let payload = try? JSONDecoder().decode(Payload.self, from: data),
+              let baseURL = URL(string: payload.baseURL),
+              !payload.cookieHeader.isEmpty else {
+            return nil
+        }
+        return (baseURL, payload.cookieHeader, payload.pinnedFingerprint)
+    }
+}
+
+/// Reproduces the app's TOFU certificate pinning for the widget's one-shot
+/// completion call. The widget has no keychain access, so the app hands it the
+/// pinned fingerprint through the shared session; without this delegate a plain
+/// URLSession rejects self-signed / privately-issued certs outright and instant
+/// sync would be silently dead on exactly the self-hosted setups the app's pinning
+/// exists to support. Mirrors NetworkConfiguration.urlSession(_:didReceive:):
+/// local hosts and system-trusted chains use default handling; anything else must
+/// match the pin. Unlike the app this never pins on first use — the widget only
+/// enforces a pin the app already established.
+private final class WidgetPinnedTrustDelegate: NSObject, URLSessionDelegate {
+    private let pinnedFingerprint: String?
+
+    init(pinnedFingerprint: String?) {
+        self.pinnedFingerprint = pinnedFingerprint
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        didReceive challenge: URLAuthenticationChallenge,
+        completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
+    ) {
+        guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
+              let trust = challenge.protectionSpace.serverTrust else {
+            completionHandler(.performDefaultHandling, nil)
+            return
+        }
+
+        let host = challenge.protectionSpace.host.lowercased()
+        if Self.isLocalAddress(host: host) {
+            completionHandler(.performDefaultHandling, nil)
+            return
+        }
+
+        let policy = SecPolicyCreateSSL(true, host as CFString)
+        SecTrustSetPolicies(trust, policy)
+        if SecTrustEvaluateWithError(trust, nil) {
+            // Public-CA chain: standard validation, exactly like the app.
+            completionHandler(.performDefaultHandling, nil)
+            return
+        }
+
+        // Self-signed / privately issued: only proceed if it matches the app's pin.
+        guard let pinnedFingerprint,
+              let fingerprint = Self.fingerprintForTrust(trust),
+              fingerprint == pinnedFingerprint else {
+            completionHandler(.cancelAuthenticationChallenge, nil)
+            return
+        }
+        completionHandler(.useCredential, URLCredential(trust: trust))
+    }
+
+    private static func isLocalAddress(host: String) -> Bool {
+        host == "localhost" ||
+        host == "127.0.0.1" ||
+        host == "10.0.2.2" ||
+        host.hasPrefix("192.168.") ||
+        host.hasPrefix("10.") ||
+        host.hasSuffix(".local")
+    }
+
+    /// Must stay byte-identical to NetworkConfiguration.fingerprintForTrust, or a
+    /// pin the app stored would never match here.
+    private static func fingerprintForTrust(_ trust: SecTrust) -> String? {
+        guard let key = SecTrustCopyKey(trust) else {
+            return leafCertificateHash(for: trust)
+        }
+        var error: Unmanaged<CFError>?
+        guard let external = SecKeyCopyExternalRepresentation(key, &error) as Data? else {
+            return leafCertificateHash(for: trust)
+        }
+        return Data(SHA256.hash(data: external)).base64EncodedString()
+    }
+
+    private static func leafCertificateHash(for trust: SecTrust) -> String? {
+        guard let certificates = SecTrustCopyCertificateChain(trust) as? [SecCertificate],
+              let certificate = certificates.first else {
+            return nil
+        }
+        let data = SecCertificateCopyData(certificate) as Data
+        return Data(SHA256.hash(data: data)).base64EncodedString()
+    }
+}
+
+/// Completes a task straight from a widget row without opening the app.
+/// Runs in the widget process, so it records the tap (offline fallback), refreshes
+/// the timeline, and — best-effort — fires an authenticated completion to the
+/// backend so a checked-off task syncs instantly instead of waiting for the next
+/// app launch. Any network failure is swallowed: the app drains the queue later.
+struct CompleteWidgetTaskIntent: AppIntent {
+    static let title: LocalizedStringResource = "Complete Task"
+    // Widget-button plumbing only — never surfaced in Shortcuts or Spotlight.
+    static let isDiscoverable = false
+    static let openAppWhenRun = false
+
+    @Parameter(title: "Task Kind")
+    var kind: String
+
+    @Parameter(title: "Task ID")
+    var taskID: String
+
+    init() {}
+
+    init(kind: String, taskID: String) {
+        self.kind = kind
+        self.taskID = taskID
+    }
+
+    func perform() async throws -> some IntentResult {
+        let nowMs = Int64(Date().timeIntervalSince1970 * 1_000)
+
+        // Durability first: queue the completion (offline fallback + what ultimately
+        // hides the row). Then mark it "checking" so the row is shown checked +
+        // struck-through for one beat before the pending queue removes it — the app's
+        // check → strikethrough → fade, as far as WidgetKit will animate it. Ordering
+        // this way means a completion is never lost even if the animation is cut short.
+        WidgetPendingCompletionStore.append(kind: kind, id: taskID)
+        WidgetPendingCompletionStore.beginChecking(kind: kind, id: taskID, nowEpochMs: nowMs)
+        // Reload BOTH kinds, not just the content kind's historical home: a per-list widget
+        // (R7) can render a todo row from a "FloaterTasksWidget" instance (or a floater row
+        // from a "TodayTasksWidget" instance) when the picked list's type doesn't match the
+        // gallery slot it was dragged from, so there is no single kind guaranteed to own the
+        // instance that was actually tapped.
+        WidgetCenter.shared.reloadAllTimelines()
+
+        // Best-effort instant backend sync (idempotent endpoints; the queue is the
+        // fallback, so any failure is swallowed).
+        await sendBackendCompletion()
+
+        // Hold the checked+struck frame, then end it so the pending filter drops the
+        // row — WidgetKit animates the removal. sendBackendCompletion may already have
+        // consumed part of the window; sleep only the remainder so the beat is bounded.
+        let elapsedMs = Int64(Date().timeIntervalSince1970 * 1_000) - nowMs
+        let remainingMs = WidgetPendingCompletionStore.checkingWindowMs - elapsedMs
+        if remainingMs > 0 {
+            try? await Task.sleep(for: .milliseconds(remainingMs))
+        }
+        WidgetPendingCompletionStore.endChecking(kind: kind, id: taskID)
+        WidgetCenter.shared.reloadAllTimelines()
+        return .result()
+    }
+
+    private func sendBackendCompletion() async {
+        guard let session = WidgetBackendSession.load(),
+              let request = Self.completionRequest(
+                  kind: kind,
+                  taskID: taskID,
+                  baseURL: session.baseURL,
+                  cookieHeader: session.cookieHeader
+              ) else {
+            return
+        }
+        let configuration = URLSessionConfiguration.ephemeral
+        // perform() must await this call (returning early would let the system tear
+        // the process down mid-flight), and the system spins the tapped ring until
+        // perform() returns — so keep the ceiling tight. A completion PATCH is tiny;
+        // if it can't land in this window the queue fallback covers it anyway.
+        configuration.timeoutIntervalForRequest = 6
+        configuration.timeoutIntervalForResource = 6
+        configuration.waitsForConnectivity = false
+        // Delegate reproduces the app's TOFU pin so self-hosted servers with
+        // self-signed certs work here too (a delegate-less session rejects them).
+        let urlSession = URLSession(
+            configuration: configuration,
+            delegate: WidgetPinnedTrustDelegate(pinnedFingerprint: session.pinnedFingerprint),
+            delegateQueue: nil
+        )
+        defer { urlSession.finishTasksAndInvalidate() }
+        // Swallow every error — the queue is the fallback and must never surface a
+        // failure to the user from a widget tap.
+        _ = try? await urlSession.data(for: request)
+    }
+
+    /// Resolves the completion payload from the App Group snapshot (canonical id +,
+    /// for todos, the recurring-instance date) and builds the authenticated PATCH.
+    /// Returns nil when the task isn't found — the queue still handles it.
+    private static func completionRequest(
+        kind: String,
+        taskID: String,
+        baseURL: URL,
+        cookieHeader: String
+    ) -> URLRequest? {
+        let path: String
+        var body: [String: Any] = [:]
+        if kind == WidgetPendingCompletionStore.floaterKind {
+            guard let canonicalId = floaterCanonicalId(taskID: taskID) else {
+                return nil
+            }
+            path = "/api/floater/complete"
+            body["id"] = canonicalId
+        } else {
+            guard let payload = todoCompletionPayload(taskID: taskID) else {
+                return nil
+            }
+            path = "/api/todo/complete"
+            body["id"] = payload.canonicalId
+            // Present as an explicit JSON null for non-recurring todos, matching the
+            // app's own TodoCompleteRequest encoding.
+            if let instanceDateEpochMs = payload.instanceDateEpochMs {
+                body["instanceDate"] = Date(timeIntervalSince1970: TimeInterval(instanceDateEpochMs) / 1_000).ISO8601Format()
+            } else {
+                body["instanceDate"] = NSNull()
+            }
+        }
+
+        let url = baseURL.appendingPathComponent(path.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
+        guard let data = try? JSONSerialization.data(withJSONObject: body) else {
+            return nil
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.httpBody = data
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
+        // Identify as the iOS client at the app's version, exactly like
+        // NetworkConfiguration.defaultHeaders. Without these the backend's mobile
+        // version gate (which returns 426/409 for incompatible builds) skips this
+        // request entirely, letting the widget write to a server the app itself is
+        // deliberately fenced off from. The extension's CFBundleShortVersionString
+        // is the app's MARKETING_VERSION, so it blocks identically.
+        request.setValue("ios", forHTTPHeaderField: "X-Tday-Client")
+        request.setValue(
+            Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
+            forHTTPHeaderField: "X-Tday-App-Version"
+        )
+        request.setValue(TimeZone.current.identifier, forHTTPHeaderField: "X-User-Timezone")
+        return request
+    }
+
+    private static func todoCompletionPayload(taskID: String) -> (canonicalId: String, instanceDateEpochMs: Int64?)? {
+        // Per-list widgets (R7) render rows sourced from `perList`, not just the global
+        // `tasks` aggregate — search both so a tap on a per-list row resolves too.
+        guard let snapshot = TodayTasksProvider.loadWidgetSnapshot(),
+              let task = snapshot.firstTask(withId: taskID) else {
+            return nil
+        }
+        return (task.canonicalId, task.instanceDateEpochMs)
+    }
+
+    private static func floaterCanonicalId(taskID: String) -> String? {
+        guard let snapshot = FloaterTasksProvider.loadWidgetSnapshot(),
+              let task = snapshot.firstTask(withId: taskID) else {
+            return nil
+        }
+        return task.canonicalId
+    }
+}
+
+/// Widget-side reader for the App Lock flag the app mirrors into the shared App Group suite
+/// (`AppLockStore` in Tday/Core/Security/ProbeDecryptor.swift). Plain UserDefaults is fine —
+/// the flag itself is not a secret, only the task content it gates is.
+private enum WidgetAppLockStore {
+    static let appGroupSuiteName = "group.com.ohmz.tday"
+    private static let key = "app.lock.enabled"
+
+    static var isEnabled: Bool {
+        (UserDefaults(suiteName: appGroupSuiteName) ?? .standard).bool(forKey: key)
+    }
+}
+
+/// R7 configurable widgets: `status`/`mode` carry what used to be split across
+/// `TodayTasksSnapshotStatus` + a separate `isLocked` bool + a mode hardcoded by the View.
+/// A configured-to-a-list instance can render EITHER shape (see `TaskWidgetMode`), so mode is
+/// now data on the entry rather than a constant the view supplies.
+private struct TodayTasksEntry: TimelineEntry {
+    let date: Date
+    let title: String
+    let status: TaskWidgetStatus
+    let taskCount: Int
+    let rows: [WidgetTaskRowModel]
+    let mode: TaskWidgetMode
+    /// The list this instance is scoped to, as a glyph and a colour — nil on the global feed and
+    /// on a locked widget, which deliberately gives nothing about a specific list away.
+    var accent: TdayWidgetListAccent? = nil
+    /// The global Today feed only — a per-list or locked entry leaves these empty.
+    var today: TodayHeaderContent? = nil
+    /// This gallery slot was pointed at one of the user's lists, so it is not the global feed its
+    /// kind is named after. See `TdayTasksWidgetContent.isListScoped`.
+    var isListScoped: Bool = false
+}
+
+/// What the global Today feed adds on top of a task list: the date-led header with its progress
+/// ring, the Overdue section, and the preview an empty day shows. Mirrors Android's
+/// `TodayTasksWidget.todayContent`.
+private struct TodayHeaderContent {
+    /// "Mon" over "28" for the day the entry shows.
+    let weekday: String
+    let day: String
+    /// "2 of 5 done", or "3 due" before anything is done; nil with nothing to count.
+    let countLabel: String?
+    let progress: WidgetProgress?
+    let overdueRows: [WidgetTaskRowModel]
+    let overdueCount: Int
+    /// "All done for today" once something due today is done, else nil for the plain message.
+    let emptyTitle: String?
+    let preview: WidgetDayPreview?
+}
+
+/// Today's header ring: tasks due today that are done, out of those plus the ones still due.
+private struct WidgetProgress: Equatable {
+    let done: Int
+    let total: Int
+}
+
+/// An empty Today's look ahead: the next day with tasks, named ("Tomorrow · 3 due").
+private struct WidgetDayPreview {
+    let label: String
+    let taskCount: Int
+    let rows: [WidgetTaskRowModel]
+}
+
+private struct TodayTaskSnapshot: Codable, Identifiable {
+    let id: String
+    let title: String
+    let dueEpochMs: Int64
+    let priority: String
+    // Optional so snapshots persisted before this field existed still decode (as nil).
+    let description: String?
+    // Backend-completion payload (widgets v2 instant sync): the CANONICAL id the
+    // /api/todo/complete endpoint expects, plus the recurring-instance date.
+    // Defaulted so snapshots persisted before these existed still decode
+    // (canonicalId falls back to the display id).
+    let canonicalId: String
+    let instanceDateEpochMs: Int64?
+
+    init(
+        id: String,
+        title: String,
+        dueEpochMs: Int64,
+        priority: String,
+        description: String? = nil,
+        canonicalId: String? = nil,
+        instanceDateEpochMs: Int64? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.dueEpochMs = dueEpochMs
+        self.priority = priority
+        self.description = description
+        self.canonicalId = canonicalId ?? id
+        self.instanceDateEpochMs = instanceDateEpochMs
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedId = try container.decode(String.self, forKey: .id)
+        id = decodedId
+        title = try container.decode(String.self, forKey: .title)
+        dueEpochMs = try container.decode(Int64.self, forKey: .dueEpochMs)
+        priority = try container.decode(String.self, forKey: .priority)
+        description = try container.decodeIfPresent(String.self, forKey: .description)
+        canonicalId = try container.decodeIfPresent(String.self, forKey: .canonicalId) ?? decodedId
+        instanceDateEpochMs = try container.decodeIfPresent(Int64.self, forKey: .instanceDateEpochMs)
+    }
+}
+
+private enum TodayTasksSnapshotStatus: String, Codable {
+    case setup
+    case empty
+    case tasks
+}
+
+/// Widget-side twin of the app's `TodayTasksWidgetPerListSnapshot` — one todo list's slice of
+/// `TodayTasksSnapshot.perList` (R7 per-list widgets): `totalCount` is the list's TRUE
+/// due-today-or-overdue count, `tasks` the display-capped rows.
+private struct TodayTasksPerListSnapshot: Codable {
+    let totalCount: Int
+    let tasks: [TodayTaskSnapshot]
+    /// `totalCount` on each of the snapshot's `upcomingDays`, and every row that makes the
+    /// display cap on any of them, in the app's order. Defaulted so older snapshots decode.
+    let upcomingTotalCounts: [Int]
+    let upcomingTasks: [TodayTaskSnapshot]
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        totalCount = try container.decode(Int.self, forKey: .totalCount)
+        tasks = try container.decode([TodayTaskSnapshot].self, forKey: .tasks)
+        upcomingTotalCounts = try container.decodeIfPresent([Int].self, forKey: .upcomingTotalCounts) ?? []
+        upcomingTasks = try container.decodeIfPresent([TodayTaskSnapshot].self, forKey: .upcomingTasks) ?? []
+    }
+
+    /// The list as it reads on covered day `dayOffset` (0 = the snapshot's own day), or nil
+    /// when the snapshot holds no count for that day. The list's window is cumulative, so on an
+    /// upcoming day its rows are the upcoming rows due before that day ends — already in order,
+    /// and led by exactly the rows a rebuild on that day would write.
+    func content(dayOffset: Int, dayEndEpochMs: Int64) -> (totalCount: Int, tasks: [TodayTaskSnapshot])? {
+        guard dayOffset > 0 else {
+            return (totalCount, tasks)
+        }
+        guard upcomingTotalCounts.indices.contains(dayOffset - 1) else {
+            return nil
+        }
+        return (
+            upcomingTotalCounts[dayOffset - 1],
+            upcomingTasks.filter { $0.dueEpochMs < dayEndEpochMs }
+        )
+    }
+}
+
+/// Widget-side twin of the app's `TodayTasksWidgetDaySnapshot`: the global "due today" feed as
+/// it reads on one upcoming local day.
+private struct TodayTasksDaySnapshot: Codable {
+    let dayStartEpochMs: Int64
+    let dayEndEpochMs: Int64
+    let taskCount: Int
+    let tasks: [TodayTaskSnapshot]
+    // Schema 4; defaulted so older snapshots decode as nothing done and nothing overdue.
+    let completedCount: Int
+    let overdueCount: Int
+    let overdueTasks: [TodayTaskSnapshot]
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        dayStartEpochMs = try container.decode(Int64.self, forKey: .dayStartEpochMs)
+        dayEndEpochMs = try container.decode(Int64.self, forKey: .dayEndEpochMs)
+        taskCount = try container.decode(Int.self, forKey: .taskCount)
+        tasks = try container.decode([TodayTaskSnapshot].self, forKey: .tasks)
+        completedCount = try container.decodeIfPresent(Int.self, forKey: .completedCount) ?? 0
+        overdueCount = try container.decodeIfPresent(Int.self, forKey: .overdueCount) ?? 0
+        overdueTasks = try container.decodeIfPresent([TodayTaskSnapshot].self, forKey: .overdueTasks) ?? []
+    }
+}
+
+/// The global Today feed on one covered day: its own tasks, how many of its tasks are already
+/// done, and what is overdue by then.
+private struct TodayTasksFeed {
+    let taskCount: Int
+    let tasks: [TodayTaskSnapshot]
+    let completedCount: Int
+    let overdueCount: Int
+    let overdueTasks: [TodayTaskSnapshot]
+}
+
+private func isTaskWidgetDaytime(_ date: Date) -> Bool {
+    let hour = Calendar.current.component(.hour, from: date)
+    return (6..<18).contains(hour)
+}
+
+private func nextTaskWidgetDayNightRefresh(after date: Date, calendar: Calendar = .current) -> Date {
+    let hour = calendar.component(.hour, from: date)
+    let targetHour = hour < 6 ? 6 : (hour < 18 ? 18 : 6)
+    let targetDate: Date
+    if hour >= 18 {
+        targetDate = calendar.date(byAdding: .day, value: 1, to: date) ?? date.addingTimeInterval(86_400)
+    } else {
+        targetDate = date
+    }
+
+    return calendar.date(bySettingHour: targetHour, minute: 0, second: 0, of: targetDate)
+        ?? date.addingTimeInterval(1_800)
+}
+
+private struct TodayTasksSnapshot: Codable {
+    let schemaVersion: Int
+    let generatedAtEpochMs: Int64
+    let title: String
+    let status: TodayTasksSnapshotStatus
+    let taskCount: Int
+    let tasks: [TodayTaskSnapshot]
+    // Defaulted so snapshots persisted before this field existed still decode (as empty).
+    let perList: [String: TodayTasksPerListSnapshot]
+    // The local day `tasks` describe, and the same feed for the days after it (schema 3).
+    // Nil/empty in older snapshots, which then cover only the day they were generated on.
+    let dayStartEpochMs: Int64?
+    let dayEndEpochMs: Int64?
+    let upcomingDays: [TodayTasksDaySnapshot]
+    // Schema 4: the header's done count and the Overdue section, for the snapshot's own day.
+    let completedCount: Int
+    let overdueCount: Int
+    let overdueTasks: [TodayTaskSnapshot]
+    // Schema 5: each todo list's whole open list, for the List widget.
+    let openByList: [String: TodayTasksPerListSnapshot]
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedTasks = try container.decodeIfPresent([TodayTaskSnapshot].self, forKey: .tasks) ?? []
+        schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
+        generatedAtEpochMs = try container.decode(Int64.self, forKey: .generatedAtEpochMs)
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? "Today's Tasks"
+        status = (try? container.decodeIfPresent(TodayTasksSnapshotStatus.self, forKey: .status)) ?? (decodedTasks.isEmpty ? .empty : .tasks)
+        taskCount = try container.decodeIfPresent(Int.self, forKey: .taskCount) ?? decodedTasks.count
+        tasks = decodedTasks
+        perList = try container.decodeIfPresent([String: TodayTasksPerListSnapshot].self, forKey: .perList) ?? [:]
+        dayStartEpochMs = try container.decodeIfPresent(Int64.self, forKey: .dayStartEpochMs)
+        dayEndEpochMs = try container.decodeIfPresent(Int64.self, forKey: .dayEndEpochMs)
+        upcomingDays = try container.decodeIfPresent([TodayTasksDaySnapshot].self, forKey: .upcomingDays) ?? []
+        completedCount = try container.decodeIfPresent(Int.self, forKey: .completedCount) ?? 0
+        overdueCount = try container.decodeIfPresent(Int.self, forKey: .overdueCount) ?? 0
+        overdueTasks = try container.decodeIfPresent([TodayTaskSnapshot].self, forKey: .overdueTasks) ?? []
+        openByList = try container.decodeIfPresent([String: TodayTasksPerListSnapshot].self, forKey: .openByList) ?? [:]
+    }
+
+    /// The local days this snapshot can answer for: its own, then its upcoming ones.
+    func coveredDays(calendar: Calendar = .current) -> [TodayWidgetDayWindow.Day] {
+        TodayWidgetDayWindow.coveredDays(
+            dayStartEpochMs: dayStartEpochMs,
+            dayEndEpochMs: dayEndEpochMs,
+            upcoming: upcomingDays.map {
+                TodayWidgetDayWindow.Day(startEpochMs: $0.dayStartEpochMs, endEpochMs: $0.dayEndEpochMs)
+            },
+            generatedAtEpochMs: generatedAtEpochMs,
+            calendar: calendar
+        )
+    }
+
+    /// The global feed on covered day `dayOffset` (0 = the snapshot's own day).
+    func feed(dayOffset: Int) -> TodayTasksFeed? {
+        guard dayOffset > 0 else {
+            return TodayTasksFeed(
+                taskCount: taskCount,
+                tasks: tasks,
+                completedCount: completedCount,
+                overdueCount: overdueCount,
+                overdueTasks: overdueTasks
+            )
+        }
+        guard upcomingDays.indices.contains(dayOffset - 1) else {
+            return nil
+        }
+        let day = upcomingDays[dayOffset - 1]
+        return TodayTasksFeed(
+            taskCount: day.taskCount,
+            tasks: day.tasks,
+            completedCount: day.completedCount,
+            overdueCount: day.overdueCount,
+            overdueTasks: day.overdueTasks
+        )
+    }
+
+    /// The first covered day after `dayOffset` that has anything due — what an empty Today
+    /// previews — with how many days on it is. Nil when no later covered day has tasks.
+    func nextDayWithTasks(after dayOffset: Int) -> (daysAhead: Int, day: TodayTasksDaySnapshot)? {
+        guard dayOffset < upcomingDays.count else {
+            return nil
+        }
+        for index in dayOffset..<upcomingDays.count where upcomingDays[index].taskCount > 0 {
+            return (index + 1 - dayOffset, upcomingDays[index])
+        }
+        return nil
+    }
+
+    /// Searches the global `tasks` aggregate (and its Overdue rows) first, then every per-list
+    /// slice, then the upcoming days, then the List widget's whole lists — a row rendered from a
+    /// configured per-list widget (R7) lives only in `perList`, one rendered after midnight only
+    /// in the upcoming rows, and a later-dated one on a List widget only in `openByList`.
+    func firstTask(withId id: String) -> TodayTaskSnapshot? {
+        if let match = tasks.first(where: { $0.id == id }) ?? overdueTasks.first(where: { $0.id == id }) {
+            return match
+        }
+        for list in perList.values {
+            if let match = list.tasks.first(where: { $0.id == id }) {
+                return match
+            }
+        }
+        for day in upcomingDays {
+            if let match = day.tasks.first(where: { $0.id == id }) ?? day.overdueTasks.first(where: { $0.id == id }) {
+                return match
+            }
+        }
+        for list in perList.values {
+            if let match = list.upcomingTasks.first(where: { $0.id == id }) {
+                return match
+            }
+        }
+        for list in openByList.values {
+            if let match = list.tasks.first(where: { $0.id == id }) {
+                return match
+            }
+        }
+        return nil
+    }
+}
+
+private struct TodayTasksProvider: AppIntentTimelineProvider {
+    func placeholder(in context: Context) -> TodayTasksEntry {
+        .previewTasks
+    }
+
+    func snapshot(for configuration: SelectTaskListIntent, in context: Context) async -> TodayTasksEntry {
+        context.isPreview ? .previewTasks : loadEntry(configuration: configuration)
+    }
+
+    func timeline(for configuration: SelectTaskListIntent, in context: Context) async -> Timeline<TodayTasksEntry> {
+        let now = Date()
+        var entries = [loadEntry(configuration: configuration, date: now)]
+        // Due-date content turns over at local midnight. An entry of its own there switches
+        // the widget onto the new day on time, from the days the snapshot carries, even if
+        // nothing reloads the timeline — offline the app writes nothing, and a policy reload
+        // can land late. A floater list has no days, so it gets no extra entry.
+        if configuration.list?.kind != .floater {
+            let midnight = TodayWidgetDayWindow.nextDayStart(after: now, calendar: .current)
+            entries.append(loadEntry(configuration: configuration, date: midnight))
+        }
+        let nextRefresh = Calendar.current.date(byAdding: .minute, value: 30, to: now) ?? now.addingTimeInterval(1800)
+        let nextDayNightRefresh = nextTaskWidgetDayNightRefresh(after: now)
+        return Timeline(entries: entries, policy: .after(min(nextRefresh, nextDayNightRefresh)))
+    }
+
+    /// `configuration.list == nil` (unset, or a widget placed before R7 existed) falls back to
+    /// the ORIGINAL global "due today" feed. A picked list — todo OR floater — renders via the
+    /// shared `PerListWidgetContentLoader`, which is what lets this "TodayTasksWidget" gallery
+    /// instance render floater-shaped content when the user picked a floater list.
+    private func loadEntry(configuration: SelectTaskListIntent, date: Date = Date()) -> TodayTasksEntry {
+        // Checked before the snapshot is even read, so a locked device never decodes real
+        // task titles into memory it isn't going to render.
+        guard !WidgetAppLockStore.isEnabled else {
+            let list = configuration.list
+            return TodayTasksEntry(
+                date: date,
+                title: list?.name ?? "Today's Tasks",
+                status: .locked,
+                taskCount: 0,
+                rows: [],
+                mode: list?.kind.mode ?? .today,
+                isListScoped: list != nil
+            )
+        }
+        if let list = configuration.list {
+            let content = PerListWidgetContentLoader.load(list: list, date: date)
+            return TodayTasksEntry(
+                date: date,
+                title: content.title,
+                status: content.status,
+                taskCount: content.taskCount,
+                rows: content.rows,
+                mode: content.mode,
+                accent: content.accent
+            )
+        }
+        return Self.loadGlobalEntry(date: date)
+    }
+
+    private static func loadGlobalEntry(date: Date) -> TodayTasksEntry {
+        guard let snapshot = loadSnapshot() else {
+            return TodayTasksEntry(date: date, title: "Today's Tasks", status: .setup, taskCount: 0, rows: [], mode: .today)
+        }
+        guard snapshot.status != .setup else {
+            return TodayTasksEntry(date: date, title: snapshot.title, status: .setup, taskCount: 0, rows: [], mode: .today)
+        }
+
+        // Render the local day that contains this entry's date, not the one the snapshot was
+        // written on: after midnight with nothing syncing, the snapshot's own `tasks` are
+        // yesterday's. Past the days it carries, ask for the app rather than guess.
+        let nowMs = Int64(date.timeIntervalSince1970 * 1_000)
+        guard let dayOffset = TodayWidgetDayWindow.dayOffset(of: nowMs, in: snapshot.coveredDays()),
+              let feed = snapshot.feed(dayOffset: dayOffset) else {
+            return TodayTasksEntry(date: date, title: snapshot.title, status: .stale, taskCount: 0, rows: [], mode: .today)
+        }
+
+        // Hide rows completed from the widget that the app has not drained yet — but
+        // keep a row that's mid check-off animation (still shown, checked + struck)
+        // until its beat ends, at which point the pending filter removes it.
+        let pending = WidgetPendingCompletionStore.pendingIds(kind: WidgetPendingCompletionStore.todoKind)
+        let checking = WidgetPendingCompletionStore.checkingIds(kind: WidgetPendingCompletionStore.todoKind, nowEpochMs: nowMs)
+        func isShown(_ task: TodayTaskSnapshot) -> Bool {
+            checking.contains(task.id) || !pending.contains(task.id)
+        }
+        func row(_ task: TodayTaskSnapshot, isOverdue: Bool = false, isPreview: Bool = false) -> WidgetTaskRowModel {
+            WidgetTaskRowModel(
+                id: task.id,
+                title: task.title,
+                priority: task.priority,
+                dueEpochMs: task.dueEpochMs,
+                description: task.description,
+                isChecking: checking.contains(task.id),
+                isOverdue: isOverdue,
+                showsDueDay: isOverdue,
+                isPreview: isPreview
+            )
+        }
+        let visible = feed.tasks.filter(isShown)
+        let completedFromWidget = feed.tasks.count - visible.count
+        let taskCount = max(0, feed.taskCount - completedFromWidget)
+        let visibleOverdue = feed.overdueTasks.filter(isShown)
+        let overdueCount = max(0, feed.overdueCount - (feed.overdueTasks.count - visibleOverdue.count))
+
+        // Done is counted by due date: today's tasks already finished, plus the ones checked off
+        // here that the app has not drained yet, plus any mid check-off — so the ring fills with
+        // the tick. An overdue row is not one of today's tasks and moves nothing in the header.
+        let checkingToday = visible.filter { checking.contains($0.id) }.count
+        let dueToday = max(0, taskCount - checkingToday)
+        let done = feed.completedCount + completedFromWidget + checkingToday
+        let total = done + dueToday
+
+        let calendar = Calendar.current
+        let days = snapshot.coveredDays()
+        let dayStart = Date(timeIntervalSince1970: TimeInterval(days[dayOffset].startEpochMs) / 1_000)
+        // Same evening rule as the title and the watermark: "tonight" once the moon is drawn.
+        let emptyTitle: String? = done > 0
+            ? (isTaskWidgetDaytime(date) ? "All done for today" : "All done for tonight")
+            : nil
+        var preview: WidgetDayPreview?
+        if taskCount == 0, overdueCount == 0, let next = snapshot.nextDayWithTasks(after: dayOffset) {
+            let nextStart = Date(timeIntervalSince1970: TimeInterval(next.day.dayStartEpochMs) / 1_000)
+            let dayName = next.daysAhead == 1
+                ? "Tomorrow"
+                : nextStart.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+            preview = WidgetDayPreview(
+                label: "\(dayName) · \(next.day.taskCount) due",
+                taskCount: next.day.taskCount,
+                rows: next.day.tasks.filter(isShown).map { row($0, isPreview: true) }
+            )
+        }
+        let today = TodayHeaderContent(
+            weekday: dayStart.formatted(.dateTime.weekday(.abbreviated)),
+            day: String(calendar.component(.day, from: dayStart)),
+            countLabel: done > 0 ? "\(done) of \(total) done" : (dueToday > 0 ? "\(dueToday) due" : nil),
+            progress: total > 0 ? WidgetProgress(done: done, total: total) : nil,
+            overdueRows: visibleOverdue.map { row($0, isOverdue: true) },
+            overdueCount: overdueCount,
+            emptyTitle: emptyTitle,
+            preview: preview
+        )
+        return TodayTasksEntry(
+            date: date,
+            title: snapshot.title,
+            status: taskCount == 0 && overdueCount == 0 ? .empty : .tasks,
+            taskCount: taskCount,
+            rows: visible.map { row($0) },
+            mode: .today,
+            today: today
+        )
+    }
+
+    private static func loadSnapshot() -> TodayTasksSnapshot? {
+        if let data = WidgetSnapshotFileStore.read(WidgetSnapshotFileStore.todayFileName),
+           let snapshot = try? JSONDecoder().decode(TodayTasksSnapshot.self, from: data) {
+            return snapshot
+        }
+        return legacyDefaultsSnapshot()
+    }
+
+    /// Transitional read of the pre-migration UserDefaults copy, so the widget still renders
+    /// between installing this build and the app's first launch (which is what moves the
+    /// snapshot into the protected file and deletes these keys). Read-only on purpose — the
+    /// widget must not resurrect the plaintext copy.
+    private static func legacyDefaultsSnapshot() -> TodayTasksSnapshot? {
+        for store in legacyDefaultsStores() {
+            guard let data = store.data(forKey: legacySnapshotKey),
+                  let snapshot = try? JSONDecoder().decode(TodayTasksSnapshot.self, from: data) else {
+                continue
+            }
+            return snapshot
+        }
+        return nil
+    }
+
+    /// Snapshot access for the completion intent's canonical-id resolution.
+    static func loadWidgetSnapshot() -> TodayTasksSnapshot? {
+        loadSnapshot()
+    }
+
+    private static func legacyDefaultsStores() -> [UserDefaults] {
+        var stores = [UserDefaults]()
+        if let shared = UserDefaults(suiteName: appGroupSuiteName) {
+            stores.append(shared)
+        }
+        stores.append(.standard)
+        return stores
+    }
+
+    private static let appGroupSuiteName = "group.com.ohmz.tday"
+    private static let legacySnapshotKey = "tday.widget.todayTasksSnapshot"
+}
+
+private extension TodayTasksEntry {
+    static let previewTasks = TodayTasksEntry(
+        date: Date(),
+        title: "Today's Tasks",
+        status: .tasks,
+        taskCount: 10,
+        rows: [
+            WidgetTaskRowModel(id: "preview-1", title: "Plan the morning", priority: "medium", dueEpochMs: Date().timeIntervalEpochMs, description: nil),
+            WidgetTaskRowModel(id: "preview-2", title: "Review today", priority: "high", dueEpochMs: Date().addingTimeInterval(3_600).timeIntervalEpochMs, description: nil),
+            WidgetTaskRowModel(id: "preview-3", title: "Send the quick update", priority: "low", dueEpochMs: Date().addingTimeInterval(7_200).timeIntervalEpochMs, description: nil),
+            WidgetTaskRowModel(id: "preview-4", title: "Reset the evening list", priority: "medium", dueEpochMs: Date().addingTimeInterval(10_800).timeIntervalEpochMs, description: nil),
+            WidgetTaskRowModel(id: "preview-5", title: "Call the contractor", priority: "high", dueEpochMs: Date().addingTimeInterval(12_600).timeIntervalEpochMs, description: nil),
+            WidgetTaskRowModel(id: "preview-6", title: "Pick up groceries", priority: "medium", dueEpochMs: Date().addingTimeInterval(14_400).timeIntervalEpochMs, description: nil),
+            WidgetTaskRowModel(id: "preview-7", title: "Prep tomorrow", priority: "low", dueEpochMs: Date().addingTimeInterval(16_200).timeIntervalEpochMs, description: nil),
+            WidgetTaskRowModel(id: "preview-8", title: "Evening reset", priority: "medium", dueEpochMs: Date().addingTimeInterval(18_000).timeIntervalEpochMs, description: nil),
+            WidgetTaskRowModel(id: "preview-9", title: "Queue notes", priority: "low", dueEpochMs: Date().addingTimeInterval(19_800).timeIntervalEpochMs, description: nil),
+            WidgetTaskRowModel(id: "preview-10", title: "Close the loop", priority: "medium", dueEpochMs: Date().addingTimeInterval(21_600).timeIntervalEpochMs, description: nil)
+        ],
+        mode: .today
+    )
+
+    static let previewEmpty = TodayTasksEntry(date: Date(), title: "Today's Tasks", status: .empty, taskCount: 0, rows: [], mode: .today)
+
+    static let previewSetup = TodayTasksEntry(date: Date(), title: "Today's Tasks", status: .setup, taskCount: 0, rows: [], mode: .today)
+
+    static let previewLocked = TodayTasksEntry(date: Date(), title: "Today's Tasks", status: .locked, taskCount: 0, rows: [], mode: .today)
+}
+
+private struct TodayTasksWidgetView: View {
+    let entry: TodayTasksEntry
+
+    var body: some View {
+        TdayTasksWidgetContent(
+            title: entry.title,
+            status: entry.status,
+            taskCount: entry.taskCount,
+            rows: entry.rows,
+            date: entry.date,
+            mode: entry.mode,
+            today: entry.today,
+            listAccent: entry.accent
+        )
+    }
+}
+
+private struct WidgetTaskRowModel: Identifiable {
+    let id: String
+    let title: String
+    let priority: String
+    let dueEpochMs: Int64?
+    let description: String?
+    /// Mid check-off: render the ring filled + the title struck-through for one beat.
+    var isChecking: Bool = false
+    /// Past due — a per-list row, or one of Today's Overdue section: tints the due chip red
+    /// instead of fabricating a second due-time text style.
+    var isOverdue: Bool = false
+    /// Today's Overdue rows show the day they were due ("Sep 27"), which says how late they are;
+    /// a time of day would not.
+    var showsDueDay: Bool = false
+    /// A later day's task previewed under an empty Today: muted, and not completable from here.
+    var isPreview: Bool = false
+
+    var note: String? {
+        guard let trimmed = description?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {
+            return nil
+        }
+        return trimmed
+    }
+}
+
+/// One entry of a widget's task list: a task, or a label introducing what follows it.
+private enum WidgetListItem: Identifiable {
+    case task(WidgetTaskRowModel)
+    case section(id: String, text: String)
+    case message(id: String, text: String)
+
+    var id: String {
+        switch self {
+        case .task(let row):
+            return "task-\(row.id)"
+        case .section(let id, _), .message(let id, _):
+            return "label-\(id)"
+        }
+    }
+
+    var isTask: Bool {
+        if case .task = self {
+            return true
+        }
+        return false
+    }
+}
+
+private enum TaskWidgetStatus: Equatable {
+    case setup
+    case empty
+    case tasks
+    case locked
+    /// The snapshot has run out of local days (see `TodayWidgetDayWindow`): rendering any of
+    /// its rows as "today" would be a guess, and the extension cannot rebuild from the cache.
+    case stale
+    /// A List widget with no list to show: none was picked, or the one picked was deleted.
+    case chooseList(listMissing: Bool)
+
+    init(_ status: FloaterTasksSnapshotStatus) {
+        switch status {
+        case .setup:
+            self = .setup
+        case .empty:
+            self = .empty
+        case .tasks:
+            self = .tasks
+        }
+    }
+
+}
+
+private enum TaskWidgetMode {
+    case today
+    case floater
+
+    /// Where a tap on the widget's body goes: the feed the widget is SHOWING.
+    ///
+    /// `.today` used to answer `tday://home`, which lands on whatever the user set as their
+    /// default home screen — so the one widget whose whole subject is today was also the one that
+    /// would not take you there, while `.floater` beside it deep-linked correctly. Android had the
+    /// identical gap on the identical widget and is fixed in the same change.
+    ///
+    /// `todos/today` is `AppRoute.todayTodos`'s own `deepLinkPath`, so this cannot drift from the
+    /// route it names.
+    var openURL: URL {
+        switch self {
+        case .today:
+            return URL(string: "tday://todos/today")!
+        case .floater:
+            return URL(string: "tday://floater")!
+        }
+    }
+
+    var createURL: URL {
+        switch self {
+        case .today:
+            return URL(string: "tday://todos/create?target=today")!
+        case .floater:
+            return URL(string: "tday://todos/create?target=floater")!
+        }
+    }
+
+    var countUnit: String {
+        switch self {
+        case .today:
+            return "due"
+        case .floater:
+            return "open"
+        }
+    }
+
+    /// The evening says "tonight", on the same 6..<18 predicate that swaps the sun for the moon —
+    /// one boundary for the whole widget, never a second one of this line's own.
+    func emptyTitle(isDaytime: Bool) -> String {
+        switch self {
+        case .today:
+            return isDaytime ? "No tasks due today" : "No tasks due tonight"
+        case .floater:
+            return "No floater tasks"
+        }
+    }
+
+    /// The watermark glyph for a widget showing a whole FEED rather than one list: Today reads
+    /// the clock, Floater is always the leaf. A list-scoped widget overrides both with the
+    /// list's own glyph — see `TdayWidgetListAccent`.
+    ///
+    /// Lucide asset names, not SF Symbols. Previously `sun.max.fill` / `moon.stars.fill` /
+    /// `leaf`, which is why these three pictures CHANGE with this release: a list's glyph can
+    /// only come from the Lucide set (one icon source across web/Android/iOS — docs/ICONS.md),
+    /// and a widget that drew Lucide for a list and SF Symbols for a feed would have two
+    /// drawing styles in one gallery. Accepted deliberately.
+    func emptyWatermarkAsset(isDaytime: Bool) -> String {
+        switch self {
+        case .today:
+            // LucideMoonStar does not exist in the catalogue; LucideMoon does.
+            return isDaytime ? "LucideSun" : "LucideMoon"
+        case .floater:
+            return "LucideLeaf"
+        }
+    }
+
+    var addAccessibilityLabel: String {
+        switch self {
+        case .today:
+            return "Add task for today"
+        case .floater:
+            return "Add floater task"
+        }
+    }
+
+    var showsDueTime: Bool {
+        self == .today
+    }
+
+    var completionKind: String {
+        switch self {
+        case .today:
+            return WidgetPendingCompletionStore.todoKind
+        case .floater:
+            return WidgetPendingCompletionStore.floaterKind
+        }
+    }
+
+    func accentColor(renderingMode: WidgetRenderingMode) -> Color {
+        guard renderingMode == .fullColor else {
+            return .primary
+        }
+        switch self {
+        case .today:
+            return .tdayTodayBlue
+        case .floater:
+            return .tdayFloaterGreen
+        }
+    }
+
+}
+
+/// Rendered content for ONE configured-to-a-list widget instance (R7), before being wrapped
+/// into either `TodayTasksEntry` or `FloaterTasksEntry`. Shared because either provider can be
+/// asked to render EITHER list kind — the "TodayTasksWidget" gallery slot renders
+/// floater-shaped content when the user picked a floater list, and vice versa — so this logic
+/// belongs to neither provider alone.
+private struct PerListWidgetContent {
+    let title: String
+    let status: TaskWidgetStatus
+    let taskCount: Int
+    let rows: [WidgetTaskRowModel]
+    let mode: TaskWidgetMode
+    /// Always set here — every path through this loader has a list — so each `PerListWidgetContent`
+    /// carries the accent beside the rows it was loaded for and no caller can hand on content
+    /// from one list with the accent of another.
+    let accent: TdayWidgetListAccent
+}
+
+private enum PerListWidgetContentLoader {
+    static func load(list: TdayWidgetListEntity, date: Date) -> PerListWidgetContent {
+        switch list.kind {
+        case .todo, .scheduled, .overdue:
+            return loadTodoList(list: list, date: date)
+        case .floater:
+            return loadFloaterList(list: list, date: date)
+        }
+    }
+
+    /// That list's due-today-OR-OVERDUE pending todos (see `TodayTasksWidgetSnapshotStore
+    /// .makeSnapshot`'s `perList` comment for why the window is wider than the global feed).
+    /// `isOverdue` is computed live against `date`, not persisted, so it stays correct across
+    /// timeline refreshes even though the underlying snapshot file only refreshes on state
+    /// change. The window itself is the local day containing `date`, from the days the
+    /// snapshot carries — the same rollover as the global feed.
+    private static func loadTodoList(list: TdayWidgetListEntity, date: Date) -> PerListWidgetContent {
+        let accent = TdayWidgetListAccent(list: list)
+        guard let snapshot = TodayTasksProvider.loadWidgetSnapshot() else {
+            return PerListWidgetContent(title: list.name, status: .empty, taskCount: 0, rows: [], mode: .today, accent: accent)
+        }
+
+        let nowMs = Int64(date.timeIntervalSince1970 * 1_000)
+        let days = snapshot.coveredDays()
+        guard let dayOffset = TodayWidgetDayWindow.dayOffset(of: nowMs, in: days) else {
+            return PerListWidgetContent(title: list.name, status: .stale, taskCount: 0, rows: [], mode: .today, accent: accent)
+        }
+        // A list is written whenever it has anything due before the last covered day ends, so a
+        // missing slice means nothing due on this day either.
+        guard let listSnapshot = snapshot.perList[list.listId] else {
+            return PerListWidgetContent(title: list.name, status: .empty, taskCount: 0, rows: [], mode: .today, accent: accent)
+        }
+        guard let content = listSnapshot.content(dayOffset: dayOffset, dayEndEpochMs: days[dayOffset].endEpochMs) else {
+            return PerListWidgetContent(title: list.name, status: .stale, taskCount: 0, rows: [], mode: .today, accent: accent)
+        }
+
+        let pending = WidgetPendingCompletionStore.pendingIds(kind: WidgetPendingCompletionStore.todoKind)
+        let checking = WidgetPendingCompletionStore.checkingIds(kind: WidgetPendingCompletionStore.todoKind, nowEpochMs: nowMs)
+        let visible = content.tasks.filter { checking.contains($0.id) || !pending.contains($0.id) }
+        let taskCount = max(0, content.totalCount - (content.tasks.count - visible.count))
+        let rows = visible.map { task in
+            WidgetTaskRowModel(
+                id: task.id,
+                title: task.title,
+                priority: task.priority,
+                dueEpochMs: task.dueEpochMs,
+                description: task.description,
+                isChecking: checking.contains(task.id),
+                isOverdue: task.dueEpochMs < nowMs
+            )
+        }
+        return PerListWidgetContent(
+            title: list.name,
+            status: rows.isEmpty ? .empty : .tasks,
+            taskCount: taskCount,
+            rows: rows,
+            mode: .today,
+            accent: accent
+        )
+    }
+
+    /// The List widget's content: the WHOLE list — a todo list's every open task whatever day
+    /// it is due, rather than `loadTodoList`'s due-today-or-overdue slice. A floater list has no
+    /// days, so its whole list is the same one the Today/Floater widgets show for it.
+    static func loadWholeList(list: TdayWidgetListEntity, date: Date) -> PerListWidgetContent {
+        switch list.kind {
+        case .todo, .scheduled, .overdue:
+            // A pseudo view's rows are the whole of its slice too, so it shares this loader.
+            return loadWholeTodoList(list: list, date: date)
+        case .floater:
+            return loadFloaterList(list: list, date: date)
+        }
+    }
+
+    /// A row due today shows its time; any other its day ("Sep 30"), since a bare time on next
+    /// week's task would read as today's. Overdue is worked out against `date`, not stored.
+    private static func loadWholeTodoList(list: TdayWidgetListEntity, date: Date) -> PerListWidgetContent {
+        let accent = TdayWidgetListAccent(list: list)
+        guard let snapshot = TodayTasksProvider.loadWidgetSnapshot(),
+              let listSnapshot = snapshot.openByList[list.listId] else {
+            return PerListWidgetContent(title: list.name, status: .empty, taskCount: 0, rows: [], mode: .today, accent: accent)
+        }
+
+        let nowMs = Int64(date.timeIntervalSince1970 * 1_000)
+        let calendar = Calendar.current
+        let pending = WidgetPendingCompletionStore.pendingIds(kind: WidgetPendingCompletionStore.todoKind)
+        let checking = WidgetPendingCompletionStore.checkingIds(kind: WidgetPendingCompletionStore.todoKind, nowEpochMs: nowMs)
+        let visible = listSnapshot.tasks.filter { checking.contains($0.id) || !pending.contains($0.id) }
+        let taskCount = max(0, listSnapshot.totalCount - (listSnapshot.tasks.count - visible.count))
+        let rows = visible.map { task in
+            let due = Date(timeIntervalSince1970: TimeInterval(task.dueEpochMs) / 1_000)
+            return WidgetTaskRowModel(
+                id: task.id,
+                title: task.title,
+                priority: task.priority,
+                dueEpochMs: task.dueEpochMs,
+                description: task.description,
+                isChecking: checking.contains(task.id),
+                isOverdue: task.dueEpochMs < nowMs,
+                showsDueDay: !calendar.isDate(due, inSameDayAs: date)
+            )
+        }
+        return PerListWidgetContent(
+            title: list.name,
+            status: rows.isEmpty ? .empty : .tasks,
+            taskCount: taskCount,
+            rows: rows,
+            mode: .today,
+            accent: accent
+        )
+    }
+
+    private static func loadFloaterList(list: TdayWidgetListEntity, date: Date) -> PerListWidgetContent {
+        let accent = TdayWidgetListAccent(list: list)
+        guard let snapshot = FloaterTasksProvider.loadWidgetSnapshot(),
+              let listSnapshot = snapshot.perList[list.listId] else {
+            return PerListWidgetContent(title: list.name, status: .empty, taskCount: 0, rows: [], mode: .floater, accent: accent)
+        }
+
+        let nowMs = Int64(date.timeIntervalSince1970 * 1_000)
+        let pending = WidgetPendingCompletionStore.pendingIds(kind: WidgetPendingCompletionStore.floaterKind)
+        let checking = WidgetPendingCompletionStore.checkingIds(kind: WidgetPendingCompletionStore.floaterKind, nowEpochMs: nowMs)
+        let visible = listSnapshot.tasks.filter { checking.contains($0.id) || !pending.contains($0.id) }
+        let taskCount = max(0, listSnapshot.totalCount - (listSnapshot.tasks.count - visible.count))
+        let rows = visible.map { task in
+            WidgetTaskRowModel(
+                id: task.id,
+                title: task.title,
+                priority: task.priority,
+                dueEpochMs: nil,
+                description: nil,
+                isChecking: checking.contains(task.id)
+            )
+        }
+        return PerListWidgetContent(
+            title: list.name,
+            status: rows.isEmpty ? .empty : .tasks,
+            taskCount: taskCount,
+            rows: rows,
+            mode: .floater,
+            accent: accent
+        )
+    }
+}
+
+private struct TdayTasksWidgetContent: View {
+    let title: String
+    let status: TaskWidgetStatus
+    let taskCount: Int
+    let rows: [WidgetTaskRowModel]
+    let date: Date
+    let mode: TaskWidgetMode
+    /// The global Today feed's header, Overdue section and empty-day preview; nil elsewhere.
+    var today: TodayHeaderContent? = nil
+    /// Where a List widget's taps go once it has a list; nil on every other widget.
+    var listChrome: ListWidgetChrome? = nil
+    /// The list this instance is scoped to, as a glyph and a colour; nil on a whole-feed widget
+    /// and on a locked one. Set, it replaces the watermark glyph and — where the list has a
+    /// colour — every accent-tinted element in the widget, so the thing reads as that list end
+    /// to end rather than wearing the Today blue with a custom picture on it.
+    var listAccent: TdayWidgetListAccent? = nil
+
+    @Environment(\.widgetFamily) private var family
+    @Environment(\.widgetRenderingMode) private var renderingMode
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            if !isChoosingList {
+                messageWatermark
+            }
+
+            switch status {
+            case .setup:
+                message(title: "Open T'Day", subtitle: "Set up your workspace")
+            case .empty:
+                if !showsPreview {
+                    message(title: today?.emptyTitle ?? emptyTitle, subtitle: "")
+                }
+            case .locked:
+                lockedMessage
+            case .stale:
+                // Tapping the widget opens the app, which retakes the snapshot on launch.
+                message(title: "Open T'Day", subtitle: "to refresh today's tasks")
+            case .tasks:
+                EmptyView()
+            case .chooseList(let listMissing):
+                chooseListMessage(listMissing: listMissing)
+            }
+
+            VStack(alignment: .leading, spacing: metrics.contentSpacing) {
+                // Nothing to title or add to yet: the picture and its line are the whole widget.
+                if !isChoosingList {
+                    header
+                }
+
+                if status == .tasks {
+                    taskList(items: taskItems, totalTaskCount: taskCount + (today?.overdueCount ?? 0), reservesOverflow: true)
+                } else if showsPreview, let today, let preview = today.preview {
+                    // The label already says how many are due that day, so no "+X more" row.
+                    taskList(items: previewItems(today, preview), totalTaskCount: preview.taskCount, reservesOverflow: false)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(.horizontal, metrics.horizontalInset)
+            .padding(.top, metrics.topInset)
+            .padding(.bottom, metrics.bottomInset)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .widgetURL(isChoosingList ? ListWidgetChrome.setupURL : (listChrome?.openURL ?? mode.openURL))
+        .containerBackground(for: .widget) {
+            widgetBackground
+        }
+    }
+
+    private var metrics: WidgetLayoutMetrics {
+        WidgetLayoutMetrics(family: family)
+    }
+
+    private var isChoosingList: Bool {
+        if case .chooseList = status {
+            return true
+        }
+        return false
+    }
+
+    /// A List widget holds every open task in its list, whatever day each is due, so it empties
+    /// to "nothing left" and counts "open" whichever type the list is — not Today's "due today".
+    private var emptyTitle: String {
+        listChrome == nil ? mode.emptyTitle(isDaytime: isDaytime) : "Nothing left in this list"
+    }
+
+    /// The header title for the layouts with no date block beside it (the locked and stale Today
+    /// states; every list-scoped and floater instance keeps its own title untouched).
+    ///
+    /// `title` for the global Today feed comes from the snapshot, which the app writes and so bakes
+    /// at whatever hour that write happened; the evening form has to be decided here, at render,
+    /// where `date` is the entry's own.
+    private var headerTitle: String {
+        guard listAccent == nil, mode == .today, !isDaytime else {
+            return title
+        }
+        return "Tonight's Tasks"
+    }
+
+    /// Where there is room, an empty Today previews its next day with tasks rather than centring
+    /// one line over blank space. Small keeps the plain message.
+    private var showsPreview: Bool {
+        status == .empty && family != .systemSmall && today?.preview != nil
+    }
+
+    /// Today's own rows, then its Overdue section — the order the app's Today screen uses.
+    private var taskItems: [WidgetListItem] {
+        var items = rows.map(WidgetListItem.task)
+        if let today, !today.overdueRows.isEmpty {
+            items.append(.section(id: "overdue", text: "Overdue · \(today.overdueCount)"))
+            items += today.overdueRows.map(WidgetListItem.task)
+        }
+        return items
+    }
+
+    private func previewItems(_ today: TodayHeaderContent, _ preview: WidgetDayPreview) -> [WidgetListItem] {
+        [
+            .message(id: "empty", text: today.emptyTitle ?? mode.emptyTitle(isDaytime: isDaytime)),
+            .section(id: "preview", text: preview.label)
+        ] + preview.rows.map(WidgetListItem.task)
+    }
+
+    /// The list's own colour where it has one, else the widget KIND's accent — the Today blue or
+    /// the floater green, which is what every widget showed before lists had a say.
+    ///
+    /// The fallback is not a cosmetic nicety: a list created before list colours existed, or one
+    /// whose stored key this build does not recognise, has no colour, and inventing one (pink,
+    /// or something derived from the name) would assert a choice the user never made. Nil means
+    /// nil all the way down from `TdayWidgetListAccent.color`.
+    private var accentColor: Color {
+        guard renderingMode == .fullColor, let listColor = listAccent?.color else {
+            // Accented/vibrant modes get no hue at all — the system tints the whole widget.
+            return mode.accentColor(renderingMode: renderingMode)
+        }
+        return listColor
+    }
+
+    private var secondaryTextColor: Color {
+        renderingMode == .fullColor ? .secondary : .primary.opacity(0.72)
+    }
+
+    /// The ONE day/night decision this widget makes: the title, the empty line and the sun/moon all
+    /// read it, so they can never disagree about which half of the day it is.
+    private var isDaytime: Bool {
+        isTaskWidgetDaytime(date)
+    }
+
+    private var watermarkColor: Color {
+        guard renderingMode == .fullColor else {
+            return .primary.opacity(0.08)
+        }
+        let color: Color
+        switch mode {
+        // The night-blue wash belongs to the TODAY feed, whose watermark is the moon. A list has
+        // one colour at every hour, so a list-scoped widget keeps it after dark rather than
+        // turning the user's teal into the small hours' blue.
+        case .today where !isTaskWidgetDaytime(date) && listAccent?.color == nil:
+            color = .tdayTitleNight
+        default:
+            color = accentColor
+        }
+        return color.opacity(colorScheme == .dark ? 0.16 : 0.11)
+    }
+
+    private var countText: String {
+        "\(taskCount) \(listChrome == nil ? mode.countUnit : "open")"
+    }
+
+    private var widgetBackground: some View {
+        colorScheme == .dark ? Color.tdayDarkSurface : Color.tdayLightSurface
+    }
+
+    /// The list's own glyph when this instance is scoped to one, else the feed's — Today's sun or
+    /// moon, Floater's leaf. This is the whole answer to "which list is this widget": at a glance,
+    /// from across a home screen, the picture and the tint say it before the title is legible.
+    private var watermarkAsset: String {
+        listAccent?.glyphAsset ?? mode.emptyWatermarkAsset(isDaytime: isTaskWidgetDaytime(date))
+    }
+
+    private var messageWatermark: some View {
+        GeometryReader { proxy in
+            // A Lucide template image, not an SF Symbol: sized by its FRAME rather than a font
+            // size, since an asset has no text metrics to scale from. The glyph therefore fills
+            // the square the symbol used to sit inside, which is why the watermark reads larger
+            // than it did — see `TaskWidgetMode.emptyWatermarkAsset`.
+            Image(watermarkAsset)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .foregroundStyle(watermarkColor)
+                .rotationEffect(.degrees(-7))
+                .frame(width: metrics.watermarkSize, height: metrics.watermarkSize)
+                .position(
+                    x: proxy.size.width - (metrics.watermarkSize / 2) + metrics.watermarkTrailingOffset,
+                    y: proxy.size.height * metrics.watermarkVerticalFraction
+                )
+        }
+        .accessibilityHidden(true)
+    }
+
+    private var header: some View {
+        HStack(spacing: 8) {
+            if family == .systemSmall {
+                if status == .tasks, taskCount > 0 {
+                    smallCountLabel
+                }
+            } else if let today {
+                dateHeader(today)
+            } else {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(headerTitle)
+                        .font(.system(size: family == .systemLarge ? 17 : 16, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+
+                    if status == .tasks {
+                        countPill
+                    }
+                }
+            }
+
+            Spacer(minLength: 4)
+            if family != .systemSmall, let progress = today?.progress {
+                progressRing(progress)
+            }
+            addButton
+        }
+        .frame(minHeight: metrics.headerHeight)
+    }
+
+    /// Today leads with its date — weekday over day number — and stacks "Today" over the count,
+    /// so a progress phrase fits beside the ring without squeezing the title.
+    private func dateHeader(_ today: TodayHeaderContent) -> some View {
+        HStack(spacing: 10) {
+            VStack(spacing: 1) {
+                Text(today.weekday)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(accentColor)
+                    .widgetAccentable()
+                Text(today.day)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+            }
+            .lineLimit(1)
+            .frame(minWidth: 28)
+
+            VStack(alignment: .leading, spacing: 2) {
+                // Flips with the watermark, not on a boundary of its own: a header reading "Today"
+                // under a moon was the whole complaint.
+                Text(isDaytime ? "Today" : "Tonight")
+                    .font(.system(size: family == .systemLarge ? 16 : 15, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+                if let countLabel = today.countLabel {
+                    Text(countLabel)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(secondaryTextColor)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// Done today out of done plus still due today, swept clockwise from twelve.
+    private func progressRing(_ progress: WidgetProgress) -> some View {
+        let fraction = progress.total > 0 ? CGFloat(progress.done) / CGFloat(progress.total) : 0
+        return ZStack {
+            Circle()
+                .stroke(accentColor.opacity(renderingMode == .fullColor ? 0.22 : 0.18), lineWidth: 3)
+            Circle()
+                .trim(from: 0, to: fraction)
+                .stroke(accentColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .widgetAccentable()
+        }
+        .frame(width: 22, height: 22)
+        // WidgetKit tweens between reloads, so the sweep follows a check-off.
+        .animation(.easeInOut(duration: 0.2), value: fraction)
+        .accessibilityHidden(true)
+    }
+
+    private var smallCountLabel: some View {
+        Text(countText)
+            .font(.system(size: 18, weight: .heavy, design: .rounded))
+            .foregroundStyle(secondaryTextColor)
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .accessibilityLabel(countText)
+    }
+
+    private var countPill: some View {
+        Text(countText)
+            .font(.system(size: 12, weight: .semibold, design: .rounded))
+            .foregroundStyle(secondaryTextColor)
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .padding(.horizontal, 2)
+            .frame(height: 26)
+    }
+
+    private var addButton: some View {
+        Link(destination: listChrome?.addURL ?? mode.createURL) {
+            Image(systemName: "plus")
+                .font(.system(size: 17, weight: .heavy, design: .rounded))
+                .foregroundStyle(accentColor)
+                .frame(width: metrics.addButtonSize, height: metrics.addButtonSize)
+                .background(
+                    RoundedRectangle(cornerRadius: metrics.addButtonCornerRadius, style: .continuous)
+                        .fill(accentColor.opacity(renderingMode == .fullColor ? 0.14 : 0.10))
+                )
+                .contentShape(Rectangle())
+                .widgetAccentable()
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(listChrome == nil ? mode.addAccessibilityLabel : "Add task to \(title)")
+    }
+
+    private func taskList(items: [WidgetListItem], totalTaskCount: Int, reservesOverflow: Bool) -> some View {
+        // WidgetKit system-family widgets do not support true in-widget scrolling, so iOS keeps a best-fit row set plus overflow text.
+        let visibleItems = visibleListItems(items, totalTaskCount: totalTaskCount, reservesOverflow: reservesOverflow)
+        let taskTotal = max(totalTaskCount, items.filter(\.isTask).count)
+        let overflowCount = reservesOverflow ? max(0, taskTotal - visibleItems.filter(\.isTask).count) : 0
+
+        let hasOverflow = overflowCount > 0
+
+        // spacing 0: the inter-row gap is a plain fixed-height spacer sized to
+        // metrics.rowSpacing, so removing the visible separator line costs no height —
+        // the row-fit count (3 medium / 9 large) stays exactly the same as with dividers.
+        return VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(visibleItems.enumerated()), id: \.element.id) { index, item in
+                listItemView(item)
+                if index < visibleItems.count - 1 || hasOverflow {
+                    rowGap
+                }
+            }
+            if hasOverflow {
+                overflowRow(count: overflowCount)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    @ViewBuilder
+    private func listItemView(_ item: WidgetListItem) -> some View {
+        switch item {
+        case .task(let row):
+            taskRow(row)
+        case .section(_, let text):
+            sectionLabel(text)
+        case .message(_, let text):
+            messageLine(text)
+        }
+    }
+
+    /// Names the rows below it: "Overdue · 2", "Tomorrow · 3 due".
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            .foregroundStyle(secondaryTextColor)
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, minHeight: metrics.rowHeight, alignment: .bottomLeading)
+    }
+
+    /// The empty day's own line, heading its preview of the next one.
+    private func messageLine(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: family == .systemLarge ? 15 : 14, weight: .bold, design: .rounded))
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .frame(maxWidth: .infinity, minHeight: metrics.rowHeight, alignment: .leading)
+    }
+
+    /// Inter-row spacing with no visible separator line. Fixed-height so it always
+    /// consumes exactly metrics.rowSpacing, matching the row-fit math the old divider
+    /// (whose vertical padding summed to the same rowSpacing total) relied on.
+    private var rowGap: some View {
+        Color.clear
+            .frame(maxWidth: .infinity)
+            .frame(height: metrics.rowSpacing)
+    }
+
+    private func rowUnitCost(_ row: WidgetTaskRowModel) -> Int {
+        metrics.showsNotes && row.note != nil ? 2 : 1
+    }
+
+    private func itemUnitCost(_ item: WidgetListItem) -> Int {
+        switch item {
+        case .task(let row):
+            return rowUnitCost(row)
+        case .section, .message:
+            return 1
+        }
+    }
+
+    private func visibleListItems(
+        _ items: [WidgetListItem],
+        totalTaskCount: Int,
+        reservesOverflow: Bool
+    ) -> [WidgetListItem] {
+        let capacity = metrics.rowUnitCapacity
+
+        // If every task is available and fits within the unit budget, show
+        // them all and skip the overflow row entirely.
+        if items.filter(\.isTask).count >= totalTaskCount {
+            let totalUnits = items.reduce(0) { $0 + itemUnitCost($1) }
+            if totalUnits <= capacity {
+                return items
+            }
+        }
+
+        // Otherwise reserve 1 unit for the "+X more" row (where there is one) and fill items
+        // greedily in order until the next one would no longer fit.
+        let reserved = reservesOverflow ? 1 : 0
+        var visible: [WidgetListItem] = []
+        var usedUnits = 0
+        for item in items {
+            let cost = itemUnitCost(item)
+            guard usedUnits + cost + reserved <= capacity else {
+                break
+            }
+            visible.append(item)
+            usedUnits += cost
+        }
+        // A section label never closes the list: it would name rows that did not fit.
+        while case .section = visible.last {
+            visible.removeLast()
+        }
+        return visible
+    }
+
+    private var lockedMessage: some View {
+        VStack(alignment: .center, spacing: family == .systemSmall ? 4 : 6) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: family == .systemSmall ? 15 : 18, weight: .semibold))
+                .foregroundStyle(secondaryTextColor)
+            Text("T'Day is locked")
+                .font(.system(size: family == .systemSmall ? 14 : (family == .systemLarge ? 17 : 15), weight: .bold, design: .rounded))
+                .lineLimit(family == .systemSmall ? 1 : 2)
+                .minimumScaleFactor(family == .systemSmall ? 0.75 : 0.85)
+
+            if family != .systemSmall {
+                Text("Tasks are hidden while app lock is on")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(secondaryTextColor)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, metrics.horizontalInset)
+    }
+
+    /// An unconfigured (or orphaned) List widget: the setup picture, then what to do. iOS cannot
+    /// open the configuration from a tap, so the line points at the long-press "Edit Widget", and a
+    /// tap opens the app's sheet that walks through it (`ListWidgetChrome.setupURL`).
+    private func chooseListMessage(listMissing: Bool) -> some View {
+        VStack(alignment: .center, spacing: family == .systemSmall ? 4 : 6) {
+            ListWidgetSetupArt()
+                .frame(width: metrics.setupArtWidth, height: metrics.setupArtWidth * ListWidgetSetupArt.aspectRatio)
+                .accessibilityHidden(true)
+            Text("Choose a list")
+                .font(.system(size: family == .systemSmall ? 14 : (family == .systemLarge ? 17 : 15), weight: .bold, design: .rounded))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+            if family != .systemSmall {
+                Text(listMissing
+                    ? "That list was deleted. Touch and hold to pick another."
+                    : "Touch and hold to pick which list this widget shows")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(secondaryTextColor)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, metrics.horizontalInset)
+    }
+
+    private func message(title: String, subtitle: String) -> some View {
+        VStack(alignment: .center, spacing: family == .systemSmall ? 6 : 8) {
+            Text(title)
+                .font(.system(size: family == .systemSmall ? 14 : (family == .systemLarge ? 17 : 15), weight: .bold, design: .rounded))
+                .lineLimit(family == .systemSmall ? 1 : 2)
+                .minimumScaleFactor(family == .systemSmall ? 0.75 : 0.85)
+
+            if family != .systemSmall, !subtitle.isEmpty {
+                Text(subtitle)
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(secondaryTextColor)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, metrics.horizontalInset)
+    }
+
+    private func taskRow(_ row: WidgetTaskRowModel) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 7) {
+            leadingRing(for: row)
+                // Pin the ring to the first line (near its vertical centre) instead
+                // of centring it across a wrapped two-line title.
+                .alignmentGuide(.firstTextBaseline) { dimension in
+                    dimension[VerticalAlignment.center] + 5
+                }
+            VStack(alignment: .leading, spacing: 1) {
+                Text(row.title)
+                    .font(.system(size: metrics.rowFontSize, weight: .medium, design: .rounded))
+                    .strikethrough(row.isChecking, color: secondaryTextColor)
+                    .lineLimit(2)
+                if metrics.showsNotes, let note = row.note {
+                    // One quiet line: the title carries the row, the note only hints at more.
+                    Text(note)
+                        .font(.system(size: metrics.rowFontSize - 2, weight: .regular, design: .rounded))
+                        .foregroundStyle(secondaryTextColor)
+                        .strikethrough(row.isChecking, color: secondaryTextColor)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: 4)
+            if mode.showsDueTime, family != .systemSmall, let dueEpochMs = row.dueEpochMs {
+                dueTimeChip(Self.dueText(for: row, epochMs: dueEpochMs), isOverdue: row.isOverdue)
+            }
+        }
+        .foregroundStyle(row.isPreview ? secondaryTextColor : .primary)
+        // Dim the whole row as it's checked off, so the fade reads as "leaving".
+        .opacity(row.isChecking ? 0.55 : 1)
+        .frame(minHeight: metrics.rowHeight, alignment: .leading)
+        // WidgetKit tweens between reloads; naming the animated values lets the ring
+        // fill + strikethrough + dim animate rather than hard-cut.
+        .animation(.easeInOut(duration: 0.2), value: row.isChecking)
+        .accessibilityLabel(accessibilityLabel(for: row))
+    }
+
+    /// A small rounded pill, red for a time or day already past (a per-list row past due, or
+    /// Today's Overdue section).
+    private func dueTimeChip(_ text: String, isOverdue: Bool) -> some View {
+        Text(text)
+            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            .foregroundStyle(isOverdue ? overdueColor : secondaryTextColor)
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .padding(.horizontal, 7)
+            .frame(height: 20)
+            .background(Capsule().fill(isOverdue ? overdueChipColor : dueChipColor))
+    }
+
+    private var dueChipColor: Color {
+        guard renderingMode == .fullColor else {
+            return .primary.opacity(0.08)
+        }
+        return colorScheme == .dark ? .tdayDueChipDark : .tdayDueChip
+    }
+
+    private var overdueChipColor: Color {
+        guard renderingMode == .fullColor else {
+            return .primary.opacity(0.08)
+        }
+        return colorScheme == .dark ? .tdayOverdueChipDark : .tdayOverdueChip
+    }
+
+    /// Reuses the same red the priority-High ring already carries, rather than introducing a
+    /// third accent color for a widget with an already-tight palette.
+    private var overdueColor: Color {
+        guard renderingMode == .fullColor else {
+            return .primary.opacity(0.78)
+        }
+        return colorScheme == .dark ? .tdayPriorityHighDark : .tdayPriorityHigh
+    }
+
+    private func overflowRow(count: Int) -> some View {
+        Text("+\(count) more")
+            .font(.system(size: 11, weight: .heavy, design: .rounded))
+            .foregroundStyle(secondaryTextColor)
+            .lineLimit(1)
+            .padding(.leading, 16)
+            .frame(height: metrics.rowHeight, alignment: .leading)
+    }
+
+    /// A previewed row belongs to a later day: a grey ring that completes nothing (the tap falls
+    /// through to the widget, which opens the app).
+    @ViewBuilder
+    private func leadingRing(for row: WidgetTaskRowModel) -> some View {
+        if row.isPreview {
+            Circle()
+                .strokeBorder(widgetPriorityColor("lowest"), lineWidth: 1.6)
+                .frame(width: 14, height: 14)
+        } else {
+            completeButton(for: row)
+        }
+    }
+
+    /// Tappable check ring (widgets v2): completes the task in place without
+    /// opening the app. Keeps the priority colour the old leading dot carried — floaters
+    /// included, since a floater has a priority too.
+    private func completeButton(for row: WidgetTaskRowModel) -> some View {
+        let ringColor = widgetPriorityColor(row.priority)
+        return Button(intent: CompleteWidgetTaskIntent(kind: mode.completionKind, taskID: row.id)) {
+            ZStack {
+                Circle()
+                    .strokeBorder(ringColor, lineWidth: 1.6)
+                // Fill + checkmark for the checked frame of the animation.
+                Circle()
+                    .fill(ringColor)
+                    .opacity(row.isChecking ? 1 : 0)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 8, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .opacity(row.isChecking ? 1 : 0)
+            }
+            .frame(width: 14, height: 14)
+            .contentShape(Circle())
+            .animation(.easeInOut(duration: 0.2), value: row.isChecking)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Complete \(row.title)")
+    }
+
+    private func widgetPriorityColor(_ priority: String) -> Color {
+        guard renderingMode == .fullColor else {
+            return .primary.opacity(0.78)
+        }
+
+        switch priority.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "high", "urgent":
+            return colorScheme == .dark ? .tdayPriorityHighDark : .tdayPriorityHigh
+        case "medium", "important":
+            return colorScheme == .dark ? .tdayPriorityMediumDark : .tdayPriorityMedium
+        case "lowest":
+            return colorScheme == .dark ? .tdayPriorityLowestDark : .tdayPriorityLowest
+        default:
+            return colorScheme == .dark ? .tdayPriorityLowDark : .tdayPriorityLow
+        }
+    }
+
+    private func accessibilityLabel(for row: WidgetTaskRowModel) -> String {
+        guard mode.showsDueTime, let dueEpochMs = row.dueEpochMs else {
+            return row.title
+        }
+        let dueText = Self.dueText(for: row, epochMs: dueEpochMs)
+        return row.isOverdue ? "\(row.title), overdue, \(dueText)" : "\(row.title), due \(dueText)"
+    }
+
+    /// The time of day, or for an Overdue row the day it was due ("Sep 27").
+    private static func dueText(for row: WidgetTaskRowModel, epochMs: Int64) -> String {
+        let date = Date(timeIntervalSince1970: TimeInterval(epochMs) / 1_000)
+        if row.showsDueDay {
+            return date.formatted(.dateTime.month(.abbreviated).day())
+        }
+        return date.formatted(date: .omitted, time: .shortened)
+    }
+}
+
+private struct WidgetLayoutMetrics {
+    let contentSpacing: CGFloat
+    let headerHeight: CGFloat
+    let addButtonSize: CGFloat
+    let addButtonCornerRadius: CGFloat
+    let rowHeight: CGFloat
+    let rowSpacing: CGFloat
+    let rowFontSize: CGFloat
+    // Vertical budget in row units: a noteless row costs 1 unit, a row with a
+    // visible note costs 2 units, and the "+X more" overflow row costs 1 unit.
+    let rowUnitCapacity: Int
+    let showsNotes: Bool
+    // Custom content insets (default WidgetKit content margins are disabled) so tasks run
+    // closer edge-to-edge and reclaim the horizontal space the bullet indent used to waste.
+    let horizontalInset: CGFloat
+    let topInset: CGFloat
+    let bottomInset: CGFloat
+    let watermarkSize: CGFloat
+    let watermarkTrailingOffset: CGFloat
+    let watermarkVerticalFraction: CGFloat
+    /// Width of the List widget's setup picture; its height follows the drawing's 6:5.
+    let setupArtWidth: CGFloat
+
+    init(family: WidgetFamily) {
+        switch family {
+        case .systemSmall:
+            // Small shares medium's insets, header, + button, row height, spacing and font so
+            // its padding and task placement match the wider sizes exactly (parity with the
+            // Android small widget). Only the row capacity, notes and watermark stay small — a
+            // 2x2 just shows fewer rows, and its header still leads with the count (the title +
+            // count + button can't fit a 2x2 width).
+            contentSpacing = 7
+            headerHeight = 42
+            addButtonSize = 42
+            addButtonCornerRadius = 13
+            rowHeight = 22
+            rowSpacing = 3
+            rowFontSize = 12
+            rowUnitCapacity = 2
+            showsNotes = false
+            horizontalInset = 14
+            topInset = 13
+            bottomInset = 11
+            watermarkSize = 116
+            watermarkTrailingOffset = 18
+            watermarkVerticalFraction = 0.70
+            setupArtWidth = 84
+        case .systemLarge:
+            contentSpacing = 8
+            headerHeight = 45
+            addButtonSize = 46
+            addButtonCornerRadius = 14
+            rowHeight = 24
+            rowSpacing = 4
+            rowFontSize = 13
+            // ~306pt usable - 45pt header - 8pt spacing ~= 253pt; 9 x 28pt units - 4 ~= 248pt.
+            rowUnitCapacity = 9
+            showsNotes = true
+            horizontalInset = 15
+            topInset = 14
+            bottomInset = 12
+            watermarkSize = 224
+            watermarkTrailingOffset = 28
+            watermarkVerticalFraction = 0.68
+            setupArtWidth = 132
+        default:
+            contentSpacing = 7
+            headerHeight = 42
+            addButtonSize = 42
+            addButtonCornerRadius = 13
+            rowHeight = 22
+            rowSpacing = 3
+            rowFontSize = 12
+            rowUnitCapacity = 3
+            showsNotes = true
+            horizontalInset = 14
+            topInset = 13
+            bottomInset = 11
+            watermarkSize = 164
+            watermarkTrailingOffset = 22
+            watermarkVerticalFraction = 0.68
+            setupArtWidth = 84
+        }
+    }
+}
+
+struct TodayTasksWidget: Widget {
+    let kind = "TodayTasksWidget"
+
+    var body: some WidgetConfiguration {
+        // R7: AppIntentConfiguration (was StaticConfiguration) lets the user pick a specific
+        // list from "Edit Widget" — any todo OR floater list (`TdayWidgetListEntityQuery`),
+        // rendering in whichever shape that list's type calls for. Leaving the picker unset
+        // keeps the ORIGINAL global "due today" feed this kind always showed — including for
+        // every instance placed before this shipped, which iOS resolves against the intent's
+        // nil default.
+        AppIntentConfiguration(kind: kind, intent: SelectTaskListIntent.self, provider: TodayTasksProvider()) { entry in
+            TodayTasksWidgetView(entry: entry)
+        }
+        .configurationDisplayName("Today's Tasks")
+        .description("Shows today's tasks, or pick a specific list.")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .containerBackgroundRemovable(true)
+        .contentMarginsDisabled()
+    }
+}
+
+/// See the Today twin's comment on `TodayTasksEntry` for why `status`/`mode` now live on the
+/// entry rather than a bool + a view-hardcoded constant.
+private struct FloaterTasksEntry: TimelineEntry {
+    let date: Date
+    let title: String
+    let status: TaskWidgetStatus
+    let taskCount: Int
+    let rows: [WidgetTaskRowModel]
+    let mode: TaskWidgetMode
+    /// The list this instance is scoped to, as a glyph and a colour — nil on the global feed and
+    /// on a locked widget, which deliberately gives nothing about a specific list away.
+    var accent: TdayWidgetListAccent? = nil
+}
+
+private struct FloaterTaskSnapshot: Codable, Identifiable {
+    let id: String
+    let title: String
+    let priority: String
+    // Backend-completion payload (widgets v2 instant sync): the CANONICAL id the
+    // /api/floater/complete endpoint expects. Defaulted so snapshots persisted
+    // before this existed still decode (canonicalId falls back to the display id).
+    let canonicalId: String
+
+    init(
+        id: String,
+        title: String,
+        priority: String,
+        canonicalId: String? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.priority = priority
+        self.canonicalId = canonicalId ?? id
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedId = try container.decode(String.self, forKey: .id)
+        id = decodedId
+        title = try container.decode(String.self, forKey: .title)
+        priority = try container.decode(String.self, forKey: .priority)
+        canonicalId = try container.decodeIfPresent(String.self, forKey: .canonicalId) ?? decodedId
+    }
+}
+
+private enum FloaterTasksSnapshotStatus: String, Codable {
+    case setup
+    case empty
+    case tasks
+}
+
+/// Widget-side twin of the app's `FloaterTasksWidgetPerListSnapshot` — see the Today twin,
+/// `TodayTasksPerListSnapshot`.
+private struct FloaterTasksPerListSnapshot: Codable {
+    let totalCount: Int
+    let tasks: [FloaterTaskSnapshot]
+}
+
+private struct FloaterTasksSnapshot: Codable {
+    let schemaVersion: Int
+    let generatedAtEpochMs: Int64
+    let title: String
+    let status: FloaterTasksSnapshotStatus
+    let taskCount: Int
+    let tasks: [FloaterTaskSnapshot]
+    // Defaulted so snapshots persisted before this field existed still decode (as empty).
+    let perList: [String: FloaterTasksPerListSnapshot]
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedTasks = try container.decodeIfPresent([FloaterTaskSnapshot].self, forKey: .tasks) ?? []
+        schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
+        generatedAtEpochMs = try container.decode(Int64.self, forKey: .generatedAtEpochMs)
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? "Floater Tasks"
+        status = (try? container.decodeIfPresent(FloaterTasksSnapshotStatus.self, forKey: .status)) ?? (decodedTasks.isEmpty ? .empty : .tasks)
+        taskCount = try container.decodeIfPresent(Int.self, forKey: .taskCount) ?? decodedTasks.count
+        tasks = decodedTasks
+        perList = try container.decodeIfPresent([String: FloaterTasksPerListSnapshot].self, forKey: .perList) ?? [:]
+    }
+
+    /// See the Today twin's `firstTask(withId:)` — searches `tasks` then every `perList` slice.
+    func firstTask(withId id: String) -> FloaterTaskSnapshot? {
+        if let match = tasks.first(where: { $0.id == id }) {
+            return match
+        }
+        for list in perList.values {
+            if let match = list.tasks.first(where: { $0.id == id }) {
+                return match
+            }
+        }
+        return nil
+    }
+}
+
+private struct FloaterTasksProvider: AppIntentTimelineProvider {
+    func placeholder(in context: Context) -> FloaterTasksEntry {
+        .previewTasks
+    }
+
+    func snapshot(for configuration: SelectTaskListIntent, in context: Context) async -> FloaterTasksEntry {
+        context.isPreview ? .previewTasks : loadEntry(configuration: configuration)
+    }
+
+    func timeline(for configuration: SelectTaskListIntent, in context: Context) async -> Timeline<FloaterTasksEntry> {
+        let now = Date()
+        var entries = [loadEntry(configuration: configuration, date: now)]
+        // A todo list picked in this gallery slot renders due-date content, which turns over
+        // at local midnight — see the Today twin's timeline.
+        if configuration.list?.kind == .todo {
+            let midnight = TodayWidgetDayWindow.nextDayStart(after: now, calendar: .current)
+            entries.append(loadEntry(configuration: configuration, date: midnight))
+        }
+        let nextRefresh = Calendar.current.date(byAdding: .minute, value: 30, to: now) ?? now.addingTimeInterval(1800)
+        return Timeline(entries: entries, policy: .after(nextRefresh))
+    }
+
+    /// See the Today twin's `loadEntry(configuration:date:)` — identical nil-falls-back-to-
+    /// global, list-present-renders-via-`PerListWidgetContentLoader` shape.
+    private func loadEntry(configuration: SelectTaskListIntent, date: Date = Date()) -> FloaterTasksEntry {
+        // Checked before the snapshot is even read, so a locked device never decodes real
+        // task titles into memory it isn't going to render.
+        guard !WidgetAppLockStore.isEnabled else {
+            let list = configuration.list
+            return FloaterTasksEntry(
+                date: date,
+                title: list?.name ?? "Floater Tasks",
+                status: .locked,
+                taskCount: 0,
+                rows: [],
+                mode: list?.kind.mode ?? .floater
+            )
+        }
+        if let list = configuration.list {
+            let content = PerListWidgetContentLoader.load(list: list, date: date)
+            return FloaterTasksEntry(
+                date: date,
+                title: content.title,
+                status: content.status,
+                taskCount: content.taskCount,
+                rows: content.rows,
+                mode: content.mode,
+                accent: content.accent
+            )
+        }
+        return Self.loadGlobalEntry()
+    }
+
+    private static func loadGlobalEntry() -> FloaterTasksEntry {
+        guard let snapshot = loadSnapshot() else {
+            return FloaterTasksEntry(date: Date(), title: "Floater Tasks", status: .setup, taskCount: 0, rows: [], mode: .floater)
+        }
+
+        // Hide rows completed from the widget that the app has not drained yet — but
+        // keep a row mid check-off animation (checked + struck) until its beat ends.
+        let nowMs = Int64(Date().timeIntervalSince1970 * 1_000)
+        let pending = WidgetPendingCompletionStore.pendingIds(kind: WidgetPendingCompletionStore.floaterKind)
+        let checking = WidgetPendingCompletionStore.checkingIds(kind: WidgetPendingCompletionStore.floaterKind, nowEpochMs: nowMs)
+        let visible = snapshot.tasks.filter { checking.contains($0.id) || !pending.contains($0.id) }
+        let taskCount = max(0, snapshot.taskCount - (snapshot.tasks.count - visible.count))
+        let rows = visible.map { task in
+            WidgetTaskRowModel(
+                id: task.id,
+                title: task.title,
+                priority: task.priority,
+                dueEpochMs: nil,
+                description: nil,
+                isChecking: checking.contains(task.id)
+            )
+        }
+        return FloaterTasksEntry(
+            // Preserves the pre-R7 quirk: the global entry's `date` is the snapshot's
+            // generation time, not wall-clock — Floater has no day/night refresh tied to it.
+            date: Date(timeIntervalSince1970: TimeInterval(snapshot.generatedAtEpochMs) / 1_000),
+            title: snapshot.title,
+            status: (snapshot.status == .tasks && taskCount == 0) ? .empty : TaskWidgetStatus(snapshot.status),
+            taskCount: taskCount,
+            rows: rows,
+            mode: .floater
+        )
+    }
+
+    private static func loadSnapshot() -> FloaterTasksSnapshot? {
+        if let data = WidgetSnapshotFileStore.read(WidgetSnapshotFileStore.floaterFileName),
+           let snapshot = try? JSONDecoder().decode(FloaterTasksSnapshot.self, from: data) {
+            return snapshot
+        }
+        return legacyDefaultsSnapshot()
+    }
+
+    /// Transitional read of the pre-migration UserDefaults copy — see the Today provider.
+    private static func legacyDefaultsSnapshot() -> FloaterTasksSnapshot? {
+        for store in legacyDefaultsStores() {
+            guard let data = store.data(forKey: legacySnapshotKey),
+                  let snapshot = try? JSONDecoder().decode(FloaterTasksSnapshot.self, from: data) else {
+                continue
+            }
+            return snapshot
+        }
+        return nil
+    }
+
+    /// Snapshot access for the completion intent's canonical-id resolution.
+    static func loadWidgetSnapshot() -> FloaterTasksSnapshot? {
+        loadSnapshot()
+    }
+
+    private static func legacyDefaultsStores() -> [UserDefaults] {
+        var stores = [UserDefaults]()
+        if let shared = UserDefaults(suiteName: appGroupSuiteName) {
+            stores.append(shared)
+        }
+        stores.append(.standard)
+        return stores
+    }
+
+    private static let appGroupSuiteName = "group.com.ohmz.tday"
+    private static let legacySnapshotKey = "tday.widget.floaterTasksSnapshot"
+}
+
+private extension FloaterTasksEntry {
+    static let previewTasks = FloaterTasksEntry(
+        date: Date(),
+        title: "Floater Tasks",
+        status: .tasks,
+        taskCount: 10,
+        rows: [
+            WidgetTaskRowModel(id: "preview-1", title: "Draft the idea", priority: "high", dueEpochMs: nil, description: nil),
+            WidgetTaskRowModel(id: "preview-2", title: "Queue reading", priority: "medium", dueEpochMs: nil, description: nil),
+            WidgetTaskRowModel(id: "preview-3", title: "Try the new shortcut", priority: "low", dueEpochMs: nil, description: nil),
+            WidgetTaskRowModel(id: "preview-4", title: "Collect shelf notes", priority: "medium", dueEpochMs: nil, description: nil),
+            WidgetTaskRowModel(id: "preview-5", title: "Sketch someday flow", priority: "high", dueEpochMs: nil, description: nil),
+            WidgetTaskRowModel(id: "preview-6", title: "Compare tools", priority: "medium", dueEpochMs: nil, description: nil),
+            WidgetTaskRowModel(id: "preview-7", title: "Make the checklist", priority: "low", dueEpochMs: nil, description: nil),
+            WidgetTaskRowModel(id: "preview-8", title: "Sort bookmarks", priority: "medium", dueEpochMs: nil, description: nil),
+            WidgetTaskRowModel(id: "preview-9", title: "Ask about the vendor", priority: "low", dueEpochMs: nil, description: nil),
+            WidgetTaskRowModel(id: "preview-10", title: "Polish notes", priority: "medium", dueEpochMs: nil, description: nil)
+        ],
+        mode: .floater
+    )
+
+    static let previewEmpty = FloaterTasksEntry(date: Date(), title: "Floater Tasks", status: .empty, taskCount: 0, rows: [], mode: .floater)
+
+    static let previewSetup = FloaterTasksEntry(date: Date(), title: "Floater Tasks", status: .setup, taskCount: 0, rows: [], mode: .floater)
+
+    static let previewLocked = FloaterTasksEntry(date: Date(), title: "Floater Tasks", status: .locked, taskCount: 0, rows: [], mode: .floater)
+}
+
+private struct FloaterTasksWidgetView: View {
+    let entry: FloaterTasksEntry
+
+    var body: some View {
+        TdayTasksWidgetContent(
+            title: entry.title,
+            status: entry.status,
+            taskCount: entry.taskCount,
+            rows: entry.rows,
+            date: entry.date,
+            mode: entry.mode,
+            listAccent: entry.accent
+        )
+    }
+}
+
+struct FloaterTasksWidget: Widget {
+    let kind = "FloaterTasksWidget"
+
+    var body: some WidgetConfiguration {
+        // R7: see TodayTasksWidget's body for the same AppIntentConfiguration rationale — this
+        // kind's picker offers the identical todo+floater list catalog.
+        AppIntentConfiguration(kind: kind, intent: SelectTaskListIntent.self, provider: FloaterTasksProvider()) { entry in
+            FloaterTasksWidgetView(entry: entry)
+        }
+        .configurationDisplayName("Floater Tasks")
+        .description("Shows your floater tasks, or pick a specific list.")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .containerBackgroundRemovable(true)
+        .contentMarginsDisabled()
+    }
+}
+
+// MARK: - List widget
+
+/// Where a List widget's taps go once it has a list: "+" into that list — its task type, the list
+/// picked, and so the list's own default priority, which the create sheet applies — and the rest
+/// of the widget to the list itself.
+private struct ListWidgetChrome {
+    /// Where a tap on a List widget with no list goes: the app's sheet showing how to pick one.
+    /// A tap cannot open the widget's own Edit Widget, and the app cannot set a widget's list, so
+    /// showing the way there is all a tap can do. `AppRoute.isListWidgetSetupLink` reads it.
+    static let setupURL = URL(string: "tday://widget/list-setup")!
+
+    let addURL: URL
+    let openURL: URL
+
+    init(list: TdayWidgetListEntity) {
+        if list.kind.isPseudo {
+            // Neither pseudo view is a list, so there is no list to add into or to open: "+"
+            // creates a scheduled task with no list, and a tap opens the view itself.
+            addURL = URL(string: "tday://todos/create?target=today") ?? list.kind.mode.createURL
+            let open = list.kind == .overdue ? "tday://todos/overdue" : "tday://todos/scheduled"
+            openURL = URL(string: open) ?? list.kind.mode.openURL
+            return
+        }
+        var add = URLComponents()
+        add.scheme = "tday"
+        add.host = "todos"
+        add.path = "/create"
+        add.queryItems = [
+            URLQueryItem(name: "target", value: list.kind == .todo ? "today" : "floater"),
+            URLQueryItem(name: "listId", value: list.listId)
+        ]
+        addURL = add.url ?? list.kind.mode.createURL
+
+        let listPath = "\(Self.pathSegment(list.listId))/\(Self.pathSegment(list.name))"
+        let open = list.kind == .todo ? "tday://todos/list/\(listPath)" : "tday://floater/list/\(listPath)"
+        openURL = URL(string: open) ?? list.kind.mode.openURL
+    }
+
+    /// A list name can hold a "/", which would split it into two path components.
+    private static func pathSegment(_ value: String) -> String {
+        var allowed = CharacterSet.urlPathAllowed
+        allowed.remove("/")
+        return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
+    }
+}
+
+/// See `TodayTasksEntry`; `chrome` is nil until the instance has a list to show.
+private struct ListTasksEntry: TimelineEntry {
+    let date: Date
+    let title: String
+    let status: TaskWidgetStatus
+    let taskCount: Int
+    let rows: [WidgetTaskRowModel]
+    let mode: TaskWidgetMode
+    let chrome: ListWidgetChrome?
+    /// The list this instance is scoped to, as a glyph and a colour — nil on the global feed and
+    /// on a locked widget, which deliberately gives nothing about a specific list away.
+    var accent: TdayWidgetListAccent? = nil
+}
+
+private struct ListTasksProvider: AppIntentTimelineProvider {
+    func placeholder(in context: Context) -> ListTasksEntry {
+        .previewChooseList
+    }
+
+    func snapshot(for configuration: SelectListWidgetListIntent, in context: Context) async -> ListTasksEntry {
+        context.isPreview ? .previewChooseList : loadEntry(configuration: configuration)
+    }
+
+    func timeline(for configuration: SelectListWidgetListIntent, in context: Context) async -> Timeline<ListTasksEntry> {
+        let now = Date()
+        var entries = [loadEntry(configuration: configuration, date: now)]
+        // A due-date-shaped list's rows turn overdue, and today's time labels become days, at
+        // midnight.
+        //
+        // This re-derives each row against the new day; it does NOT move a task between the
+        // Scheduled and Overdue slices. Those are written by the app (see
+        // `TodayTasksWidgetSnapshotStore`), and membership in them is fixed until the app writes
+        // the next snapshot — so a task that crosses its due time overnight joins the Overdue
+        // widget on the next app write, not here.
+        if configuration.list?.kind != .floater {
+            let midnight = TodayWidgetDayWindow.nextDayStart(after: now, calendar: .current)
+            entries.append(loadEntry(configuration: configuration, date: midnight))
+        }
+        let nextRefresh = Calendar.current.date(byAdding: .minute, value: 30, to: now) ?? now.addingTimeInterval(1800)
+        return Timeline(entries: entries, policy: .after(nextRefresh))
+    }
+
+    private func loadEntry(configuration: SelectListWidgetListIntent, date: Date = Date()) -> ListTasksEntry {
+        guard let target = configuration.list else {
+            return .chooseList(date: date, listMissing: false)
+        }
+        let list = target.asListEntity
+        // A list deleted since it was picked asks for another rather than sitting empty. An
+        // unreadable catalog proves nothing, so the list is only called gone when it can be read —
+        // and a pseudo view is never in the catalog at all, so it is never called gone.
+        if !list.kind.isPseudo,
+           let catalog = TdayWidgetListEntityQuery.catalog(),
+           !catalog.contains(where: { $0.id == list.id }) {
+            return .chooseList(date: date, listMissing: true)
+        }
+        // A list's NAME is user content, so the locked widget keeps the generic title — the same
+        // rule Android's List widget follows. Checked before any snapshot is read.
+        //
+        // It drops the list's accent with it (no `accent:` below), and the glyph is the reason:
+        // for a list whose owner never picked one it is INFERRED from the name, so drawing it
+        // would publish a reading of the very string the generic title is withholding. The
+        // colour could have stayed, but a locked widget showing a list's colour under a generic
+        // title is a worse thing to explain than one that plainly falls back to its kind.
+        guard !WidgetAppLockStore.isEnabled else {
+            return ListTasksEntry(
+                date: date,
+                title: "List",
+                status: .locked,
+                taskCount: 0,
+                rows: [],
+                mode: list.kind.mode,
+                chrome: ListWidgetChrome(list: list)
+            )
+        }
+        let content = PerListWidgetContentLoader.loadWholeList(list: list, date: date)
+        return ListTasksEntry(
+            date: date,
+            title: content.title,
+            status: content.status,
+            taskCount: content.taskCount,
+            rows: content.rows,
+            mode: content.mode,
+            chrome: ListWidgetChrome(list: list),
+            accent: content.accent
+        )
+    }
+}
+
+private extension ListTasksEntry {
+    static func chooseList(date: Date, listMissing: Bool) -> ListTasksEntry {
+        ListTasksEntry(
+            date: date,
+            title: "List",
+            status: .chooseList(listMissing: listMissing),
+            taskCount: 0,
+            rows: [],
+            mode: .today,
+            chrome: nil
+        )
+    }
+
+    static let previewChooseList = ListTasksEntry.chooseList(date: Date(), listMissing: false)
+
+    static let previewTasks = ListTasksEntry(
+        date: Date(),
+        title: "Groceries",
+        status: .tasks,
+        taskCount: 4,
+        rows: [
+            WidgetTaskRowModel(id: "preview-1", title: "Oat milk", priority: "medium", dueEpochMs: Date().timeIntervalEpochMs, description: nil),
+            WidgetTaskRowModel(id: "preview-2", title: "Basil", priority: "low", dueEpochMs: Date().addingTimeInterval(86_400).timeIntervalEpochMs, description: nil, showsDueDay: true),
+            WidgetTaskRowModel(id: "preview-3", title: "Coffee beans", priority: "high", dueEpochMs: Date().addingTimeInterval(172_800).timeIntervalEpochMs, description: nil, showsDueDay: true),
+            WidgetTaskRowModel(id: "preview-4", title: "Lemons", priority: "lowest", dueEpochMs: Date().addingTimeInterval(259_200).timeIntervalEpochMs, description: nil, showsDueDay: true)
+        ],
+        mode: .today,
+        chrome: nil
+    )
+}
+
+private struct ListTasksWidgetView: View {
+    let entry: ListTasksEntry
+
+    var body: some View {
+        TdayTasksWidgetContent(
+            title: entry.title,
+            status: entry.status,
+            taskCount: entry.taskCount,
+            rows: entry.rows,
+            date: entry.date,
+            mode: entry.mode,
+            listChrome: entry.chrome,
+            listAccent: entry.accent
+        )
+    }
+}
+
+/// The third widget kind, beside Today and Floater: one list of the user's choosing. From iOS 18
+/// the list is asked for as the widget is added; until one is picked — skipped, on iOS 17 which
+/// cannot prompt, or after the picked list is deleted — it shows the setup picture and asks for
+/// one. Mirrors Android's `ListTasksWidget`.
+struct ListTasksWidget: Widget {
+    let kind = "ListTasksWidget"
+
+    var body: some WidgetConfiguration {
+        if #available(iOS 18.0, *) {
+            return configuration.promptsForUserConfiguration()
+        }
+        return configuration
+    }
+
+    private var configuration: some WidgetConfiguration {
+        AppIntentConfiguration(kind: kind, intent: SelectListWidgetListIntent.self, provider: ListTasksProvider()) { entry in
+            ListTasksWidgetView(entry: entry)
+        }
+        .configurationDisplayName("List")
+        .description("Shows one list of your choice at a glance.")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .containerBackgroundRemovable(true)
+        .contentMarginsDisabled()
+    }
+}
+
+@main
+struct TdayWidgetBundle: WidgetBundle {
+    var body: some Widget {
+        TodayTasksWidget()
+        FloaterTasksWidget()
+        ListTasksWidget()
+    }
+}
+
+private extension Color {
+    static let tdayTodayBlue = Color(red: 110.0 / 255.0, green: 168.0 / 255.0, blue: 225.0 / 255.0)
+    static let tdayTitleNight = Color(red: 168.0 / 255.0, green: 184.0 / 255.0, blue: 232.0 / 255.0)
+    static let tdayFloaterGreen = Color(red: 77.0 / 255.0, green: 143.0 / 255.0, blue: 131.0 / 255.0)
+    static let tdayLightSurface = Color.white
+    static let tdayDarkSurface = Color(red: 0.09, green: 0.10, blue: 0.13)
+    static let tdayPriorityHigh = Color(red: 1.0, green: 59.0 / 255.0, blue: 48.0 / 255.0)
+    static let tdayPriorityMedium = Color(red: 1.0, green: 149.0 / 255.0, blue: 0.0)
+    static let tdayPriorityLow = Color(red: 0.0, green: 122.0 / 255.0, blue: 1.0)
+    static let tdayPriorityHighDark = Color(red: 1.0, green: 107.0 / 255.0, blue: 97.0 / 255.0)
+    static let tdayPriorityMediumDark = Color(red: 1.0, green: 180.0 / 255.0, blue: 84.0 / 255.0)
+    static let tdayPriorityLowDark = Color(red: 121.0 / 255.0, green: 184.0 / 255.0, blue: 1.0)
+    // New bottom tier ("Lowest" wire value, "Low" UI label) — iOS system gray
+    // tones (#8E8E93 / #98989D), numerically identical to Android's parallel
+    // colors.xml addition for cross-platform parity.
+    static let tdayPriorityLowest = Color(red: 142.0 / 255.0, green: 142.0 / 255.0, blue: 147.0 / 255.0)
+    static let tdayPriorityLowestDark = Color(red: 152.0 / 255.0, green: 152.0 / 255.0, blue: 157.0 / 255.0)
+    // Due-time pill fills, numerically identical to Android's tday_widget_due_chip_background and
+    // tday_widget_overdue_chip_background (light / values-night).
+    static let tdayDueChip = Color(red: 241.0 / 255.0, green: 244.0 / 255.0, blue: 249.0 / 255.0)
+    static let tdayDueChipDark = Color(red: 34.0 / 255.0, green: 39.0 / 255.0, blue: 54.0 / 255.0)
+    static let tdayOverdueChip = Color(red: 1.0, green: 236.0 / 255.0, blue: 234.0 / 255.0)
+    static let tdayOverdueChipDark = Color(red: 58.0 / 255.0, green: 35.0 / 255.0, blue: 38.0 / 255.0)
+}
+
+private extension Date {
+    var timeIntervalEpochMs: Int64 {
+        Int64(timeIntervalSince1970 * 1_000)
+    }
+}
+
+#if DEBUG
+#Preview("Small Tasks", as: .systemSmall) {
+    TodayTasksWidget()
+} timeline: {
+    TodayTasksEntry.previewTasks
+}
+
+#Preview("Medium Tasks", as: .systemMedium) {
+    TodayTasksWidget()
+} timeline: {
+    TodayTasksEntry.previewTasks
+}
+
+#Preview("Large Tasks", as: .systemLarge) {
+    TodayTasksWidget()
+} timeline: {
+    TodayTasksEntry.previewTasks
+}
+
+#Preview("Empty", as: .systemMedium) {
+    TodayTasksWidget()
+} timeline: {
+    TodayTasksEntry.previewEmpty
+}
+
+#Preview("Setup", as: .systemMedium) {
+    TodayTasksWidget()
+} timeline: {
+    TodayTasksEntry.previewSetup
+}
+
+#Preview("Locked", as: .systemMedium) {
+    TodayTasksWidget()
+} timeline: {
+    TodayTasksEntry.previewLocked
+}
+
+#Preview("Floater Small Tasks", as: .systemSmall) {
+    FloaterTasksWidget()
+} timeline: {
+    FloaterTasksEntry.previewTasks
+}
+
+#Preview("Floater Medium Tasks", as: .systemMedium) {
+    FloaterTasksWidget()
+} timeline: {
+    FloaterTasksEntry.previewTasks
+}
+
+#Preview("Floater Large Tasks", as: .systemLarge) {
+    FloaterTasksWidget()
+} timeline: {
+    FloaterTasksEntry.previewTasks
+}
+
+#Preview("Floater Empty", as: .systemMedium) {
+    FloaterTasksWidget()
+} timeline: {
+    FloaterTasksEntry.previewEmpty
+}
+
+#Preview("Floater Setup", as: .systemMedium) {
+    FloaterTasksWidget()
+} timeline: {
+    FloaterTasksEntry.previewSetup
+}
+
+#Preview("Floater Locked", as: .systemMedium) {
+    FloaterTasksWidget()
+} timeline: {
+    FloaterTasksEntry.previewLocked
+}
+
+#Preview("List Choose Small", as: .systemSmall) {
+    ListTasksWidget()
+} timeline: {
+    ListTasksEntry.previewChooseList
+}
+
+#Preview("List Choose Medium", as: .systemMedium) {
+    ListTasksWidget()
+} timeline: {
+    ListTasksEntry.previewChooseList
+}
+
+#Preview("List Choose Large", as: .systemLarge) {
+    ListTasksWidget()
+} timeline: {
+    ListTasksEntry.previewChooseList
+}
+
+#Preview("List Tasks Medium", as: .systemMedium) {
+    ListTasksWidget()
+} timeline: {
+    ListTasksEntry.previewTasks
+}
+#endif
+#endif

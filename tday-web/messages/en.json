@@ -1,0 +1,1266 @@
+{
+  "terms": {
+    "title": "Terms of Service",
+    "lastUpdated": "Last updated: January 19, 2026",
+    "intro": "By using T'Day (the “Service”), you agree to these Terms of Service.",
+    "sections": {
+      "1": {
+        "title": "Use of the Service",
+        "content": "T'Day is a free productivity app for managing tasks, notes, and files. You agree to use the Service lawfully and not abuse or disrupt it."
+      },
+      "2": {
+        "title": "Accounts",
+        "content": "You are responsible for keeping your account secure and all activity under your account. Information must be accurate."
+      },
+      "3": {
+        "title": "Your Content",
+        "content": "You retain ownership of your content. By using T'Day, you grant permission to store and process it only to operate the Service."
+      },
+      "4": {
+        "title": "Acceptable Use",
+        "content": [
+          "No illegal, harmful, or malicious content",
+          "No accessing other users’ data",
+          "No abusing infrastructure",
+          "No unlawful use of the Service"
+        ]
+      },
+      "5": {
+        "title": "Availability",
+        "content": "T'Day is a personal service provided on a best-effort basis. The Service may change, go offline, or be discontinued at any time."
+      },
+      "6": {
+        "title": "Termination",
+        "content": "You may stop using T'Day at any time. We may suspend access if these Terms are violated."
+      },
+      "7": {
+        "title": "Disclaimer",
+        "content": "T'Day is provided “as is”. We are not responsible for data loss, interruptions, or damages resulting from use of the Service."
+      },
+      "8": {
+        "title": "Changes",
+        "content": "We may update these Terms. Continued use means you accept the changes."
+      },
+      "9": {
+        "title": "Contact",
+        "content": "Questions? Email support"
+      }
+    }
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated: October 4, 2026",
+    "intro": "T'Day (“we”, “our”, or “us”) is a personal productivity app. This Privacy Policy explains what data we collect and how we use it.",
+    "sections": {
+      "1": {
+        "title": "Information We Collect",
+        "content": [
+          "Account data: email address and time zone",
+          "User content: tasks, notes, and encrypted files",
+          "Technical data the server sees when you connect (this is not part of crash reports): IP address, browser and session info",
+          "Cookies and local storage for authentication"
+        ]
+      },
+      "2": {
+        "title": "How We Use Your Data",
+        "content": [
+          "Provide and operate T'Day",
+          "Authenticate users",
+          "Store and sync your content",
+          "Maintain security and prevent abuse"
+        ]
+      },
+      "3": {
+        "title": "Data Storage & Security",
+        "content": "T'Day is self-hosted: a Kotlin backend stores your data in a PostgreSQL database on the server you or your host operate. Sensitive fields can be encrypted at rest and traffic is served over HTTPS. While no system is perfectly secure, reasonable steps are taken to protect your data."
+      },
+      "4": {
+        "title": "Sharing of Data",
+        "content": "We only share data with service providers required to operate T'Day, and, only with consent, with Sentry for crash and problem reports. We do not sell your personal data."
+      },
+      "5": {
+        "title": "Cookies",
+        "content": "Cookies and local storage are used for login sessions, preferences, and security. Disabling cookies may affect functionality."
+      },
+      "6": {
+        "title": "Data Retention",
+        "content": "We keep your data while your account is active. You may delete your account at any time and your content will be removed within a reasonable period."
+      },
+      "7": {
+        "title": "Your Rights",
+        "content": "You may access, correct, delete, or export your data using the app features."
+      },
+      "8": {
+        "title": "Changes",
+        "content": "We may update this policy from time to time. Updates will appear on this page."
+      },
+      "9": {
+        "title": "Crash & Problem Reports",
+        "content": [
+          "Off by default. On the web, an admin decides for the whole server; on mobile, you decide on each device. Reports are sent only at the moment something fails",
+          "A report holds the app version, device model and OS, the error and where it happened. It never holds your name, account, IP address, location, server address or any task or list content",
+          "Reports go to Sentry, are kept for 30 days and are used only to fix bugs, never for analytics or advertising. Sentry sees the network address of any connection but is set not to store it"
+        ]
+      },
+      "10": {
+        "title": "Contact",
+        "content": "Questions? Email support"
+      }
+    }
+  },
+  "app": {
+    "agenda": "agenda",
+    "scheduledTaskHome": "Scheduled",
+    "more": "More",
+    "cancel": "Cancel",
+    "save": "Save",
+    "clearSearch": "Clear search",
+    "versionAvailableTitle": "Update available",
+    "versionAvailableBody": "A new version is ready to load.",
+    "versionAvailableReload": "Reload",
+    "unresponsiveTitle": "T'Day stopped responding",
+    "unresponsiveBody": "T'Day was unresponsive for {{seconds}} s.",
+    "unresponsiveReload": "Reload",
+    "releaseUpdateTitle": "Update available",
+    "releaseUpdateVersion": "Version {{version}}",
+    "today": "Today",
+    "tonight": "Tonight",
+    "yesterday": "Yesterday",
+    "tomorrow": "Tomorrow",
+    "nextWeek": "Next week",
+    "day": "Day",
+    "week": "Week",
+    "month": "Month",
+    "duration": "Duration",
+    "date": "Date",
+    "durationMenu": {
+      "error": "Invalid date range: End time must be after start time."
+    },
+    "priority": "Priority",
+    "list": "List",
+    "overdue": "Overdue",
+    "low": "Low",
+    "normal": "Normal",
+    "important": "Important",
+    "urgent": "Urgent",
+    "floater": "Floater",
+    "root_feed_tab_floater": "Floater",
+    "newFloater": "New floater",
+    "editFloater": "Edit floater",
+    "floaterList": "Floater list",
+    "newFloaterList": "New floater list",
+    "deleteFloaterList": "Delete floater list",
+    "floaterListName": "Floater list name",
+    "floaterTitlePlaceholder": "Anytime task",
+    "floaterEmpty": "No floaters yet",
+    "floaterListEmpty": "No floaters in this list",
+    "myFloaterLists": "My Lists",
+    "searchFloaters": "Search floaters",
+    "searchFloatersPlaceholder": "Search floaters...",
+    "noMatchingFloaters": "No matching floaters",
+    "searchIn": "Search in",
+    "repeat": "Repeat",
+    "everyDay": "Daily",
+    "everyWeek": "Weekly",
+    "everyMonth": "Monthly",
+    "everyYear": "Yearly",
+    "weekdaysOnly": "Weekdays only",
+    "custom": "Custom",
+    "descPlaceholder": "description",
+    "schedule": "Schedule",
+    "scheduleOnHint": "Task has a due date",
+    "scheduleOffHint": "Floater task",
+    "details": "Details",
+    "due": "Due",
+    "notes": "Notes",
+    "clearFormatting": "Clear formatting",
+    "bold": "Bold",
+    "italic": "Italic",
+    "underline": "Underline",
+    "strikethrough": "Strikethrough",
+    "bulletedList": "Bulleted list",
+    "numberedList": "Numbered list",
+    "noList": "No list",
+    "noRepeat": "No repeat",
+    "color": "Color",
+    "icon": "Icon",
+    "defaultPriority": "Default priority",
+    "noDefaultPriority": "No default",
+    "listName": "List name",
+    "newTask": "New task",
+    "editTask": "Edit task",
+    "newList": "New list",
+    "listSettings": "List settings",
+    "deleteList": "Delete list",
+    "undo": "Undo",
+    "taskDeleted": "Task deleted",
+    "taskCompleted": "Task completed",
+    "listDeleted": "List deleted",
+    "listsDeleted": "{{count}} lists deleted",
+    "done": "Done",
+    "previous": "Previous",
+    "next": "Next",
+    "searchTasks": "Search tasks",
+    "taskCount": "{{count}} tasks",
+    "shareList": "Share list",
+    "sharing": "Sharing",
+    "share": "Share",
+    "shareListCopied": "List copied to clipboard",
+    "taskCopied": "Task copied to clipboard",
+    "taskCopyFailed": "Could not copy task to clipboard",
+    "shareDueLabel": "Due: {{date}}",
+    "sharePriorityLabel": "Priority: {{priority}}",
+    "shareTaskCount_one": "{{count}} task",
+    "shareTaskCount_few": "{{count}} tasks",
+    "shareTaskCount_many": "{{count}} tasks",
+    "shareTaskCount_other": "{{count}} tasks",
+    "members": "Members",
+    "sharedBy": "Shared by {{name}}",
+    "addMember": "Add member",
+    "searchUsersPlaceholder": "Search by name or username",
+    "roleOwner": "Owner",
+    "roleEditor": "Editor",
+    "roleViewer": "Viewer",
+    "removeMember": "Remove member",
+    "leaveList": "Leave list",
+    "leaveListConfirm": "Leave “{{name}}”? Its tasks will disappear from your feeds.",
+    "noUsersFound": "No users found",
+    "alreadyAMember": "Already a member",
+    "tasksDueOn": "Tasks due {{date}}",
+    "noTasksDueThisDay": "No tasks due this day",
+    "selectAnotherDate": "Select another date on the calendar.",
+    "quickDefer": "Defer",
+    "quickDeferLaterToday": "Later today",
+    "quickDeferTonight": "Tonight",
+    "quickDeferTomorrow": "Tomorrow morning",
+    "quickDeferNextWeek": "Next week",
+    "allDoneToday": "All done for today",
+    "allDoneTonight": "All done for tonight",
+    "sweep": "Sweep",
+    "sweepTitle": "Morning Sweep",
+    "sweepToday": "Today",
+    "sweepTomorrow": "Tomorrow",
+    "sweepPickDate": "Pick a date",
+    "sweepFloat": "Make it a floater",
+    "sweepLetGo": "Let it go",
+    "sweepSkip": "Skip",
+    "sweepAllToToday": "Sweep all to today",
+    "sweptToast": "Swept {{count}} tasks",
+    "sweepDone": "All caught up",
+    "reusableList": "Reusable list",
+    "reusableListHint": "Show a Reset to un-check everything and run it again",
+    "resetFloaterList": "Reset list",
+    "floaterListReset": "List reset — everything un-checked",
+    "steps": "Steps",
+    "add": "Add",
+    "addStep": "Add a step",
+    "stepsCreateHint": "Save the task first to add steps.",
+    "searchFloaterTasksPlaceholder": "Search Floater Task",
+    "searchShort": "Search",
+    "listEmpty": "Nothing here yet",
+    "listEmptyBody": "Add your first task and it will show up right here.",
+    "floaterEmptyBody": "Floaters have no due date — write one down and it will wait until you are ready.",
+    "floaterListEmptyBody": "Add a floater and it will wait right here.",
+    "noMatchingTasks": "No matching tasks",
+    "searchEmptyBody": "Try a different word, or clear the search.",
+    "scrollForMore": "Scroll for more",
+    "tasksShownOfTotal": "Showing {{shown}} of {{total}} tasks",
+    "todayEmpty": "No tasks for today",
+    "todayEmptyBody": "Add something for today and it will show up right here.",
+    "tonightEmpty": "No tasks for tonight",
+    "tonightEmptyBody": "Add something for tonight and it will show up right here.",
+    "overdueEmpty": "No overdue tasks",
+    "overdueEmptyBody": "Nothing has slipped past its due date.",
+    "priorityEmpty": "No priority tasks",
+    "priorityEmptyBody": "Flag a task as priority and it will move up here.",
+    "scheduledEmpty": "No scheduled tasks",
+    "scheduledEmptyBody": "Give a task a date and it will line up here.",
+    "allTasksEmpty": "No tasks yet",
+    "allTasksEmptyBody": "Everything you add shows up here, whatever its date.",
+    "noMatchingSettings": "No matching settings",
+    "noMatchingTopics": "No matching topics",
+    "bulkSelect": "Select",
+    "bulkSelected": "{{count}} selected",
+    "bulkSelectedCapped": "{{count}} selected — the most one action can cover",
+    "bulkSelectAll": "Select all",
+    "bulkDeselectAll": "Deselect all",
+    "bulkAppliesTo": "Applies to {{count}} of {{total}} — repeating tasks are skipped.",
+    "bulkComplete": "Complete",
+    "bulkPriority": "Priority",
+    "bulkMove": "Move",
+    "bulkDelete": "Delete",
+    "tasksCompleted_one": "Task completed",
+    "tasksCompleted_few": "{{count}} tasks completed",
+    "tasksCompleted_many": "{{count}} tasks completed",
+    "tasksCompleted_other": "{{count}} tasks completed",
+    "tasksDeleted_one": "Task deleted",
+    "tasksDeleted_few": "{{count}} tasks deleted",
+    "tasksDeleted_many": "{{count}} tasks deleted",
+    "tasksDeleted_other": "{{count}} tasks deleted",
+    "bulkDeleteTitle_one": "Delete this task?",
+    "bulkDeleteTitle_few": "Delete {{count}} tasks?",
+    "bulkDeleteTitle_many": "Delete {{count}} tasks?",
+    "bulkDeleteTitle_other": "Delete {{count}} tasks?",
+    "bulkDeleteBody": "This removes them from every list, along with their completed history. You'll have a few seconds to undo.",
+    "bulkDeleteConfirm_one": "Delete task",
+    "bulkDeleteConfirm_few": "Delete {{count}} tasks",
+    "bulkDeleteConfirm_many": "Delete {{count}} tasks",
+    "bulkDeleteConfirm_other": "Delete {{count}} tasks",
+    "bulkMoveTitle": "Move {{count}} tasks?",
+    "bulkMoveBody": "These tasks come from different lists. Moving them can't be undone in one step — you'd have to put each one back by hand.",
+    "bulkMoveConfirm": "Move {{count}} tasks",
+    "bulkDeleteFailed_one": "A task couldn't be deleted",
+    "bulkDeleteFailed_few": "{{count}} tasks couldn't be deleted",
+    "bulkDeleteFailed_many": "{{count}} tasks couldn't be deleted",
+    "bulkDeleteFailed_other": "{{count}} tasks couldn't be deleted",
+    "bulkUpdateFailed_one": "A task couldn't be updated",
+    "bulkUpdateFailed_few": "{{count}} tasks couldn't be updated",
+    "bulkUpdateFailed_many": "{{count}} tasks couldn't be updated",
+    "bulkUpdateFailed_other": "{{count}} tasks couldn't be updated",
+    "floaterCompletedTile": "Completed"
+  },
+  "today": {
+    "saveInstance": "Save instance",
+    "nextRepeatText": "This task is next scheduled for",
+    "addATask": "Add a task",
+    "titlePlaceholder": "Title",
+    "menu": {
+      "pinToTop": "Pin to top",
+      "edit": "Edit",
+      "editAsInstance": "Edit as instance",
+      "copy": "Copy",
+      "delete": "Delete",
+      "Move to": "Move to..."
+    },
+    "repeatSuggestion": {
+      "prompt": "Repeat {{cadence}}?",
+      "dismiss": "Dismiss",
+      "everyDay": "daily",
+      "everyWeek": "weekly",
+      "everyMonth": "monthly",
+      "everyYear": "yearly"
+    },
+    "weekInReview": {
+      "title": "Week in Review",
+      "dismiss": "Dismiss"
+    },
+    "brainDump": {
+      "title": "Brain dump",
+      "blurb": "Paste everything on your mind — T'Day splits it into tasks for you to review.",
+      "placeholder": "buy milk\ncall the dentist tomorrow 3pm\nwater plants every week",
+      "parse": "Split into tasks",
+      "parseFailed": "Couldn't parse that — try again",
+      "reviewHint": "Uncheck anything you don't want. Dated → scheduled, undated → Anytime.",
+      "empty": "Nothing to add.",
+      "back": "Back",
+      "add": "Add {{count}}",
+      "created": "Added {{count}} tasks"
+    }
+  },
+  "sidebar": {
+    "completed": "Completed",
+    "calendar": "Calendar",
+    "note": "Note",
+    "settings": "Settings",
+    "admin": "Admin",
+    "settingMenu": {
+      "logout": "Log out",
+      "theme": "Theme",
+      "shortcuts": "Shortcuts"
+    },
+    "noteMenu": {
+      "rename": "rename",
+      "delete": "delete"
+    }
+  },
+  "completed": {
+    "title": "Completion history",
+    "empty": "No finished tasks yet",
+    "emptyBody": "Tick something off and it will land here.",
+    "tabTasks": "Scheduled",
+    "floaterEmpty": "No finished floaters yet",
+    "floaterEmptyBody": "Tick something off in Floater and it will land here.",
+    "listDeletedSuffix": "list deleted",
+    "floaterRestoredIntoRecreatedList": "Restored — {{listName}} was recreated"
+  },
+  "modal": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "delete": {
+      "title": "Delete task?",
+      "subtitle": "This action cannot be undone. This will permanently delete",
+      "button": "Delete"
+    },
+    "deleteAll": {
+      "title": "Delete all task recurrences?",
+      "subtitle": "This is a recurring task, delete all other recurrences?",
+      "deleteInstance": "Delete this occurrence only",
+      "deleteAll": "Delete all recurrences"
+    },
+    "cancelEdit": {
+      "title": "Cancel Edit?",
+      "subtitle": "Changes you have made will be discarded"
+    },
+    "editAll": {
+      "title": "Edit all task recurrences?",
+      "subtitle": "This is a recurring task, make the same edit for all other recurrences?",
+      "editInstance": "Edit this occurrence only",
+      "editAll": "Edit all recurrences"
+    }
+  },
+  "shortcuts": {
+    "title": "Shortcuts",
+    "todo": {
+      "title": "Task shortcuts",
+      "submitAndOpen": "Submit form and open another",
+      "openForm": "Open form",
+      "exitForm": "Exit form",
+      "editForm": "Edit form",
+      "submit": "Submit form"
+    },
+    "calendar": {
+      "markComplete": "Mark complete",
+      "title": "Calendar shortcuts",
+      "previous": "Previous month/week/day",
+      "next": "Next month/week/day",
+      "todayView": "Today view",
+      "viewModes": "Month/Week/Day view"
+    },
+    "navigation": {
+      "title": "Navigation",
+      "then": "then",
+      "today": "Today",
+      "calendar": "Calendar",
+      "completed": "Completed"
+    },
+    "global": {
+      "title": "Anywhere",
+      "newTask": "New task",
+      "openPalette": "Command palette",
+      "showShortcuts": "This overview"
+    }
+  },
+  "scheduledTaskHome": {
+    "tileScheduled": "Scheduled",
+    "tilePriority": "Priority",
+    "tileOverdue": "Overdue",
+    "tileAll": "All",
+    "tileCompleted": "Completed",
+    "tileCalendar": "Calendar",
+    "searchTasksPlaceholder": "Search tasks...",
+    "noMatchingTasks": "No matching tasks",
+    "openList": "Open {{name}}",
+    "searchScheduledPlaceholder": "Search Scheduled Task"
+  },
+  "settings": {
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
+    "systemDefault": "System default",
+    "profile": {
+      "title": "Profile",
+      "unknownUser": "Unknown user",
+      "description": "Update your display name",
+      "name": "Name",
+      "namePlaceholder": "Enter your name",
+      "username": "Username",
+      "saving": "Saving...",
+      "save": "Save",
+      "edit": "Edit",
+      "cancel": "Cancel"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "description": "Choose light, dark, or follow your system setting.",
+      "descriptionSystem": "Follow your device, light, or dark. Currently using {{theme}}."
+    },
+    "behavior": {
+      "title": "Behavior",
+      "defaultHomeScreen": "Default home screen"
+    },
+    "language": {
+      "title": "Language",
+      "description": "Choose your app language",
+      "appLanguage": "Language"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "push": "Push notifications",
+      "description": "Get notified about important things, even when the app isn't open.",
+      "blocked": "Blocked in your browser settings. Update your browser permissions to enable them.",
+      "toggle": "Toggle push notifications"
+    },
+    "password": {
+      "title": "Password",
+      "description": "Update your account password",
+      "current": "Current password",
+      "currentPlaceholder": "Enter your current password",
+      "new": "New password",
+      "newPlaceholder": "Enter your new password",
+      "requirement": "Password must be at least 8 characters, with an uppercase letter and a special character.",
+      "confirm": "Confirm new password",
+      "confirmPlaceholder": "Confirm your new password",
+      "changing": "Saving...",
+      "change": "Save",
+      "changeAction": "Change",
+      "cancel": "Cancel",
+      "forgot": "Forgot password?"
+    },
+    "dashboard": {
+      "title": "Dashboard access",
+      "enabled": "API access enabled",
+      "disabled": "API access disabled",
+      "activeKeyEnding": "Active key ending in …{{preview}}",
+      "activeKeyExists": "An active key exists",
+      "noKey": "No key has been generated",
+      "revoking": "Revoking...",
+      "generating": "Generating...",
+      "revokeKey": "Revoke key",
+      "generateKey": "Generate key",
+      "copyNow": "Copy your API key now — it won't be shown again.",
+      "labelPlaceholder": "Key name (optional)",
+      "scopeRead": "Read-only",
+      "scopeFull": "Full access",
+      "scopeReadHint": "Can read your tasks but not change them — safe for dashboards.",
+      "scopeFullHint": "Can read and modify your account. Only use where you trust the app.",
+      "unnamedKey": "Unnamed key",
+      "expired": "Expired",
+      "createdAt": "Created {{date}}",
+      "lastUsedAt": "Last used {{date}}",
+      "neverUsed": "Never used",
+      "newKeyTitle": "New API key",
+      "cancel": "Cancel",
+      "done": "Done"
+    },
+    "toast": {
+      "apiKeyGenerated": "API key generated. Copy it now — it won't be shown again.",
+      "apiKeyGenerateFailed": "Failed to generate API key",
+      "apiKeyRevoked": "API key revoked",
+      "apiKeyRevokeFailed": "Failed to revoke API key",
+      "apiKeyCopied": "API key copied to clipboard",
+      "apiKeyCopyFailed": "Failed to copy API key",
+      "pushDisabled": "Push notifications disabled",
+      "pushEnabled": "Push notifications enabled",
+      "pushUpdateFailed": "Failed to update notification settings",
+      "noChanges": "No changes to save",
+      "nameUpdated": "Name updated successfully",
+      "nameUpdateFailed": "Failed to update",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "passwordsDoNotMatch": "Passwords do not match",
+      "passwordChanged": "Password changed successfully",
+      "passwordChangeFailed": "Failed to change password",
+      "securityQuestionsUpdated": "Security questions updated",
+      "securityQuestionsUpdateFailed": "Could not update security questions",
+      "securityQuestionsLoadFailed": "Could not load security questions"
+    },
+    "signOut": "Sign out",
+    "featureToggle": {
+      "title": "Feature toggle"
+    },
+    "aiSummary": {
+      "title": "Summary"
+    },
+    "securityQuestions": {
+      "title": "Security questions",
+      "changeAction": "Change",
+      "configured": "Configured",
+      "notConfigured": "Not configured",
+      "questionLabel": "Question {{index}}",
+      "answerPlaceholder": "Answer",
+      "save": "Save",
+      "saving": "Saving...",
+      "errorSelectAll": "Please choose three questions",
+      "errorDistinct": "Choose three different questions",
+      "errorAnswersRequired": "Please answer all three questions",
+      "errorPasswordRequired": "Enter your current password"
+    },
+    "data": {
+      "title": "Your data",
+      "summary": "{{tasks}} tasks · {{lists}} lists · {{completed}} completed",
+      "download": "Download my data",
+      "import": "Import",
+      "exportDone": "Your data file was downloaded.",
+      "exportFailed": "Could not export your data.",
+      "importInvalid": "That file isn't a valid T'Day export.",
+      "importDone": "Import complete — added {{count}} items.",
+      "importFailed": "Could not import that file.",
+      "confirmTitle": "Import data?",
+      "confirmBody": "This adds {{count}} items to your account. Nothing you already have is changed or removed.",
+      "confirmRemapped": "{{count}} items with clashing IDs will be added as fresh copies.",
+      "confirmCancel": "Cancel",
+      "confirmImport": "Import",
+      "summaryLocal": "{{tasks}} tasks · {{lists}} lists · {{completed}} completed, all in this browser."
+    },
+    "restingFloaters": {
+      "title": "Resting floaters",
+      "toggle": "Fade untouched Anytime tasks"
+    },
+    "sound": {
+      "title": "Sound",
+      "toggle": "Play a sound when a task is completed"
+    },
+    "haptics": {
+      "title": "Vibration",
+      "toggle": "Vibrate on taps and drags"
+    },
+    "workspace": {
+      "title": "Workspace",
+      "localTitle": "Local workspace",
+      "localDetail": "Saved in this browser only — no account, no sync.",
+      "encryptedDetail": "Encrypted with your passphrase.",
+      "unencryptedDetail": "Stored unencrypted — anyone with this browser profile can read it.",
+      "encrypt": "Encrypt this workspace",
+      "encryptTitle": "Encrypt this workspace?",
+      "encryptBody": "Your tasks will be encrypted in this browser with a passphrase only you know. Nothing is lost — the same tasks stay, in a form nobody can read without it. There is no recovery: no reset link, no backup key, no support account. Write the passphrase down somewhere safe.",
+      "encryptPassphrase": "Passphrase",
+      "encryptRepeat": "Repeat passphrase",
+      "encryptAcknowledge": "I understand that losing this passphrase means losing this workspace.",
+      "encryptAction": "Encrypt",
+      "encryptCancel": "Cancel",
+      "encryptDone": "This workspace is now encrypted.",
+      "encryptTooShort": "Use at least {{count}} characters.",
+      "encryptMismatch": "The two passphrases don't match.",
+      "encryptFailed": "Could not encrypt this workspace.",
+      "leave": "Leave local workspace",
+      "delete": "Delete local data",
+      "deleteConfirmTitle": "Delete local data?",
+      "deleteConfirmBody": "This permanently removes every task, list and completed entry stored in this browser. There is no copy on a server — download your data first if you want to keep it.",
+      "deleteConfirmCancel": "Cancel",
+      "deleteConfirmAction": "Delete",
+      "deleteDone": "Local data deleted."
+    },
+    "about": {
+      "title": "About",
+      "appVersion": "App Version",
+      "server": "Server",
+      "updateAvailable": "v{{version}} available"
+    },
+    "troubleshooting": {
+      "reset": "Reset cached app data",
+      "confirmTitle": "Reset cached app data?",
+      "confirmBody": "Clears this device's offline cache and reloads the latest version. Your tasks, lists and sign-in are not affected.",
+      "confirmAction": "Reset",
+      "confirmCancel": "Cancel",
+      "resetFailed": "Couldn't reset the cache. Close and reopen the app, then try again."
+    },
+    "privacy": {
+      "title": "Privacy"
+    },
+    "serverTelemetry": {
+      "title": "Server error reports",
+      "toggle": "Send error reports for this server and the web app",
+      "description": "Sends this server's own errors, plus timings for a small sample of requests, to the Sentry project set in SENTRY_DSN. The web app obeys the same switch. Never includes tasks, lists or account details.",
+      "helpLabel": "About error reports",
+      "stateOn": "On",
+      "stateOff": "Off",
+      "stateDetail": "An admin decides this for the whole server.",
+      "updateFailed": "Couldn't update the server setting. Try again."
+    }
+  },
+  "crashReports": {
+    "card": {
+      "title": "Send error reports?",
+      "intro": "If something breaks, T'Day can send a short technical report to help fix it. One answer covers this whole server and everyone using it.",
+      "neverSent": "Never sent: names, accounts, or any task or list content.",
+      "share": "Send reports",
+      "notNow": "Don't send",
+      "saveFailed": "Couldn't save that. Try again.",
+      "readFaq": "Read the full FAQ"
+    }
+  },
+  "summary": {
+    "untitledTask": "Untitled task",
+    "and": "and",
+    "windowMorning": "in the morning",
+    "windowAfternoon": "in the afternoon",
+    "windowNight": "at night",
+    "window_morning": "morning",
+    "window_afternoon": "afternoon",
+    "night": "night",
+    "dueTonight": "due tonight",
+    "dueTodayWindow": "due today {{window}}",
+    "dueTomorrowWindow": "due tomorrow {{window}}",
+    "dueYesterdayWindow": "due yesterday {{window}}",
+    "targetToday": "today",
+    "targetTomorrow": "tomorrow",
+    "targetYesterday": "yesterday",
+    "targetOnDate": "on {{date}}",
+    "dueOnDate": "due {{target}}",
+    "dueOnDateWindow": "due {{target}} {{window}}",
+    "taskPhrasePast": "{{title}}, which was {{due}}",
+    "taskPhrasePresent": "{{title}}, which is {{due}}",
+    "thenSeparator": ", then ",
+    "qualifierBoth": "both",
+    "qualifierAll": "all",
+    "dayGroupedPast": "{{tasks}}, {{qualifier}} were due {{target}}",
+    "dayGroupedPresent": "{{tasks}}, {{qualifier}} are due {{target}}",
+    "startWith": "Start with {{task}}.",
+    "nextUp": "Next up, {{tasks}}.",
+    "overdueCatchUp": "You also have {{count}} overdue task(s) to catch up on.",
+    "clearForNow": "You're clear for now. No tasks need attention in this view.",
+    "floaterClear": "Nothing is waiting here yet.",
+    "floaterPileOne": "One thing is waiting here, with no date on it.",
+    "floaterPileFew": "A handful of undated things are waiting here.",
+    "floaterPileSome": "Quite a few undated things have gathered here.",
+    "floaterPileMany": "A long backlog of undated things has built up here.",
+    "floaterStartWith": "Start with {{title}}.",
+    "floaterPinnedOne": "Only {{title}} is pinned.",
+    "floaterPinnedMany": "{{title}} is pinned, and it isn't the only one.",
+    "floaterPriorityOne": "Only {{title}} is at high priority.",
+    "floaterPriorityMany": "{{title}} is at high priority, and it isn't the only one.",
+    "floaterMediumOne": "Only {{title}} is at medium priority.",
+    "floaterMediumMany": "{{title}} is at medium priority, and it isn't the only one.",
+    "floaterRestingOne": "One of them hasn't been touched in months.",
+    "floaterRestingMany": "Some of them haven't been touched in months.",
+    "floaterRestingAll": "Nothing here has been touched in months.",
+    "floaterRestingAllOne": "It hasn't been touched in months.",
+    "title": "Summary",
+    "loading": "Generating summary…",
+    "error": "Couldn't generate a summary. Please try again.",
+    "sourceServer": "Server model",
+    "sourceLocal": "Local model",
+    "dateMonthDay": "{{day}} {{month}}",
+    "dateMonthDayYear": "{{day}} {{month}} {{year}}",
+    "dueAnytime": "anytime",
+    "monthsShort": [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec"
+    ],
+    "weekNone": "No tasks cleared this week yet.",
+    "weekCleared": "You cleared {{count}} tasks this week.",
+    "weekBusiest": "Busiest day was {{day}} ({{count}}).",
+    "weekOldest": "Oldest you finally cleared: {{title}}.",
+    "weekdaysShort": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+      "Sun"
+    ]
+  },
+  "guide": {
+    "title": "How-To & Tips",
+    "subtitle": "Everything T'Day can do — the obvious and the hidden.",
+    "searchPlaceholder": "Search features…",
+    "searchAria": "Search the guide",
+    "whatsNew": "What's new",
+    "tryIt": "Try it",
+    "clearSearch": "Clear",
+    "noResults": "No matches. Try another word.",
+    "results": "{{count}} results",
+    "badges": {
+      "hiddenGem": "Hidden gem",
+      "proTip": "Pro tip",
+      "new": "New",
+      "server": "Server mode"
+    },
+    "sections": {
+      "gettingStarted": "Getting started",
+      "captureAndDates": "Capture & dates",
+      "gestures": "Gestures",
+      "organizing": "Organizing",
+      "recurrenceAndReminders": "Recurrence & reminders",
+      "widgetsAndSurfaces": "Widgets & surfaces",
+      "modesAndSync": "Modes & sync",
+      "integrations": "Integrations",
+      "keyboardShortcuts": "Keyboard shortcuts"
+    },
+    "topics": {
+      "root-feeds": {
+        "title": "Scheduled and Anytime",
+        "summary": "Two calm main feeds you switch between from the dock.",
+        "keywords": "scheduled, anytime, feed, dock, root, navigate, tabs",
+        "body": "T'Day has two sibling feeds. Scheduled holds your dated tasks for today and beyond. Anytime holds Floaters — tasks with no date. Switch between them from the dock at the bottom, and create a task from either one."
+      },
+      "default-home-screen": {
+        "title": "Default home screen",
+        "summary": "Choose whether T'Day opens on Scheduled or Floaters.",
+        "keywords": "default, home screen, launch, startup, scheduled, floater, behavior, settings",
+        "body": "Settings has a Behavior section where you can choose which feed opens first — Scheduled or Floaters. It only sets what greets you at launch; the dock still switches between both anytime."
+      },
+      "create-task": {
+        "title": "Create a task",
+        "summary": "Add a scheduled task or a dateless Floater in a couple of taps.",
+        "keywords": "create, add, new, task, plus, fab, compose",
+        "body": "Tap the create button to add a task. Give it a title and, if it has a date, a due time. Leave the date off and it becomes a Floater in your Anytime feed instead.",
+        "tip": "Start typing a date right in the title — T'Day reads it for you. See “Type the date”."
+      },
+      "nlp-date-syntax": {
+        "title": "Type the date",
+        "summary": "Write the date into the title and T'Day schedules it for you.",
+        "keywords": "natural language, date, tomorrow, next week, parse, quick, smart, nlp, on device",
+        "body": "You don't need pickers. Type a date phrase (\"tomorrow 3pm\"), a repeat (\"every day\", \"weekly\", \"every weekday\"), or a priority (\"!\", \"!!\", or a trailing \"high\"/\"low\") straight into the task title. T'Day parses it on-device — no account or network — highlights the date it understood, and fills in the schedule, recurrence, and priority.",
+        "example": "dentist tuesday 3pm every weekday !!"
+      },
+      "calendar-views": {
+        "title": "Calendar views",
+        "summary": "See your scheduled tasks by month, week, or day.",
+        "keywords": "calendar, month, week, day, agenda, view, dates",
+        "body": "Open the calendar to see scheduled tasks laid out by month, week, or day. Swipe or use the chevrons to move between periods; the top-right button jumps you back to today without changing the view."
+      },
+      "priorities": {
+        "title": "Priorities",
+        "summary": "Flag what matters with Low, Medium, or High.",
+        "keywords": "priority, high, medium, low, important, urgent, flag",
+        "body": "Give a task a priority to mark how much it matters. Priority shows as a small accent dot on the task and helps sort what deserves attention first."
+      },
+      "pin-task": {
+        "title": "Pin a task",
+        "summary": "Keep an important task at the top of its list.",
+        "keywords": "pin, pinned, stick, top, important, keep",
+        "body": "Pin a task to hold it at the top of its feed, above the normal order. Unpin it to let it fall back into place."
+      },
+      "swipe-actions": {
+        "title": "Swipe actions",
+        "summary": "Swipe a task row for quick actions without opening it.",
+        "keywords": "swipe, gesture, slide, complete, delete, quick, row",
+        "body": "Swipe a task row to reveal quick actions — complete it, or remove it — without opening the task at all.",
+        "tip": "A completed task shows an undo toast for a few seconds, so a mis-swipe is never final."
+      },
+      "copy-task-text": {
+        "title": "Copy task details",
+        "summary": "Copy a task's title, notes, due date, and priority as text.",
+        "keywords": "copy, clipboard, share, text, swipe",
+        "body": "Swipe a task and tap Copy — or use the Copy button on desktop — to copy its title, notes, due date, and priority as plain text, ready to paste anywhere.",
+        "tip": "Handy for pasting a task into a message, email, or another app without retyping it."
+      },
+      "long-press-actions": {
+        "title": "Long-press a task",
+        "summary": "Press and hold for more options and to start reordering.",
+        "keywords": "long press, hold, context menu, options, reorder, drag",
+        "body": "Press and hold a task to open its options, or to pick it up and drag it to a new position in the list."
+      },
+      "drag-reorder": {
+        "title": "Reorder by dragging",
+        "summary": "Drag tasks into the order you want.",
+        "keywords": "drag, reorder, move, sort, order, arrange",
+        "body": "Your lists keep the order you give them. Drag a task up or down to arrange your day the way you think about it."
+      },
+      "swipe-sheet-away": {
+        "title": "Swipe a sheet away",
+        "summary": "Pull the new-task sheet down to close it.",
+        "keywords": "swipe, drag, pull, dismiss, close, sheet, grabber, handle, gesture, swipe down",
+        "body": "The small bar at the top of the new-task sheet means the card can be pulled down. Drag it and it follows your finger; let go once you are about a quarter of the way down and it closes, exactly as if you had tapped the dimmed area behind it. A quick flick counts too — the sheet goes by where you were heading rather than where you let go — and a pull you think better of springs back into place.",
+        "tip": "On a sheet whose contents scroll, drag it by the top: the middle of the card belongs to the list."
+      },
+      "sound-and-vibration": {
+        "title": "Sound and vibration",
+        "summary": "Turn off the completion pop, the buzz, or both.",
+        "keywords": "sound, mute, silent, silence, audio, volume, vibration, vibrate, haptics, buzz, quiet, feedback, accessibility",
+        "body": "Ticking a task off plays a short pop, and on a phone the app answers your taps and drags with a small vibration. Settings has a switch for each one — turn either off and everything else stays exactly as it was.",
+        "tip": "The switches belong to this browser rather than to your account, so a quiet laptop and a buzzing phone can each have their own answer."
+      },
+      "reduce-motion": {
+        "title": "Reduce motion",
+        "summary": "Turn T'Day's animations off without changing the rest of your phone.",
+        "keywords": "motion, animation, animations, reduce motion, accessibility, vestibular, still, transitions, dizzy",
+        "body": "Settings has a Reduce motion switch. With it on, T'Day stops playing the animations it writes itself: a task ticks off, strikes through and leaves at once instead of over three beats, the swipe hint and the confetti stay away, and the empty-day illustration is simply there rather than rising into place. Every wait that was only there to cover one of those goes with it, so the app gets faster rather than slower. Sliding between screens, and sheets coming up, are Android's own animations rather than T'Day's, so those keep following your phone's animation setting.",
+        "tip": "It only ever takes motion away. If Android's own animation setting is already off, T'Day is already still, and the switch says so instead of offering to undo it."
+      },
+      "floaters-vs-todos": {
+        "title": "Floaters vs dated tasks",
+        "summary": "Dateless tasks live in Anytime; dated tasks live in Scheduled.",
+        "keywords": "floater, anytime, unscheduled, dateless, todo, scheduled, difference",
+        "body": "A task with a due date shows up in Scheduled and on the calendar. A Floater has no date — it waits quietly in your Anytime feed until you're ready. Use Floaters for “someday” work that shouldn't clutter today.",
+        "tip": "Floaters never appear on the calendar — that space is only for dated work."
+      },
+      "promote-and-float": {
+        "title": "Promote & float",
+        "summary": "Schedule a floater into a real task, or let a stale task float.",
+        "keywords": "promote, schedule floater, demote, let it float, convert, anytime, move, overdue",
+        "body": "When a floater is ready to become real work, use its Schedule action: pick a time and it moves into Scheduled as a dated task. The other direction works too — an overdue task you keep postponing can quietly float: demote it and it returns to Anytime with no date, keeping its title, notes and priority.",
+        "tip": "Recurring tasks can't float — end the series first if you want it dateless."
+      },
+      "quick-defer": {
+        "title": "Quick Defer",
+        "summary": "One tap moves a task to later today, tonight, tomorrow or next week.",
+        "keywords": "defer, postpone, snooze task, later, tonight, tomorrow, next week, reschedule",
+        "body": "When a task needs to move but not far, skip the date picker: the Defer action offers Later today (+3 hours), Tonight (19:00), Tomorrow morning (09:00) and Next week (Monday 09:00) as one-tap choices. It's the same change the edit sheet would make — just faster.",
+        "tip": "Recurring tasks defer per-occurrence from the edit sheet, so the one-tap menu stays out of their way."
+      },
+      "day-done": {
+        "title": "Day Done",
+        "summary": "Finish everything for today and the Today screen quietly celebrates.",
+        "keywords": "day done, all done, finished, completed everything, empty today, celebration",
+        "body": "When every task scheduled for today is completed — not merely absent — the Today screen swaps its \"No tasks\" message for a calm Day Done state: a soft double-check, the words \"All done for today\" and the date. No streaks, no scores; just the small payoff of an actually finished day."
+      },
+      "floater-lists": {
+        "title": "Floater lists",
+        "summary": "Group your Anytime tasks into their own lists.",
+        "keywords": "floater list, anytime, group, list, category, groceries, packing",
+        "body": "Organize Floaters into separate lists — groceries, packing, ideas — each with its own name and color, and its own completed history."
+      },
+      "scheduled-lists": {
+        "title": "Lists for scheduled tasks",
+        "summary": "Sort dated tasks into named, colored lists.",
+        "keywords": "list, project, group, color, scheduled, category",
+        "body": "Give scheduled tasks a list so related work stays together. Lists carry a name and color and can be filtered."
+      },
+      "completed-history": {
+        "title": "Completed history",
+        "summary": "Everything you finished, kept for you to look back on.",
+        "keywords": "completed, done, history, finished, archive, past",
+        "body": "Finished tasks aren't discarded — they move to your completed history, grouped by day, so you can see what you actually got done."
+      },
+      "overdue-view": {
+        "title": "Overdue",
+        "summary": "A dedicated place for tasks whose time has passed.",
+        "keywords": "overdue, late, past due, missed, carried over, backlog",
+        "body": "Tasks whose due time has passed collect in the Overdue view so nothing slips silently. Reschedule them when you're ready."
+      },
+      "morning-sweep": {
+        "title": "Morning Sweep",
+        "summary": "Triage carried-over tasks one card at a time.",
+        "keywords": "sweep, overdue, triage, carried over, catch up, backlog, morning",
+        "body": "Getting behind stops hurting: the Sweep button on the Overdue screen walks your carried-over tasks one card at a time — Today, Tomorrow, Pick a date, Make it a floater, or Let it go. In a hurry? Sweep all to today moves everything at once, with a single undo.",
+        "tip": "Recurring tasks stay out of the sweep; their occurrences reschedule from the edit sheet so the series stays intact."
+      },
+      "search-tasks": {
+        "title": "Search your tasks",
+        "summary": "Find any task by title, note, or list name.",
+        "keywords": "search, find, filter, lookup, query",
+        "body": "Use the search field to filter your tasks instantly by title, description, or list name — no need to scroll."
+      },
+      "recurrence-presets": {
+        "title": "Repeating tasks",
+        "summary": "Make a task repeat daily, weekly, and more.",
+        "keywords": "repeat, recurring, recurrence, every day, weekly, monthly, rrule, schedule",
+        "body": "Set a task to repeat and it comes back on its own schedule. Pick from the presets — every day, weekday, week, or month — and completing one occurrence leaves the rest of the series intact.",
+        "example": "Water the plants · every week"
+      },
+      "reminders": {
+        "title": "Reminders",
+        "summary": "Get a notification before a task is due.",
+        "keywords": "reminder, notification, alert, alarm, notify, before",
+        "body": "Add a reminder to a scheduled task and your device notifies you at the right time. Reminders are scheduled on your device, so they work even in Local Mode.",
+        "tip": "Reminder lead-time options vary slightly by task — pick the one that gives you enough warning."
+      },
+      "reminder-snooze": {
+        "title": "Snooze a reminder",
+        "summary": "Reminder notifications carry Snooze 1h and Tonight actions.",
+        "keywords": "snooze, reminder, notification, later, tonight, postpone alert",
+        "body": "When a reminder fires at a bad moment, you don't have to open the app: Snooze 1h re-delivers the same reminder an hour later, and Tonight moves the task itself to 19:00 today. Tonight works for one-off tasks — recurring occurrences reschedule from the app so their series stays intact.",
+        "tip": "Snoozing only delays the notification; the task keeps its original due time until you move it."
+      },
+      "day-ahead": {
+        "title": "Day Ahead digest",
+        "summary": "One quiet morning notification with today's counts.",
+        "keywords": "day ahead, digest, morning summary, daily notification, overview",
+        "body": "Opt in from Settings and pick an hour: each morning one notification tells you how the day looks — \"4 tasks today, 2 carried over\" — and opens Today, or jumps straight into Morning Sweep when something is carried over. Fully on-device: nothing leaves your phone.",
+        "tip": "The digest stays silent on task-free days — no news is good news."
+      },
+      "push-notifications": {
+        "title": "Web reminders (push)",
+        "summary": "Let the web app notify you when a task is due, even when it's closed.",
+        "keywords": "push, notification, web, browser, reminder, vapid, subscribe, due",
+        "body": "In the web app you can turn on push notifications from Settings. Your self-hosted server then sends a reminder when a task's due time arrives — so the web app can reach you even when the tab is closed. You can complete the task straight from the notification."
+      },
+      "notifications": {
+        "title": "Notifications",
+        "summary": "One switch decides whether T'Day may interrupt you at all.",
+        "keywords": "notifications, permission, switch, allow, mute, silence, reminder, digest, system settings",
+        "body": "Settings has a single Notifications switch, and everything that reaches you passes through it — task reminders and the Day Ahead digest. Turning it off empties the queue instead of muting it, so nothing arrives late when you turn it back on. It needs the system permission as well: while notifications are blocked for T'Day on your device the switch stays off, and offers to open the system settings.",
+        "tip": "Both halves have to be on. If the system permission is missing the switch reads off, however you left it here."
+      },
+      "home-widget": {
+        "title": "Home-screen widget",
+        "summary": "See today's tasks without opening the app.",
+        "keywords": "widget, home screen, glance, today, lock screen",
+        "body": "Add the T'Day widget to your home screen to glance at today's tasks. Tapping the widget opens the app at the right place."
+      },
+      "widget-list-selection": {
+        "title": "Pick a list for your widget",
+        "summary": "Point any widget at one specific list instead of the whole feed.",
+        "keywords": "widget, list, configure, edit widget, per-list, home screen, ios",
+        "body": "Long-press a T'Day widget and choose Edit Widget to pick exactly which list it shows — any of your scheduled lists or floater lists. A scheduled list shows due times and flags anything overdue; a floater list shows an open list with no due times. Leave it unset and the widget keeps showing the full Today or Floater feed.",
+        "tip": "Add several widgets, each pointed at a different list, to see them all on your home screen at once."
+      },
+      "list-widgets": {
+        "title": "List widget",
+        "summary": "A third widget, for one built-in view or list of your choice.",
+        "keywords": "widget, home screen, list, setup, picker, floater, scheduled, add",
+        "body": "Beside Today and Floater there's a List widget. Place it and it asks what to show — the built-in Scheduled and Overdue views, or any of your scheduled or floater lists. From then on it shows only that choice, and its + adds a task: into the list when you picked one. Place another for another view or list; each keeps its own.",
+        "tip": "To switch a List widget to a different list, long-press it and choose Edit (Edit Widget on iPhone)."
+      },
+      "widget-quick-add": {
+        "title": "Quick-add from the widget",
+        "summary": "Start a new task straight from the widget.",
+        "keywords": "widget, quick add, create, shortcut, home screen",
+        "body": "The widget has a create button, so you can capture a task from your home screen without first opening the app — and it works in Local Mode too."
+      },
+      "interactive-widgets": {
+        "title": "Complete from the widget",
+        "summary": "Check off tasks right on the home-screen widget.",
+        "keywords": "widget, complete, check off, home screen, interactive, tap",
+        "body": "The Today and Floater widgets take taps now: hit the ring at the start of any row to complete that task without opening the app. The row disappears immediately and the completion syncs like any other — taps made offline queue up and apply once you're back.",
+        "tip": "Mis-tapped? Open the Completed history in the app and restore the task from there."
+      },
+      "today-widget-progress": {
+        "title": "Today widget at a glance",
+        "summary": "See how far through the day you are, what's overdue, and what's next.",
+        "keywords": "widget, today, progress, ring, done, overdue, tomorrow, date, home screen",
+        "body": "The Today widget leads with the date and a progress ring: how many of the tasks due today are done, out of all of them. Anything overdue sits in its own section below today's tasks, marked with the day it was due. When nothing is due today, the widget shows what's coming up on the next day that has tasks. Check a task off and it stays ticked and struck through for a moment before it leaves.",
+        "tip": "The ring counts only tasks due today. Finishing something from another day won't fill it."
+      },
+      "share-into-tday": {
+        "title": "Share into T'Day",
+        "summary": "Send text from any app straight into a new task.",
+        "keywords": "share, share sheet, send to, capture, import, from another app",
+        "body": "Found something in another app? Open the system share sheet and pick T'Day. Shared text lands in a new-task form — a shared page keeps its title as the task name with the link tucked into notes. On Android and the web app the form opens on the spot; on iOS the capture is saved instantly and the prefilled form greets you next time you open the app.",
+        "tip": "Share text that contains a date phrase and the parser sets the due date for you."
+      },
+      "android-shortcuts": {
+        "title": "Quick Settings tile & shortcuts",
+        "summary": "Add tasks from Quick Settings or the app icon's long-press menu.",
+        "keywords": "quick settings, tile, shortcut, long press, app icon, quick add",
+        "body": "Two Android fast lanes. Add T'Day's tile to Quick Settings (edit the tile grid and drag it in) and one tap opens the new-task sheet from anywhere — even on top of another app. Long-pressing the app icon offers shortcuts too: New task, Today, and Floater each jump straight to where you were headed.",
+        "tip": "Launcher shortcuts can be dragged out as standalone home-screen icons — a dedicated one-tap New task button."
+      },
+      "carplay": {
+        "title": "T'Day on CarPlay",
+        "summary": "Glance at and capture tasks safely while you drive.",
+        "keywords": "carplay, car, driving, voice, apple, hands free",
+        "body": "On CarPlay, T'Day shows a focused, glanceable list built for the car, so you can check what's next or add a task by voice without reaching for your phone."
+      },
+      "android-car": {
+        "title": "T'Day car screen",
+        "summary": "A simplified in-app screen made for the car.",
+        "keywords": "car, driving, android, voice, hands free, screen",
+        "body": "T'Day includes a simplified car screen with large targets and voice capture, so you can add a task with minimal fuss while you're on the move."
+      },
+      "local-mode": {
+        "title": "Local Mode",
+        "summary": "Use T'Day fully offline, with no server or account.",
+        "keywords": "local mode, offline, private, no account, no server, on device",
+        "body": "Local Mode keeps everything on your device — no login, no server, no upload. It's a first-class way to use T'Day privately, and your local data is never sent anywhere on its own. In a browser it lives in that browser's own storage, so clearing your cookies and site data clears the workspace with it — export first if you want to keep it. If you opt in to crash reports, only a short technical report is sent when something fails, never your tasks or lists.",
+        "tip": "Server-only features are shown here with a “Server mode” badge so you know what changes if you sign in."
+      },
+      "server-mode": {
+        "title": "Server Mode",
+        "summary": "Sync across devices through your own private server.",
+        "keywords": "server mode, sync, self hosted, account, login, devices, realtime",
+        "body": "Sign in to your self-hosted server to sync tasks across devices in real time. Writes happen instantly on your device and replay to the server, so the app stays fast even on a shaky connection."
+      },
+      "offline-sync": {
+        "title": "Offline sync",
+        "summary": "Keep working offline; changes replay when you reconnect.",
+        "keywords": "offline, sync, pending, queue, replay, connection, conflict",
+        "body": "In Server Mode your changes are saved locally first and queued when you're offline. As soon as you reconnect, T'Day replays them to the server in order."
+      },
+      "export-your-data": {
+        "title": "Export your data",
+        "summary": "Download everything as one portable file — and bring it back anytime.",
+        "keywords": "export, import, download, backup, my data, portable, restore, migrate",
+        "body": "From Settings you can download your whole account — tasks, lists, completed history, and preferences — as a single JSON file. Import it into another T'Day (a server, or a device in Local Mode) and it lands as new items: import always adds and never overwrites, so nothing you already have is lost. On a server, descriptions are decrypted into the file so it stays readable even if you move to a differently-keyed server.",
+        "tip": "The file is plain, human-readable JSON — keep a copy as a personal backup."
+      },
+      "local-to-server-migration": {
+        "title": "Move from this device to a server",
+        "summary": "Bring your on-device tasks with you when you switch to Server Mode.",
+        "keywords": "migration, local to server, move data, switch mode, upload, sign in, transfer",
+        "body": "Started in Local Mode and later set up a server? Nothing ever uploads on its own. To move your data up: export it from Settings first, sign in to your server, then import the file there. Your tasks, lists, and history transfer in one deliberate step — you choose the moment, and your on-device data stays untouched until you do.",
+        "tip": "After importing, keep the exported file until you've confirmed everything arrived — then it doubles as a backup."
+      },
+      "crash-reports": {
+        "title": "Crash & problem reports",
+        "summary": "Off by default. Who decides depends on the platform.",
+        "keywords": "crash, error, report, sentry, privacy, diagnostics, telemetry, hang, anr, memory, analytics",
+        "body": "Crash & problem reports are optional and off by default. Who decides is different on each platform: in the web app one admin answer covers the whole server — the website, the server's own errors and everyone using it — and no individual user is asked. On Android and iOS each person is asked in the sign-in flow, so the answer is per device and the question comes back on every sign-in. It works like Crashlytics: it exists to fix bugs, not to measure how you use the app. There is no usage analytics, no session tracking and no performance monitoring on your device while things work normally.",
+        "body2": "A report contains the app version, your device model and OS version (or browser and version), the error and the place in the code where it happened, a few labelled steps leading up to it, screen or API route names without any IDs, status codes, and on mobile rough device conditions such as free memory, battery level and whether you were online. It also includes your time-zone offset (for example UTC+2) and language, because dates are central to a task planner.",
+        "body3": "The report never contains: your name, username, email or any account detail; your IP address or location; the address of your server; task, list or note titles and contents; the contents of your database; passwords, cookies or tokens; screenshots or recordings. Error messages are scrubbed of addresses, identifiers and quoted text on your device before they are sent, on a best-effort basis. Reports carry no user ID, so they cannot be traced back to you or deleted per person.",
+        "body4": "Reports are sent only when something fails, and only once reports are on for that platform: in the web app after an admin turns them on for the server, on mobile after you say yes on the device. If something fails while reports are off, nothing is stored or queued, and turning them on later does not send earlier failures. What counts as a failure depends on the platform: Android reports crashes, freezes and out-of-memory crashes; iOS reports crashes, freezes and the system ending the app for using too much memory; the web app reports unexpected errors only. T'Day does not detect memory leaks.",
+        "body5": "Reports go to T'Day's maintainer through Sentry, a crash-reporting service. They are kept for 30 days and used only to fix bugs, never sold or shared for advertising. They are sent directly to Sentry, not through your server. Sentry sees the network address of any connection, as any online service does, but it is set not to store it, and the web app also tells Sentry which website the report came from. On a self-hosted server the same admin answer also covers the server's own error reports, plus timings for a small sample of requests; that never includes your tasks. Builds without a reporting endpoint, such as ones you build yourself, don't show this setting.",
+        "step0": "Open Settings.",
+        "step1": "In the web app an admin switches off \"Server error reports\" under Privacy; on mobile you switch off \"Crash & problem reports\" yourself.",
+        "step2": "Reports stop immediately, and anything waiting to be sent is deleted.",
+        "tip": "Saying no costs nothing. The answer can be changed any time in Settings → Privacy — by an admin on the web, by you on mobile. Technical details: docs/TELEMETRY.md in the T'Day repository."
+      },
+      "in-app-update": {
+        "title": "In-app updates",
+        "summary": "Install the latest T'Day build from inside the app.",
+        "keywords": "update, upgrade, version, install, apk, latest release",
+        "body": "When a new build is available, T'Day can download and install it for you from the Latest Release screen, so you stay current without hunting for a file."
+      },
+      "api-key-homarr": {
+        "title": "API key & Homarr",
+        "summary": "Show your tasks on a dashboard with a personal API key.",
+        "keywords": "api key, homarr, dashboard, integration, token, widget, homelab",
+        "body": "Generate a personal API key in Settings to surface your tasks in a dashboard like Homarr. Choose a read-only key for dashboards so it can never change your data, give it a name to tell keys apart, and keep it private. You can hold several keys and revoke any one on its own.",
+        "step0": "Open Settings and find the API key card.",
+        "step1": "Pick a read-only scope for dashboards, generate the key, and copy it — it's shown once.",
+        "step2": "Paste it into your dashboard's T'Day widget."
+      },
+      "ai-summary": {
+        "title": "Task summaries",
+        "summary": "A short, calm read on your day — with optional local AI.",
+        "keywords": "summary, ai, ollama, overview, digest, local, private",
+        "body": "T'Day can summarize your day in a sentence or two. With a local Ollama model it reads naturally; without one it falls back to a warm, deterministic recap — either way nothing leaves your server.",
+        "tip": "The summary never depends on a cloud AI service — it's local or nothing."
+      },
+      "keyboard-submit": {
+        "title": "Submit with the keyboard",
+        "summary": "Save a task without reaching for the mouse.",
+        "keywords": "keyboard, shortcut, submit, enter, save, hotkey",
+        "body": "In the web app you can submit the task form straight from the keyboard, so quick capture never breaks your flow.",
+        "kbd": "Ctrl / ⌘ + Enter"
+      },
+      "keyboard-shortcuts": {
+        "title": "Keyboard shortcuts",
+        "summary": "Drive the web app from the keyboard: quick add, palette, overview.",
+        "keywords": "keyboard, shortcut, hotkey, command palette, cmd+k, quick add",
+        "body": "The web app has a global keyboard layer. Press N anywhere to start a new task, Ctrl / ⌘ + K to open the command palette — type to jump to any view or list, or run an action — and ? to see the shortcut overview. Keys are ignored while you're typing in a field.",
+        "tip": "Inside the palette, the arrow keys move the selection and Enter runs it.",
+        "kbd": "N",
+        "kbd2": "Ctrl / ⌘ + K",
+        "kbd3": "?"
+      },
+      "device-calendar-sync": {
+        "title": "Tasks in your device calendar",
+        "summary": "Mirror your dated tasks into a T'Day calendar on your phone.",
+        "keywords": "calendar, device calendar, sync, google calendar, apple calendar, eventkit, phone calendar, mirror",
+        "body": "Turn this on and every task with a date is copied into a calendar called T'Day on your phone, alongside your other calendars. Anytime tasks stay out of it, because they have no date to sit on. It's one-way: T'Day writes to that calendar, so edits you make there are replaced the next time your tasks change.",
+        "step0": "In Settings, turn on “Add scheduled tasks to my calendar”.",
+        "step1": "Allow calendar access when your phone asks.",
+        "step2": "Open your calendar app — your dated tasks are in the T'Day calendar."
+      },
+      "unifiedpush": {
+        "title": "UnifiedPush (Android)",
+        "summary": "Server push without Google, via your own distributor.",
+        "keywords": "unifiedpush, ntfy, push, notifications, self-host, distributor, fcm, google-free",
+        "body": "In Server Mode, T'Day delivers server notifications through UnifiedPush instead of Google's FCM — keeping your data on your own server and your own push distributor. There is nothing to switch on: install a distributor app (like ntfy) and T'Day registers with it by itself. Local reminders keep working either way.",
+        "step0": "Install a UnifiedPush distributor such as ntfy from your app store.",
+        "step1": "Open T'Day — it finds the distributor and registers on its own. If two or more are installed, Settings → Reminders asks which one to use.",
+        "step2": "To stop server push, uninstall the distributor or sign out — local reminders are unaffected."
+      },
+      "repeat-suggestions": {
+        "title": "Repeat suggestions",
+        "summary": "T'Day spots tasks you finish on a rhythm and offers to repeat them.",
+        "keywords": "repeat, suggestion, recurring, cadence, habit, pattern, smart, automatic",
+        "body": "When you keep completing the same task on a steady rhythm — watering plants every week, paying rent monthly — T'Day notices and offers a one-tap chip to make it repeat. It reads only your on-device completed history; nothing leaves your device.",
+        "tip": "Not interested? Tap the ✕ and that title won't ask again."
+      },
+      "week-in-review": {
+        "title": "Week in Review",
+        "summary": "A calm Sunday recap of what you cleared this week.",
+        "keywords": "week, review, recap, summary, sunday, completed, retrospective",
+        "body": "On Sundays, T'Day shows a short recap on your Today feed: how many tasks you cleared this week, your busiest day, and the oldest task you finally finished. It's built from your completed history.",
+        "tip": "Not in the mood? Dismiss it and it stays gone until next week."
+      },
+      "quiet-hours": {
+        "title": "Quiet hours",
+        "summary": "Hold reminders overnight so nothing buzzes while you sleep.",
+        "keywords": "quiet, hours, do not disturb, night, sleep, reminders, silence, schedule",
+        "body": "Set a window — say 22:00 to 07:00 — and any reminder that would fire inside it is held until the window ends. It's on-device only; local reminders just wait for morning.",
+        "tip": "The window can cross midnight (22:00 → 07:00); the math handles it."
+      },
+      "resting-floaters": {
+        "title": "Resting floaters",
+        "summary": "Untouched Anytime tasks quietly fade and rest, so your list stays calm.",
+        "keywords": "resting, floater, anytime, fade, dim, aging, dormant, old, quiet",
+        "body": "Anytime tasks you haven't touched in a month gently fade, and after three months they gather into a calm \"Resting\" group at the bottom. Nothing is deleted — they just stop demanding attention until you come back to them.",
+        "tip": "It's a display cue only; a tap wakes a floater right back up."
+      },
+      "reusable-lists": {
+        "title": "Reusable lists",
+        "summary": "Reset a checklist to run it again — packing, chores, groceries.",
+        "keywords": "reusable, reset, checklist, floater, list, repeat, template, run again",
+        "body": "Mark an Anytime list as reusable and a Reset appears. One tap un-completes every item so you can run the same checklist again — no need to recreate it.",
+        "step0": "Open a floater list and turn on \"Reusable\" in its settings.",
+        "step1": "Work through it, checking items off as usual.",
+        "step2": "When you need it again, tap Reset to un-check everything."
+      },
+      "brain-dump": {
+        "title": "Brain dump",
+        "summary": "Empty your head into one box; T'Day sorts it into tasks.",
+        "keywords": "brain dump, capture, paste, split, tasks, review, gtd, offload",
+        "body": "When your head is full, open Brain dump (⌘K → Brain dump), paste everything — one thought per line, bullets, or \"and then\" — and T'Day splits it into candidate tasks. Dates you wrote become scheduled tasks; the rest become Anytime floaters. It parses on your own server; nothing is invented.",
+        "step0": "Open the command palette (⌘K) and pick Brain dump.",
+        "step1": "Paste your thoughts and tap Split into tasks.",
+        "step2": "Uncheck anything you don't want, then Add."
+      },
+      "task-steps": {
+        "title": "Steps",
+        "summary": "Break a task into a flat checklist and watch it fill up.",
+        "keywords": "steps, checklist, subtasks, breakdown, progress, checkbox, sub-steps",
+        "body": "Open a task and add Steps to break it into a flat checklist — no nesting, no separate dates. A small counter like 2/5 shows how far along you are, and the whole task stays a single line in your day. Check steps off as you go; when the task is done its steps are kept with its history.",
+        "step0": "Open a task and add your first step under Steps.",
+        "step1": "Add as many as you need, then drag to reorder.",
+        "step2": "Check them off — the 2/5 counter tracks your progress."
+      },
+      "focus-filters": {
+        "title": "Focus filters",
+        "summary": "Let an iOS Focus decide which lists show in your Today feed.",
+        "keywords": "focus, filter, ios, work, personal, do not disturb, lists, hide, concentrate",
+        "body": "T'Day plugs into iOS Focus. Pick a Focus like Work or Personal, choose which of your lists it should show, and while that Focus is on your Today feed and home-screen widget quietly hide everything else. Turn the Focus off and every task comes back — nothing is deleted.",
+        "step0": "Open Settings ▸ Focus on iPhone and pick a Focus.",
+        "step1": "Add a Focus Filter and choose T'Day, then pick your lists.",
+        "step2": "Enable the Focus — Today and the widget now show only those lists."
+      },
+      "apple-watch": {
+        "title": "Apple Watch",
+        "summary": "Your Today tasks on the wrist, mirrored live from your iPhone.",
+        "keywords": "apple watch, watch, wrist, complication, watchos, today, glance, mirror",
+        "body": "Install T'Day on Apple Watch and today's tasks ride along on your wrist. The Watch mirrors the same Today list your iPhone builds — no separate login — and a complication on your watch face shows how many tasks are left so you can glance without opening the app. It updates whenever your iPhone syncs.",
+        "step0": "Open the Watch app on iPhone and install T'Day.",
+        "step1": "Add the T'Day complication to your watch face.",
+        "step2": "Glance at the count, or open the app for the full list."
+      },
+      "bulk-actions": {
+        "title": "Bulk actions",
+        "summary": "Select several tasks at once, then act on all of them together.",
+        "keywords": "bulk, multi-select, select all, batch, many, several, complete, delete, priority, move, selection",
+        "body": "Tap Select in the header of a task list to enter selection mode. Pick tasks one at a time or hit Select all, then apply a single action to the whole set — mark them done, change their priority, move them to another list, or delete them.",
+        "step0": "Open a task list and tap Select in the header.",
+        "step1": "Tap tasks to pick them, or use Select all for everything on screen.",
+        "step2": "Choose Complete, Priority, Move or Delete from the bar at the bottom.",
+        "tip": "Deleting asks you to confirm the exact number first, and still leaves an undo toast. Repeating tasks sit out bulk actions altogether, so a whole series is never changed by accident — open one on its own to complete, reschedule or delete it."
+      },
+      "list-icons": {
+        "title": "Automatic list icons",
+        "summary": "A list with no icon of its own picks one that matches its name.",
+        "keywords": "list icon, automatic, suggested, glyph, name, groceries, gym, work",
+        "body": "Name a list Groceries and it wears a shopping cart; Gym gets a dumbbell, Work a briefcase. T'Day only guesses when you have not chosen an icon yourself, and it leaves the plain default in place whenever the name is not clear enough to be sure. Names are matched in English for now.",
+        "tip": "Pick an icon in the list's settings whenever you like — once you choose one it is kept, and never guessed over."
+      }
+    }
+  },
+  "palette": {
+    "title": "Command palette",
+    "placeholder": "Type a command or search…",
+    "empty": "Nothing matches",
+    "actions": "Actions",
+    "navigation": "Go to",
+    "lists": "Lists",
+    "newTask": "New task",
+    "brainDump": "Brain dump"
+  },
+  "release": {
+    "loading": "Loading release information…",
+    "error": "Unable to fetch release information. Please check your connection and try again.",
+    "retry": "Retry",
+    "statusLatest": "Latest",
+    "statusUpdateAvailable": "Update Available",
+    "messageLatest": "You're running the latest version",
+    "messageUpdateReady": "Version {{version}} is ready to install.",
+    "installed": "Installed",
+    "installedVersion": "Installed Version",
+    "latest": "Latest",
+    "whatsNew": "What's new in {{version}}",
+    "noNotes": "No release notes available for this version",
+    "viewOnGithub": "View on GitHub",
+    "published": "Published {{date}}",
+    "serverUnavailable": "Unavailable"
+  }
+}

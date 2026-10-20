@@ -1,0 +1,263 @@
+import Foundation
+import SwiftData
+
+@Model
+final class CachedTodoEntity {
+    @Attribute(.unique) var id: String
+    var canonicalId: String
+    var title: String
+    var itemDescription: String?
+    var priority: String
+    var dueEpochMs: Int64?
+    var rrule: String?
+    var instanceDateEpochMs: Int64?
+    var pinned: Bool
+    var completed: Bool
+    var listId: String?
+    var updatedAtEpochMs: Int64
+
+    init(from record: CachedTodoRecord) {
+        id = record.id
+        canonicalId = record.canonicalId
+        title = record.title
+        itemDescription = record.description
+        priority = record.priority
+        dueEpochMs = record.dueEpochMs
+        rrule = record.rrule
+        instanceDateEpochMs = record.instanceDateEpochMs
+        pinned = record.pinned
+        completed = record.completed
+        listId = record.listId
+        updatedAtEpochMs = record.updatedAtEpochMs
+    }
+}
+
+@Model
+final class CachedFloaterEntity {
+    @Attribute(.unique) var id: String
+    var canonicalId: String
+    var title: String
+    var itemDescription: String?
+    var priority: String
+    var pinned: Bool
+    var completed: Bool
+    var listId: String?
+    var updatedAtEpochMs: Int64
+
+    init(from record: CachedFloaterRecord) {
+        id = record.id
+        canonicalId = record.canonicalId
+        title = record.title
+        itemDescription = record.description
+        priority = record.priority
+        pinned = record.pinned
+        completed = record.completed
+        listId = record.listId
+        updatedAtEpochMs = record.updatedAtEpochMs
+    }
+}
+
+@Model
+final class CachedListEntity {
+    @Attribute(.unique) var id: String
+    var name: String
+    var color: String?
+    var iconKey: String?
+    var todoCount: Int
+    var updatedAtEpochMs: Int64
+    var createdAtEpochMs: Int64?
+    // Optional so SwiftData lightweight migration covers pre-sharing stores.
+    var myRole: String?
+    var isShared: Bool?
+    var memberCount: Int?
+    var ownerUsername: String?
+    // Optional so SwiftData lightweight migration covers pre-default-priority stores.
+    var defaultPriority: String?
+
+    init(from record: CachedListRecord) {
+        id = record.id
+        name = record.name
+        color = record.color
+        iconKey = record.iconKey
+        todoCount = record.todoCount
+        updatedAtEpochMs = record.updatedAtEpochMs
+        createdAtEpochMs = record.createdAtEpochMs
+        myRole = record.myRole
+        isShared = record.isShared
+        memberCount = record.memberCount
+        ownerUsername = record.ownerUsername
+        defaultPriority = record.defaultPriority
+    }
+}
+
+@Model
+final class CachedFloaterListEntity {
+    @Attribute(.unique) var id: String
+    var name: String
+    var color: String?
+    var iconKey: String?
+    var todoCount: Int
+    var updatedAtEpochMs: Int64
+    var createdAtEpochMs: Int64?
+    // Optional so SwiftData lightweight migration covers pre-sharing stores.
+    var myRole: String?
+    var isShared: Bool?
+    var memberCount: Int?
+    var ownerUsername: String?
+    // Optional so SwiftData lightweight migration covers pre-default-priority stores.
+    var defaultPriority: String?
+    // Optional so SwiftData lightweight migration covers pre-reusable-list stores;
+    // nil reads back as "not reusable" (see `CachedFloaterListRecord.reusable`).
+    var reusable: Bool?
+
+    init(from record: CachedFloaterListRecord) {
+        id = record.id
+        name = record.name
+        color = record.color
+        iconKey = record.iconKey
+        todoCount = record.todoCount
+        updatedAtEpochMs = record.updatedAtEpochMs
+        createdAtEpochMs = record.createdAtEpochMs
+        myRole = record.myRole
+        isShared = record.isShared
+        memberCount = record.memberCount
+        ownerUsername = record.ownerUsername
+        defaultPriority = record.defaultPriority
+        reusable = record.reusable
+    }
+}
+
+@Model
+final class CachedCompletedEntity {
+    @Attribute(.unique) var id: String
+    var originalTodoId: String?
+    var title: String
+    var itemDescription: String?
+    var priority: String
+    var dueEpochMs: Int64?
+    var completedAtEpochMs: Int64
+    var rrule: String?
+    var instanceDateEpochMs: Int64?
+    var listId: String?
+    var listName: String?
+    var listColor: String?
+
+    init(from record: CachedCompletedRecord) {
+        id = record.id
+        originalTodoId = record.originalTodoId
+        title = record.title
+        itemDescription = record.description
+        priority = record.priority
+        dueEpochMs = record.dueEpochMs
+        completedAtEpochMs = record.completedAtEpochMs
+        rrule = record.rrule
+        instanceDateEpochMs = record.instanceDateEpochMs
+        listId = record.listId
+        listName = record.listName
+        listColor = record.listColor
+    }
+}
+
+@Model
+final class CachedCompletedFloaterEntity {
+    @Attribute(.unique) var id: String
+    var originalFloaterId: String?
+    var title: String
+    var itemDescription: String?
+    var priority: String
+    var completedAtEpochMs: Int64
+    var listId: String?
+    var listName: String?
+    var listColor: String?
+
+    init(from record: CachedCompletedFloaterRecord) {
+        id = record.id
+        originalFloaterId = record.originalFloaterId
+        title = record.title
+        itemDescription = record.description
+        priority = record.priority
+        completedAtEpochMs = record.completedAtEpochMs
+        listId = record.listId
+        listName = record.listName
+        listColor = record.listColor
+    }
+}
+
+@Model
+final class PendingMutationEntity {
+    @Attribute(.unique) var mutationId: String
+    var kindRawValue: String
+    var targetId: String?
+    var timestampEpochMs: Int64
+    var title: String?
+    var itemDescription: String?
+    var priority: String?
+    var dueEpochMs: Int64?
+    var rrule: String?
+    var listId: String?
+    var pinned: Bool?
+    var completed: Bool?
+    var instanceDateEpochMs: Int64?
+    var name: String?
+    var color: String?
+    var iconKey: String?
+    // Default literal (not just an init parameter) so SwiftData's lightweight migration can
+    // backfill existing rows on an already-installed app. See PendingMutationRecord.staged for
+    // what this guards: dropping it here would silently reset every staged list/floater-list
+    // delete marker to "real" on the very next `loadOfflineState()` fetch.
+    var staged: Bool = false
+    var defaultPriority: String?
+    var defaultPriorityChanged: Bool?
+    // A floater list's create/update carries its `reusable` flag, and the queue is read back
+    // from here before every replay. Without the column the flag came back nil — "leave it
+    // alone" — so turning Reusable off never reached the server and the next sync switched it
+    // back on. Optional, so the lightweight migration fills existing rows with nil.
+    var reusable: Bool?
+
+    init(from record: PendingMutationRecord) {
+        mutationId = record.mutationId
+        kindRawValue = record.kind.rawValue
+        targetId = record.targetId
+        timestampEpochMs = record.timestampEpochMs
+        title = record.title
+        itemDescription = record.description
+        priority = record.priority
+        dueEpochMs = record.dueEpochMs
+        rrule = record.rrule
+        listId = record.listId
+        pinned = record.pinned
+        completed = record.completed
+        instanceDateEpochMs = record.instanceDateEpochMs
+        name = record.name
+        color = record.color
+        iconKey = record.iconKey
+        staged = record.staged
+        defaultPriority = record.defaultPriority
+        defaultPriorityChanged = record.defaultPriorityChanged
+        reusable = record.reusable
+    }
+}
+
+@Model
+final class SyncMetadataEntity {
+    @Attribute(.unique) var id: Int
+    var lastSuccessfulSyncEpochMs: Int64
+    var lastSyncAttemptEpochMs: Int64
+    var aiSummaryEnabled: Bool
+    // "scheduled" or "floater". Default literal (not just an init parameter) so SwiftData's
+    // lightweight migration can backfill existing rows on an already-installed app.
+    var defaultHomeScreen: String = "scheduled"
+
+    init(
+        lastSuccessfulSyncEpochMs: Int64,
+        lastSyncAttemptEpochMs: Int64,
+        aiSummaryEnabled: Bool,
+        defaultHomeScreen: String = "scheduled"
+    ) {
+        id = 1
+        self.lastSuccessfulSyncEpochMs = lastSuccessfulSyncEpochMs
+        self.lastSyncAttemptEpochMs = lastSyncAttemptEpochMs
+        self.aiSummaryEnabled = aiSummaryEnabled
+        self.defaultHomeScreen = defaultHomeScreen
+    }
+}

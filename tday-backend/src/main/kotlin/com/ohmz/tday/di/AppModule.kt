@@ -1,0 +1,137 @@
+package com.ohmz.tday.di
+
+import com.ohmz.tday.config.AppConfig
+import com.ohmz.tday.mcp.McpToolDispatcher
+import com.ohmz.tday.mcp.TdayMcpService
+import com.ohmz.tday.config.DatabaseConfig
+import com.ohmz.tday.observability.TelemetryGate
+import com.ohmz.tday.security.AbuseGuard
+import com.ohmz.tday.security.AbuseGuardImpl
+import com.ohmz.tday.security.AuthThrottle
+import com.ohmz.tday.security.AuthThrottleImpl
+import com.ohmz.tday.security.AuthUserCache
+import com.ohmz.tday.security.ClientSignals
+import com.ohmz.tday.security.ClientSignalsImpl
+import com.ohmz.tday.security.CredentialEnvelope
+import com.ohmz.tday.security.CredentialEnvelopeImpl
+import com.ohmz.tday.security.FieldEncryption
+import com.ohmz.tday.security.FieldEncryptionImpl
+import com.ohmz.tday.security.InMemoryRequestRateLimiter
+import com.ohmz.tday.security.JwtService
+import com.ohmz.tday.security.JwtServiceImpl
+import com.ohmz.tday.security.PasswordProof
+import com.ohmz.tday.security.PasswordProofImpl
+import com.ohmz.tday.security.PasswordService
+import com.ohmz.tday.security.PasswordServiceImpl
+import com.ohmz.tday.security.RequestRateLimiter
+import com.ohmz.tday.security.SecurityEventLogger
+import com.ohmz.tday.security.SecurityEventLoggerImpl
+import com.ohmz.tday.security.SessionControl
+import com.ohmz.tday.security.SessionControlImpl
+import com.ohmz.tday.services.AdminService
+import com.ohmz.tday.services.AdminServiceImpl
+import com.ohmz.tday.services.CacheService
+import com.ohmz.tday.services.CacheServiceImpl
+import com.ohmz.tday.services.CompletedFloaterService
+import com.ohmz.tday.services.CompletedFloaterServiceImpl
+import com.ohmz.tday.services.CompletedTodoService
+import com.ohmz.tday.services.CompletedTodoServiceImpl
+import com.ohmz.tday.services.ExportService
+import com.ohmz.tday.services.ExportServiceImpl
+import com.ohmz.tday.services.InstanceSettingsService
+import com.ohmz.tday.services.InstanceSettingsServiceImpl
+import com.ohmz.tday.services.IntegrationContextService
+import com.ohmz.tday.services.IntegrationContextServiceImpl
+import com.ohmz.tday.services.FloaterListService
+import com.ohmz.tday.services.FloaterListServiceImpl
+import com.ohmz.tday.services.FloaterService
+import com.ohmz.tday.services.FloaterServiceImpl
+import com.ohmz.tday.services.ListService
+import com.ohmz.tday.services.ListServiceImpl
+import com.ohmz.tday.services.ListShareService
+import com.ohmz.tday.services.ListShareServiceImpl
+import com.ohmz.tday.services.RealtimePublisher
+import com.ohmz.tday.services.RecurrenceExpander
+import com.ohmz.tday.services.RecurrenceExpanderImpl
+import com.ohmz.tday.services.PreferencesService
+import com.ohmz.tday.services.PreferencesServiceImpl
+import com.ohmz.tday.services.PushNotificationService
+import com.ohmz.tday.services.PushNotificationServiceImpl
+import com.ohmz.tday.services.RealtimeService
+import com.ohmz.tday.services.RealtimeServiceImpl
+import com.ohmz.tday.services.ReminderPushScheduler
+import com.ohmz.tday.services.SecurityAlertService
+import com.ohmz.tday.services.SecurityAlertServiceImpl
+import com.ohmz.tday.services.SecurityQuestionService
+import com.ohmz.tday.services.SecurityQuestionServiceImpl
+import com.ohmz.tday.services.TaskStepService
+import com.ohmz.tday.services.TaskStepServiceImpl
+import com.ohmz.tday.services.TodoNlpService
+import com.ohmz.tday.services.TodoNlpServiceImpl
+import com.ohmz.tday.services.TodoService
+import com.ohmz.tday.services.TodoServiceImpl
+import com.ohmz.tday.services.TodoSummaryService
+import com.ohmz.tday.services.TodoSummaryServiceImpl
+import com.ohmz.tday.services.CalendarFeedService
+import com.ohmz.tday.services.CalendarFeedServiceImpl
+import com.ohmz.tday.services.UserApiKeyService
+import com.ohmz.tday.services.UserApiKeyServiceImpl
+import com.ohmz.tday.services.UserService
+import com.ohmz.tday.services.UserServiceImpl
+import org.koin.dsl.module
+
+fun configModule(config: AppConfig, telemetryGate: TelemetryGate) = module {
+    single { config }
+    single { telemetryGate }
+    single { DatabaseConfig(get()) }
+}
+
+val securityModule = module {
+    single<ClientSignals> { ClientSignalsImpl(get()) }
+    single<SecurityEventLogger> { SecurityEventLoggerImpl() }
+    single<JwtService> { JwtServiceImpl(get()) }
+    single<FieldEncryption> { FieldEncryptionImpl(get()) }
+    single<PasswordService> { PasswordServiceImpl(get()) }
+    single<PasswordProof> { PasswordProofImpl(get(), get()) }
+    single<AuthThrottle> { AuthThrottleImpl(get(), get(), get(), get()) }
+    single<AbuseGuard> { AbuseGuardImpl(get(), get(), get(), get()) }
+    single<CredentialEnvelope> { CredentialEnvelopeImpl(get()) }
+    single<RequestRateLimiter> { InMemoryRequestRateLimiter(get(), get()) }
+    single { AuthUserCache() }
+    single<SessionControl> {
+        val calendarFeedService = get<CalendarFeedService>()
+        SessionControlImpl(get(), get()) { userId -> calendarFeedService.revoke(userId) }
+    }
+}
+
+val serviceModule = module {
+    single<CacheService> { CacheServiceImpl() }
+    single<ListShareService> { ListShareServiceImpl(get(), get(), get()) }
+    single { RealtimePublisher(get(), get(), get(), get()) }
+    single<TodoService> { TodoServiceImpl(get(), get(), get(), get()) }
+    single<FloaterService> { FloaterServiceImpl(get(), get(), get()) }
+    single<ListService> { ListServiceImpl(get(), get(), get()) }
+    single<FloaterListService> { FloaterListServiceImpl(get(), get(), get()) }
+    single<UserService> { UserServiceImpl(get()) }
+    single<SecurityQuestionService> { SecurityQuestionServiceImpl(get(), get(), get()) }
+    single<CompletedTodoService> { CompletedTodoServiceImpl(get()) }
+    single<TaskStepService> { TaskStepServiceImpl(get(), get()) }
+    single<CompletedFloaterService> { CompletedFloaterServiceImpl(get()) }
+    single<ExportService> { ExportServiceImpl(get(), get(), get()) }
+    single<PreferencesService> { PreferencesServiceImpl() }
+    single<TodoSummaryService> { TodoSummaryServiceImpl(get()) }
+    single<TodoNlpService> { TodoNlpServiceImpl() }
+    single<RealtimeService> { RealtimeServiceImpl() }
+    single<AdminService> { AdminServiceImpl(get(), get()) }
+    single<InstanceSettingsService> { InstanceSettingsServiceImpl(get(), get(), get()) }
+    single<PushNotificationService> { PushNotificationServiceImpl(get()) }
+    single<SecurityAlertService> { SecurityAlertServiceImpl(get(), get()) }
+    single { ReminderPushScheduler(get(), get()) }
+    single { com.ohmz.tday.services.RetentionScheduler(get()) }
+    single<UserApiKeyService> { UserApiKeyServiceImpl(get()) }
+    single<CalendarFeedService> { CalendarFeedServiceImpl(get()) }
+    single<IntegrationContextService> { IntegrationContextServiceImpl(get(), get(), get()) }
+    single<RecurrenceExpander> { RecurrenceExpanderImpl() }
+    single { TdayMcpService(get(), get(), get(), get(), get(), get(), get(), get()) }
+    single { McpToolDispatcher(get()) }
+}

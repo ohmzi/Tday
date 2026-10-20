@@ -1,0 +1,1266 @@
+{
+  "terms": {
+    "title": "服务条款",
+    "lastUpdated": "最后更新：2026年1月19日",
+    "intro": "通过使用 T'Day（“服务”），即表示您同意这些服务条款。",
+    "sections": {
+      "1": {
+        "title": "服务使用",
+        "content": "T'Day 是一款免费的生产力应用，用于管理待办事项、笔记和文件。您同意合法使用本服务，不得滥用或干扰本服务。"
+      },
+      "2": {
+        "title": "账户",
+        "content": "您有责任维护账户安全，并对账户下的所有活动负责。提供的信息必须准确。"
+      },
+      "3": {
+        "title": "您的内容",
+        "content": "您保留对内容的所有权。通过使用 T'Day，您仅授权我们为运行服务而存储和处理这些内容。"
+      },
+      "4": {
+        "title": "接受的使用行为",
+        "content": [
+          "严禁非法、有害或恶意内容",
+          "严禁访问其他用户的数据",
+          "严禁滥用基础设施",
+          "严禁非法使用本服务"
+        ]
+      },
+      "5": {
+        "title": "可用性",
+        "content": "T'Day 是一个个人项目，按“尽力而为”的原则提供。服务可能随时更改、离线或停止。"
+      },
+      "6": {
+        "title": "终止",
+        "content": "您可以随时停止使用 T'Day。如果违反本条款，我们可能会暂停您的访问权限。"
+      },
+      "7": {
+        "title": "免责声明",
+        "content": "T'Day 按“原样”提供。对于因使用本服务而导致的任何数据丢失、中断或损害，我们不承担任何责任。"
+      },
+      "8": {
+        "title": "变更",
+        "content": "我们可能会更新这些条款。继续使用即表示您接受变更。"
+      },
+      "9": {
+        "title": "联系方式",
+        "content": "有问题？发送电子邮件至 support"
+      }
+    }
+  },
+  "privacy": {
+    "title": "隐私政策",
+    "lastUpdated": "最后更新：2026年10月4日",
+    "intro": "T'Day（“我们”或“我们的”）是一款个人生产力应用。本隐私政策解释了我们收集哪些数据以及如何使用这些数据。",
+    "sections": {
+      "1": {
+        "title": "我们收集的信息",
+        "content": [
+          "账户数据：电子邮件地址和时区",
+          "用户内容：待办事项、笔记和加密文件",
+          "连接时服务器可见的技术数据（不属于崩溃报告）：IP 地址、浏览器和会话信息",
+          "用于身份验证的 Cookie 和本地存储"
+        ]
+      },
+      "2": {
+        "title": "我们如何使用您的数据",
+        "content": [
+          "提供并运行 T'Day",
+          "验证用户身份",
+          "存储并同步您的内容",
+          "维护安全并防止滥用"
+        ]
+      },
+      "3": {
+        "title": "数据存储与安全",
+        "content": "T'Day 为自托管应用：Kotlin 后端将您的数据存储在由您或您的托管方运维的服务器上的 PostgreSQL 数据库中。敏感字段可在存储时加密，流量通过 HTTPS 传输。虽然没有绝对安全的系统，但我们已采取合理措施来保护您的数据。"
+      },
+      "4": {
+        "title": "数据共享",
+        "content": "我们仅与运行 T'Day 所需的服务提供商共享数据；并且仅在获得同意的情况下，才会向 Sentry 共享崩溃与问题报告。我们不会出售您的个人数据。"
+      },
+      "5": {
+        "title": "Cookie",
+        "content": "Cookie 和本地存储用于登录会话、偏好设置和安全。禁用 Cookie 可能会影响功能使用。"
+      },
+      "6": {
+        "title": "数据保留",
+        "content": "只要您的账户处于活跃状态，我们就会保留您的数据。您可以随时删除账户，您的内容将在合理期限内被移除。"
+      },
+      "7": {
+        "title": "您的权利",
+        "content": "您可以使用应用功能访问、更正、删除或导出您的数据。"
+      },
+      "8": {
+        "title": "变更",
+        "content": "我们可能会不时更新此政策。更新将显示在此页面上。"
+      },
+      "9": {
+        "title": "崩溃与问题报告",
+        "content": [
+          "默认关闭。网页版由管理员为整个服务器决定；移动端由你在每台设备上决定。报告仅在出现故障的那一刻发送",
+          "一份报告包含应用版本、设备型号和系统、错误以及它发生的位置。其中绝不包含您的姓名、账户、IP 地址、位置、服务器地址，也不包含任何任务或列表内容",
+          "报告会发送到 Sentry，保留 30 天，仅用于修复缺陷，绝不用于数据分析或广告。Sentry 能看到每个连接的网络地址，但已设置为不存储该地址"
+        ]
+      },
+      "10": {
+        "title": "联系方式",
+        "content": "有问题？发送电子邮件至 support"
+      }
+    }
+  },
+  "app": {
+    "agenda": "议程",
+    "scheduledTaskHome": "已安排",
+    "more": "更多",
+    "cancel": "取消",
+    "save": "保存",
+    "clearSearch": "清除搜索",
+    "versionAvailableTitle": "有可用更新",
+    "versionAvailableBody": "新版本已准备好加载。",
+    "versionAvailableReload": "重新加载",
+    "unresponsiveTitle": "T'Day 无响应",
+    "unresponsiveBody": "T'Day 已无响应 {{seconds}} 秒。",
+    "unresponsiveReload": "重新加载",
+    "releaseUpdateTitle": "有可用更新",
+    "releaseUpdateVersion": "版本 {{version}}",
+    "today": "今天",
+    "tonight": "今晚",
+    "yesterday": "昨天",
+    "tomorrow": "明天",
+    "nextWeek": "下周",
+    "day": "日",
+    "week": "周",
+    "month": "月",
+    "duration": "持续时间",
+    "date": "日期",
+    "durationMenu": {
+      "error": "日期范围无效：结束时间必须在开始时间之后。"
+    },
+    "priority": "优先级",
+    "list": "项目",
+    "overdue": "已逾期",
+    "low": "低",
+    "normal": "普通",
+    "important": "重要",
+    "urgent": "紧急",
+    "floater": "浮动任务",
+    "root_feed_tab_floater": "浮动任务",
+    "newFloater": "新建浮动任务",
+    "editFloater": "编辑浮动任务",
+    "floaterList": "浮动任务列表",
+    "newFloaterList": "新建浮动任务列表",
+    "deleteFloaterList": "删除浮动任务列表",
+    "floaterListName": "浮动任务列表名称",
+    "floaterTitlePlaceholder": "随时任务",
+    "floaterEmpty": "暂无浮动任务",
+    "floaterListEmpty": "此列表中没有浮动任务",
+    "myFloaterLists": "我的列表",
+    "searchFloaters": "搜索浮动任务",
+    "searchFloatersPlaceholder": "搜索浮动任务...",
+    "noMatchingFloaters": "没有匹配的浮动任务",
+    "searchIn": "搜索范围",
+    "repeat": "重复",
+    "everyDay": "每天",
+    "everyWeek": "每周",
+    "everyMonth": "每月",
+    "everyYear": "每年",
+    "weekdaysOnly": "仅工作日",
+    "custom": "自定义",
+    "descPlaceholder": "描述",
+    "schedule": "安排时间",
+    "scheduleOnHint": "任务有截止日期",
+    "scheduleOffHint": "浮动任务",
+    "details": "详情",
+    "due": "截止",
+    "notes": "备注",
+    "clearFormatting": "清除格式",
+    "bold": "粗体",
+    "italic": "斜体",
+    "underline": "下划线",
+    "strikethrough": "删除线",
+    "bulletedList": "项目符号列表",
+    "numberedList": "编号列表",
+    "noList": "无列表",
+    "noRepeat": "不重复",
+    "color": "颜色",
+    "icon": "图标",
+    "defaultPriority": "默认优先级",
+    "noDefaultPriority": "无默认",
+    "listName": "列表名称",
+    "newTask": "新建任务",
+    "editTask": "编辑任务",
+    "newList": "新建列表",
+    "listSettings": "列表设置",
+    "deleteList": "删除列表",
+    "undo": "撤销",
+    "taskDeleted": "任务已删除",
+    "taskCompleted": "任务已完成",
+    "listDeleted": "列表已删除",
+    "listsDeleted": "已删除 {{count}} 个列表",
+    "done": "完成",
+    "previous": "上一个",
+    "next": "下一个",
+    "searchTasks": "搜索任务",
+    "taskCount": "{{count}} 个任务",
+    "shareList": "分享列表",
+    "sharing": "共享",
+    "share": "分享",
+    "shareListCopied": "列表已复制到剪贴板",
+    "taskCopied": "任务已复制到剪贴板",
+    "taskCopyFailed": "无法将任务复制到剪贴板",
+    "shareDueLabel": "截止：{{date}}",
+    "sharePriorityLabel": "优先级：{{priority}}",
+    "shareTaskCount_one": "{{count}}个任务",
+    "shareTaskCount_few": "{{count}}个任务",
+    "shareTaskCount_many": "{{count}}个任务",
+    "shareTaskCount_other": "{{count}}个任务",
+    "members": "成员",
+    "sharedBy": "由 {{name}} 分享",
+    "addMember": "添加成员",
+    "searchUsersPlaceholder": "按姓名或用户名搜索",
+    "roleOwner": "所有者",
+    "roleEditor": "编辑者",
+    "roleViewer": "查看者",
+    "removeMember": "移除成员",
+    "leaveList": "退出列表",
+    "leaveListConfirm": "退出“{{name}}”？其中的任务将从你的视图中消失。",
+    "noUsersFound": "未找到用户",
+    "alreadyAMember": "已是成员",
+    "tasksDueOn": "{{date}} 到期的任务",
+    "noTasksDueThisDay": "这一天没有到期的任务",
+    "selectAnotherDate": "在日历上选择另一个日期。",
+    "quickDefer": "推迟",
+    "quickDeferLaterToday": "今天晚些时候",
+    "quickDeferTonight": "今晚",
+    "quickDeferTomorrow": "明天早上",
+    "quickDeferNextWeek": "下周",
+    "allDoneToday": "今天的任务全部完成",
+    "allDoneTonight": "今晚的任务全部完成",
+    "sweep": "清理",
+    "sweepTitle": "晨间清理",
+    "sweepToday": "今天",
+    "sweepTomorrow": "明天",
+    "sweepPickDate": "选择日期",
+    "sweepFloat": "变为漂浮任务",
+    "sweepLetGo": "放手",
+    "sweepSkip": "跳过",
+    "sweepAllToToday": "全部移到今天",
+    "sweptToast": "已清理 {{count}} 项任务",
+    "sweepDone": "全部处理完毕",
+    "reusableList": "可重用清单",
+    "reusableListHint": "显示“重置”以取消所有勾选并再次使用",
+    "resetFloaterList": "重置清单",
+    "floaterListReset": "清单已重置——全部取消勾选",
+    "steps": "步骤",
+    "add": "添加",
+    "addStep": "添加步骤",
+    "stepsCreateHint": "请先保存任务再添加步骤。",
+    "searchFloaterTasksPlaceholder": "搜索浮动任务",
+    "searchShort": "搜索",
+    "listEmpty": "这里还什么都没有",
+    "listEmptyBody": "添加第一个任务，它就会出现在这里。",
+    "floaterEmptyBody": "浮动任务没有截止日期——记下一个，它会一直等你。",
+    "floaterListEmptyBody": "添加一个浮动任务，它会在这里等你。",
+    "noMatchingTasks": "没有匹配的任务",
+    "searchEmptyBody": "换个词试试，或者清除搜索。",
+    "scrollForMore": "滚动查看更多",
+    "tasksShownOfTotal": "已显示 {{total}} 项任务中的 {{shown}} 项",
+    "todayEmpty": "今天没有任务",
+    "todayEmptyBody": "添加今天要做的事，它就会出现在这里。",
+    "tonightEmpty": "今晚没有任务",
+    "tonightEmptyBody": "添加今晚要做的事，它就会出现在这里。",
+    "overdueEmpty": "没有逾期任务",
+    "overdueEmptyBody": "没有任务超过截止日期。",
+    "priorityEmpty": "没有优先任务",
+    "priorityEmptyBody": "把任务标记为优先，它就会移到这里。",
+    "scheduledEmpty": "没有已安排的任务",
+    "scheduledEmptyBody": "给任务设置日期，它就会排在这里。",
+    "allTasksEmpty": "还没有任务",
+    "allTasksEmptyBody": "你添加的所有任务都会出现在这里，无论日期。",
+    "noMatchingSettings": "没有匹配的设置",
+    "noMatchingTopics": "没有匹配的主题",
+    "bulkSelect": "选择",
+    "bulkSelected": "已选 {{count}} 个",
+    "bulkSelectedCapped": "已选 {{count}} 个——单次操作的上限",
+    "bulkSelectAll": "全选",
+    "bulkDeselectAll": "取消全选",
+    "bulkAppliesTo": "将作用于 {{total}} 个中的 {{count}} 个——重复任务会被跳过。",
+    "bulkComplete": "完成",
+    "bulkPriority": "优先级",
+    "bulkMove": "移动",
+    "bulkDelete": "删除",
+    "tasksCompleted_one": "任务已完成",
+    "tasksCompleted_few": "已完成 {{count}} 个任务",
+    "tasksCompleted_many": "已完成 {{count}} 个任务",
+    "tasksCompleted_other": "已完成 {{count}} 个任务",
+    "tasksDeleted_one": "任务已删除",
+    "tasksDeleted_few": "已删除 {{count}} 个任务",
+    "tasksDeleted_many": "已删除 {{count}} 个任务",
+    "tasksDeleted_other": "已删除 {{count}} 个任务",
+    "bulkDeleteTitle_one": "删除这个任务？",
+    "bulkDeleteTitle_few": "删除 {{count}} 个任务？",
+    "bulkDeleteTitle_many": "删除 {{count}} 个任务？",
+    "bulkDeleteTitle_other": "删除 {{count}} 个任务？",
+    "bulkDeleteBody": "它们会从所有列表中移除，连同完成记录一起。你有几秒钟可以撤销。",
+    "bulkDeleteConfirm_one": "删除任务",
+    "bulkDeleteConfirm_few": "删除 {{count}} 个任务",
+    "bulkDeleteConfirm_many": "删除 {{count}} 个任务",
+    "bulkDeleteConfirm_other": "删除 {{count}} 个任务",
+    "bulkMoveTitle": "移动 {{count}} 个任务？",
+    "bulkMoveBody": "这些任务来自不同的列表。移动之后无法一步撤销——你得手动把每一个放回去。",
+    "bulkMoveConfirm": "移动 {{count}} 个任务",
+    "bulkDeleteFailed_one": "有一个任务未能删除",
+    "bulkDeleteFailed_few": "有 {{count}} 个任务未能删除",
+    "bulkDeleteFailed_many": "有 {{count}} 个任务未能删除",
+    "bulkDeleteFailed_other": "有 {{count}} 个任务未能删除",
+    "bulkUpdateFailed_one": "有一个任务未能更新",
+    "bulkUpdateFailed_few": "有 {{count}} 个任务未能更新",
+    "bulkUpdateFailed_many": "有 {{count}} 个任务未能更新",
+    "bulkUpdateFailed_other": "有 {{count}} 个任务未能更新",
+    "floaterCompletedTile": "已完成"
+  },
+  "today": {
+    "saveInstance": "保存实例",
+    "nextRepeatText": "此待办事项下一次计划于",
+    "addATask": "添加任务",
+    "titlePlaceholder": "标题",
+    "menu": {
+      "pinToTop": "置顶",
+      "edit": "编辑",
+      "editAsInstance": "编辑此实例",
+      "copy": "复制",
+      "delete": "删除",
+      "Move to": "移动到..."
+    },
+    "repeatSuggestion": {
+      "prompt": "每{{cadence}}重复？",
+      "dismiss": "忽略",
+      "everyDay": "天",
+      "everyWeek": "周",
+      "everyMonth": "月",
+      "everyYear": "年"
+    },
+    "weekInReview": {
+      "title": "本周回顾",
+      "dismiss": "忽略"
+    },
+    "brainDump": {
+      "title": "想法速记",
+      "blurb": "把脑中所想都粘贴进来——T'Day 会拆成任务供你确认。",
+      "placeholder": "买牛奶\n明天下午3点给牙医打电话\n每周浇花",
+      "parse": "拆成任务",
+      "parseFailed": "解析失败——请重试",
+      "reviewHint": "取消不需要的。有日期→已排期，无日期→Anytime。",
+      "empty": "没有可添加的。",
+      "back": "返回",
+      "add": "添加 {{count}}",
+      "created": "已添加 {{count}} 个任务"
+    }
+  },
+  "sidebar": {
+    "completed": "已完成",
+    "calendar": "日历",
+    "note": "笔记",
+    "settings": "设置",
+    "admin": "Admin",
+    "settingMenu": {
+      "logout": "退出登录",
+      "theme": "主题",
+      "shortcuts": "快捷键"
+    },
+    "noteMenu": {
+      "rename": "重命名",
+      "delete": "删除"
+    }
+  },
+  "completed": {
+    "title": "完成历史",
+    "empty": "还没有完成的任务",
+    "emptyBody": "完成一个任务，它就会出现在这里。",
+    "tabTasks": "已安排",
+    "floaterEmpty": "还没有已完成的随手事项",
+    "floaterEmptyBody": "在随手事项中勾选一项，它就会显示在这里。",
+    "listDeletedSuffix": "列表已删除",
+    "floaterRestoredIntoRecreatedList": "已恢复 — “{{listName}}”已重新创建"
+  },
+  "modal": {
+    "confirm": "确认",
+    "cancel": "取消",
+    "delete": {
+      "title": "删除待办事项？",
+      "subtitle": "此操作无法撤销。这将永久删除",
+      "button": "删除"
+    },
+    "deleteAll": {
+      "title": "删除所有重复项？",
+      "subtitle": "这是一个重复任务，是否删除所有其他重复项？",
+      "deleteInstance": "仅删除此项",
+      "deleteAll": "删除所有项"
+    },
+    "cancelEdit": {
+      "title": "取消编辑？",
+      "subtitle": "您所做的更改将被放弃"
+    },
+    "editAll": {
+      "title": "编辑所有重复项？",
+      "subtitle": "这是一个重复任务，是否对所有其他重复项进行相同的编辑？",
+      "editInstance": "仅编辑此项",
+      "editAll": "编辑所有项"
+    }
+  },
+  "shortcuts": {
+    "title": "快捷键",
+    "todo": {
+      "title": "待办事项快捷键",
+      "submitAndOpen": "提交并打开另一个",
+      "openForm": "打开表单",
+      "exitForm": "退出表单",
+      "editForm": "编辑表单",
+      "submit": "提交表单"
+    },
+    "calendar": {
+      "markComplete": "标记为完成",
+      "title": "日历快捷键",
+      "previous": "上个月/周/日",
+      "next": "下个月/周/日",
+      "todayView": "今天视图",
+      "viewModes": "切换 月/周/日 视图"
+    },
+    "navigation": {
+      "title": "导航",
+      "then": "接着",
+      "today": "今天",
+      "calendar": "日历",
+      "completed": "已完成"
+    },
+    "global": {
+      "title": "任意位置",
+      "newTask": "新任务",
+      "openPalette": "命令面板",
+      "showShortcuts": "此总览"
+    }
+  },
+  "scheduledTaskHome": {
+    "tileScheduled": "已安排",
+    "tilePriority": "优先",
+    "tileOverdue": "逾期",
+    "tileAll": "全部",
+    "tileCompleted": "已完成",
+    "tileCalendar": "日历",
+    "searchTasksPlaceholder": "搜索任务...",
+    "noMatchingTasks": "没有匹配的任务",
+    "openList": "打开 {{name}}",
+    "searchScheduledPlaceholder": "搜索计划任务"
+  },
+  "settings": {
+    "themeLight": "浅色",
+    "themeDark": "深色",
+    "themeSystem": "系统",
+    "systemDefault": "系统默认",
+    "profile": {
+      "title": "个人资料",
+      "unknownUser": "未知用户",
+      "description": "更新您的显示名称",
+      "name": "名称",
+      "namePlaceholder": "输入您的名称",
+      "username": "用户名",
+      "saving": "保存中...",
+      "save": "保存",
+      "edit": "编辑",
+      "cancel": "取消"
+    },
+    "appearance": {
+      "title": "外观",
+      "description": "选择浅色、深色，或跟随系统设置。",
+      "descriptionSystem": "跟随设备、浅色或深色。当前使用{{theme}}。"
+    },
+    "behavior": {
+      "title": "行为",
+      "defaultHomeScreen": "默认主屏幕"
+    },
+    "language": {
+      "title": "语言",
+      "description": "选择应用语言",
+      "appLanguage": "语言"
+    },
+    "notifications": {
+      "title": "通知",
+      "push": "推送通知",
+      "description": "即使应用未打开，也能收到重要事项的通知。",
+      "blocked": "已在浏览器设置中被阻止。请更新浏览器权限以启用。",
+      "toggle": "切换推送通知"
+    },
+    "password": {
+      "title": "密码",
+      "description": "更新您的账户密码",
+      "current": "当前密码",
+      "currentPlaceholder": "输入您的当前密码",
+      "new": "新密码",
+      "newPlaceholder": "输入您的新密码",
+      "requirement": "密码至少需要 8 个字符，并包含一个大写字母和一个特殊字符。",
+      "confirm": "确认新密码",
+      "confirmPlaceholder": "确认您的新密码",
+      "changing": "保存中...",
+      "change": "保存",
+      "changeAction": "更改",
+      "cancel": "取消",
+      "forgot": "忘记密码？"
+    },
+    "dashboard": {
+      "title": "仪表板访问",
+      "enabled": "已启用 API 访问",
+      "disabled": "已禁用 API 访问",
+      "activeKeyEnding": "活动密钥以 …{{preview}} 结尾",
+      "activeKeyExists": "存在活动密钥",
+      "noKey": "尚未生成密钥",
+      "revoking": "正在撤销...",
+      "generating": "正在生成...",
+      "revokeKey": "撤销密钥",
+      "generateKey": "生成密钥",
+      "copyNow": "立即复制您的 API 密钥——它不会再次显示。",
+      "labelPlaceholder": "密钥名称（可选）",
+      "scopeRead": "只读",
+      "scopeFull": "完全访问",
+      "scopeReadHint": "可读取但无法修改你的任务——适合仪表盘使用。",
+      "scopeFullHint": "可读取并修改你的账户。仅在信任的应用中使用。",
+      "unnamedKey": "未命名密钥",
+      "expired": "已过期",
+      "createdAt": "创建于 {{date}}",
+      "lastUsedAt": "最后使用于 {{date}}",
+      "neverUsed": "从未使用",
+      "newKeyTitle": "新建 API 密钥",
+      "cancel": "取消",
+      "done": "完成"
+    },
+    "toast": {
+      "apiKeyGenerated": "已生成 API 密钥。立即复制——它不会再次显示。",
+      "apiKeyGenerateFailed": "生成 API 密钥失败",
+      "apiKeyRevoked": "API 密钥已撤销",
+      "apiKeyRevokeFailed": "撤销 API 密钥失败",
+      "apiKeyCopied": "API 密钥已复制到剪贴板",
+      "apiKeyCopyFailed": "复制 API 密钥失败",
+      "pushDisabled": "推送通知已禁用",
+      "pushEnabled": "推送通知已启用",
+      "pushUpdateFailed": "更新通知设置失败",
+      "noChanges": "没有要保存的更改",
+      "nameUpdated": "名称更新成功",
+      "nameUpdateFailed": "更新失败",
+      "passwordTooShort": "密码至少需要 8 个字符",
+      "passwordsDoNotMatch": "密码不匹配",
+      "passwordChanged": "密码更改成功",
+      "passwordChangeFailed": "更改密码失败",
+      "securityQuestionsUpdated": "Security questions updated",
+      "securityQuestionsUpdateFailed": "Could not update security questions",
+      "securityQuestionsLoadFailed": "Could not load security questions"
+    },
+    "signOut": "退出登录",
+    "featureToggle": {
+      "title": "功能开关"
+    },
+    "aiSummary": {
+      "title": "摘要"
+    },
+    "securityQuestions": {
+      "title": "Security questions",
+      "changeAction": "Change",
+      "configured": "已设置",
+      "notConfigured": "Not configured",
+      "questionLabel": "Question {{index}}",
+      "answerPlaceholder": "答案",
+      "save": "保存",
+      "saving": "Saving...",
+      "errorSelectAll": "Please choose three questions",
+      "errorDistinct": "选择三个不同的问题",
+      "errorAnswersRequired": "Please answer all three questions",
+      "errorPasswordRequired": "Enter your current password"
+    },
+    "data": {
+      "title": "你的数据",
+      "summary": "{{tasks}} 个任务 · {{lists}} 个清单 · {{completed}} 个已完成",
+      "download": "下载我的数据",
+      "import": "导入",
+      "exportDone": "已下载你的数据文件。",
+      "exportFailed": "无法导出你的数据。",
+      "importInvalid": "该文件不是有效的 T'Day 导出文件。",
+      "importDone": "导入完成——已添加 {{count}} 项。",
+      "importFailed": "无法导入该文件。",
+      "confirmTitle": "导入数据？",
+      "confirmBody": "这会向你的账户添加 {{count}} 项。你已有的内容不会被更改或删除。",
+      "confirmRemapped": "{{count}} 项 ID 冲突的内容将作为新副本添加。",
+      "confirmCancel": "取消",
+      "confirmImport": "导入",
+      "summaryLocal": "{{tasks}} 个任务 · {{lists}} 个清单 · {{completed}} 个已完成，全部在这个浏览器中。"
+    },
+    "restingFloaters": {
+      "title": "休眠浮动任务",
+      "toggle": "淡出长期未动的 Anytime 任务"
+    },
+    "sound": {
+      "title": "声音",
+      "toggle": "完成任务时播放声音"
+    },
+    "haptics": {
+      "title": "振动",
+      "toggle": "点按和拖动时振动"
+    },
+    "workspace": {
+      "title": "工作区",
+      "localTitle": "本地工作区",
+      "localDetail": "仅保存在此浏览器中 — 无需账号，也不会同步。",
+      "encryptedDetail": "已用你的密语加密。",
+      "unencryptedDetail": "未加密存储 —— 任何能使用此浏览器配置文件的人都能读取。",
+      "encrypt": "加密此工作区",
+      "encryptTitle": "加密此工作区？",
+      "encryptBody": "你的任务将在此浏览器中用只有你知道的密语加密。不会丢失任何东西 —— 任务还是那些任务，只是没有密语就无法读取。没有任何找回的办法：没有重置链接，没有备用密钥，也没有客服。请把密语记在安全的地方。",
+      "encryptPassphrase": "密语",
+      "encryptRepeat": "再次输入密语",
+      "encryptAcknowledge": "我明白，忘记这个密语就等于失去这个工作区。",
+      "encryptAction": "加密",
+      "encryptCancel": "取消",
+      "encryptDone": "此工作区现已加密。",
+      "encryptTooShort": "至少使用 {{count}} 个字符。",
+      "encryptMismatch": "两次输入的密语不一致。",
+      "encryptFailed": "无法加密此工作区。",
+      "leave": "退出本地工作区",
+      "delete": "删除本地数据",
+      "deleteConfirmTitle": "删除本地数据？",
+      "deleteConfirmBody": "这将永久删除保存在此浏览器中的所有任务、清单和已完成记录。服务器上没有副本 — 如果想保留，请先下载你的数据。",
+      "deleteConfirmCancel": "取消",
+      "deleteConfirmAction": "删除",
+      "deleteDone": "本地数据已删除。"
+    },
+    "about": {
+      "title": "关于",
+      "appVersion": "应用版本",
+      "server": "服务器",
+      "updateAvailable": "v{{version}} 可用"
+    },
+    "troubleshooting": {
+      "reset": "重置应用缓存",
+      "confirmTitle": "重置应用缓存？",
+      "confirmBody": "清除此设备的离线缓存并重新加载最新版本。您的任务、列表和登录状态不会受到影响。",
+      "confirmAction": "重置",
+      "confirmCancel": "取消",
+      "resetFailed": "无法重置缓存。请关闭并重新打开应用，然后重试。"
+    },
+    "privacy": {
+      "title": "隐私"
+    },
+    "serverTelemetry": {
+      "title": "服务器错误报告",
+      "toggle": "为此服务器和网页应用发送错误报告",
+      "description": "将此服务器自身的错误，以及少量请求的耗时，发送到 SENTRY_DSN 中设置的 Sentry 项目。网页应用遵循同一个开关。绝不包含任务、清单或账户信息。",
+      "helpLabel": "关于错误报告",
+      "stateOn": "开启",
+      "stateOff": "关闭",
+      "stateDetail": "由管理员为整个服务器决定。",
+      "updateFailed": "无法更新服务器设置，请重试。"
+    }
+  },
+  "crashReports": {
+    "card": {
+      "title": "发送错误报告？",
+      "intro": "出问题时，T'Day 可以发送一份简短的技术报告来帮助修复。一个回答适用于整个服务器及其所有使用者。",
+      "neverSent": "绝不发送：姓名、账户，或任何任务和清单内容。",
+      "share": "发送报告",
+      "notNow": "不发送",
+      "saveFailed": "保存失败，请重试。",
+      "readFaq": "阅读完整常见问题"
+    }
+  },
+  "summary": {
+    "untitledTask": "无标题任务",
+    "and": "和",
+    "windowMorning": "上午",
+    "windowAfternoon": "下午",
+    "windowNight": "晚上",
+    "window_morning": "上午",
+    "window_afternoon": "下午",
+    "night": "晚上",
+    "dueTonight": "今晚到期",
+    "dueTodayWindow": "今天{{window}}到期",
+    "dueTomorrowWindow": "明天{{window}}到期",
+    "dueYesterdayWindow": "昨天{{window}}到期",
+    "targetToday": "今天",
+    "targetTomorrow": "明天",
+    "targetYesterday": "昨天",
+    "targetOnDate": "{{date}}",
+    "dueOnDate": "{{target}}到期",
+    "dueOnDateWindow": "{{target}}{{window}}到期",
+    "taskPhrasePast": "{{title}}，{{due}}",
+    "taskPhrasePresent": "{{title}}，{{due}}",
+    "thenSeparator": "，然后",
+    "qualifierBoth": "两者都",
+    "qualifierAll": "全部",
+    "dayGroupedPast": "{{tasks}}，{{qualifier}}于{{target}}到期",
+    "dayGroupedPresent": "{{tasks}}，{{qualifier}}于{{target}}到期",
+    "startWith": "先从{{task}}开始。",
+    "nextUp": "接下来，{{tasks}}。",
+    "overdueCatchUp": "您还有 {{count}} 项逾期任务需要处理。",
+    "clearForNow": "目前一切就绪。此视图中没有需要处理的任务。",
+    "floaterClear": "这里暂时没有等着的事情。",
+    "floaterPileOne": "这里只等着一件事，没有日期。",
+    "floaterPileFew": "这里等着几件没有日期的事。",
+    "floaterPileSome": "这里攒下了不少没有日期的事。",
+    "floaterPileMany": "这里已经攒成一长串没有日期的事。",
+    "floaterStartWith": "先从{{title}}开始。",
+    "floaterPinnedOne": "你只置顶了 {{title}}。",
+    "floaterPinnedMany": "你置顶了 {{title}}，而且不止这一件。",
+    "floaterPriorityOne": "只有 {{title}} 是高优先级。",
+    "floaterPriorityMany": "{{title}} 是高优先级，而且不止这一件。",
+    "floaterMediumOne": "只有 {{title}} 是中优先级。",
+    "floaterMediumMany": "{{title}} 是中优先级，而且不止这一件。",
+    "floaterRestingOne": "其中一件已经好几个月没动过。",
+    "floaterRestingMany": "其中有几件已经好几个月没动过。",
+    "floaterRestingAll": "这里已经好几个月没动过了。",
+    "floaterRestingAllOne": "它已经好几个月没动过了。",
+    "title": "Summary",
+    "loading": "Generating summary…",
+    "error": "Couldn't generate a summary. Please try again.",
+    "sourceServer": "Server model",
+    "sourceLocal": "Local model",
+    "dateMonthDay": "{{month}}{{day}}日",
+    "dateMonthDayYear": "{{year}}年{{month}}{{day}}日",
+    "dueAnytime": "随时",
+    "monthsShort": [
+      "1月",
+      "2月",
+      "3月",
+      "4月",
+      "5月",
+      "6月",
+      "7月",
+      "8月",
+      "9月",
+      "10月",
+      "11月",
+      "12月"
+    ],
+    "weekNone": "本周还没有完成的任务。",
+    "weekCleared": "本周你完成了 {{count}} 项任务。",
+    "weekBusiest": "最忙的一天是{{day}}（{{count}}）。",
+    "weekOldest": "终于完成的最久任务：{{title}}。",
+    "weekdaysShort": [
+      "周一",
+      "周二",
+      "周三",
+      "周四",
+      "周五",
+      "周六",
+      "周日"
+    ]
+  },
+  "guide": {
+    "title": "使用方法与技巧",
+    "subtitle": "T'Day 能做的一切——显而易见的，和隐藏起来的。",
+    "searchPlaceholder": "搜索功能…",
+    "searchAria": "搜索指南",
+    "whatsNew": "新功能",
+    "tryIt": "试一试",
+    "clearSearch": "清除",
+    "noResults": "没有匹配项。换个词试试。",
+    "results": "{{count}} 条结果",
+    "badges": {
+      "hiddenGem": "隐藏惊喜",
+      "proTip": "高手技巧",
+      "new": "新增",
+      "server": "服务器模式"
+    },
+    "sections": {
+      "gettingStarted": "快速上手",
+      "captureAndDates": "记录与日期",
+      "gestures": "手势",
+      "organizing": "整理",
+      "recurrenceAndReminders": "重复与提醒",
+      "widgetsAndSurfaces": "小组件与展示界面",
+      "modesAndSync": "模式与同步",
+      "integrations": "集成",
+      "keyboardShortcuts": "键盘快捷键"
+    },
+    "topics": {
+      "root-feeds": {
+        "title": "已安排与随时",
+        "summary": "两个宁静的主信息流，可从底栏切换。",
+        "keywords": "已安排, 随时, 信息流, 底栏, 根, 导航, 标签页, scheduled, anytime, feed, tabs",
+        "body": "T'Day 有两个并列的信息流。“已安排”存放你今天及以后有日期的任务。“随时”存放浮动任务——没有日期的任务。从底部的底栏在两者之间切换，也可以从任意一个创建任务。"
+      },
+      "default-home-screen": {
+        "title": "默认主屏幕",
+        "summary": "选择 T'Day 启动后打开“已安排”还是“随时”。",
+        "keywords": "默认, 主屏幕, 启动, 已安排, 随时, 行为, 设置",
+        "body": "设置中有一个“行为”部分，可以选择启动时先打开哪个信息流——“已安排”或“随时”。这只决定启动时看到的画面；底栏仍然可以随时在两者间切换。"
+      },
+      "create-task": {
+        "title": "创建任务",
+        "summary": "几下点按即可添加一个已安排的任务或一个无日期的浮动任务。",
+        "keywords": "创建, 添加, 新建, 任务, 加号, 悬浮按钮, 撰写, create, add, new, task",
+        "body": "点按创建按钮来添加任务。给它一个标题，如果有日期，再加上截止时间。不填日期，它就会变成随时信息流里的一个浮动任务。",
+        "tip": "直接在标题里输入日期——T'Day 会替你识别。参见“输入日期”。"
+      },
+      "nlp-date-syntax": {
+        "title": "输入日期",
+        "summary": "把日期写进标题，T'Day 就会替你安排好时间。",
+        "keywords": "自然语言, 日期, 明天, 下周, 解析, 快捷, 智能, 本地识别, natural language, tomorrow, nlp",
+        "body": "无需选择器。直接在标题里输入日期（\"tomorrow 3pm\"）、重复（\"every day\"、\"weekly\"、\"every weekday\"）或优先级（\"!\"、\"!!\"，或结尾的 \"high\"/\"low\"）。T'Day 在设备上解析——无需账户或网络——高亮它理解的日期，并自动填入日程、重复和优先级。",
+        "example": "牙医 tuesday 3pm every weekday !!"
+      },
+      "calendar-views": {
+        "title": "日历视图",
+        "summary": "按月、周或日查看你已安排的任务。",
+        "keywords": "日历, 月, 周, 日, 日程, 视图, 日期, calendar, month, week, day, agenda",
+        "body": "打开日历，按月、周或日查看已安排的任务。滑动或使用箭头在不同时间段之间切换；右上角的按钮能让你回到今天而不改变视图。"
+      },
+      "priorities": {
+        "title": "优先级",
+        "summary": "用低、中、高标记重要程度。",
+        "keywords": "优先级, 高, 中, 低, 重要, 紧急, 标记, priority, high, medium, low",
+        "body": "给任务设置优先级，标明它有多重要。优先级会在任务上显示为一个小小的强调色圆点，帮你排出哪些事最值得先关注。"
+      },
+      "pin-task": {
+        "title": "置顶任务",
+        "summary": "让重要任务始终留在列表顶部。",
+        "keywords": "置顶, 已置顶, 固定, 顶部, 重要, 保留, pin, top",
+        "body": "置顶一个任务，让它固定在信息流顶部，位于常规顺序之上。取消置顶后，它会回到原来的位置。"
+      },
+      "swipe-actions": {
+        "title": "滑动操作",
+        "summary": "在任务行上滑动，无需打开即可快速操作。",
+        "keywords": "滑动, 手势, 滑, 完成, 删除, 快捷, 行, swipe, gesture, complete, delete",
+        "body": "在任务行上滑动即可显示快捷操作——完成它，或移除它——完全不用打开任务。",
+        "tip": "已完成的任务会显示几秒钟的撤销提示，所以误滑绝不会成为定局。"
+      },
+      "copy-task-text": {
+        "title": "复制任务详情",
+        "summary": "将任务的标题、备注、截止日期和优先级复制为文本。",
+        "keywords": "复制, 剪贴板, 分享, 文本, 滑动",
+        "body": "滑动任务并点击复制——或在桌面端使用复制按钮——即可将其标题、备注、截止日期和优先级复制为纯文本，随时粘贴到任何地方。",
+        "tip": "方便将任务粘贴到消息、邮件或其他应用中，无需重新输入。"
+      },
+      "long-press-actions": {
+        "title": "长按任务",
+        "summary": "按住不放以查看更多选项并开始重新排序。",
+        "keywords": "长按, 按住, 快捷菜单, 选项, 重新排序, 拖动, long press, hold, reorder, drag",
+        "body": "按住一个任务不放，打开它的选项，或者把它拿起来拖到列表中的新位置。"
+      },
+      "drag-reorder": {
+        "title": "拖动重新排序",
+        "summary": "把任务拖成你想要的顺序。",
+        "keywords": "拖动, 重新排序, 移动, 排序, 顺序, 排列, drag, reorder, sort",
+        "body": "你的列表会保持你设定的顺序。上下拖动任务，按照你思考的方式来安排你的一天。"
+      },
+      "swipe-sheet-away": {
+        "title": "向下滑动关闭卡片",
+        "summary": "把新建任务卡片往下拉即可关闭。",
+        "keywords": "滑动, 拖动, 下拉, 关闭, 取消, 卡片, 手柄, 手势, 向下, swipe, drag, dismiss, sheet",
+        "body": "新建任务卡片顶部的小横条表示它可以向下拉。拖动时卡片会跟随手指；下拉约四分之一后松手就会关闭，效果与点击它后面的暗色区域完全相同。快速轻甩同样有效——判断依据是你正要去往何处，而不是松手时停在哪里。中途改主意的话，卡片会弹回原位。",
+        "tip": "如果卡片内容可以滚动，请从卡片顶部拖动：中间部分属于列表。"
+      },
+      "sound-and-vibration": {
+        "title": "声音与振动",
+        "summary": "关闭完成提示音、振动，或两者都关。",
+        "keywords": "声音, 静音, 音量, 音频, 振动, 震动, 触感, 反馈, 无障碍, sound, mute, vibration, haptics",
+        "body": "勾选任务时会响一声轻快的提示音；在手机上，应用还会以轻微振动回应你的点按和拖动。设置里为两者各有一个开关——关掉其中任何一个，其余一切照旧。",
+        "tip": "开关属于这个浏览器而不是你的账号，所以安静的笔记本和会振动的手机可以各有各的答案。"
+      },
+      "reduce-motion": {
+        "title": "减弱动效",
+        "summary": "只关闭 T'Day 的动画，不改动手机的其他设置。",
+        "keywords": "动效, 动画, 减弱, 无障碍, 静止, 过渡, 眩晕",
+        "body": "设置里有一个「减弱动效」开关。打开后，T'Day 不再播放自己编写的动画：任务会一次完成勾选、划线并消失，而不是分三拍进行；滑动提示和彩纸不再出现；空白日子的插图直接就在那里，而不是升上来。每一个只为遮掩这些动画而存在的等待也随之取消，所以应用只会更快，不会更慢。页面之间的滑动和升起的面板属于 Android 自己的动画，不是 T'Day 的，它们仍然听从手机的动画设置。",
+        "tip": "它只会减少动效。如果 Android 自身的动画设置已经关闭，T'Day 本来就是静止的，开关会如实说明，而不是提议把动画改回来。"
+      },
+      "floaters-vs-todos": {
+        "title": "浮动任务与已安排任务",
+        "summary": "无日期任务住在“随时”里；有日期任务住在“已安排”里。",
+        "keywords": "浮动任务, 随时, 未安排, 无日期, 待办, 已安排, 区别, floater, anytime, todo",
+        "body": "有截止日期的任务会出现在“已安排”和日历里。浮动任务没有日期——它安静地在你的随时信息流里等待，直到你准备好。用浮动任务来放那些“将来某天”要做、又不该扰乱今天的事。",
+        "tip": "浮动任务从不出现在日历上——那片空间只留给有日期的事。"
+      },
+      "promote-and-float": {
+        "title": "升级与放漂",
+        "summary": "把漂浮任务安排成正式任务，或让搁置的任务重新漂浮。",
+        "keywords": "升级, 安排漂浮任务, 降级, 放漂, 转换, 随时, 移动, 逾期",
+        "body": "当某个漂浮任务准备变成正式工作时，使用它的“安排”操作：选好时间后，它会作为有日期的任务进入“已安排”信息流。反过来也可以——一直拖延的逾期任务可以安静地漂浮：将它降级后，它会不带日期地回到“随时”，并保留标题、备注和优先级。",
+        "tip": "重复任务不能漂浮——若想让它没有日期，请先结束重复系列。"
+      },
+      "quick-defer": {
+        "title": "快速推迟",
+        "summary": "一键把任务移到今天晚些时候、今晚、明天或下周。",
+        "keywords": "推迟, 延后, 稍后, 今晚, 明天, 下周, 改期",
+        "body": "当任务需要挪动但不用挪太远时，不必打开日期选择器：“推迟”操作提供今天晚些时候（+3 小时）、今晚（19:00）、明天早上（09:00）和下周（周一 09:00）四个一键选项。效果与编辑表单的修改完全相同——只是更快。",
+        "tip": "重复任务请在编辑表单中按单次推迟，因此一键菜单不会出现在它们上面。"
+      },
+      "day-done": {
+        "title": "今日完成",
+        "summary": "完成今天的所有任务，“今天”页面会安静地庆祝。",
+        "keywords": "今日完成, 全部完成, 完成, 做完了, 今天为空",
+        "body": "当今天安排的每项任务都已完成——而不仅仅是没有任务——“今天”页面会把“无任务”提示换成平静的完成状态：柔和的双勾、“今天的任务全部完成”字样和日期。没有连胜，没有积分，只有真正完成一天的小小回报。"
+      },
+      "floater-lists": {
+        "title": "浮动任务列表",
+        "summary": "把你的随时任务归入各自的列表。",
+        "keywords": "浮动任务列表, 随时, 分组, 列表, 分类, 购物, 打包, floater list, group, category",
+        "body": "把浮动任务整理进不同的列表——采购、打包、点子——每个都有自己的名称、颜色和各自的完成记录。"
+      },
+      "scheduled-lists": {
+        "title": "已安排任务的列表",
+        "summary": "把有日期的任务归入命名的、带颜色的列表。",
+        "keywords": "列表, 项目, 分组, 颜色, 已安排, 分类, list, project, group, color",
+        "body": "给已安排的任务分配一个列表，让相关的事聚在一起。列表带有名称和颜色，还可以按其筛选。"
+      },
+      "completed-history": {
+        "title": "完成记录",
+        "summary": "你完成的一切，都替你留存下来供回顾。",
+        "keywords": "已完成, 完成, 历史, 完成记录, 归档, 过往, completed, done, history, archive",
+        "body": "完成的任务不会被丢弃——它们会转入你的完成记录，按天分组，让你看到自己实际做成了哪些事。"
+      },
+      "overdue-view": {
+        "title": "逾期",
+        "summary": "一个专门存放已过时限任务的地方。",
+        "keywords": "逾期, 迟到, 过期, 错过, 顺延, 积压, overdue, late, past due, backlog",
+        "body": "截止时间已过的任务会汇集到逾期视图里，这样什么都不会悄悄溜走。等你准备好，再给它们重新安排时间。"
+      },
+      "morning-sweep": {
+        "title": "晨间清理",
+        "summary": "逐张卡片处理积压的任务。",
+        "keywords": "清理, 逾期, 分流, 积压, 赶上进度, 待办堆积, 早晨",
+        "body": "落后不再让人焦虑：逾期页面上的“清理”按钮会带你逐张卡片处理积压任务——今天、明天、选择日期、变为漂浮任务或放手。赶时间？“全部移到今天”一次移动所有任务，只需一次撤销。",
+        "tip": "重复任务不参与清理；它们的单次安排请在编辑表单中改期，以保持系列完整。"
+      },
+      "search-tasks": {
+        "title": "搜索你的任务",
+        "summary": "按标题、备注或列表名称找到任何任务。",
+        "keywords": "搜索, 查找, 筛选, 检索, 查询, search, find, filter, query",
+        "body": "使用搜索栏，按标题、描述或列表名称即时筛选你的任务——无需滚动查找。"
+      },
+      "recurrence-presets": {
+        "title": "重复任务",
+        "summary": "让任务每天、每周或按更多规律重复。",
+        "keywords": "重复, 循环, 周期, 每天, 每周, 每月, 安排, repeat, recurring, weekly, rrule",
+        "body": "把任务设为重复，它就会按自己的节奏回来。从预设中挑选——每天、工作日、每周或每月——完成其中一次，系列里的其余次数依旧保留。",
+        "example": "给植物浇水 · 每周"
+      },
+      "reminders": {
+        "title": "提醒",
+        "summary": "在任务到期前收到通知。",
+        "keywords": "提醒, 通知, 提示, 闹钟, 通知我, 提前, reminder, notification, alert",
+        "body": "给已安排的任务添加提醒，你的设备会在恰当的时间通知你。提醒在你的设备上安排，所以即便在本地模式下也能用。",
+        "tip": "提醒的提前时间选项会因任务而略有不同——挑一个能给你足够预留时间的。"
+      },
+      "reminder-snooze": {
+        "title": "暂停提醒",
+        "summary": "提醒通知带有“暂停1小时”和“今晚”操作。",
+        "keywords": "暂停, 提醒, 通知, 稍后, 今晚, 推迟提醒",
+        "body": "提醒来得不巧时，无需打开应用：“暂停1小时”会在一小时后重新送达同一条提醒，“今晚”则把任务本身移到今天 19:00。“今晚”适用于一次性任务——重复任务请在应用内改期，以保持系列完整。",
+        "tip": "暂停只是推迟通知；在你移动任务之前，它仍保留原定时间。"
+      },
+      "day-ahead": {
+        "title": "今日摘要",
+        "summary": "每天早晨一条安静的通知，告诉你今天的任务数量。",
+        "keywords": "摘要, 今日, 早晨, 每日通知, 概览",
+        "body": "在设置中开启并选择时间：每天早晨一条通知告诉你今天的安排——“今天 4 项任务，2 项积压”——点开即进入“今天”页面；有积压时则直接进入晨间清理。完全在设备本地运行：任何数据都不会离开你的手机。",
+        "tip": "没有任务的日子摘要保持安静——没有消息就是好消息。"
+      },
+      "push-notifications": {
+        "title": "网页提醒（推送）",
+        "summary": "让网页应用在任务到期时通知你，哪怕它已关闭。",
+        "keywords": "推送, 通知, 网页, 浏览器, 提醒, 订阅, 到期, push, web, browser, vapid",
+        "body": "在网页应用里，你可以从设置中开启推送通知。之后，你自托管的服务器会在任务截止时间到来时发送提醒——这样即使标签页已关闭，网页应用也能找到你。你可以直接从通知里完成任务。"
+      },
+      "notifications": {
+        "title": "通知",
+        "summary": "一个开关决定 T'Day 是否可以打扰你。",
+        "keywords": "通知, 权限, 开关, 允许, 静音, 提醒, 摘要, 系统设置",
+        "body": "设置里只有一个通知开关，所有送达你的内容都要经过它——任务提醒和次日摘要。关闭它会清空队列，而不是把它静音，所以重新打开时不会有内容延迟送达。还需要系统权限：只要设备上 T'Day 的通知被屏蔽，这个开关就保持关闭，并提示你打开系统设置。",
+        "tip": "两半都必须打开。缺少系统权限时，无论你在这里如何设置，开关都会显示为关闭。"
+      },
+      "home-widget": {
+        "title": "主屏幕小组件",
+        "summary": "不打开应用也能看到今天的任务。",
+        "keywords": "小组件, 主屏幕, 一瞥, 今天, 锁屏, widget, home screen, today, lock screen",
+        "body": "把 T'Day 小组件添加到主屏幕，随手一瞥就能看到今天的任务。点按小组件会把应用打开到相应的位置。"
+      },
+      "widget-list-selection": {
+        "title": "为小组件选择一个列表",
+        "summary": "让小组件只显示某一个列表，而不是整个动态。",
+        "keywords": "小组件, 列表, 配置, 编辑小组件, 按列表, 主屏幕, ios, widget, list",
+        "body": "长按 T'Day 小组件并选择「编辑小组件」，即可精确指定它显示哪个列表——可以是你的任意计划列表或浮动任务列表。计划列表会显示截止时间并标出逾期任务；浮动任务列表则显示一个没有截止时间的开放列表。若不设置，小组件会继续显示完整的「今天」或「浮动任务」动态。",
+        "tip": "添加多个小组件，每个指向不同的列表，就能在主屏幕上同时看到它们。"
+      },
+      "list-widgets": {
+        "title": "列表小组件",
+        "summary": "第三种小组件，显示你选择的一个内置视图或列表。",
+        "keywords": "小组件, 主屏幕, 列表, 设置, 选择器, 浮动任务, 计划任务, 添加",
+        "body": "除了「今天」和「浮动任务」，还有一个列表小组件。放置后它会询问要显示什么——内置的「已安排」和「逾期」视图，或任意计划列表或浮动任务列表。之后它只显示该选择，点它的 + 会添加任务：若你选了列表，则直接加入该列表。再放一个即可显示另一个视图或列表；每个小组件都保留自己的设置。",
+        "tip": "要把列表小组件切换到另一个列表，长按它并选择「编辑」（iPhone 上为「编辑小组件」）。"
+      },
+      "widget-quick-add": {
+        "title": "从小组件快速添加",
+        "summary": "直接从小组件开始一个新任务。",
+        "keywords": "小组件, 快速添加, 创建, 快捷方式, 主屏幕, widget, quick add, create, shortcut",
+        "body": "小组件上有一个创建按钮，所以你可以直接从主屏幕记录任务，无需先打开应用——而且在本地模式下也能用。"
+      },
+      "interactive-widgets": {
+        "title": "在小组件上直接完成",
+        "summary": "在主屏幕小组件上直接勾掉任务。",
+        "keywords": "小组件, 完成, 勾选, 主屏幕, 交互, 点按",
+        "body": "今日任务和浮动任务的小组件现在支持点按：点一下任意一行开头的圆环，无需打开应用即可完成该任务。这一行会立即消失，完成操作也会照常同步——离线时的点按会先排队，联网后自动补上。",
+        "tip": "点错了？在应用里打开完成记录，从那里恢复任务即可。"
+      },
+      "today-widget-progress": {
+        "title": "今日小组件一目了然",
+        "summary": "看看今天完成了多少、哪些已逾期、接下来是什么。",
+        "keywords": "小组件, 今天, 进度, 圆环, 完成, 逾期, 明天, 日期, 主屏幕",
+        "body": "今日小组件以日期和进度环开头：今天到期的任务中已完成了多少。逾期的任务单独列在今天任务的下方，并标出原定日期。今天没有到期任务时，小组件会显示下一个有任务的日子。勾选任务后，它会先保持勾选和划线状态片刻，然后再消失。",
+        "tip": "进度环只统计今天到期的任务。完成其他日子的任务不会让它增加。"
+      },
+      "share-into-tday": {
+        "title": "分享到 T'Day",
+        "summary": "把任意应用里的文字直接变成一条新任务。",
+        "keywords": "分享, 分享面板, 发送到, 捕获, 导入, 来自其他应用",
+        "body": "在别的应用里看到想记下的内容？打开系统分享面板选择 T'Day，分享的文字就会进入新任务表单——分享网页时，标题会成为任务名，链接则收进备注。在 Android 和网页版中表单会立即打开；在 iOS 上分享会即时保存，下次打开应用时会看到已填好的表单。",
+        "tip": "分享带有日期的文字，解析器会自动帮你设置截止时间。"
+      },
+      "android-shortcuts": {
+        "title": "快捷设置磁贴与快捷方式",
+        "summary": "从快捷设置或长按应用图标直接添加任务。",
+        "keywords": "快捷设置, 磁贴, 快捷方式, 长按, 应用图标, 快速添加",
+        "body": "Android 上有两条快车道。把 T'Day 磁贴加入快捷设置（编辑磁贴网格后拖入），在任何地方点一下就能打开新任务表单——哪怕正在用别的应用。长按应用图标还有快捷方式：新任务、今日、浮动任务，直达目的地。",
+        "tip": "快捷方式可以拖到主屏幕变成独立图标——一个专属的一键新任务按钮。"
+      },
+      "carplay": {
+        "title": "CarPlay 上的 T'Day",
+        "summary": "开车时安全地一瞥并记录任务。",
+        "keywords": "carplay, 车, 开车, 语音, 苹果, 免提, car, driving, voice, hands free",
+        "body": "在 CarPlay 上，T'Day 会显示一个专为车内设计、一瞥即知的精简列表，让你无需伸手去拿手机，就能看看接下来要做什么，或用语音添加任务。"
+      },
+      "android-car": {
+        "title": "T'Day 车载界面",
+        "summary": "一个为车内设计的应用内简化界面。",
+        "keywords": "车, 开车, 安卓, 语音, 免提, 界面, car, driving, android, voice, screen",
+        "body": "T'Day 内置一个简化的车载界面，带有大号点按目标和语音记录，让你在途中也能以最少的麻烦添加任务。"
+      },
+      "local-mode": {
+        "title": "本地模式",
+        "summary": "完全离线使用 T'Day，无需服务器或账户。",
+        "keywords": "本地模式, 离线, 私密, 无账户, 无服务器, 设备本地, local mode, offline, private",
+        "body": "本地模式把一切都留在你的设备上——不登录、不用服务器、不上传。这是私密使用 T'Day 的一流方式，你的本地数据绝不会自行被发送到任何地方。 在浏览器里，它保存在该浏览器自己的存储中，因此清除 Cookie 和网站数据也会一并清除这个工作区 — 想保留就先导出。 如果你开启崩溃报告，只有在出现故障时才会发送一份简短的技术报告，绝不包含你的任务或列表。",
+        "tip": "仅限服务器的功能在这里会标注“服务器模式”徽标，让你知道登录后会有哪些变化。"
+      },
+      "server-mode": {
+        "title": "服务器模式",
+        "summary": "通过你自己的私有服务器在多台设备间同步。",
+        "keywords": "服务器模式, 同步, 自托管, 账户, 登录, 设备, 实时, server mode, sync, self hosted",
+        "body": "登录你自托管的服务器，即可在多台设备间实时同步任务。写入会立即在你的设备上生效，再回放到服务器，所以即使网络不稳，应用依然流畅。"
+      },
+      "offline-sync": {
+        "title": "离线同步",
+        "summary": "离线也能继续工作；重新联网后改动会回放。",
+        "keywords": "离线, 同步, 待处理, 队列, 回放, 连接, 冲突, offline, sync, queue, replay",
+        "body": "在服务器模式下，你的改动会先保存在本地，离线时进入队列。一旦重新联网，T'Day 就会按顺序把它们回放到服务器。"
+      },
+      "export-your-data": {
+        "title": "导出你的数据",
+        "summary": "把所有内容下载为一个可携带的文件，随时都能带回来。",
+        "keywords": "导出, 导入, 下载, 备份, 我的数据, 可携带, 恢复, 迁移",
+        "body": "在设置里，你可以把整个账户——任务、清单、完成记录和偏好——下载为一个 JSON 文件。把它导入到另一个 T'Day（服务器，或本地模式下的设备），所有内容都会作为新条目进入：导入只会新增、绝不覆盖，所以已有的内容不会丢失。在服务器上，描述会被解密写入文件，即使你换到使用不同密钥的服务器也依然可读。",
+        "tip": "这个文件就是普通、可读的 JSON——留一份副本当作个人备份。"
+      },
+      "local-to-server-migration": {
+        "title": "从本设备迁移到服务器",
+        "summary": "切换到服务器模式时，把设备上的任务一起带走。",
+        "keywords": "迁移, 本地到服务器, 迁移数据, 切换模式, 上传, 登录, 转移",
+        "body": "先用本地模式，后来又搭了服务器？绝不会自动上传任何内容。迁移数据的方法：先在设置里导出，登录你的服务器，然后在那里导入文件。任务、清单和历史会在你主动的一步里迁移过去——时机由你决定，在此之前设备上的数据保持原样。",
+        "tip": "导入后，先留着导出的文件，等确认全部到齐再删——它同时也是一份备份。"
+      },
+      "crash-reports": {
+        "title": "崩溃与问题报告",
+        "summary": "默认关闭。由谁决定取决于平台。",
+        "keywords": "崩溃, 错误, 报告, 问题报告, 隐私, 诊断, 遥测, 卡死, 无响应, 内存, 分析, 统计, crash, error, report, sentry, privacy, diagnostics, telemetry, hang, anr, memory, analytics",
+        "body": "崩溃与问题报告是可选的，默认关闭。由谁决定因平台而异：在网页版中，管理员的一个回答适用于整个服务器——包括网站、服务器自身的错误以及所有使用者——不会逐个询问用户。在 Android 和 iOS 上，每个人都会在登录流程中被询问，因此回答是按设备保存的，并且每次登录都会重新询问。它的作用类似 Crashlytics：目的是修复缺陷，而不是衡量你如何使用应用。一切正常运行时，你的设备上没有使用情况分析，没有会话跟踪，也没有性能监控。",
+        "body2": "一份报告包含：应用版本、你的设备型号和系统版本（或浏览器及其版本）、错误以及它在代码中发生的位置、出错前的几个带标签的步骤、不含任何 ID 的屏幕或 API 路由名称、状态码，以及在移动端上大致的设备状况，例如可用内存、电量和是否联网。报告还包含你的时区偏移（例如 UTC+2）和语言，因为日期对任务规划应用至关重要。",
+        "body3": "报告绝不包含：你的姓名、用户名、电子邮件或任何账户信息；你的 IP 地址或位置；你的服务器地址；任务、列表或备注的标题和内容；你的数据库内容；密码、Cookie 或令牌；屏幕截图或录屏。错误消息在发送前，会先在你的设备上清除其中的地址、标识符和引用的文字，但这只是尽力而为。报告不带任何用户 ID，因此无法追溯到你，也无法按个人删除。",
+        "body4": "只有在出现故障、并且该平台已开启报告时才会发送报告：网页版需要管理员为服务器开启，移动端需要你在设备上同意。如果报告关闭期间出现故障，不会存储任何内容，也不会排队等待；之后再开启，也不会补发更早的故障。哪些情况算作故障取决于平台：Android 会报告崩溃、卡死和内存不足导致的崩溃；iOS 会报告崩溃、卡死，以及系统因应用占用内存过多而结束应用；网页版只报告意外错误。T'Day 不会检测内存泄漏。",
+        "body5": "报告会通过崩溃报告服务 Sentry 发送给 T'Day 的维护者。报告保留 30 天，仅用于修复缺陷，绝不出售，也不会共享用于广告。报告直接发送到 Sentry，不经过你的服务器。与任何在线服务一样，Sentry 能看到每个连接的网络地址，但已设置为不存储该地址；网页版还会告知 Sentry 该报告来自哪个网站。如果你运行自己的服务器，同一个管理员回答也会覆盖服务器自身的错误报告，以及一小部分请求的耗时；其中绝不包含你的任务。没有报告端点的版本（例如你自行构建的版本）不会显示此设置。",
+        "step0": "打开“设置”。",
+        "step1": "在网页版中，管理员在“隐私”中关闭“服务器错误报告”；在移动端，由你自己关闭“崩溃与问题报告”。",
+        "step2": "报告会立即停止发送，所有等待发送的内容都会被删除。",
+        "tip": "拒绝不会有任何损失。你可以随时在“设置 → 隐私”中更改回答——网页版由管理员更改，移动端由你自己更改。技术细节：T'Day 仓库中的 docs/TELEMETRY.md。"
+      },
+      "in-app-update": {
+        "title": "应用内更新",
+        "summary": "在应用内安装最新的 T'Day 版本。",
+        "keywords": "更新, 升级, 版本, 安装, apk, 最新版本, update, upgrade, install, latest release",
+        "body": "当有新版本可用时，T'Day 可以从“最新版本”界面替你下载并安装，让你无需四处找文件就能保持最新。"
+      },
+      "api-key-homarr": {
+        "title": "API 密钥与 Homarr",
+        "summary": "用个人 API 密钥把你的任务显示在仪表盘上。",
+        "keywords": "api密钥, homarr, 仪表盘, 集成, 令牌, 小组件, 家庭实验室, api key, dashboard, token",
+        "body": "在设置中生成个人 API 密钥，即可在 Homarr 等仪表盘上显示你的任务。为仪表盘选择只读密钥，使其永远无法修改你的数据；为密钥命名以便区分，并妥善保密。你可以创建多个密钥，并分别撤销其中任意一个。",
+        "step0": "打开设置，找到 API 密钥卡片。",
+        "step1": "为仪表盘选择只读权限，生成密钥并复制——只会显示一次。",
+        "step2": "把它粘贴到你仪表盘的 T'Day 小组件里。"
+      },
+      "ai-summary": {
+        "title": "任务摘要",
+        "summary": "对你一天的简短、宁静的概览——可选配本地 AI。",
+        "keywords": "摘要, ai, ollama, 概览, 摘要, 本地, 私密, summary, overview, digest, local",
+        "body": "T'Day 可以用一两句话概括你的一天。配上本地的 Ollama 模型，读起来自然流畅；没有它，则会退回到一段温暖、确定的回顾——无论哪种方式，都不会有任何东西离开你的服务器。",
+        "tip": "摘要从不依赖云端 AI 服务——要么本地生成，要么就没有。"
+      },
+      "keyboard-submit": {
+        "title": "用键盘提交",
+        "summary": "无需动鼠标即可保存任务。",
+        "keywords": "键盘, 快捷键, 提交, 回车, 保存, 热键, keyboard, shortcut, submit, enter",
+        "body": "在网页应用里，你可以直接用键盘提交任务表单，让快速记录不打断你的节奏。",
+        "kbd": "Ctrl / ⌘ + Enter"
+      },
+      "keyboard-shortcuts": {
+        "title": "键盘快捷键",
+        "summary": "用键盘操作网页版：快速添加、命令面板、快捷键总览。",
+        "keywords": "键盘, 快捷键, 热键, 命令面板, cmd+k, 快速添加",
+        "body": "网页版有一层全局键盘操作。在任何地方按 N 新建任务，按 Ctrl / ⌘ + K 打开命令面板——输入即可跳转到任意视图或清单，或执行操作——按 ? 查看快捷键总览。在输入框里打字时按键会被忽略。",
+        "tip": "在面板中，方向键移动选择，Enter 执行。",
+        "kbd": "N",
+        "kbd2": "Ctrl / ⌘ + K",
+        "kbd3": "?"
+      },
+      "device-calendar-sync": {
+        "title": "在设备日历中查看任务",
+        "summary": "将带日期的任务同步到手机上的 T'Day 日历。",
+        "keywords": "日历, 设备日历, 同步, google 日历, apple 日历, eventkit, 手机日历, 镜像",
+        "body": "开启后，每个带日期的任务都会被复制到手机上一个名为 T'Day 的日历中，与其他日历并列显示。Anytime 任务不会包含在内，因为它们没有日期。同步是单向的：T'Day 写入该日历，因此你在日历中的修改会在任务下次变更时被覆盖。",
+        "step0": "在设置中开启“将安排的任务添加到我的日历”。",
+        "step1": "当手机询问时，允许访问日历。",
+        "step2": "打开日历应用 —— 带日期的任务就在 T'Day 日历里。"
+      },
+      "unifiedpush": {
+        "title": "UnifiedPush（Android）",
+        "summary": "无需 Google，通过你自己的分发器接收服务器推送。",
+        "keywords": "unifiedpush, ntfy, 推送, 通知, 自托管, 分发器, fcm",
+        "body": "在服务器模式下，T'Day 通过 UnifiedPush 而非 Google 的 FCM 发送服务器通知——数据留在你自己的服务器和分发器上。无需手动开启：安装一个分发器应用（如 ntfy），T'Day 会自动向它注册。本地提醒不受影响，照常工作。",
+        "step0": "从应用商店安装 UnifiedPush 分发器，例如 ntfy。",
+        "step1": "打开 T'Day，它会找到分发器并自动注册。若安装了两个或更多，设置 → 提醒会询问使用哪一个。",
+        "step2": "要停止服务器推送，卸载分发器或退出登录——本地提醒不受影响。"
+      },
+      "repeat-suggestions": {
+        "title": "重复建议",
+        "summary": "T'Day 发现你按节奏完成的任务，并建议将其设为重复。",
+        "keywords": "重复, 建议, 循环, 节奏, 习惯, 模式, 智能, 自动",
+        "body": "当你以稳定节奏反复完成同一任务——每周浇花、每月付房租——T'Day 会注意到，并提供一键芯片将其设为重复。它只读取设备上的已完成历史，任何数据都不会离开设备。",
+        "tip": "不需要？点 ✕，该标题不再询问。"
+      },
+      "week-in-review": {
+        "title": "本周回顾",
+        "summary": "周日为你平静地回顾本周完成的任务。",
+        "keywords": "周, 回顾, 总结, 周日, 已完成, 复盘",
+        "body": "每逢周日，T'Day 会在你的“今天”信息流中展示简短回顾：本周完成了多少任务、最忙的一天，以及你终于完成的最久任务。它由你的完成历史生成。",
+        "tip": "没心情？关掉它，下周才会再出现。"
+      },
+      "quiet-hours": {
+        "title": "免打扰时段",
+        "summary": "夜间暂缓提醒，睡觉时不会有任何响动。",
+        "keywords": "免打扰, 时段, 勿扰, 夜间, 睡眠, 提醒, 计划",
+        "body": "设置一个时段——例如 22:00 到 07:00——凡是会在其中触发的提醒都会保留到时段结束。仅在设备本地生效；本地提醒会等到早晨。",
+        "tip": "时段可跨越午夜（22:00 → 07:00），计算会自动处理。"
+      },
+      "resting-floaters": {
+        "title": "休眠浮动任务",
+        "summary": "长期未动的 Anytime 任务会淡出并休眠，让列表保持平静。",
+        "keywords": "休眠, 浮动, anytime, 淡出, 变暗, 老化, 闲置, 旧, 平静",
+        "body": "一个月未触碰的 Anytime 任务会轻轻淡出，三个月后会聚到底部平静的“休眠”分组。任何任务都不会被删除——它们只是不再争夺注意力，直到你再回来。",
+        "tip": "这只是显示提示；轻点即可唤醒浮动任务。"
+      },
+      "reusable-lists": {
+        "title": "可重用清单",
+        "summary": "重置清单以再次使用——收拾行李、家务、购物。",
+        "keywords": "可重用, 重置, 清单, 浮动, 重复, 模板, 再次",
+        "body": "将某个 Anytime 清单标记为可重用，就会出现“重置”。一键取消所有勾选，即可再次使用同一清单，无需重新创建。",
+        "step0": "打开一个浮动清单，在其设置中开启“可重用”。",
+        "step1": "照常逐项勾选完成。",
+        "step2": "再次需要时，点“重置”即可取消全部勾选。"
+      },
+      "brain-dump": {
+        "title": "想法速记",
+        "summary": "把脑子里的都倒进一个框；T'Day 会整理成任务。",
+        "keywords": "想法速记, 捕获, 粘贴, 拆分, 任务, 审阅, gtd",
+        "body": "当脑子塞满时，打开想法速记（⌘K → 想法速记），把所有内容粘贴进来——每行一个想法、项目符号或“然后”——T'Day 会拆成候选任务。你写的日期变成已排期任务，其余变成 Anytime 浮动项。解析在你自己的服务器上进行，绝不臆造。",
+        "step0": "打开命令面板（⌘K）并选择想法速记。",
+        "step1": "粘贴想法并点“拆成任务”。",
+        "step2": "取消不需要的，然后点“添加”。"
+      },
+      "task-steps": {
+        "title": "步骤",
+        "summary": "把任务拆分成一个扁平的清单，看着它逐渐完成。",
+        "keywords": "步骤, 清单, 子任务, 拆分, 进度, 复选框, 子步骤",
+        "body": "打开一个任务并添加步骤，即可将其拆分成扁平的清单——没有嵌套，也没有单独的日期。像 2/5 这样的小计数器显示你的进度，而整个任务在你的一天中仍然只占一行。随着推进逐个勾选步骤；任务完成后，其步骤会随历史记录一并保留。",
+        "step0": "打开一个任务，在步骤下添加你的第一个步骤。",
+        "step1": "按需添加任意数量，然后拖动重新排序。",
+        "step2": "勾选它们——2/5 计数器会跟踪你的进度。"
+      },
+      "focus-filters": {
+        "title": "专注过滤",
+        "summary": "让 iOS 专注模式决定「今天」列表中显示哪些清单。",
+        "keywords": "专注, 过滤, ios, 工作, 个人, 勿扰, 清单, 隐藏, 集中",
+        "body": "T'Day 可接入 iOS 专注模式。选择一个专注模式（如「工作」或「个人」），指定它应显示哪些清单；当该专注模式开启时，你的「今天」列表和主屏幕小组件会悄悄隐藏其余内容。关闭专注模式后，所有任务都会回来——不会删除任何内容。",
+        "step0": "在 iPhone 上打开「设置」▸「专注模式」并选择一个专注模式。",
+        "step1": "添加一个专注过滤器并选择 T'Day，然后挑选你的清单。",
+        "step2": "开启专注模式——「今天」和小组件现在只显示这些清单。"
+      },
+      "apple-watch": {
+        "title": "Apple Watch",
+        "summary": "把「今天」的任务戴在手腕上，从 iPhone 实时镜像同步。",
+        "keywords": "apple watch, 手表, 手腕, 复杂功能, watchos, 今天, 一瞥, 镜像",
+        "body": "在 Apple Watch 上安装 T'Day，今天的任务便随你戴在手腕上。手表会镜像 iPhone 生成的同一份「今天」列表——无需单独登录——表盘上的复杂功能会显示还剩多少任务，让你无需打开应用即可一瞥了然。每当 iPhone 同步时，它都会更新。",
+        "step0": "在 iPhone 上打开 Watch 应用并安装 T'Day。",
+        "step1": "在表盘上添加 T'Day 复杂功能。",
+        "step2": "瞥一眼数量，或打开应用查看完整列表。"
+      },
+      "bulk-actions": {
+        "title": "批量操作",
+        "summary": "一次选中多项任务，然后统一处理。",
+        "keywords": "批量, 多选, 全选, 一批, 多项, 完成, 删除, 优先级, 移动, 选择",
+        "body": "在任务列表的标题栏点按「选择」进入选择模式。逐项点选任务，或点按「全选」，然后对整批任务执行一个操作——标记完成、更改优先级、移动到其他列表，或者删除。",
+        "step0": "打开任务列表，在标题栏点按「选择」。",
+        "step1": "点按任务将其选中，或用「全选」选中屏幕上的全部任务。",
+        "step2": "在底部操作栏中选择「完成」「优先级」「移动」或「删除」。",
+        "tip": "删除会先让你确认具体数量，之后仍会留下可撤销的提示。重复任务完全不参与批量操作，以免整个系列被误改——请单独打开来完成、移动或删除。"
+      },
+      "list-icons": {
+        "title": "自动列表图标",
+        "summary": "尚未选择图标的列表会自动获得与名称相符的图标。",
+        "keywords": "列表图标, 自动, 建议, 字形, 名称, 购物, 健身, 工作",
+        "body": "把列表命名为 Groceries，它就会显示购物车；Gym 会得到哑铃，Work 会得到公文包。只有在你没有自己选择图标时，T'Day 才会推测；名称不够明确时，它会保留默认图标。目前仅按英文名称匹配。",
+        "tip": "你随时可以在列表设置中选择图标：一旦选定就会保留，绝不会被推测覆盖。"
+      }
+    }
+  },
+  "palette": {
+    "title": "命令面板",
+    "placeholder": "输入命令或搜索…",
+    "empty": "没有匹配项",
+    "actions": "操作",
+    "navigation": "前往",
+    "lists": "清单",
+    "newTask": "新任务",
+    "brainDump": "想法速记"
+  },
+  "release": {
+    "loading": "正在加载版本信息…",
+    "error": "无法获取版本信息。请检查网络连接后重试。",
+    "retry": "重试",
+    "statusLatest": "最新版本",
+    "statusUpdateAvailable": "有可用更新",
+    "messageLatest": "你正在使用最新版本",
+    "messageUpdateReady": "版本 {{version}} 已准备好安装。",
+    "installed": "已安装",
+    "installedVersion": "已安装版本",
+    "latest": "最新",
+    "whatsNew": "{{version}} 的新内容",
+    "noNotes": "此版本没有可用的发行说明",
+    "viewOnGithub": "在 GitHub 上查看",
+    "published": "发布于 {{date}}",
+    "serverUnavailable": "不可用"
+  }
+}

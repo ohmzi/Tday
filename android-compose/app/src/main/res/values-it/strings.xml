@@ -1,0 +1,749 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">T\'Day</string>
+
+    <!-- Shared / reusable -->
+    <string name="action_back">Indietro</string>
+    <string name="action_close">Chiudi</string>
+    <string name="action_search">Cerca</string>
+    <string name="action_close_search">Chiudi ricerca</string>
+    <string name="action_clear_search">Cancella ricerca</string>
+    <string name="action_search_in">Cerca in %1$s</string>
+    <string name="search_no_results_body">Prova un\'altra parola o cancella la ricerca.</string>
+    <string name="search_no_results_settings">Nessuna impostazione corrispondente</string>
+    <string name="action_create_task">Crea attività</string>
+    <string name="action_create_list">Crea elenco</string>
+    <string name="action_edit">Modifica</string>
+    <string name="action_edit_task">Modifica attività</string>
+    <string name="action_copy">Copia</string>
+    <string name="action_copy_task">Copia attività</string>
+    <string name="action_delete_task">Elimina attività</string>
+    <string name="action_delete_list">Elimina elenco</string>
+    <string name="action_delete">Elimina</string>
+    <string name="action_schedule">Pianifica</string>
+    <string name="action_schedule_task">Pianifica attività</string>
+    <string name="action_float">Fluttua</string>
+    <string name="action_float_task">Lascia fluttuare</string>
+    <string name="action_defer">Rimanda</string>
+    <string name="action_defer_task">Rimanda attività</string>
+    <string name="quick_defer_later_today">Più tardi oggi</string>
+    <string name="quick_defer_tonight">Stasera</string>
+    <string name="quick_defer_tomorrow">Domani mattina</string>
+    <string name="quick_defer_next_week">La prossima settimana</string>
+    <string name="reminder_action_snooze_hour">Posticipa 1 h</string>
+    <string name="sweep_title">Riordino mattutino</string>
+    <string name="sweep_done">Tutto in pari</string>
+    <string name="sweep_today">Oggi</string>
+    <string name="sweep_tomorrow">Domani</string>
+    <string name="sweep_pick_date">Scegli una data</string>
+    <string name="sweep_float">Rendi fluttuante</string>
+    <string name="sweep_let_go">Lascia andare</string>
+    <string name="sweep_skip">Salta</string>
+    <string name="sweep_all_to_today">Sposta tutto a oggi</string>
+    <string name="sweep_swept_toast">%1$d attività spostate</string>
+    <string name="day_ahead_setting">Anteprima della giornata</string>
+    <string name="day_ahead_off">Disattivato</string>
+    <string name="day_ahead_h7">7:00</string>
+    <string name="day_ahead_h8">8:00</string>
+    <string name="day_ahead_h9">9:00</string>
+    <string name="day_ahead_title">La tua giornata</string>
+    <string name="day_ahead_text">%1$d attività oggi</string>
+    <string name="day_ahead_text_with_overdue">%1$d attività oggi, %2$d arretrate</string>
+    <string name="task_promote_failed">Impossibile pianificare l\'attività</string>
+    <string name="task_float_failed">Impossibile far fluttuare l\'attività</string>
+    <string name="action_complete">Completa</string>
+    <string name="action_more_options">Altre opzioni</string>
+    <string name="action_save">Salva</string>
+    <string name="action_save_task">Salva attività</string>
+    <string name="action_cancel">Annulla</string>
+    <string name="action_done">Fatto</string>
+    <string name="action_ok">OK</string>
+    <string name="action_sign_out">Esci</string>
+    <string name="action_expand_section">Espandi sezione</string>
+    <string name="action_collapse_section">Comprimi sezione</string>
+    <string name="label_completed">Completata</string>
+    <string name="label_mark_complete">Segna come completata</string>
+    <string name="label_undo_complete">Annulla completamento</string>
+    <string name="label_task_list">Elenco attività</string>
+    <string name="label_priority_task">Attività prioritaria</string>
+    <string name="label_loading">Caricamento…</string>
+    <string name="label_version_name">v%1$s</string>
+    <string name="label_server">Server</string>
+
+    <!-- Scheduled task home screen -->
+    <string name="scheduled_task_home_title">T\'Day</string>
+    <string name="scheduled_task_home_category_overdue">In ritardo</string>
+    <string name="scheduled_task_home_category_scheduled">Programmate</string>
+    <string name="scheduled_task_home_category_all">Tutte</string>
+    <string name="scheduled_task_home_category_priority">Priorità</string>
+    <string name="scheduled_task_home_category_completed">Completate</string>
+    <string name="scheduled_task_home_category_calendar">Calendario</string>
+    <string name="root_feed_tab_scheduled_task_home">Programmate</string>
+    <string name="root_feed_tab_floater">Senza data</string>
+    <string name="scheduled_task_home_search_no_results">Nessuna attività corrispondente</string>
+    <string name="scheduled_task_home_my_lists">I miei elenchi</string>
+    <string name="scheduled_task_home_new_list">Nuovo elenco</string>
+    <string name="scheduled_task_home_list_name_placeholder">Nome elenco</string>
+    <string name="scheduled_task_home_section_list">Elenco</string>
+    <string name="scheduled_task_home_section_color">Colore</string>
+    <string name="scheduled_task_home_section_icon">Icona</string>
+    <string name="scheduled_task_home_list_icon_option">Seleziona l\'icona dell\'elenco %1$s</string>
+    <string name="scheduled_task_home_locked_list_name">Accedi per caricare i tuoi elenchi</string>
+
+    <string-array name="splash_taglines">
+        <item>Il tuo server ricorda, così non devi farlo tu</item>
+        <item>Ospitato da te, perseguitato dalle scadenze</item>
+        <item>Perché \'me lo ricorderò dopo\' è sempre una bugia</item>
+        <item>Lucidità self-hosted, un\'attività alla volta</item>
+        <item>Ti assilla dal tuo stesso hardware</item>
+        <item>I tuoi dati, il tuo server, la tua zona senza scuse</item>
+        <item>Rende la procrastinazione un po\' più difficile dalla v0.1</item>
+        <item>Gira sul tuo server, gestisce la tua vita</item>
+        <item>Perché i post-it non hanno le notifiche push</item>
+        <item>Trasforma \'l\'ho dimenticato\' in \'ce la faccio\'</item>
+        <item>La tua macchina di promemoria personale</item>
+        <item>Self-hosted, auto-organizzato… beh, ci stiamo arrivando</item>
+        <item>Dove le attività dimenticate vengono ritrovate</item>
+        <item>Vita da adulti, ma rendila self-hosted</item>
+        <item>Doma il caos da un server vicino a te</item>
+        <item>Il te del futuro ti ringrazia in anticipo</item>
+        <item>Il cloud è solo il server di qualcun altro. Questo è il tuo.</item>
+        <item>Organizza la tua vita, senza bisogno di un padrone di casa</item>
+        <item>Zero trust… tranne il tuo server</item>
+        <item>Sincronizza le tue attività, giudica le tue priorità</item>
+        <item>Oggi ha chiamato. Vuole un piano.</item>
+        <item>Costringe il \'dopo\' a fare una richiesta formale</item>
+        <item>Trasforma il caos in caselle da spuntare</item>
+        <item>Le tue attività si stanno mettendo in fila ordinatamente</item>
+        <item>Un server privato con opinioni sulle tue priorità</item>
+        <item>Per quando il tuo cervello apre troppe schede</item>
+        <item>Programma il caos prima che programmi te</item>
+        <item>I tuoi elenchi sono entrati nella loro era produttiva</item>
+        <item>Una piccola centrale operativa per il te del futuro</item>
+        <item>Perché le sensazioni non sono una strategia di attività</item>
+        <item>Attività private. Mattine migliori.</item>
+        <item>Fa sentire visto il tuo arretrato, poi lo riordina</item>
+        <item>Dove i pensieri sparsi ottengono un posto assegnato</item>
+        <item>Le tue priorità hanno appena ottenuto un indirizzo</item>
+        <item>Prima sincronizza, poi vai nel panico</item>
+        <item>Drammi di calendario, ora sotto controllo</item>
+        <item>Le scadenze odiano questo trucco self-hosted</item>
+        <item>Aiuta la tua giornata a smettere di fare il freelance</item>
+        <item>I tuoi promemoria sono arrivati preparati</item>
+        <item>Trasforma il \'dovrei\' in \'programmato\'</item>
+        <item>La tua lista di cose da fare, ma che si presenta</item>
+        <item>Più furbo di \'lo faccio domani\'</item>
+        <item>Una lista di cose da fare con memoria</item>
+        <item>Il tuo esecutore, self-hosted</item>
+        <item>L\'incubo peggiore della procrastinazione</item>
+        <item>Dove \'un giorno\' ottiene una data</item>
+        <item>Produttività, ospitata alle tue condizioni</item>
+        <item>Un server. Zero scuse.</item>
+        <item>Mantiene le tue promesse al posto tuo</item>
+        <item>La colonna del \'dopo\', addomesticata</item>
+        <item>Il tuo secondo cervello, ma affidabile</item>
+        <item>Promuove il \'forse\' a \'programmato\'</item>
+        <item>Gestione del caos, edizione privata</item>
+        <item>Il project manager della tua giornata</item>
+        <item>Perché \'ce l\'ho in testa\' non è un sistema</item>
+        <item>Radunare le attività reso ufficiale</item>
+        <item>Trasforma il carico mentale in segni di spunta</item>
+        <item>Serve le attività come dovrebbe fare un buon server</item>
+        <item>Il tuo server di responsabilità personale</item>
+        <item>Stabilisce le priorità così non devi farlo tu</item>
+        <item>Le tue scuse non sono in agenda</item>
+        <item>Fatto per la versione di te che si presenta</item>
+        <item>Il te di domani ti sta guardando</item>
+        <item>Dove le buone intenzioni ricevono una data</item>
+        <item>Niente cloud, niente disordine, niente dimenticanze</item>
+        <item>La tua giornata, senza tirare a indovinare</item>
+        <item>Gestisce in silenzio la parte noiosa della tua vita</item>
+        <item>Il tuo cervello riposa, il tuo server lavora</item>
+        <item>Ambizione, ora con le scadenze</item>
+        <item>Piccole attività, grande energia da server</item>
+        <item>Ogni lista merita una casa che sia tua</item>
+        <item>Uptime per le tue intenzioni</item>
+        <item>L’assillo che hai chiesto tu</item>
+        <item>Perché ‘un giorno di questa settimana’ non è un orario</item>
+        <item>I tuoi piani, salvati e di nuovo in carreggiata</item>
+        <item>Ti ricorda tutto da una scatola che puoi staccare</item>
+        <item>Meno schede, più cose fatte</item>
+        <item>Trasforma il mucchio mentale in un piano</item>
+        <item>Localhost, ma per la tua vita</item>
+        <item>La tua casella di intenzioni, ordinata</item>
+        <item>Scadenze rispettate, privacy inclusa</item>
+        <item>Accesso root alla tua routine</item>
+        <item>Perché ‘impegnato’ torni a significare qualcosa</item>
+        <item>Il tuo io futuro ha presentato una richiesta</item>
+        <item>La parte silenziosa del fare le cose</item>
+        <item>Nessun abbonamento, nessuna sorpresa, nessuna dimenticanza</item>
+        <item>Ordine, servito fresco dal tuo rack</item>
+        <item>Dove ‘urgente’ incontra finalmente ‘pianificato’</item>
+        <item>La tua giornata ora compila senza errori</item>
+        <item>Fuori dal cloud, dentro il gioco</item>
+    </string-array>
+
+    <!-- Settings screen -->
+    <string name="settings_title">Impostazioni</string>
+    <string name="settings_unknown_user">Utente sconosciuto</string>
+    <string name="settings_role_label">Ruolo: %1$s</string>
+    <string name="settings_role_default">UTENTE</string>
+    <!-- Account settings (profile name + password change) -->
+    <string name="settings_account_name_label">Nome</string>
+    <string name="settings_account_username_label">Nome utente</string>
+    <string name="settings_account_password_label">Password</string>
+    <string name="settings_account_change_password">Modifica</string>
+    <string name="settings_account_current_password">Password attuale</string>
+    <string name="settings_account_confirm_new_password">Conferma nuova password</string>
+    <string name="settings_account_forgot_password">Password dimenticata?</string>
+    <string name="settings_account_password_requirement">La password deve contenere almeno 8 caratteri, con una lettera maiuscola e un carattere speciale.</string>
+    <string name="settings_account_show_password">Mostra password</string>
+    <string name="settings_account_hide_password">Nascondi password</string>
+    <string name="settings_account_not_signed_in">Non hai effettuato l\'accesso.</string>
+    <string name="settings_account_name_required">Il nome non può essere vuoto.</string>
+    <string name="error_update_name_failed">Impossibile aggiornare il nome. Riprova.</string>
+    <string name="error_change_password_failed">Impossibile cambiare la password. Riprova.</string>
+    <string name="settings_appearance">Aspetto</string>
+    <string name="settings_motion">Movimento</string>
+    <string name="settings_reduce_motion">Riduci il movimento</string>
+    <string name="settings_reduce_motion_system">Le animazioni sono già disattivate nelle impostazioni di Android.</string>
+    <string name="settings_behavior">Comportamento</string>
+    <string name="settings_default_home_screen">Schermata iniziale predefinita</string>
+    <string name="settings_reminders">Promemoria</string>
+    <string name="settings_feature_toggle">Attiva/disattiva funzione</string>
+    <string name="settings_notifications">Notifiche</string>
+    <string name="settings_notifications_blocked">Le notifiche sono disattivate per T\'Day nelle impostazioni di Android.</string>
+    <string name="settings_notifications_declined">Le notifiche non sono state consentite, quindi T\'Day non può inviare promemoria.</string>
+    <string name="settings_ai_task_summary">Riepilogo</string>
+    <string name="settings_default_reminder">Promemoria predefinito</string>
+    <string name="settings_update_available_version">v%1$s disponibile</string>
+    <string name="settings_server_compatible">Compatibile</string>
+    <string name="settings_server_incompatible">Non compatibile</string>
+
+    <!-- Onboarding / wizard -->
+    <string name="onboarding_step_mode">Modalità</string>
+    <string name="onboarding_step_server">Server</string>
+    <string name="onboarding_step_login">Accesso</string>
+    <string name="onboarding_step_privacy">Privacy</string>
+    <string name="onboarding_mode_title">Scegli la tua configurazione</string>
+    <string name="onboarding_mode_subtitle">Scegli dove T\'Day conserva le tue attività.</string>
+    <string name="onboarding_mode_server_title">Server self-hosted</string>
+    <string name="onboarding_mode_server_short_title">Self-hosted</string>
+    <string name="onboarding_mode_server_short_subtitle">Account e sincronizzazione</string>
+    <string name="onboarding_mode_local_short_title">Questo dispositivo</string>
+    <string name="onboarding_mode_local_short_subtitle">Nessun accesso</string>
+    <string name="onboarding_server_hero_subtitle">Connetti il tuo endpoint T\'Day.</string>
+    <string name="onboarding_server_url_label">URL del server</string>
+    <string name="onboarding_server_url_placeholder">https://app.example.com</string>
+    <string name="onboarding_reset_trust">Reimposta server attendibile</string>
+    <string name="onboarding_resetting_trust">Reimpostazione attendibilità…</string>
+    <string name="onboarding_connect">Connetti</string>
+    <string name="onboarding_connecting_title">Connessione al server…</string>
+    <string name="onboarding_connecting_subtitle">Verifica di endpoint, TLS e impostazioni dello spazio di lavoro</string>
+    <string name="onboarding_username_label">Nome utente</string>
+    <string name="onboarding_password_label">Password</string>
+    <string name="onboarding_sign_in">Accedi</string>
+    <string name="onboarding_create_account">Crea account</string>
+    <string name="onboarding_change_setup">Cambia configurazione</string>
+    <string name="onboarding_first_name_label">Nome</string>
+    <string name="onboarding_confirm_password_label">Conferma password</string>
+    <string name="onboarding_creating_account">Creazione account…</string>
+    <string name="onboarding_back_to_sign_in">Torna all\'accesso</string>
+    <string name="onboarding_authenticating_title">Autenticazione…</string>
+    <string name="onboarding_authenticating_register_subtitle">Invio della registrazione e attesa dello stato di approvazione</string>
+    <string name="onboarding_authenticating_login_subtitle">Crittografia della sessione e caricamento del tuo spazio di lavoro</string>
+    <string name="onboarding_error_connect_fallback">Impossibile connettersi al server</string>
+    <string name="onboarding_error_reset_trust_fallback">Impossibile reimpostare il server attendibile</string>
+    <string name="onboarding_validation_first_name_min">Il nome deve contenere almeno 2 caratteri</string>
+    <string name="onboarding_validation_username_required">Il nome utente è obbligatorio</string>
+    <string name="onboarding_validation_username_invalid">Inserisci un nome utente valido</string>
+    <string name="onboarding_validation_password_required">Password e conferma sono obbligatorie</string>
+    <string name="onboarding_validation_password_min">La password deve contenere almeno 8 caratteri</string>
+    <string name="onboarding_validation_password_uppercase">La password deve includere almeno una lettera maiuscola</string>
+    <string name="onboarding_validation_password_special">La password deve includere almeno un carattere speciale</string>
+    <string name="onboarding_validation_password_mismatch">Le password non corrispondono</string>
+
+    <!-- Authentication / credential messages -->
+    <string name="auth_pending_admin_approval">Account in attesa di approvazione dell\'admin.</string>
+    <string name="auth_password_manager_save_server_url_failed">Il gestore password di Android non è riuscito a salvare questo URL del server. Verifica che un gestore password sia abilitato.</string>
+    <string name="auth_password_manager_save_login_failed">Il gestore password di Android non è riuscito a salvare questo accesso. Verifica che un gestore password sia abilitato.</string>
+    <string name="auth_error_incorrect_credentials">Nome utente o password errati</string>
+
+    <!-- Todo list screen -->
+    <string name="todos_summarize">Riepiloga attività</string>
+    <string name="todos_title_tasks">Attività</string>
+    <string name="todos_title_today">Oggi</string>
+    <string name="todos_title_tonight">Stasera</string>
+    <string name="todos_title_overdue">In ritardo</string>
+    <string name="todos_title_scheduled">Programmate</string>
+    <string name="todos_title_all_tasks">Tutte le attività</string>
+    <string name="todos_title_priority">Priorità</string>
+    <string name="todos_title_floater">Senza data</string>
+    <string name="todos_title_list">Elenco</string>
+    <string name="todos_empty_today">Nessuna attività per oggi</string>
+    <string name="todos_empty_tonight">Nessuna attività per stasera</string>
+    <string name="todos_all_done_today">Tutto fatto per oggi</string>
+    <string name="todos_all_done_tonight">Tutto fatto per stasera</string>
+    <string name="todos_empty_overdue">Nessuna attività in ritardo</string>
+    <string name="todos_empty_priority">Nessuna attività prioritaria</string>
+    <string name="todos_empty_scheduled">Nessuna attività programmata</string>
+    <string name="todos_empty_all">Ancora nessuna attività</string>
+    <string name="todos_empty_list">Nessuna attività in questo elenco</string>
+    <string name="todos_empty_today_body">Aggiungi qualcosa per oggi e comparirà proprio qui.</string>
+    <string name="todos_empty_overdue_body">Niente ha superato la sua scadenza.</string>
+    <string name="todos_empty_priority_body">Segna un\'attività come prioritaria e salirà qui.</string>
+    <string name="todos_empty_scheduled_body">Dai una data a un\'attività e si metterà in fila qui.</string>
+    <string name="todos_empty_all_body">Tutto ciò che aggiungi compare qui, qualunque sia la data.</string>
+    <string name="todos_empty_list_body">Aggiungi la tua prima attività e comparirà proprio qui.</string>
+    <string name="car_surface_title_today">T\'Day</string>
+    <string name="car_surface_title_floater">Senza data</string>
+    <string name="car_surface_loading">Caricamento attività</string>
+    <string name="car_surface_load_error">Impossibile caricare le attività</string>
+    <string name="car_voice_prompt_today">Pronuncia l\'attività da aggiungere a T\'Day</string>
+    <string name="car_voice_prompt_floater">Pronuncia l\'attività senza data da aggiungere</string>
+    <string name="car_voice_empty_result">Nessuna attività rilevata</string>
+    <string name="car_complete_dialog_title">Completare questa attività?</string>
+    <string name="car_complete_dialog_confirm">Completa</string>
+    <string name="todos_section_morning">Mattina</string>
+    <string name="todos_section_afternoon">Pomeriggio</string>
+    <string name="todos_section_tonight">Stasera</string>
+    <string name="todos_section_earlier">In ritardo</string>
+    <string name="todos_section_today">Oggi</string>
+    <string name="todos_section_tomorrow">Domani</string>
+    <string name="todos_section_rest_of">Resto di %1$s</string>
+    <string name="todos_reschedule_recurring_title">Spostare l\'attività ricorrente?</string>
+    <string name="todos_reschedule_recurring_message">Scegli se spostare solo questa occorrenza dell\'attività o l\'intera serie ricorrente.</string>
+    <string name="todos_reschedule_this_occurrence">Questa occorrenza</string>
+    <string name="todos_reschedule_entire_series">Intera serie</string>
+    <string name="todos_summary_title">Riepilogo</string>
+    <string name="todos_summary_close">Chiudi riepilogo</string>
+    <string name="todos_summary_loading">Creazione del riepilogo delle attività…</string>
+    <string name="todos_summary_admin_disabled">Il riepilogo è disabilitato dall\'admin</string>
+    <string name="todos_summary_offline_unavailable">Nessun riepilogo disponibile offline.</string>
+    <string name="todos_list_settings">Impostazioni elenco</string>
+    <string name="reusable_list">Lista riutilizzabile</string>
+    <string name="reusable_list_hint">Mostra Reimposta per deselezionare tutto e rifarla</string>
+    <string name="reset_floater_list">Reimposta lista</string>
+    <string name="floater_list_reset">Lista reimpostata: tutto deselezionato</string>
+    <string name="error_reset_list_failed">Impossibile reimpostare l\'elenco.</string>
+    <string name="share_list_action">Condividi elenco</string>
+    <string name="share_section_title">Condivisione</string>
+    <string name="action_share">Condividi</string>
+    <string name="members_title">Membri</string>
+    <string name="members_add_section">Aggiungi membro</string>
+    <string name="members_add_action">Aggiungi</string>
+    <string name="members_search_placeholder">Cerca per nome o nome utente</string>
+    <string name="members_no_results">Nessun utente trovato</string>
+    <string name="members_already_member">Già membro</string>
+    <string name="members_remove">Rimuovi membro</string>
+    <string name="members_leave_list">Abbandona elenco</string>
+    <string name="members_shared_by">Condiviso da %1$s</string>
+    <string name="share_role_owner">Proprietario</string>
+    <string name="share_role_editor">Editor</string>
+    <string name="share_role_viewer">Visualizzatore</string>
+    <string name="share_due_label">Scadenza: %1$s</string>
+    <string name="share_priority_label">Priorità: %1$s</string>
+    <plurals name="share_task_count">
+        <item quantity="one">%d attività</item>
+        <item quantity="other">%d attività</item>
+    </plurals>
+    <string name="todos_save_list_settings">Salva impostazioni elenco</string>
+    <string name="todos_delete_list_title">Eliminare l\'elenco?</string>
+    <string name="todos_delete_list_message">Questa azione eliminerà questo elenco, ogni attività al suo interno e la cronologia completata di tali attività.</string>
+    <string name="todos_due_overdue_text">In ritardo, %1$s</string>
+    <string name="todos_due_text">Scadenza %1$s</string>
+
+    <!-- Create/edit task sheet -->
+    <string name="create_task_title_new">Nuova attività</string>
+    <string name="create_task_title_edit">Modifica attività</string>
+    <string name="create_task_section_schedule">Pianificazione</string>
+    <string name="create_task_due">Scadenza</string>
+    <string name="create_task_section_details">Dettagli</string>
+    <string name="create_task_list">Elenco</string>
+    <string name="create_task_no_list">Nessun elenco</string>
+    <string name="create_task_priority">Priorità</string>
+    <string name="create_task_priority_low">Bassa</string>
+    <string name="create_task_priority_normal">Normale</string>
+    <string name="create_task_priority_important">Importante</string>
+    <string name="create_task_priority_urgent">Urgente</string>
+    <string name="create_task_repeat">Ripeti</string>
+    <string name="create_task_repeat_none">Nessuna ripetizione</string>
+    <string name="create_task_repeat_daily">Ogni giorno</string>
+    <string name="create_task_repeat_weekly">Ogni settimana</string>
+    <string name="create_task_repeat_weekdays">Giorni feriali</string>
+    <string name="create_task_repeat_monthly">Ogni mese</string>
+    <string name="create_task_repeat_yearly">Ogni anno</string>
+    <string name="create_task_title_placeholder">Titolo</string>
+    <string name="create_task_notes_placeholder">Note</string>
+    <string name="create_task_clear_formatting">Cancella formattazione</string>
+    <string name="create_task_format_bold">Grassetto</string>
+    <string name="create_task_format_italic">Corsivo</string>
+    <string name="create_task_format_underline">Sottolineato</string>
+    <string name="create_task_format_strikethrough">Barrato</string>
+    <string name="create_task_format_bulleted_list">Elenco puntato</string>
+    <string name="create_task_format_numbered_list">Elenco numerato</string>
+    <string name="create_task_schedule_enabled">L\'attività ha una scadenza</string>
+    <string name="create_task_schedule_disabled">Attività senza data</string>
+    <string name="create_task_select_date">Seleziona data</string>
+    <string name="create_task_select_time">Seleziona ora</string>
+
+    <!-- Completed screen -->
+    <string name="completed_title">Completate</string>
+    <string name="completed_empty">Ancora nessuna attività completata</string>
+    <string name="completed_empty_body">Segna qualcosa come fatto e finirà qui.</string>
+    <string name="completed_floater_empty">Nessun elemento flottante completato</string>
+    <string name="completed_floater_empty_body">Spunta qualcosa in Flottante e apparirà qui.</string>
+
+    <!-- Calendar screen -->
+    <string name="calendar_title">Calendario</string>
+    <string name="calendar_jump_to_today">Vai a oggi</string>
+    <string name="calendar_today">Oggi</string>
+    <string name="calendar_tasks_due">Attività in scadenza %1$s</string>
+    <string name="calendar_no_pending">Nessuna attività in sospeso per questo giorno</string>
+    <string name="calendar_no_pending_body">Seleziona un\'altra data nel calendario.</string>
+    <string name="calendar_prev_month">Mese precedente</string>
+    <string name="calendar_next_month">Mese successivo</string>
+    <string name="calendar_prev_week">Settimana precedente</string>
+    <string name="calendar_next_week">Settimana successiva</string>
+    <string name="calendar_prev_day">Giorno precedente</string>
+    <string name="calendar_next_day">Giorno successivo</string>
+    <string name="calendar_task_count_one">1 attività in scadenza</string>
+    <string name="calendar_task_count_many">%1$d attività in scadenza</string>
+    <string name="calendar_task_count_cap">9+</string>
+
+    <!-- Error handling / retry / offline -->
+    <string name="action_retry">Riprova</string>
+    <string name="action_undo">Annulla</string>
+    <string name="settings_about">Informazioni</string>
+    <string name="settings_workspace_local_title">Spazio di lavoro locale</string>
+    <string name="settings_workspace_local_detail">Solo su questo dispositivo</string>
+    <string name="settings_workspace_leave">Esci dallo spazio locale</string>
+    <string name="settings_workspace_delete">Elimina i dati locali</string>
+    <string name="settings_workspace_delete_title">Eliminare i dati locali?</string>
+    <string name="settings_workspace_delete_body">Questa azione rimuove definitivamente tutte le attività, le liste e le voci completate salvate su questo dispositivo. Non esiste alcuna copia su un server: scarica prima i tuoi dati se vuoi conservarli.</string>
+    <string name="settings_workspace_delete_done">Dati locali eliminati.</string>
+    <string name="settings_workspace_server_title">Sincronizzazione server</string>
+    <string name="settings_sync_last_synced_label">Ultima sincronizzazione</string>
+    <string name="settings_sync_last_synced_never">Non ancora</string>
+    <string name="settings_sync_now">Sincronizza ora</string>
+    <string name="settings_sync_up_to_date">Aggiornato</string>
+    <string name="settings_sync_offline_short">Offline</string>
+    <string name="settings_sync_offline_message">Le modifiche verranno sincronizzate al ritorno della connessione.</string>
+    <string name="settings_syncing_now">Sincronizzazione...</string>
+    <string name="error_auth_expired">Sessione scaduta. Accedi di nuovo.</string>
+    <string name="error_app_outdated">Questa versione dell\'app non è aggiornata. Aggiorna per continuare.</string>
+    <string name="error_server_outdated">Il server deve essere aggiornato prima che questa app possa continuare.</string>
+    <string name="error_server">Errore del server. Riprova più tardi.</string>
+    <string name="error_permission_denied">Non hai il permesso di farlo.</string>
+    <string name="error_not_found">L\'elemento richiesto non è stato trovato.</string>
+    <string name="error_connection">Errore di connessione. Controlla la tua connessione internet e riprova.</string>
+    <string name="error_connectivity_title">Nessuna connessione a Internet</string>
+    <string name="error_connectivity">Impossibile connettersi. Controlla la tua connessione di rete e riprova.</string>
+    <string name="error_generic">Si è verificato un errore. Riprova.</string>
+    <string name="error_load_failed">Caricamento non riuscito.</string>
+    <string name="error_load_dashboard_failed">Caricamento della dashboard non riuscito.</string>
+    <string name="error_load_calendar_failed">Caricamento del calendario non riuscito.</string>
+    <string name="error_load_tasks_failed">Caricamento delle attività non riuscito.</string>
+    <string name="error_create_task_failed">Impossibile creare l\'attività.</string>
+    <string name="error_update_task_failed">Impossibile aggiornare l\'attività.</string>
+    <string name="error_delete_task_failed">Impossibile eliminare l\'attività.</string>
+    <string name="error_restore_task_failed">Impossibile ripristinare l\'attività.</string>
+    <string name="error_create_list_failed">Impossibile creare l\'elenco.</string>
+    <string name="error_update_list_failed">Impossibile aggiornare l\'elenco.</string>
+    <string name="error_delete_list_failed">Impossibile eliminare l\'elenco.</string>
+    <string name="error_summarize_tasks_failed">Impossibile riepilogare le attività.</string>
+    <string name="error_reset_trusted_server_failed">Impossibile reimpostare il server attendibile.</string>
+    <string name="error_connect_server_failed">Impossibile connettersi al server.</string>
+    <string name="server_setup_error_probe_timeout">Tempo scaduto per la verifica del server. Controlla URL e rete, poi riprova.</string>
+    <string name="server_setup_error_invalid_url">URL del server non valido.</string>
+    <string name="server_setup_error_insecure_transport">Usa HTTPS per gli URL di server remoti.</string>
+    <string name="server_setup_error_not_tday_server">Il server è raggiungibile ma non sembra essere un server T\'Day.</string>
+
+    <string name="notification_channel_task_reminders_name">Promemoria attività</string>
+    <string name="notification_channel_task_reminders_description">Promemoria per le prossime scadenze delle attività</string>
+    <string name="notification_channel_app_updates_name">Aggiornamenti app</string>
+    <string name="notification_channel_app_updates_description">Suggerimenti per riaprire T\'Day al termine dell\'installazione di un aggiornamento</string>
+    <string name="update_notification_title">Aggiornamento installato</string>
+    <string name="update_notification_message">Tocca per riaprire T\'Day.</string>
+
+    <string name="app_update_required_title">Aggiornamento richiesto</string>
+    <string name="app_update_required_message">È necessario un aggiornamento alla v%1$s per continuare.</string>
+    <string name="app_update_download_not_ready">La v%1$s non è ancora disponibile per il download. Chiedi a un amministratore di caricare l\'aggiornamento.</string>
+    <string name="server_update_required_title">Aggiornamento del server necessario</string>
+    <string name="server_update_required_message">La tua app richiede una versione più recente del server. Il server è alla v%1$s. Contatta il tuo amministratore per aggiornare il server.</string>
+    <string name="install_permission_return_to_app">Concedi l\'autorizzazione all\'installazione, poi torna all\'app.</string>
+    <string name="install_permission_return_here">Concedi l\'autorizzazione all\'installazione, poi torna qui.</string>
+    <string name="overlay_install_awaiting_permission">In attesa di autorizzazione...</string>
+    <string name="overlay_install_downloading_progress">Download in corso... %1$d%%</string>
+    <string name="overlay_install_downloading">Download in corso...</string>
+    <string name="overlay_install_installing">Installazione in corso...</string>
+    <string name="overlay_install_download_and_install">Scarica e installa</string>
+
+    <string name="widget_today_tasks_description">Mostra le attività di oggi a colpo d\'occhio</string>
+    <string name="widget_today_tasks_title">Attività di oggi</string>
+    <string name="widget_today_tasks_title_small">Attività di oggi - Piccolo</string>
+    <string name="widget_today_tasks_title_medium">Attività di oggi - Medio</string>
+    <string name="widget_today_tasks_title_large">Attività di oggi - Grande</string>
+    <string name="widget_today_tasks_empty">Nessuna attività in scadenza oggi</string>
+    <string name="widget_tonight_tasks_title">Attività di stasera</string>
+    <string name="widget_tonight_tasks_empty">Nessuna attività in scadenza stasera</string>
+    <string name="widget_tonight_all_done">Tutto fatto per stasera</string>
+    <string name="widget_today_tasks_add">Aggiungine una per oggi</string>
+    <string name="widget_today_tasks_add_tonight">Aggiungine una per stasera</string>
+    <string name="widget_today_tasks_count">%1$d in scadenza</string>
+    <string name="widget_today_progress">%1$d di %2$d fatte</string>
+    <string name="widget_today_tasks_setup_title">Apri T\'Day</string>
+    <string name="widget_today_tasks_setup_message">Configura il tuo spazio di lavoro</string>
+    <string name="widget_floater_tasks_description">Mostra le attività senza data a colpo d\'occhio</string>
+    <string name="widget_floater_tasks_title">Attività senza data</string>
+    <string name="widget_floater_tasks_title_small">Attività senza data - Piccolo</string>
+    <string name="widget_floater_tasks_title_medium">Attività senza data - Medio</string>
+    <string name="widget_floater_tasks_title_large">Attività senza data - Grande</string>
+    <string name="widget_floater_tasks_empty">Nessuna attività senza data</string>
+    <string name="widget_floater_tasks_add">Aggiungi un\'attività senza data</string>
+    <string name="widget_floater_tasks_count">%1$d aperte</string>
+    <string name="widget_loading">Caricamento attività…</string>
+    <string name="widget_list_tasks_description">Mostra una lista a tua scelta a colpo d\'occhio</string>
+    <string name="widget_list_tasks_title">Lista</string>
+    <string name="widget_list_tasks_title_small">Lista - Piccolo</string>
+    <string name="widget_list_tasks_title_medium">Lista - Medio</string>
+    <string name="widget_list_tasks_title_large">Lista - Grande</string>
+    <string name="widget_list_tasks_setup_title">Scegli una lista</string>
+    <string name="widget_list_tasks_setup_message">Tocca per scegliere quale lista mostra questo widget</string>
+    <string name="widget_list_tasks_missing_message">Quella lista è stata eliminata. Tocca per sceglierne un\'altra.</string>
+    <string name="widget_list_tasks_empty">Niente da fare in questo elenco</string>
+    <string name="widget_list_picker_title">Scegli una lista</string>
+    <string name="widget_list_picker_subtitle">Questo widget mostrerà solo questa lista e il suo + vi aggiungerà direttamente le attività.</string>
+    <string name="widget_list_picker_empty_title">Ancora nessuna lista</string>
+    <string name="widget_list_picker_empty">Crea una lista in T\'Day, poi tocca di nuovo questo widget.</string>
+    <string name="widget_list_picker_section_views">Viste</string>
+    <string name="widget_list_picker_section_todo">Liste pianificate</string>
+    <string name="widget_list_picker_section_floater">Liste senza data</string>
+    <string name="widget_list_picker_selected">Selezionata</string>
+
+    <!-- Latest release screen -->
+    <string name="release_title">Versione app</string>
+    <string name="release_error">Impossibile recuperare le informazioni sulla versione. Controlla la tua connessione e riprova.</string>
+    <string name="release_installed_version">Versione installata</string>
+    <string name="release_installed_label">Installata</string>
+    <string name="release_server_not_connected">Non connesso</string>
+    <string name="release_server_version_unavailable">Non disponibile</string>
+    <string name="release_latest_label">Ultima</string>
+    <string name="release_update_available">Aggiornamento disponibile</string>
+    <string name="release_version_mismatch">Versione non corrispondente</string>
+    <string name="release_app_update_required_summary">Il server richiede la v%1$s. Aggiorna l\'app per continuare.</string>
+    <string name="release_server_update_required_summary">Questa app richiede che il server sia alla v%1$s, ma il server è alla v%2$s.</string>
+    <string name="release_update_ready_version">La versione %1$s è pronta per l\'installazione.</string>
+    <string name="release_update_ready_generic">Una versione più recente è pronta per l\'installazione.</string>
+    <string name="release_up_to_date">Ultima</string>
+    <string name="release_up_to_date_message">Stai usando l\'ultima versione</string>
+    <string name="release_published">Pubblicata %1$s</string>
+    <string name="release_whats_new_in_version">Novità della %1$s</string>
+    <string name="release_no_notes_for_version">Nessuna nota di rilascio disponibile per questa versione</string>
+    <string name="release_download_and_install">Scarica e installa aggiornamento</string>
+    <string name="release_allow_install_permission">Consenti l\'autorizzazione all\'installazione</string>
+    <string name="release_downloading_apk">Download aggiornamento…</string>
+    <string name="release_downloading_apk_progress">Download aggiornamento… %1$d%%</string>
+    <string name="release_preparing_update">Preparazione aggiornamento…</string>
+    <string name="release_opening_installer">Apertura dell\'installazione Android…</string>
+    <string name="release_install_permission_return_hint">Consenti a T\'Day di installare aggiornamenti, poi torna qui per continuare automaticamente.</string>
+    <string name="release_download_failed">Impossibile scaricare l\'aggiornamento. Riprova.</string>
+    <string name="release_install_failed">Impossibile installare l\'aggiornamento.</string>
+    <string name="release_install_cancelled">Installazione annullata. Tocca Scarica e installa per riprovare.</string>
+    <string name="release_install_blocked">L\'installazione è stata bloccata dal tuo dispositivo. Controlla le impostazioni del dispositivo e riprova.</string>
+    <string name="release_install_storage">Spazio di archiviazione insufficiente. Libera dello spazio e riprova.</string>
+    <string name="release_install_incompatible">Questo aggiornamento non è compatibile con il tuo dispositivo.</string>
+    <string name="release_signature_conflict">La versione installata è stata firmata con una chiave diversa e non può essere aggiornata direttamente.</string>
+    <string name="release_signature_conflict_hint">Disinstalla prima la versione corrente, poi torna qui per installare l\'aggiornamento. I dati dell\'app andranno persi.</string>
+    <string name="release_uninstall">Disinstalla versione corrente</string>
+    <string name="release_install_success">Aggiornamento installato.</string>
+    <string name="release_no_apk">Nessun APK allegato a questo rilascio.</string>
+    <string name="release_launch_update_toast">L\'aggiornamento %1$s è disponibile.</string>
+    <string name="task_deleted_toast">Attività eliminata</string>
+    <string name="task_copied_toast">Copiato negli appunti</string>
+    <string name="task_copy_failed_toast">Impossibile copiare negli appunti</string>
+    <string name="list_deleted_toast">Elenco eliminato</string>
+    <string name="release_view_on_github">Visualizza su GitHub</string>
+
+    <!-- Language picker -->
+    <string name="settings_language">Lingua</string>
+    <string name="settings_language_system_default">Predefinita di sistema</string>
+    <string name="settings_language_dialog_title">Lingua</string>
+
+    <!-- Empty state -->
+    <string name="todos_empty_floater">Nessuna attività flottante</string>
+    <string name="todos_empty_floater_body">I flottanti non hanno scadenza: annotane uno e aspetterà finché non sei pronto.</string>
+    <string name="todos_empty_floater_list">Nessuna attività fluttuante in questo elenco</string>
+    <string name="todos_empty_floater_list_body">Aggiungi un flottante e aspetterà proprio qui.</string>
+
+    <!-- Theme mode -->
+    <string name="settings_theme_system">Sistema</string>
+    <string name="settings_theme_light">Chiaro</string>
+    <string name="settings_theme_dark">Scuro</string>
+
+    <!-- Reminder options -->
+    <string name="reminder_option_none">Nessuno</string>
+    <string name="reminder_option_at_time">All\'ora dell\'attività</string>
+    <string name="reminder_option_minutes_5">5 minuti prima</string>
+    <string name="reminder_option_minutes_10">10 minuti prima</string>
+    <string name="reminder_option_minutes_15">15 minuti prima</string>
+    <string name="reminder_option_minutes_30">30 minuti prima</string>
+    <string name="reminder_option_hours_1">1 ora prima</string>
+    <string name="reminder_option_hours_2">2 ore prima</string>
+    <string name="reminder_option_days_1">1 giorno prima</string>
+    <string name="reminder_option_days_2">2 giorni prima</string>
+
+    <!-- Reminder notification -->
+    <string name="reminder_notification_default_title">Promemoria attività</string>
+    <string name="reminder_due_unknown">L\'attività è in scadenza</string>
+    <string name="reminder_due_now">In scadenza ora</string>
+    <string name="reminder_due_less_than_minute">In scadenza tra meno di un minuto</string>
+    <string name="reminder_due_in_minutes_one">In scadenza tra %1$d minuto</string>
+    <string name="reminder_due_in_minutes_other">In scadenza tra %1$d minuti</string>
+    <string name="reminder_due_in_hours_one">In scadenza tra %1$d ora</string>
+    <string name="reminder_due_in_hours_other">In scadenza tra %1$d ore</string>
+    <string name="reminder_due_in_days_one">In scadenza tra %1$d giorno</string>
+    <string name="reminder_due_in_days_other">In scadenza tra %1$d giorni</string>
+
+    <!-- Auth, offline toasts, security questions (lint MissingTranslation backfill) -->
+    <string name="error_cannot_reach">Impossibile raggiungere il server. Controlla la connessione internet e che l\'indirizzo del server sia corretto.</string>
+    <string name="error_server_unavailable">Il server non risponde al momento: potrebbe essere spento o in riavvio. Se il problema persiste, contatta il tuo amministratore.</string>
+    <string name="error_update_security_questions_failed">Impossibile aggiornare le domande di sicurezza. Riprova.</string>
+    <string name="forgot_password_admin_request_failed">Impossibile inviare la richiesta. Riprova.</string>
+    <string name="forgot_password_back_to_sign_in">Torna all\'accesso</string>
+    <string name="forgot_password_continue">Continua</string>
+    <string name="forgot_password_entry">Password dimenticata?</string>
+    <string name="forgot_password_new_password">Nuova password</string>
+    <string name="forgot_password_ok">OK</string>
+    <string name="forgot_password_questions_unavailable">Impossibile caricare le domande di sicurezza.</string>
+    <string name="forgot_password_reenter_answers">Inserisci di nuovo le risposte di sicurezza.</string>
+    <string name="forgot_password_request_admin">Richiedi il ripristino a un amministratore</string>
+    <string name="forgot_password_reset">Reimposta password</string>
+    <string name="forgot_password_reset_failed">Le risposte non corrispondono. Riprova.</string>
+    <string name="forgot_password_reset_failed_contact_admin">%1$s Contatta un amministratore per reimpostare la password.</string>
+    <string name="forgot_password_reset_success">Password reimpostata. Accedi con la nuova password.</string>
+    <string name="forgot_password_subtitle_locked">Troppi tentativi errati. Puoi richiedere il ripristino della password a un amministratore.</string>
+    <string name="forgot_password_subtitle_requested">La tua richiesta è stata inviata. Un amministratore reimposterà la password e te ne fornirà una temporanea.</string>
+    <string name="forgot_password_success_title">Password modificata</string>
+    <string name="forgot_password_title">Reimposta la tua password</string>
+    <string name="forgot_password_username_required">Inserisci il tuo nome utente</string>
+    <string name="forgot_password_verify">Verifica risposte</string>
+    <string name="offline_toast">Sei offline: le modifiche verranno sincronizzate quando tornerà la connessione.</string>
+    <string name="offline_toast_pending_many">Sei offline: %1$d modifiche in attesa di sincronizzazione.</string>
+    <string name="offline_toast_pending_one">Sei offline: 1 modifica in attesa di sincronizzazione.</string>
+    <string name="online_toast">Di nuovo online: sincronizzazione delle ultime modifiche…</string>
+    <string name="backend_down_toast">Errore del server: il backend o il database potrebbero non essere disponibili. Riprova tra poco.</string>
+    <string name="password_changed_toast">Password modificata correttamente</string>
+    <string name="pending_approval_check">Controlla stato di approvazione</string>
+    <string name="pending_approval_message">Il tuo account (%1$s) è in attesa dell\'approvazione di un amministratore. Ti faremo entrare non appena verrà approvato.</string>
+    <string name="pending_approval_message_generic">Il tuo account è in attesa dell\'approvazione di un amministratore. Ti faremo entrare non appena verrà approvato.</string>
+    <string name="pending_approval_title">In attesa di approvazione</string>
+    <string name="pending_approval_use_different_account">Usa un altro account</string>
+    <string name="profile_name_updated_toast">Nome aggiornato correttamente</string>
+    <string name="security_questions_answer_label">Risposta</string>
+    <string name="security_questions_answers_required">Rispondi a tutte e tre le domande</string>
+    <string name="security_questions_back">Indietro</string>
+    <string name="security_questions_distinct_required">Scegli tre domande diverse</string>
+    <string name="security_questions_gate_subtitle">Scegli tre domande di sicurezza. Le useremo per verificare la tua identità se dovrai reimpostare la password.</string>
+    <string name="security_questions_gate_title">Configura le domande di sicurezza</string>
+    <string name="security_questions_question_1">Domanda 1</string>
+    <string name="security_questions_question_2">Domanda 2</string>
+    <string name="security_questions_question_3">Domanda 3</string>
+    <string name="security_questions_save">Salva domande di sicurezza</string>
+    <string name="security_questions_save_failed">Impossibile salvare le domande di sicurezza</string>
+    <string name="security_questions_title">Domande di sicurezza</string>
+    <string name="settings_account_change_security_questions">Modifica</string>
+    <string name="settings_account_current_password_required">Inserisci la password attuale</string>
+    <string name="settings_account_security_questions_configured">Configurate</string>
+    <string name="settings_account_security_questions_label">Domande di sicurezza</string>
+    <string name="settings_account_security_questions_not_configured">Non configurate</string>
+    <string name="settings_account_security_questions_updated">Domande di sicurezza aggiornate</string>
+    <string name="summary_source_local">Modello locale</string>
+    <string name="summary_source_server">Modello del server</string>
+    <string name="settings_help_guide">Guida e consigli</string>
+    <string name="settings_data_title">I tuoi dati</string>
+    <string name="settings_data_summary">%1$d attività · %2$d liste · %3$d completate</string>
+    <string name="settings_data_download">Scarica i miei dati</string>
+    <string name="settings_data_import">Importa</string>
+    <string name="settings_data_export_done">Il file dei tuoi dati è stato salvato.</string>
+    <string name="settings_data_import_done">Importazione completata — aggiunti %1$d elementi.</string>
+    <string name="settings_data_import_failed">Impossibile importare quel file.</string>
+    <string name="settings_data_confirm_title">Importare i dati?</string>
+    <string name="settings_data_confirm_body">Questo aggiunge %1$d elementi al tuo account. Nulla di ciò che hai già viene cambiato o rimosso.</string>
+    <string name="settings_data_confirm_import">Importa</string>
+    <string name="settings_data_confirm_cancel">Annulla</string>
+    <string name="settings_push_distributor_title">App di consegna push</string>
+    <string name="settings_push_distributor_subtitle">È installata più di un\'app push. Scegli quale consegna le notifiche di T\'Day.</string>
+    <string name="settings_push_distributor_choose">Scegli</string>
+    <string name="create_task_repeat_suggestion">Ripetere %1$s?</string>
+    <string name="create_task_repeat_suggestion_dismiss">Ignora</string>
+    <string name="settings_quiet_hours">Ore di silenzio</string>
+    <string name="settings_quiet_hours_start">Inizio</string>
+    <string name="settings_quiet_hours_end">Fine</string>
+    <string name="settings_resting_floaters">Floater a riposo</string>
+    <string name="settings_calendar_sync">Aggiungi le attività pianificate al mio calendario</string>
+    <string name="settings_privacy">Privacy</string>
+    <string name="settings_crash_reports">Segnalazioni di crash e problemi</string>
+    <string name="settings_crash_reports_toggle">Invia segnalazioni di crash e problemi quando qualcosa non funziona</string>
+    <string name="settings_crash_reports_help">Informazioni sulle segnalazioni di crash e problemi</string>
+
+    <!-- Crash reports: the sign-in wizard's consent step and its card -->
+    <string name="telemetry_card_title">Inviare segnalazioni di errore?</string>
+    <string name="telemetry_card_intro">Se qualcosa si rompe, T\'Day può inviare un breve rapporto tecnico per aiutare a risolverlo. Puoi cambiarlo in qualsiasi momento in Impostazioni.</string>
+    <string name="telemetry_card_never_sent_label">Mai inviato</string>
+    <string name="telemetry_card_never_sent">nomi, account o contenuti di attività ed elenchi.</string>
+    <string name="telemetry_card_footnote">Disattivato per impostazione predefinita. Puoi cambiarlo in Impostazioni.</string>
+    <string name="telemetry_card_share">Invia segnalazioni</string>
+    <string name="telemetry_card_not_now">Non inviare</string>
+    <string name="telemetry_card_read_faq">Leggi le FAQ complete</string>
+    <string name="root_feed_search_scheduled">Cerca attività pianificate</string>
+    <string name="root_feed_search_floater">Cerca attività fluttuanti</string>
+
+    <!-- Bulk selection: multi-select actions in a task list -->
+    <string name="bulk_select">Seleziona</string>
+    <string name="bulk_select_all">Seleziona tutto</string>
+    <string name="bulk_deselect_all">Deseleziona tutto</string>
+    <string name="bulk_selected">%1$d selezionate</string>
+    <string name="bulk_selected_capped">%1$d selezionate — il massimo che una sola azione può coprire</string>
+    <string name="bulk_applies_to">Si applica a %1$d di %2$d — le attività ricorrenti vengono saltate.</string>
+    <string name="bulk_select_task">Seleziona attività</string>
+    <string name="bulk_deselect_task">Deseleziona attività</string>
+    <string name="bulk_action_complete">Completa</string>
+    <string name="bulk_action_priority">Priorità</string>
+    <string name="bulk_action_move">Sposta</string>
+    <string name="bulk_action_delete">Elimina</string>
+    <string name="bulk_delete_body">Questa azione le rimuove da ogni elenco, insieme alla loro cronologia completata. Avrai qualche secondo per annullare.</string>
+    <string name="bulk_move_body">Queste attività provengono da elenchi diversi. Lo spostamento non si può annullare in un solo passaggio — dovresti rimettere ognuna a mano.</string>
+    <plurals name="bulk_tasks_completed">
+        <item quantity="one">Attività completata</item>
+        <item quantity="other">%d attività completate</item>
+    </plurals>
+    <plurals name="bulk_tasks_deleted">
+        <item quantity="one">Attività eliminata</item>
+        <item quantity="other">%d attività eliminate</item>
+    </plurals>
+    <plurals name="bulk_delete_title">
+        <item quantity="one">Eliminare questa attività?</item>
+        <item quantity="other">Eliminare %d attività?</item>
+    </plurals>
+    <plurals name="bulk_delete_confirm">
+        <item quantity="one">Elimina attività</item>
+        <item quantity="other">Elimina %d attività</item>
+    </plurals>
+    <plurals name="bulk_move_title">
+        <item quantity="one">Spostare questa attività?</item>
+        <item quantity="other">Spostare %d attività?</item>
+    </plurals>
+    <plurals name="bulk_move_confirm">
+        <item quantity="one">Sposta attività</item>
+        <item quantity="other">Sposta %d attività</item>
+    </plurals>
+    <plurals name="bulk_delete_failed">
+        <item quantity="one">Non è stato possibile eliminare un\'attività</item>
+        <item quantity="other">Non è stato possibile eliminare %d attività</item>
+    </plurals>
+    <plurals name="bulk_update_failed">
+        <item quantity="one">Non è stato possibile aggiornare un\'attività</item>
+        <item quantity="other">Non è stato possibile aggiornare %d attività</item>
+    </plurals>
+</resources>

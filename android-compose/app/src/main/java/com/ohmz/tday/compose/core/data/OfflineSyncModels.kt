@@ -1,0 +1,194 @@
+package com.ohmz.tday.compose.core.data
+
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class OfflineSyncState(
+    val lastSuccessfulSyncEpochMs: Long = 0L,
+    val lastSyncAttemptEpochMs: Long = 0L,
+    val todos: List<CachedTodoRecord> = emptyList(),
+    val floaters: List<CachedFloaterRecord> = emptyList(),
+    val completedItems: List<CachedCompletedRecord> = emptyList(),
+    val completedFloaters: List<CachedCompletedFloaterRecord> = emptyList(),
+    val lists: List<CachedListRecord> = emptyList(),
+    val floaterLists: List<CachedFloaterListRecord> = emptyList(),
+    val pendingMutations: List<PendingMutationRecord> = emptyList(),
+    val aiSummaryEnabled: Boolean = true,
+    // "scheduled" or "floater" — mirrors the shared DefaultHomeScreen API values verbatim, since
+    // this layer stays free of the Compose-only RootFeedTab enum.
+    val defaultHomeScreen: String = "scheduled",
+)
+
+@Serializable
+data class CachedTodoRecord(
+    val id: String,
+    val canonicalId: String,
+    val title: String,
+    val description: String? = null,
+    val priority: String = "Low",
+    val dueEpochMs: Long? = null,
+    val rrule: String? = null,
+    val instanceDateEpochMs: Long? = null,
+    val pinned: Boolean = false,
+    val completed: Boolean = false,
+    val listId: String? = null,
+    val updatedAtEpochMs: Long = 0L,
+)
+
+@Serializable
+data class CachedFloaterRecord(
+    val id: String,
+    val canonicalId: String,
+    val title: String,
+    val description: String? = null,
+    val priority: String = "Low",
+    val pinned: Boolean = false,
+    val completed: Boolean = false,
+    val listId: String? = null,
+    val updatedAtEpochMs: Long = 0L,
+)
+
+@Serializable
+data class CachedListRecord(
+    val id: String,
+    val name: String,
+    val color: String? = null,
+    val iconKey: String? = null,
+    val todoCount: Int = 0,
+    val updatedAtEpochMs: Long = 0L,
+    val createdAtEpochMs: Long = 0L,
+    val myRole: String = "OWNER",
+    val isShared: Boolean = false,
+    val memberCount: Int = 0,
+    val ownerUsername: String? = null,
+    val defaultPriority: String? = null,
+)
+
+@Serializable
+data class CachedFloaterListRecord(
+    val id: String,
+    val name: String,
+    val color: String? = null,
+    val iconKey: String? = null,
+    val todoCount: Int = 0,
+    val updatedAtEpochMs: Long = 0L,
+    val createdAtEpochMs: Long = 0L,
+    val myRole: String = "OWNER",
+    val isShared: Boolean = false,
+    val memberCount: Int = 0,
+    val ownerUsername: String? = null,
+    // A reusable list can be Reset (all its floaters un-completed) to run again.
+    // Mirrors `FloaterListDto.reusable` (shared ListModels.kt) and web's
+    // `floaterList-utils.ts` normalization. Defaulted so state persisted before
+    // the flag existed still decodes as "not reusable".
+    val reusable: Boolean = false,
+    val defaultPriority: String? = null,
+)
+
+@Serializable
+data class CachedCompletedRecord(
+    val id: String,
+    val originalTodoId: String? = null,
+    val title: String,
+    val description: String? = null,
+    val priority: String,
+    val dueEpochMs: Long? = null,
+    val completedAtEpochMs: Long = 0L,
+    val rrule: String? = null,
+    val instanceDateEpochMs: Long? = null,
+    val listId: String? = null,
+    val listName: String? = null,
+    val listColor: String? = null,
+)
+
+@Serializable
+data class CachedCompletedFloaterRecord(
+    val id: String,
+    val originalFloaterId: String? = null,
+    val title: String,
+    val description: String? = null,
+    val priority: String,
+    val completedAtEpochMs: Long = 0L,
+    val listId: String? = null,
+    val listName: String? = null,
+    val listColor: String? = null,
+    // True only when this item had a list at completion time (listName/listColor
+    // populated) and that list has since been deleted — server-computed, see
+    // CompletedFloaterDto.listDeleted. Not recomputed locally: the local cache no
+    // longer prunes completedFloaters on a list delete (see FloaterListRepository),
+    // so a stale-but-harmless listId/listDeleted pair between the delete and the
+    // next sync is expected, not a bug.
+    val listDeleted: Boolean = false,
+)
+
+@Serializable
+data class PendingMutationRecord(
+    val mutationId: String,
+    val kind: MutationKind,
+    val targetId: String? = null,
+    val timestampEpochMs: Long,
+    val title: String? = null,
+    val description: String? = null,
+    val priority: String? = null,
+    val dueEpochMs: Long? = null,
+    val rrule: String? = null,
+    val listId: String? = null,
+    val pinned: Boolean? = null,
+    val completed: Boolean? = null,
+    val instanceDateEpochMs: Long? = null,
+    val name: String? = null,
+    val color: String? = null,
+    val iconKey: String? = null,
+    // Reusable flag for the floater-list create/update mutations (UPDATE_FLOATER_LIST,
+    // CREATE_FLOATER_LIST). Null means "not part of this mutation", the same
+    // convention the shared UpdateFloaterListRequest uses for `reusable`.
+    val reusable: Boolean? = null,
+    // Default priority for the list create/update mutations (CREATE_LIST, UPDATE_LIST,
+    // CREATE_FLOATER_LIST, UPDATE_FLOATER_LIST). `defaultPriorityChanged` disambiguates
+    // "leave unchanged" from "clear the default", the same tri-state UpdateListRequest uses.
+    val defaultPriority: String? = null,
+    val defaultPriorityChanged: Boolean? = null,
+    // Task-step ordering (REORDER_STEPS): the full ordered list of step ids.
+    val orderedIds: List<String>? = null,
+    // True only for the marker a delayed-commit list/floater-list delete writes while
+    // staged (see ListRepository.stageDeleteList / FloaterListRepository.stageDeleteList):
+    // it makes the sync merge's resurrection guard (pendingDeletedListIds /
+    // pendingDeletedFloaterListIds in SyncManager) treat the staged-but-not-yet-committed
+    // delete exactly like a real one, so a refresh mid-undo-window can't write the
+    // still-server-side list back into the cache. SyncManager's replay pass must never
+    // send a staged mutation to the server — the whole point of staging is that Undo
+    // needs no network trace — so it always re-queues these unresolved instead of acting
+    // on them. The real commit (deleteList()/its floater-list twin) replaces the marker
+    // with a normal (non-staged) pending mutation of the same kind.
+    val staged: Boolean = false,
+)
+
+@Serializable
+enum class MutationKind {
+    CREATE_LIST,
+    UPDATE_LIST,
+    DELETE_LIST,
+    CREATE_FLOATER_LIST,
+    UPDATE_FLOATER_LIST,
+    DELETE_FLOATER_LIST,
+    RESET_FLOATER_LIST,
+    CREATE_TODO,
+    UPDATE_TODO,
+    DELETE_TODO,
+    CREATE_FLOATER,
+    UPDATE_FLOATER,
+    DELETE_FLOATER,
+    SET_PINNED,
+    SET_PRIORITY,
+    COMPLETE_TODO,
+    COMPLETE_TODO_INSTANCE,
+    UNCOMPLETE_TODO,
+    COMPLETE_FLOATER,
+    UNCOMPLETE_FLOATER,
+    PROMOTE_FLOATER,
+    DEMOTE_TODO,
+    CREATE_STEP,
+    TOGGLE_STEP,
+    DELETE_STEP,
+    REORDER_STEPS,
+}

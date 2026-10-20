@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>es</string>
+		<string>fr</string>
+		<string>de</string>
+		<string>it</string>
+		<string>pt</string>
+		<string>ru</string>
+		<string>zh</string>
+		<string>ja</string>
+		<string>ms</string>
+	</array>
+	<key>CFBundleDisplayName</key>
+	<string>T'Day</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.ohmz.tday.ios</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>T'Day</string>
+	<!-- Required before LocalAuthentication may use Face ID at all; without it the optional
+	     app lock can only ever fall back to the passcode. -->
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>T'Day adds your scheduled tasks to a calendar it creates on this device, and needs access to keep that calendar up to date.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>T'Day adds your scheduled tasks to a calendar it creates on this device, and needs access to keep that calendar up to date.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Face ID unlocks T'Day when you turn on the app lock.</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.8.5</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.ohmz.tday.ios</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>tday</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<!-- Export compliance (US EAR Category 5 Part 2). Declared here so a TestFlight upload is
+	     never parked at "Missing Compliance" waiting on a manual answer in App Store Connect.
+	     The release lane does not wait for build processing, so it has no opportunity to answer
+	     that question after the fact - see ios-swiftUI/fastlane/Fastfile.
+
+	     <false/> asserts that T'Day contains no NON-EXEMPT encryption. What it actually uses:
+	       - AES-256-GCM (CryptoKit) in Tday/Core/Data/Auth/CredentialEnvelope.swift, wrapping
+	         the sign-in username/password for transport to the user's own server;
+	       - RSA-2048 OAEP-SHA256 (Security) in the same file, wrapping that AES key;
+	       - AES-256-GCM (CryptoKit) in Tday/Core/Security/ProbeDecryptor.swift, decrypting the
+	         server's version-compatibility probe - note this one is confidentiality applied to
+	         ordinary application data (appVersion / updateRequired / compatibilityMode) using a
+	         key bundled in the app, NOT authentication;
+	       - SHA-256 (CryptoKit) in NetworkConfiguration/TodayTasksWidget - hashing, not
+	         encryption;
+	       - HTTPS/TLS via URLSession.
+
+	     THE BASIS FOR THE EXEMPTION, in order of how cleanly it fits:
+
+	       1. Encryption limited to that provided within the operating system. Every primitive
+	          above is Apple's own CryptoKit / Security / URLSession. T'Day implements no cipher,
+	          bundles no third-party crypto library, and ships no modified crypto. This one
+	          covers ProbeDecryptor as well as the credential envelope.
+	       2. Publicly available source code (EAR 740.13(e)). T'Day is open source at
+	          github.com/ohmzi/Tday. NOTE: this exemption carries a ONE-TIME email notification
+	          to BIS (crypt@bis.doc.gov) and the NSA (enc@nsa.gov) giving the source URL. If the
+	          account owner wants to rely on it, that email has to be sent.
+
+	     Deliberately NOT relied on:
+	       - "limited to authentication" alone. It covers CredentialEnvelope but not
+	         ProbeDecryptor, which decrypts application data rather than authenticating anything.
+	         An earlier draft of this comment claimed it did; that was wrong.
+	       - "short key length". AES-256 / RSA-2048 exceed the 56-bit symmetric / 512-bit
+	         asymmetric thresholds, so this exemption does not apply.
+
+	     THE ACCOUNT OWNER MUST CONFIRM THIS DECLARATION BEFORE THE FIRST UPLOAD - it is a legal
+	     export statement, not a build setting. If they are not comfortable with the above, the
+	     alternative is to set this key to <true/> and file the annual self-classification
+	     report with BIS; the pipeline still works, but the first build of each version then
+	     needs the compliance question answered by hand in App Store Connect.
+	     See docs/DEPLOYMENT.md - Export compliance. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.ohmz.tday.ios.widgetRefresh</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
+	<key>SENTRY_DSN</key>
+	<string>$(SENTRY_DSN)</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<true/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+				</dict>
+			</array>
+			<key>CPTemplateApplicationSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneClassName</key>
+					<string>CPTemplateApplicationScene</string>
+					<key>UISceneConfigurationName</key>
+					<string>CarPlay Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).CarPlaySceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+	<key>TdayProbeEncryptionKey</key>
+	<string>$(TDAY_PROBE_ENCRYPTION_KEY)</string>
+	<key>TdayUpdateURL</key>
+	<string>https://testflight.apple.com/join/paKSyGAG</string>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Nunito.ttf</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+</dict>
+</plist>

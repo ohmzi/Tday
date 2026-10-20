@@ -1,0 +1,531 @@
+import Foundation
+
+/// Snapshot of everything `stageDeleteList(listId:)` pruned from the local
+/// cache — the list, its tasks, completed history for those tasks, and any
+/// pending mutations — so `undoStagedList(_:)` can restore the exact
+/// pre-delete state.
+struct StagedListDeletion {
+    let lists: [CachedListRecord]
+    let todos: [CachedTodoRecord]
+    let completedItems: [CachedCompletedRecord]
+    let pendingMutations: [PendingMutationRecord]
+    /// Identifies the non-replayable staged DELETE_LIST marker `stageDeleteList(listId:)`
+    /// wrote (see `PendingMutationRecord.staged`), so `undoStagedList(_:)` can remove it on
+    /// Undo instead of leaving it stranded in the pending queue.
+    var stagedMutationId: String? = nil
+}
+
+@MainActor
+final class ListRepository {
+    private let api: TdayAPIService
+    private let cacheManager: OfflineCacheManager
+    private let syncManager: SyncManager
+
+    init(api: TdayAPIService, cacheManager: OfflineCacheManager, syncManager: SyncManager) {
+        self.api = api
+        self.cacheManager = cacheManager
+        self.syncManager = syncManager
+    }
+
+    /// Off `cacheManager.cachedState`, the in-memory mirror: `CompletedViewModel` and
+    /// `CalendarViewModel` read this in the synchronous hydrate their initializers run in
+    /// the screen's first body pass (the frame the tile zoom draws first), and again on
+    /// every `.offlineCacheDidChange` and after each of their own refreshes and writes.
+    /// See `OfflineCacheManager.cachedState`. `buildLists` re-applies `orderListsLikeWeb`,
+    /// so the mirror's order shows only among lists it cannot tell apart (undated, or
+    /// created in the same millisecond). Those keep the last writer's order, where they
+    /// used to keep the store's equally unspecified fetch order.
+    func fetchListsSnapshot() -> [ListSummary] {
+        buildLists(from: cacheManager.cachedState)
+    }
+
+    func createList(name: String, color: String? = nil, iconKey: String? = nil, defaultPriority: String? = nil) async throws {
+        let normalizedName = capitalizeFirstListLetter(name).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedName.isEmpty else {
+            return
+        }
+        let now = Date().epochMilliseconds
+        let localListID = LOCAL_LIST_PREFIX + UUID().uuidString.lowercased()
+        let mutationID = UUID().uuidString
+        _ = try await cacheManager.updateOfflineState { state in
+            var nextState = state
+            nextState.lists.append(
+                CachedListRecord(
+                    id: localListID,
+                    name: normalizedName,
+                    color: color,
+                    iconKey: iconKey,
+                    todoCount: 0,
+                    updatedAtEpochMs: now,
+                    createdAtEpochMs: now,
+                    defaultPriority: defaultPriority
+                )
+            )
+            nextState.pendingMutations.append(
+                PendingMutationRecord(
+                    mutationId: mutationID,
+                    kind: .createList,
+                    targetId: localListID,
+                    timestampEpochMs: now,
+                    title: nil,
+                    description: nil,
+                    priority: nil,
+                    dueEpochMs: nil,
+                    rrule: nil,
+                    listId: nil,
+                    pinned: nil,
+                    completed: nil,
+                    instanceDateEpochMs: nil,
+                    name: normalizedName,
+                    color: color,
+                    iconKey: iconKey,
+                    defaultPriority: defaultPriority
+                )
+            )
+            return nextState
+        }
+
+        if syncManager.isLocalMode {
+            return
+        }
+
+        // Held for the whole request-plus-remap: a realtime self-echo of this
+        // very create can otherwise trigger a background sync whose fetch
+        // already contains the new server row while the placeholder above
+        // still carries its local_ id (see SyncManager.mergeRemoteWithLocal's
+        // doc comment) -- the union merge would then keep both. Sharing
+        // syncCachedData's lock means that fetch-and-merge can only run
+        // fully before this starts or fully after it finishes, never
+        // interleaved with it.
+        await cacheManager.withSyncLock {
+            do {
+                let response = try await api.createList(
+                    payload: CreateListRequest(name: normalizedName, color: color, iconKey: iconKey, defaultPriority: defaultPriority)
+                )
+                guard let createdList = response.list else {
+                    return
+                }
+                let createdAt = parseOptionalDate(createdList.createdAt)?.epochMilliseconds ?? now
+                let updatedAt = parseOptionalDate(createdList.updatedAt)?.epochMilliseconds ?? now
+                _ = try await cacheManager.updateOfflineState { state in
+                    var nextState = self.replaceLocalListID(state, localListID: localListID, serverListID: createdList.id)
+                    let todoCount = nextState.todos.filter { !$0.completed && $0.dueEpochMs != nil && $0.listId == createdList.id }.count
+                    nextState.lists = nextState.lists.map { list in
+                        guard list.id == createdList.id else {
+                            return list
+                        }
+                        return CachedListRecord(
+                            id: createdList.id,
+                            name: createdList.name,
+                            color: createdList.color,
+                            iconKey: createdList.iconKey ?? list.iconKey,
+                            todoCount: todoCount,
+                            updatedAtEpochMs: updatedAt,
+                            createdAtEpochMs: createdAt,
+                            defaultPriority: createdList.defaultPriority ?? defaultPriority
+                        )
+                    }
+                    nextState.pendingMutations.removeAll { $0.mutationId == mutationID }
+                    return nextState
+                }
+            } catch {
+                // Keep the pending CREATE_LIST mutation so background sync can retry it.
+            }
+        }
+    }
+
+    func updateList(
+        listId: String,
+        name: String,
+        color: String? = nil,
+        iconKey: String? = nil,
+        defaultPriority: String? = nil,
+        defaultPriorityChanged: Bool = false
+    ) async throws {
+        let normalizedName = capitalizeFirstListLetter(name).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !listId.isEmpty, !normalizedName.isEmpty else {
+            return
+        }
+        let now = Date().epochMilliseconds
+        if listId.hasPrefix(LOCAL_LIST_PREFIX) {
+            _ = try await cacheManager.updateOfflineState { state in
+                var nextState = state
+                nextState.lists = state.lists.map { list in
+                    guard list.id == listId else {
+                        return list
+                    }
+                    return CachedListRecord(
+                        id: list.id,
+                        name: normalizedName,
+                        color: color ?? list.color,
+                        iconKey: iconKey ?? list.iconKey,
+                        todoCount: list.todoCount,
+                        updatedAtEpochMs: now,
+                        createdAtEpochMs: list.createdAtEpochMs,
+                        defaultPriority: defaultPriorityChanged ? defaultPriority : list.defaultPriority
+                    )
+                }
+                nextState.pendingMutations = state.pendingMutations.compactMap { mutation in
+                    if mutation.kind == .updateList && mutation.targetId == listId {
+                        return nil
+                    }
+                    guard mutation.kind == .createList, mutation.targetId == listId else {
+                        return mutation
+                    }
+                    return PendingMutationRecord(
+                        mutationId: mutation.mutationId,
+                        kind: mutation.kind,
+                        targetId: mutation.targetId,
+                        timestampEpochMs: now,
+                        title: mutation.title,
+                        description: mutation.description,
+                        priority: mutation.priority,
+                        dueEpochMs: mutation.dueEpochMs,
+                        rrule: mutation.rrule,
+                        listId: mutation.listId,
+                        pinned: mutation.pinned,
+                        completed: mutation.completed,
+                        instanceDateEpochMs: mutation.instanceDateEpochMs,
+                        name: normalizedName,
+                        color: color ?? mutation.color,
+                        iconKey: iconKey ?? mutation.iconKey,
+                        defaultPriority: defaultPriorityChanged ? defaultPriority : mutation.defaultPriority
+                    )
+                }
+                return nextState
+            }
+            if syncManager.isLocalMode {
+                return
+            }
+            _ = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
+            return
+        }
+
+        _ = try await cacheManager.updateOfflineState { state in
+            var nextState = state
+            nextState.lists = state.lists.map { list in
+                guard list.id == listId else { return list }
+                return CachedListRecord(
+                    id: list.id,
+                    name: normalizedName,
+                    color: color ?? list.color,
+                    iconKey: iconKey ?? list.iconKey,
+                    todoCount: list.todoCount,
+                    updatedAtEpochMs: now,
+                    createdAtEpochMs: list.createdAtEpochMs,
+                    defaultPriority: defaultPriorityChanged ? defaultPriority : list.defaultPriority
+                )
+            }
+            nextState.pendingMutations.removeAll { $0.kind == .updateList && $0.targetId == listId }
+            nextState.pendingMutations.append(
+                PendingMutationRecord(
+                    mutationId: UUID().uuidString,
+                    kind: .updateList,
+                    targetId: listId,
+                    timestampEpochMs: now,
+                    title: nil,
+                    description: nil,
+                    priority: nil,
+                    dueEpochMs: nil,
+                    rrule: nil,
+                    listId: nil,
+                    pinned: nil,
+                    completed: nil,
+                    instanceDateEpochMs: nil,
+                    name: normalizedName,
+                    color: color,
+                    iconKey: iconKey,
+                    defaultPriority: defaultPriority,
+                    defaultPriorityChanged: defaultPriorityChanged
+                )
+            )
+            return nextState
+        }
+        if syncManager.isLocalMode {
+            return
+        }
+        let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
+        if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
+            throw error
+        }
+    }
+
+    /// First half of a delayed-commit delete: prunes the list, its tasks,
+    /// their completed history, and related pending mutations from the local
+    /// cache. Nothing is sent to the server here — the real DELETE_LIST
+    /// mutation is added by the commit step — but a non-replayable *staged*
+    /// marker of the same kind is written in its place so a sync's merge (a
+    /// pull-to-refresh racing the undo window) still treats the list as
+    /// deleted instead of writing it back from the server response; see
+    /// `PendingMutationRecord.staged` and SyncManager's replay/merge handling
+    /// of it. Commit later by calling `deleteList(listId:onOptimisticDelete:)`
+    /// — its prune half re-runs as a no-op and its own DELETE_LIST mutation
+    /// naturally replaces this marker (same targetId) — or restore with
+    /// `undoStagedList(_:)`.
+    ///
+    /// Runs inside `cacheManager.withSyncLock` — the same lock a sync holds for
+    /// its whole read-fetch-merge-save span (see `SyncManager.syncCachedData`)
+    /// — so this write can never land between a concurrent sync's pre-network
+    /// state read and its post-network save. Without that, the sync's merge
+    /// would be computed from a snapshot that still has the list, and its final
+    /// `saveOfflineState` unconditionally overwrites the cached lists with that
+    /// stale merge, resurrecting the list this call just pruned.
+    func stageDeleteList(listId: String) async -> StagedListDeletion {
+        let normalizedListID = listId.trimmingCharacters(in: .whitespacesAndNewlines)
+        var staged = StagedListDeletion(lists: [], todos: [], completedItems: [], pendingMutations: [])
+        guard !normalizedListID.isEmpty else {
+            return staged
+        }
+
+        await cacheManager.withSyncLock {
+            cacheManager.updateOfflineState { state in
+                var nextState = state
+                let deletedTodoIDs = Set(state.todos.filter { $0.listId == normalizedListID }.map(\.canonicalId))
+                let isRemovedCompleted: (CachedCompletedRecord) -> Bool = { completed in
+                    completed.listId == normalizedListID ||
+                        completed.originalTodoId.map { deletedTodoIDs.contains($0) } == true
+                }
+                let isRemovedMutation: (PendingMutationRecord) -> Bool = { mutation in
+                    mutation.targetId == normalizedListID ||
+                        mutation.listId == normalizedListID ||
+                        mutation.targetId.map { deletedTodoIDs.contains($0) } == true
+                }
+                let stagedMutationID = UUID().uuidString
+                staged = StagedListDeletion(
+                    lists: state.lists.filter { $0.id == normalizedListID },
+                    todos: state.todos.filter { $0.listId == normalizedListID },
+                    completedItems: state.completedItems.filter(isRemovedCompleted),
+                    pendingMutations: state.pendingMutations.filter(isRemovedMutation),
+                    stagedMutationId: stagedMutationID
+                )
+                nextState.lists.removeAll { $0.id == normalizedListID }
+                nextState.todos.removeAll { $0.listId == normalizedListID }
+                nextState.completedItems.removeAll(where: isRemovedCompleted)
+                nextState.pendingMutations.removeAll(where: isRemovedMutation)
+                nextState.pendingMutations.append(
+                    PendingMutationRecord(
+                        mutationId: stagedMutationID,
+                        kind: .deleteList,
+                        targetId: normalizedListID,
+                        timestampEpochMs: Date().epochMilliseconds,
+                        title: nil,
+                        description: nil,
+                        priority: nil,
+                        dueEpochMs: nil,
+                        rrule: nil,
+                        listId: nil,
+                        pinned: nil,
+                        completed: nil,
+                        instanceDateEpochMs: nil,
+                        name: nil,
+                        color: nil,
+                        iconKey: nil,
+                        staged: true
+                    )
+                )
+                return nextState
+            }
+        }
+        return staged
+    }
+
+    /// Restores the local state captured by `stageDeleteList(listId:)` and
+    /// drops its staged marker mutation. Idempotent: records that already
+    /// exist again (e.g. re-added by a sync pull during the undo window) are
+    /// left untouched.
+    func undoStagedList(_ staged: StagedListDeletion) {
+        cacheManager.updateOfflineState { state in
+            var nextState = state
+            for list in staged.lists where !nextState.lists.contains(where: { $0.id == list.id }) {
+                nextState.lists.append(list)
+            }
+            for todo in staged.todos where !nextState.todos.contains(where: {
+                $0.canonicalId == todo.canonicalId && $0.instanceDateEpochMs == todo.instanceDateEpochMs
+            }) {
+                nextState.todos.append(todo)
+            }
+            for completed in staged.completedItems where !nextState.completedItems.contains(where: { $0.id == completed.id }) {
+                nextState.completedItems.append(completed)
+            }
+            nextState.pendingMutations.removeAll { $0.mutationId == staged.stagedMutationId }
+            for mutation in staged.pendingMutations where !nextState.pendingMutations.contains(where: {
+                $0.mutationId == mutation.mutationId
+            }) {
+                nextState.pendingMutations.append(mutation)
+            }
+            return nextState
+        }
+    }
+
+    func deleteList(
+        listId: String,
+        onOptimisticDelete: () -> Void = {}
+    ) async throws {
+        let normalizedListID = listId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedListID.isEmpty else {
+            return
+        }
+
+        let now = Date().epochMilliseconds
+        let mutationID = UUID().uuidString
+        let isLocalOnly = normalizedListID.hasPrefix(LOCAL_LIST_PREFIX)
+        _ = try await cacheManager.updateOfflineState { state in
+            var nextState = state
+            let deletedTodoIDs = Set(state.todos.filter { $0.listId == normalizedListID }.map(\.canonicalId))
+
+            nextState.lists.removeAll { $0.id == normalizedListID }
+            nextState.todos.removeAll { $0.listId == normalizedListID }
+            nextState.completedItems.removeAll { completed in
+                completed.listId == normalizedListID ||
+                    completed.originalTodoId.map { deletedTodoIDs.contains($0) } == true
+            }
+            nextState.pendingMutations.removeAll { mutation in
+                mutation.targetId == normalizedListID ||
+                    mutation.listId == normalizedListID ||
+                    mutation.targetId.map { deletedTodoIDs.contains($0) } == true
+            }
+            if !isLocalOnly {
+                nextState.pendingMutations.append(
+                    PendingMutationRecord(
+                        mutationId: mutationID,
+                        kind: .deleteList,
+                        targetId: normalizedListID,
+                        timestampEpochMs: now,
+                        title: nil,
+                        description: nil,
+                        priority: nil,
+                        dueEpochMs: nil,
+                        rrule: nil,
+                        listId: nil,
+                        pinned: nil,
+                        completed: nil,
+                        instanceDateEpochMs: nil,
+                        name: nil,
+                        color: nil,
+                        iconKey: nil
+                    )
+                )
+            }
+            return nextState
+        }
+
+        onOptimisticDelete()
+
+        if syncManager.isLocalMode {
+            return
+        }
+
+        let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
+        if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
+            throw error
+        }
+    }
+
+    private func buildLists(from state: OfflineSyncState) -> [ListSummary] {
+        let scheduledCounts = Dictionary(grouping: state.todos.filter { !$0.completed && $0.dueEpochMs != nil }, by: { $0.listId })
+            .mapValues(\.count)
+        return orderListsLikeWeb(state.lists)
+            .map { listFromCache($0, todoCountOverride: scheduledCounts[$0.id] ?? 0) }
+    }
+
+    private func replaceLocalListID(_ state: OfflineSyncState, localListID: String, serverListID: String) -> OfflineSyncState {
+        OfflineSyncState(
+            lastSuccessfulSyncEpochMs: state.lastSuccessfulSyncEpochMs,
+            lastSyncAttemptEpochMs: state.lastSyncAttemptEpochMs,
+            todos: state.todos.map { todo in
+                guard todo.listId == localListID else {
+                    return todo
+                }
+                return CachedTodoRecord(
+                    id: todo.id,
+                    canonicalId: todo.canonicalId,
+                    title: todo.title,
+                    description: todo.description,
+                    priority: todo.priority,
+                    dueEpochMs: todo.dueEpochMs,
+                    rrule: todo.rrule,
+                    instanceDateEpochMs: todo.instanceDateEpochMs,
+                    pinned: todo.pinned,
+                    completed: todo.completed,
+                    listId: serverListID,
+                    updatedAtEpochMs: todo.updatedAtEpochMs
+                )
+            },
+            floaters: state.floaters,
+            completedItems: state.completedItems.map { completed in
+                guard completed.listId == localListID else {
+                    return completed
+                }
+                return CachedCompletedRecord(
+                    id: completed.id,
+                    originalTodoId: completed.originalTodoId,
+                    title: completed.title,
+                    description: completed.description,
+                    priority: completed.priority,
+                    dueEpochMs: completed.dueEpochMs,
+                    completedAtEpochMs: completed.completedAtEpochMs,
+                    rrule: completed.rrule,
+                    instanceDateEpochMs: completed.instanceDateEpochMs,
+                    listId: serverListID,
+                    listName: completed.listName,
+                    listColor: completed.listColor
+                )
+            },
+            completedFloaters: state.completedFloaters,
+            lists: state.lists.map { list in
+                guard list.id == localListID else {
+                    return list
+                }
+                return CachedListRecord(
+                    id: serverListID,
+                    name: list.name,
+                    color: list.color,
+                    iconKey: list.iconKey,
+                    todoCount: list.todoCount,
+                    updatedAtEpochMs: list.updatedAtEpochMs,
+                    createdAtEpochMs: list.createdAtEpochMs,
+                    defaultPriority: list.defaultPriority
+                )
+            }.dedupedByID(),
+            floaterLists: state.floaterLists,
+            pendingMutations: state.pendingMutations.map { mutation in
+                PendingMutationRecord(
+                    mutationId: mutation.mutationId,
+                    kind: mutation.kind,
+                    targetId: mutation.targetId == localListID ? serverListID : mutation.targetId,
+                    timestampEpochMs: mutation.timestampEpochMs,
+                    title: mutation.title,
+                    description: mutation.description,
+                    priority: mutation.priority,
+                    dueEpochMs: mutation.dueEpochMs,
+                    rrule: mutation.rrule,
+                    listId: mutation.listId == localListID ? serverListID : mutation.listId,
+                    pinned: mutation.pinned,
+                    completed: mutation.completed,
+                    instanceDateEpochMs: mutation.instanceDateEpochMs,
+                    name: mutation.name,
+                    color: mutation.color,
+                    iconKey: mutation.iconKey,
+                    defaultPriority: mutation.defaultPriority,
+                    defaultPriorityChanged: mutation.defaultPriorityChanged
+                )
+            },
+            aiSummaryEnabled: state.aiSummaryEnabled
+        )
+    }
+
+    private func capitalizeFirstListLetter(_ value: String) -> String {
+        guard let firstLetterIndex = value.firstIndex(where: { $0.isLetter }) else {
+            return value
+        }
+        let current = value[firstLetterIndex]
+        let capitalized = String(current).capitalized
+        guard String(current) != capitalized else {
+            return value
+        }
+
+        var result = value
+        result.replaceSubrange(firstLetterIndex...firstLetterIndex, with: capitalized)
+        return result
+    }
+}

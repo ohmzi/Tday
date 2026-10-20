@@ -1,0 +1,142 @@
+package com.ohmz.tday.compose.core.network
+
+import com.ohmz.tday.compose.BuildConfig
+import com.ohmz.tday.compose.core.data.SecureConfigStore
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import io.sentry.okhttp.SentryOkHttpInterceptor
+import kotlinx.serialization.json.Json
+import okhttp3.Dispatcher
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.JavaNetCookieJar
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Retrofit
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
+import java.net.CookieManager
+import java.net.CookiePolicy
+import java.util.TimeZone
+import javax.inject.Singleton
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+
+@Module
+@InstallIn(SingletonComponent::class)
+object NetworkModule {
+
+    /** Matches the 8-way parallel fetch in `SyncManager.fetchRemoteSnapshot`, with headroom. */
+    private const val MAX_REQUESTS_PER_HOST = 10
+
+    @Provides
+    @Singleton
+    fun provideJson(): Json = Json {
+        ignoreUnknownKeys = true
+        explicitNulls = false
+        encodeDefaults = true
+    }
+
+    @Provides
+    @Singleton
+    fun provideCookieManager(cookieStore: EncryptedCookieStore): CookieManager =
+        CookieManager(cookieStore, CookiePolicy.ACCEPT_ORIGINAL_SERVER)
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(
+        cookieManager: CookieManager,
+        secureConfigStore: SecureConfigStore,
+        serverTrustManager: ServerTrustManager,
+    ): OkHttpClient {
+        val logging = HttpLoggingInterceptor().apply {
+            redactHeader("Cookie")
+            redactHeader("Set-Cookie")
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BASIC
+            } else {
+                HttpLoggingInterceptor.Level.NONE
+            }
+        }
+
+        val sslContext = SSLContext.getInstance("TLS").apply {
+            init(null, arrayOf<TrustManager>(serverTrustManager), null)
+        }
+
+        val client = OkHttpClient.Builder()
+            // A sync fans out 8 parallel GETs at the one self-hosted host; OkHttp's default of 5
+            // per host would queue the other 3 behind them for an extra round trip. The request
+            // count the server sees is unchanged, only how many are in flight at once.
+            .dispatcher(Dispatcher().apply { maxRequestsPerHost = MAX_REQUESTS_PER_HOST })
+            .cookieJar(JavaNetCookieJar(cookieManager))
+            .sslSocketFactory(sslContext.socketFactory, serverTrustManager)
+            // NextAuth callback responses may issue absolute redirects; keep auth flow
+            // in-app and avoid jumping to unreachable localhost targets on Android.
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .addInterceptor { chain ->
+                val request = chain.request()
+                val bypassRewrite = request.header("X-Tday-No-Rewrite") == "1"
+                val baseUrl = secureConfigStore.getServerUrl()?.toHttpUrlOrNull()
+                val rewrittenUrl = if (!bypassRewrite && baseUrl != null) {
+                    request.url.newBuilder()
+                        .scheme(baseUrl.scheme)
+                        .host(baseUrl.host)
+                        .port(baseUrl.port)
+                        .build()
+                } else {
+                    request.url
+                }
+
+                val updated = request.newBuilder()
+                    .url(rewrittenUrl)
+                    .removeHeader("X-Tday-No-Rewrite")
+                    .header("Accept", "application/json")
+                    .header("X-User-Timezone", TimeZone.getDefault().id)
+                    .header("X-Tday-Client", "android-compose")
+                    .header("X-Tday-App-Version", BuildConfig.VERSION_NAME)
+                    .header("X-Tday-Device-Id", secureConfigStore.getOrCreateDeviceId())
+                    .build()
+                // TLS trust is enforced during the handshake by ServerTrustManager: public CA
+                // validation first (no pin, so routine renewals never false-trip), and for
+                // anything the system cannot vouch for, an exact pin the user confirmed once.
+                chain.proceed(updated)
+            }
+            // Breadcrumbs only, which TelemetryScrubber reduces to method, status and a route with
+            // no host. A failed request is not captured: a 5xx is the server's own report to make,
+            // and a 4xx, an offline phone or a timeout is noise that would not be a crash.
+            .addInterceptor(SentryOkHttpInterceptor(captureFailedRequests = false))
+            .addInterceptor(logging)
+            .build()
+
+        // Certificates pinned by fingerprint are self-signed as a rule and routinely fail
+        // hostname verification; for those the pin is the identity check. Everything else still
+        // goes through OkHttp's default verifier.
+        return client.newBuilder()
+            .hostnameVerifier { hostname, session ->
+                client.hostnameVerifier.verify(hostname, session) ||
+                    serverTrustManager.isPinnedSession(hostname, session)
+            }
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideRetrofit(
+        json: Json,
+        okHttpClient: OkHttpClient,
+    ): Retrofit {
+        return Retrofit.Builder()
+            // Placeholder base URL; runtime host is rewritten from encrypted user config.
+            .baseUrl("https://placeholder.invalid/")
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideApiService(retrofit: Retrofit): TdayApiService =
+        retrofit.create(TdayApiService::class.java)
+}

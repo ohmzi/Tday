@@ -1,0 +1,615 @@
+import Foundation
+
+/// Local cache records removed by `stageDeleteList(listId:)`, retained so an
+/// Undo within the delete-toast window can restore the exact pre-delete state
+/// (the list plus its cascaded floaters). Nothing here has been sent to the
+/// server. `completedFloaters` is always empty — completed floaters are no
+/// longer pruned on list delete (they outlive the list; see `deleteList`) —
+/// but the field stays so `undoStagedList(_:)` needs no special-casing.
+struct StagedFloaterListDeletion {
+    let floaterLists: [CachedFloaterListRecord]
+    let floaters: [CachedFloaterRecord]
+    let completedFloaters: [CachedCompletedFloaterRecord]
+    let pendingMutations: [PendingMutationRecord]
+    /// Identifies the non-replayable staged DELETE_FLOATER_LIST marker
+    /// `stageDeleteList(listId:)` wrote (see `PendingMutationRecord.staged`), so
+    /// `undoStagedList(_:)` can remove it on Undo instead of leaving it stranded
+    /// in the pending queue.
+    var stagedMutationId: String? = nil
+}
+
+@MainActor
+final class FloaterListRepository {
+    private let api: TdayAPIService
+    private let cacheManager: OfflineCacheManager
+    private let syncManager: SyncManager
+
+    init(api: TdayAPIService, cacheManager: OfflineCacheManager, syncManager: SyncManager) {
+        self.api = api
+        self.cacheManager = cacheManager
+        self.syncManager = syncManager
+    }
+
+    /// Off `cacheManager.cachedState`, the in-memory mirror, for the reason on
+    /// `ListRepository.fetchListsSnapshot` (here the one reader is `CompletedViewModel`'s
+    /// hydrate). `buildLists` re-applies `orderFloaterListsLikeWeb`, so, as there, the
+    /// mirror's order shows only among floater lists it cannot tell apart (undated, or
+    /// created in the same millisecond). Those keep the last writer's order, where they
+    /// used to keep the store's equally unspecified fetch order.
+    func fetchListsSnapshot() -> [ListSummary] {
+        buildLists(from: cacheManager.cachedState)
+    }
+
+    func createList(
+        name: String,
+        color: String? = nil,
+        iconKey: String? = nil,
+        reusable: Bool = false,
+        defaultPriority: String? = nil
+    ) async throws {
+        let normalizedName = capitalizeFirstListLetter(name).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedName.isEmpty else {
+            return
+        }
+
+        let now = Date().epochMilliseconds
+        let localListID = LOCAL_FLOATER_LIST_PREFIX + UUID().uuidString.lowercased()
+        let mutationID = UUID().uuidString
+        _ = try await cacheManager.updateOfflineState { state in
+            var nextState = state
+            nextState.floaterLists.append(
+                CachedFloaterListRecord(
+                    id: localListID,
+                    name: normalizedName,
+                    color: color,
+                    iconKey: iconKey,
+                    todoCount: 0,
+                    updatedAtEpochMs: now,
+                    createdAtEpochMs: now,
+                    reusable: reusable,
+                    defaultPriority: defaultPriority
+                )
+            )
+            nextState.pendingMutations.append(
+                PendingMutationRecord(
+                    mutationId: mutationID,
+                    kind: .createFloaterList,
+                    targetId: localListID,
+                    timestampEpochMs: now,
+                    title: nil,
+                    description: nil,
+                    priority: nil,
+                    dueEpochMs: nil,
+                    rrule: nil,
+                    listId: nil,
+                    pinned: nil,
+                    completed: nil,
+                    instanceDateEpochMs: nil,
+                    name: normalizedName,
+                    color: color,
+                    iconKey: iconKey,
+                    reusable: reusable,
+                    defaultPriority: defaultPriority
+                )
+            )
+            return nextState
+        }
+
+        if syncManager.isLocalMode {
+            return
+        }
+
+        // Held for the whole request-plus-remap: a realtime self-echo of this
+        // very create can otherwise trigger a background sync whose fetch
+        // already contains the new server row while the placeholder above
+        // still carries its local_ id (see SyncManager.mergeRemoteWithLocal's
+        // doc comment) -- the union merge would then keep both. Sharing
+        // syncCachedData's lock means that fetch-and-merge can only run
+        // fully before this starts or fully after it finishes, never
+        // interleaved with it.
+        await cacheManager.withSyncLock {
+            do {
+                let response = try await api.createFloaterList(
+                    payload: CreateFloaterListRequest(name: normalizedName, color: color, iconKey: iconKey, reusable: reusable, defaultPriority: defaultPriority)
+                )
+                guard let createdList = response.list else {
+                    return
+                }
+                let createdAt = parseOptionalDate(createdList.createdAt)?.epochMilliseconds ?? now
+                let updatedAt = parseOptionalDate(createdList.updatedAt)?.epochMilliseconds ?? now
+                _ = try await cacheManager.updateOfflineState { state in
+                    var nextState = self.replaceLocalFloaterListID(
+                        state,
+                        localListID: localListID,
+                        serverListID: createdList.id
+                    )
+                    let todoCount = nextState.floaters.filter { !$0.completed && $0.listId == createdList.id }.count
+                    nextState.floaterLists = nextState.floaterLists.map { list in
+                        guard list.id == createdList.id else {
+                            return list
+                        }
+                        return CachedFloaterListRecord(
+                            id: createdList.id,
+                            name: createdList.name,
+                            color: createdList.color,
+                            iconKey: createdList.iconKey ?? list.iconKey,
+                            todoCount: todoCount,
+                            updatedAtEpochMs: updatedAt,
+                            createdAtEpochMs: createdAt,
+                            reusable: createdList.reusable ?? reusable,
+                            defaultPriority: createdList.defaultPriority ?? defaultPriority
+                        )
+                    }
+                    nextState.pendingMutations.removeAll { $0.mutationId == mutationID }
+                    return nextState
+                }
+            } catch {
+                // Keep the pending CREATE_FLOATER_LIST mutation so background sync can retry it.
+            }
+        }
+    }
+
+    func updateList(
+        listId: String,
+        name: String,
+        color: String? = nil,
+        iconKey: String? = nil,
+        reusable: Bool? = nil,
+        defaultPriority: String? = nil,
+        defaultPriorityChanged: Bool = false
+    ) async throws {
+        let normalizedName = capitalizeFirstListLetter(name).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !listId.isEmpty, !normalizedName.isEmpty else {
+            return
+        }
+
+        let now = Date().epochMilliseconds
+        if listId.hasPrefix(LOCAL_FLOATER_LIST_PREFIX) {
+            _ = try await cacheManager.updateOfflineState { state in
+                var nextState = state
+                nextState.floaterLists = state.floaterLists.map { list in
+                    guard list.id == listId else {
+                        return list
+                    }
+                    return CachedFloaterListRecord(
+                        id: list.id,
+                        name: normalizedName,
+                        color: color ?? list.color,
+                        iconKey: iconKey ?? list.iconKey,
+                        todoCount: list.todoCount,
+                        updatedAtEpochMs: now,
+                        createdAtEpochMs: list.createdAtEpochMs,
+                        reusable: reusable ?? list.reusable,
+                        defaultPriority: defaultPriorityChanged ? defaultPriority : list.defaultPriority
+                    )
+                }
+                nextState.pendingMutations = state.pendingMutations.compactMap { mutation in
+                    if mutation.kind == .updateFloaterList && mutation.targetId == listId {
+                        return nil
+                    }
+                    guard mutation.kind == .createFloaterList, mutation.targetId == listId else {
+                        return mutation
+                    }
+                    return PendingMutationRecord(
+                        mutationId: mutation.mutationId,
+                        kind: mutation.kind,
+                        targetId: mutation.targetId,
+                        timestampEpochMs: now,
+                        title: mutation.title,
+                        description: mutation.description,
+                        priority: mutation.priority,
+                        dueEpochMs: mutation.dueEpochMs,
+                        rrule: mutation.rrule,
+                        listId: mutation.listId,
+                        pinned: mutation.pinned,
+                        completed: mutation.completed,
+                        instanceDateEpochMs: mutation.instanceDateEpochMs,
+                        name: normalizedName,
+                        color: color ?? mutation.color,
+                        iconKey: iconKey ?? mutation.iconKey,
+                        reusable: reusable ?? mutation.reusable,
+                        defaultPriority: defaultPriorityChanged ? defaultPriority : mutation.defaultPriority
+                    )
+                }
+                return nextState
+            }
+            if syncManager.isLocalMode {
+                return
+            }
+            _ = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
+            return
+        }
+
+        _ = try await cacheManager.updateOfflineState { state in
+            var nextState = state
+            nextState.floaterLists = state.floaterLists.map { list in
+                guard list.id == listId else { return list }
+                return CachedFloaterListRecord(
+                    id: list.id,
+                    name: normalizedName,
+                    color: color ?? list.color,
+                    iconKey: iconKey ?? list.iconKey,
+                    todoCount: list.todoCount,
+                    updatedAtEpochMs: now,
+                    createdAtEpochMs: list.createdAtEpochMs,
+                    reusable: reusable ?? list.reusable,
+                    defaultPriority: defaultPriorityChanged ? defaultPriority : list.defaultPriority
+                )
+            }
+            nextState.pendingMutations.removeAll { $0.kind == .updateFloaterList && $0.targetId == listId }
+            nextState.pendingMutations.append(
+                PendingMutationRecord(
+                    mutationId: UUID().uuidString,
+                    kind: .updateFloaterList,
+                    targetId: listId,
+                    timestampEpochMs: now,
+                    title: nil,
+                    description: nil,
+                    priority: nil,
+                    dueEpochMs: nil,
+                    rrule: nil,
+                    listId: nil,
+                    pinned: nil,
+                    completed: nil,
+                    instanceDateEpochMs: nil,
+                    name: normalizedName,
+                    color: color,
+                    iconKey: iconKey,
+                    reusable: reusable,
+                    defaultPriority: defaultPriority,
+                    defaultPriorityChanged: defaultPriorityChanged
+                )
+            )
+            return nextState
+        }
+        if syncManager.isLocalMode {
+            return
+        }
+        let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
+        if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
+            throw error
+        }
+    }
+
+    /// Reset a reusable list: locally un-complete all its floaters, then queue the
+    /// reset for the server. The twin of web's `useResetFloaterList` plus
+    /// `localLists.resetFloaterList`, and of Android's `resetFloaterList`; the
+    /// route returns only a message/resetCount and never the list, so callers
+    /// re-read the cache afterwards.
+    ///
+    /// Local Mode is honest rather than a no-op: the un-complete is written to the
+    /// cache and the mutation stays queued for the next server sync, exactly as the
+    /// create/update paths above do.
+    func resetFloaterList(listId: String) async throws {
+        guard !listId.isEmpty else {
+            return
+        }
+        let now = Date().epochMilliseconds
+        let mutationID = UUID().uuidString
+        _ = try await cacheManager.updateOfflineState { state in
+            var nextState = state
+            nextState.floaters = state.floaters.map { floater in
+                guard floater.listId == listId, floater.completed else {
+                    return floater
+                }
+                return CachedFloaterRecord(
+                    id: floater.id,
+                    canonicalId: floater.canonicalId,
+                    title: floater.title,
+                    description: floater.description,
+                    priority: floater.priority,
+                    pinned: floater.pinned,
+                    completed: false,
+                    listId: floater.listId,
+                    updatedAtEpochMs: now
+                )
+            }
+            nextState.completedFloaters = state.completedFloaters.filter { $0.listId != listId }
+            nextState.pendingMutations.removeAll { $0.kind == .resetFloaterList && $0.targetId == listId }
+            nextState.pendingMutations.append(
+                PendingMutationRecord(
+                    mutationId: mutationID,
+                    kind: .resetFloaterList,
+                    targetId: listId,
+                    timestampEpochMs: now,
+                    title: nil,
+                    description: nil,
+                    priority: nil,
+                    dueEpochMs: nil,
+                    rrule: nil,
+                    listId: nil,
+                    pinned: nil,
+                    completed: nil,
+                    instanceDateEpochMs: nil,
+                    name: nil,
+                    color: nil,
+                    iconKey: nil
+                )
+            )
+            return nextState
+        }
+        if syncManager.isLocalMode {
+            return
+        }
+        let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
+        if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
+            throw error
+        }
+    }
+
+    /// First half of a delayed-commit delete: prunes the floater list and its
+    /// floaters, and related pending mutations, from the local cache. Nothing
+    /// is sent to the server here — the real DELETE_FLOATER_LIST mutation is
+    /// added by the commit step — but a non-replayable *staged* marker of the
+    /// same kind is written in its place so a sync's merge (a pull-to-refresh
+    /// racing the undo window) still treats the list as deleted instead of
+    /// writing it back from the server response; see
+    /// `PendingMutationRecord.staged` and SyncManager's replay/merge handling
+    /// of it. Completed floaters are deliberately left untouched — see
+    /// `deleteList` for why — so `StagedFloaterListDeletion.completedFloaters`
+    /// is always empty; the field stays so `undoStagedList(_:)` has nothing
+    /// extra to special-case if that ever changes. Commit later by calling
+    /// `deleteList(listId:onOptimisticDelete:)` — its prune half re-runs as a
+    /// no-op and its own DELETE_FLOATER_LIST mutation naturally replaces this
+    /// marker (same targetId) — or restore with `undoStagedList(_:)`.
+    ///
+    /// Runs inside `cacheManager.withSyncLock` — the same lock a sync holds for
+    /// its whole read-fetch-merge-save span (see `SyncManager.syncCachedData`)
+    /// — so this write can never land between a concurrent sync's pre-network
+    /// state read and its post-network save; see `ListRepository.stageDeleteList`'s
+    /// matching note for why that window is otherwise unsafe.
+    func stageDeleteList(listId: String) async -> StagedFloaterListDeletion {
+        let normalizedListID = listId.trimmingCharacters(in: .whitespacesAndNewlines)
+        var staged = StagedFloaterListDeletion(floaterLists: [], floaters: [], completedFloaters: [], pendingMutations: [])
+        guard !normalizedListID.isEmpty else {
+            return staged
+        }
+
+        await cacheManager.withSyncLock {
+            cacheManager.updateOfflineState { state in
+                var nextState = state
+                let deletedFloaterIDs = Set(state.floaters.filter { $0.listId == normalizedListID }.map(\.canonicalId))
+                let isRemovedMutation: (PendingMutationRecord) -> Bool = { mutation in
+                    mutation.targetId == normalizedListID ||
+                        mutation.listId == normalizedListID ||
+                        mutation.targetId.map { deletedFloaterIDs.contains($0) } == true
+                }
+                let stagedMutationID = UUID().uuidString
+                staged = StagedFloaterListDeletion(
+                    floaterLists: state.floaterLists.filter { $0.id == normalizedListID },
+                    floaters: state.floaters.filter { $0.listId == normalizedListID },
+                    completedFloaters: [],
+                    pendingMutations: state.pendingMutations.filter(isRemovedMutation),
+                    stagedMutationId: stagedMutationID
+                )
+                nextState.floaterLists.removeAll { $0.id == normalizedListID }
+                nextState.floaters.removeAll { $0.listId == normalizedListID }
+                // Completed floaters survive list deletion (see
+                // docs/design/completed-floaters-durability.md): only the live/pending
+                // floaters for this list are pruned here, matching the backend's
+                // FloaterListService.deleteMany(), which detaches CompletedFloaters
+                // rows (nulling their listID) instead of deleting them.
+                nextState.pendingMutations.removeAll(where: isRemovedMutation)
+                nextState.pendingMutations.append(
+                    PendingMutationRecord(
+                        mutationId: stagedMutationID,
+                        kind: .deleteFloaterList,
+                        targetId: normalizedListID,
+                        timestampEpochMs: Date().epochMilliseconds,
+                        title: nil,
+                        description: nil,
+                        priority: nil,
+                        dueEpochMs: nil,
+                        rrule: nil,
+                        listId: nil,
+                        pinned: nil,
+                        completed: nil,
+                        instanceDateEpochMs: nil,
+                        name: nil,
+                        color: nil,
+                        iconKey: nil,
+                        staged: true
+                    )
+                )
+                return nextState
+            }
+        }
+        return staged
+    }
+
+    /// Restores the local state captured by `stageDeleteList(listId:)` and
+    /// drops its staged marker mutation. Idempotent: records that already
+    /// exist again (e.g. re-added by a sync pull during the undo window) are
+    /// left untouched. The `completedFloaters` restore loop below is
+    /// defensive dead code: `staged.completedFloaters` is always empty
+    /// because `stageDeleteList(listId:)` no longer removes any, so this has
+    /// nothing to special-case unless that ever changes.
+    func undoStagedList(_ staged: StagedFloaterListDeletion) {
+        cacheManager.updateOfflineState { state in
+            var nextState = state
+            for list in staged.floaterLists where !nextState.floaterLists.contains(where: { $0.id == list.id }) {
+                nextState.floaterLists.append(list)
+            }
+            for floater in staged.floaters where !nextState.floaters.contains(where: {
+                $0.canonicalId == floater.canonicalId
+            }) {
+                nextState.floaters.append(floater)
+            }
+            for completed in staged.completedFloaters where !nextState.completedFloaters.contains(where: { $0.id == completed.id }) {
+                nextState.completedFloaters.append(completed)
+            }
+            nextState.pendingMutations.removeAll { $0.mutationId == staged.stagedMutationId }
+            for mutation in staged.pendingMutations where !nextState.pendingMutations.contains(where: {
+                $0.mutationId == mutation.mutationId
+            }) {
+                nextState.pendingMutations.append(mutation)
+            }
+            return nextState
+        }
+    }
+
+    /// Deletes the floater list. Its cache-prune block below removes
+    /// `floaterLists` and `floaters` for the deleted list but never touches
+    /// `completedFloaters`: completed floaters survive list deletion (see
+    /// docs/design/completed-floaters-durability.md), matching the backend's
+    /// `FloaterListService.deleteMany()`, which detaches CompletedFloaters
+    /// rows (nulling their listID) instead of deleting them.
+    func deleteList(listId: String, onOptimisticDelete: () -> Void = {}) async throws {
+        let normalizedListID = listId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedListID.isEmpty else {
+            return
+        }
+
+        let now = Date().epochMilliseconds
+        let mutationID = UUID().uuidString
+        let isLocalOnly = normalizedListID.hasPrefix(LOCAL_FLOATER_LIST_PREFIX)
+        _ = try await cacheManager.updateOfflineState { state in
+            var nextState = state
+            let deletedFloaterIDs = Set(state.floaters.filter { $0.listId == normalizedListID }.map(\.canonicalId))
+
+            nextState.floaterLists.removeAll { $0.id == normalizedListID }
+            nextState.floaters.removeAll { $0.listId == normalizedListID }
+            nextState.pendingMutations.removeAll { mutation in
+                mutation.targetId == normalizedListID ||
+                    mutation.listId == normalizedListID ||
+                    mutation.targetId.map { deletedFloaterIDs.contains($0) } == true
+            }
+            if !isLocalOnly {
+                nextState.pendingMutations.append(
+                    PendingMutationRecord(
+                        mutationId: mutationID,
+                        kind: .deleteFloaterList,
+                        targetId: normalizedListID,
+                        timestampEpochMs: now,
+                        title: nil,
+                        description: nil,
+                        priority: nil,
+                        dueEpochMs: nil,
+                        rrule: nil,
+                        listId: nil,
+                        pinned: nil,
+                        completed: nil,
+                        instanceDateEpochMs: nil,
+                        name: nil,
+                        color: nil,
+                        iconKey: nil
+                    )
+                )
+            }
+            return nextState
+        }
+
+        onOptimisticDelete()
+
+        if syncManager.isLocalMode {
+            return
+        }
+
+        let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
+        if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
+            throw error
+        }
+    }
+
+    private func buildLists(from state: OfflineSyncState) -> [ListSummary] {
+        let floaterCounts = Dictionary(grouping: state.floaters.filter { !$0.completed }, by: { $0.listId })
+            .mapValues(\.count)
+        return orderFloaterListsLikeWeb(state.floaterLists)
+            .map { floaterListFromCache($0, todoCountOverride: floaterCounts[$0.id] ?? 0) }
+    }
+
+    private func replaceLocalFloaterListID(
+        _ state: OfflineSyncState,
+        localListID: String,
+        serverListID: String
+    ) -> OfflineSyncState {
+        var nextState = state
+        nextState.floaters = state.floaters.map { floater in
+            guard floater.listId == localListID else {
+                return floater
+            }
+            return CachedFloaterRecord(
+                id: floater.id,
+                canonicalId: floater.canonicalId,
+                title: floater.title,
+                description: floater.description,
+                priority: floater.priority,
+                pinned: floater.pinned,
+                completed: floater.completed,
+                listId: serverListID,
+                updatedAtEpochMs: floater.updatedAtEpochMs
+            )
+        }
+        nextState.completedFloaters = state.completedFloaters.map { completed in
+            guard completed.listId == localListID else {
+                return completed
+            }
+            return CachedCompletedFloaterRecord(
+                id: completed.id,
+                originalFloaterId: completed.originalFloaterId,
+                title: completed.title,
+                description: completed.description,
+                priority: completed.priority,
+                completedAtEpochMs: completed.completedAtEpochMs,
+                listId: serverListID,
+                listName: completed.listName,
+                listColor: completed.listColor
+            )
+        }
+        nextState.floaterLists = state.floaterLists.map { list in
+            guard list.id == localListID else {
+                return list
+            }
+            return CachedFloaterListRecord(
+                id: serverListID,
+                name: list.name,
+                color: list.color,
+                iconKey: list.iconKey,
+                todoCount: list.todoCount,
+                updatedAtEpochMs: list.updatedAtEpochMs,
+                createdAtEpochMs: list.createdAtEpochMs,
+                reusable: list.reusable,
+                defaultPriority: list.defaultPriority
+            )
+        }.dedupedByID()
+        nextState.pendingMutations = state.pendingMutations.map { mutation in
+            PendingMutationRecord(
+                mutationId: mutation.mutationId,
+                kind: mutation.kind,
+                targetId: mutation.targetId == localListID ? serverListID : mutation.targetId,
+                timestampEpochMs: mutation.timestampEpochMs,
+                title: mutation.title,
+                description: mutation.description,
+                priority: mutation.priority,
+                dueEpochMs: mutation.dueEpochMs,
+                rrule: mutation.rrule,
+                listId: mutation.listId == localListID ? serverListID : mutation.listId,
+                pinned: mutation.pinned,
+                completed: mutation.completed,
+                instanceDateEpochMs: mutation.instanceDateEpochMs,
+                name: mutation.name,
+                color: mutation.color,
+                iconKey: mutation.iconKey,
+                reusable: mutation.reusable,
+                defaultPriority: mutation.defaultPriority,
+                defaultPriorityChanged: mutation.defaultPriorityChanged
+            )
+        }
+        return nextState
+    }
+
+    private func capitalizeFirstListLetter(_ value: String) -> String {
+        guard let firstLetterIndex = value.firstIndex(where: { $0.isLetter }) else {
+            return value
+        }
+        let current = value[firstLetterIndex]
+        let capitalized = String(current).capitalized
+        guard String(current) != capitalized else {
+            return value
+        }
+
+        var result = value
+        result.replaceSubrange(firstLetterIndex...firstLetterIndex, with: capitalized)
+        return result
+    }
+}

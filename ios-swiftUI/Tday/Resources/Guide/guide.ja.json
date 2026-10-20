@@ -1,0 +1,1808 @@
+{
+  "currentVersion": "0.8.5",
+  "ui": {
+    "title": "使い方とヒント",
+    "subtitle": "T'Day でできることのすべて — 目に見える機能も、隠れた機能も。",
+    "searchPlaceholder": "機能を検索…",
+    "searchAria": "ガイドを検索",
+    "whatsNew": "新着情報",
+    "tryIt": "試してみる",
+    "clearSearch": "クリア",
+    "noResults": "一致する項目がありません。別の言葉でお試しください。",
+    "results": "{{count}} 件の結果",
+    "badges.hiddenGem": "隠れた便利機能",
+    "badges.proTip": "プロのヒント",
+    "badges.new": "新機能",
+    "badges.server": "サーバーモード",
+    "sections.gettingStarted": "はじめに",
+    "sections.captureAndDates": "入力と日付",
+    "sections.gestures": "ジェスチャー",
+    "sections.organizing": "整理する",
+    "sections.recurrenceAndReminders": "繰り返しとリマインダー",
+    "sections.widgetsAndSurfaces": "ウィジェットと表示先",
+    "sections.modesAndSync": "モードと同期",
+    "sections.integrations": "連携",
+    "sections.keyboardShortcuts": "キーボードショートカット"
+  },
+  "sections": [
+    {
+      "id": "GETTING_STARTED",
+      "title": "はじめに",
+      "order": 0
+    },
+    {
+      "id": "CAPTURE_AND_DATES",
+      "title": "入力と日付",
+      "order": 1
+    },
+    {
+      "id": "GESTURES",
+      "title": "ジェスチャー",
+      "order": 2
+    },
+    {
+      "id": "ORGANIZING",
+      "title": "整理する",
+      "order": 3
+    },
+    {
+      "id": "RECURRENCE_AND_REMINDERS",
+      "title": "繰り返しとリマインダー",
+      "order": 4
+    },
+    {
+      "id": "WIDGETS_AND_SURFACES",
+      "title": "ウィジェットと表示先",
+      "order": 5
+    },
+    {
+      "id": "MODES_AND_SYNC",
+      "title": "モードと同期",
+      "order": 6
+    },
+    {
+      "id": "INTEGRATIONS",
+      "title": "連携",
+      "order": 7
+    },
+    {
+      "id": "KEYBOARD_SHORTCUTS",
+      "title": "キーボードショートカット",
+      "order": 8
+    }
+  ],
+  "topics": [
+    {
+      "id": "root-feeds",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "layout-dashboard",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "予定とエニタイム",
+      "summary": "ドックから切り替えられる、2つの静かなメインフィード。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day には対になった2つのフィードがあります。「予定」には今日以降の日付付きタスクが並びます。エニタイムにはフローター（日付のないタスク）が並びます。下部のドックから2つを切り替え、どちらからでもタスクを作成できます。"
+          ]
+        }
+      ],
+      "searchTitle": "予定とエニタイム",
+      "searchKeywords": "予定, エニタイム, フィード, ドック, ルート, 移動, タブ, scheduled, anytime, feed",
+      "searchBody": "ドックから切り替えられる、2つの静かなメインフィード。 t'day には対になった2つのフィードがあります。「予定」には今日以降の日付付きタスクが並びます。エニタイムにはフローター（日付のないタスク）が並びます。下部のドックから2つを切り替え、どちらからでもタスクを作成できます。"
+    },
+    {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "デフォルトのホーム画面",
+      "summary": "T'Dayが「予定」と「エニタイム」のどちらで開くかを選べます。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "設定の「動作」セクションで、最初に開くフィードを「予定」か「エニタイム」から選べます。起動時に表示される画面だけを決めるもので、ドックからはいつでも両方を切り替えられます。"
+          ]
+        }
+      ],
+      "searchTitle": "デフォルトのホーム画面",
+      "searchKeywords": "デフォルト, ホーム画面, 起動, 予定, エニタイム, 動作, 設定",
+      "searchBody": "t'dayが「予定」と「エニタイム」のどちらで開くかを選べます。 設定の「動作」セクションで、最初に開くフィードを「予定」か「エニタイム」から選べます。起動時に表示される画面だけを決めるもので、ドックからはいつでも両方を切り替えられます。"
+    },
+    {
+      "id": "create-task",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "plus",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "タスクを作成する",
+      "summary": "予定付きタスクも日付なしのフローターも、数タップで追加。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "作成ボタンをタップしてタスクを追加します。タイトルを付け、日付があれば締め切り時刻も設定します。日付を入れなければ、エニタイムフィードのフローターになります。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "タイトルにそのまま日付を入力し始めてください — T'Day が読み取ってくれます。「日付を入力する」を参照。"
+          ]
+        }
+      ],
+      "searchTitle": "タスクを作成する",
+      "searchKeywords": "作成, 追加, 新規, タスク, プラス, 作成ボタン, 入力, create, add, new",
+      "searchBody": "予定付きタスクも日付なしのフローターも、数タップで追加。 作成ボタンをタップしてタスクを追加します。タイトルを付け、日付があれば締め切り時刻も設定します。日付を入れなければ、エニタイムフィードのフローターになります。 タイトルにそのまま日付を入力し始めてください — t'day が読み取ってくれます。「日付を入力する」を参照。"
+    },
+    {
+      "id": "nlp-date-syntax",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "nlp-title-input"
+      ],
+      "title": "日付を入力する",
+      "summary": "タイトルに日付を書くだけで、T'Day が予定を設定します。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "ピッカーは不要です。日付（\"tomorrow 3pm\"）、繰り返し（\"every day\"、\"weekly\"、\"every weekday\"）、優先度（\"!\"、\"!!\"、末尾の \"high\"/\"low\"）をタイトルに直接入力できます。T'Day は端末上で解析し（アカウントや通信は不要）、理解した日付をハイライトして、予定・繰り返し・優先度を埋めます。"
+          ]
+        },
+        {
+          "type": "EXAMPLE",
+          "texts": [
+            "歯医者 tuesday 3pm every weekday !!"
+          ]
+        }
+      ],
+      "searchTitle": "日付を入力する",
+      "searchKeywords": "自然言語, 日付, 明日, 来週, 解析, クイック, スマート, オンデバイス, natural language, nlp, tomorrow",
+      "searchBody": "タイトルに日付を書くだけで、t'day が予定を設定します。 ピッカーは不要です。日付（\"tomorrow 3pm\"）、繰り返し（\"every day\"、\"weekly\"、\"every weekday\"）、優先度（\"!\"、\"!!\"、末尾の \"high\"/\"low\"）をタイトルに直接入力できます。t'day は端末上で解析し（アカウントや通信は不要）、理解した日付をハイライトして、予定・繰り返し・優先度を埋めます。 歯医者 tuesday 3pm every weekday !!"
+    },
+    {
+      "id": "calendar-views",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "calendar",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": "calendar",
+        "android": "calendar",
+        "ios": "calendar"
+      },
+      "helpAnchors": [],
+      "title": "カレンダー表示",
+      "summary": "予定付きタスクを月・週・日で確認。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "カレンダーを開くと、予定付きタスクが月・週・日ごとに並びます。スワイプするか山型ボタンで期間を移動できます。右上のボタンを押すと、表示を変えずに今日へ戻れます。"
+          ]
+        }
+      ],
+      "searchTitle": "カレンダー表示",
+      "searchKeywords": "カレンダー, 月, 週, 日, アジェンダ, 表示, 日付, calendar, month, week, day",
+      "searchBody": "予定付きタスクを月・週・日で確認。 カレンダーを開くと、予定付きタスクが月・週・日ごとに並びます。スワイプするか山型ボタンで期間を移動できます。右上のボタンを押すと、表示を変えずに今日へ戻れます。"
+    },
+    {
+      "id": "priorities",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "flag",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "優先度",
+      "summary": "低・中・高で、大切なものに印を付ける。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "タスクに優先度を付けて、どれくらい重要かを示します。優先度はタスク上に小さなアクセントカラーのドットで表示され、最初に注意を向けるべきものを並べ替えるのに役立ちます。"
+          ]
+        }
+      ],
+      "searchTitle": "優先度",
+      "searchKeywords": "優先度, 高, 中, 低, 重要, 緊急, フラグ, priority, high, medium, low",
+      "searchBody": "低・中・高で、大切なものに印を付ける。 タスクに優先度を付けて、どれくらい重要かを示します。優先度はタスク上に小さなアクセントカラーのドットで表示され、最初に注意を向けるべきものを並べ替えるのに役立ちます。"
+    },
+    {
+      "id": "pin-task",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "pin",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "タスクをピン留めする",
+      "summary": "大切なタスクをリストの一番上に固定。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "タスクをピン留めすると、通常の並び順より上、フィードの一番上に固定できます。ピンを外すと元の位置に戻ります。"
+          ]
+        }
+      ],
+      "searchTitle": "タスクをピン留めする",
+      "searchKeywords": "ピン, ピン留め, 固定, 一番上, 重要, キープ, pin, pinned, top",
+      "searchBody": "大切なタスクをリストの一番上に固定。 タスクをピン留めすると、通常の並び順より上、フィードの一番上に固定できます。ピンを外すと元の位置に戻ります。"
+    },
+    {
+      "id": "swipe-actions",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "pointer",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": null,
+        "android": "todos/today",
+        "ios": "today"
+      },
+      "helpAnchors": [],
+      "title": "スワイプ操作",
+      "summary": "タスクの行をスワイプすれば、開かずにすばやく操作。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "タスクの行をスワイプすると、タスクを開かずにすばやく操作できます — 完了にしたり、削除したり。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "完了したタスクは数秒間「元に戻す」トーストを表示するので、誤ってスワイプしても取り返しがつかなくなることはありません。"
+          ]
+        }
+      ],
+      "searchTitle": "スワイプ操作",
+      "searchKeywords": "スワイプ, ジェスチャー, スライド, 完了, 削除, クイック, 行, swipe, gesture, complete",
+      "searchBody": "タスクの行をスワイプすれば、開かずにすばやく操作。 タスクの行をスワイプすると、タスクを開かずにすばやく操作できます — 完了にしたり、削除したり。 完了したタスクは数秒間「元に戻す」トーストを表示するので、誤ってスワイプしても取り返しがつかなくなることはありません。"
+    },
+    {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.8",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "タスクの詳細をコピー",
+      "summary": "タスクのタイトル・メモ・期限・優先度をテキストとしてコピー。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "タスクをスワイプしてコピーをタップするか、デスクトップではコピーボタンを使うと、タイトル・メモ・期限・優先度をプレーンテキストとしてコピーでき、どこにでも貼り付けられます。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "メッセージやメール、他のアプリにタスクを貼り付けたいときに、入力し直さずに済んで便利です。"
+          ]
+        }
+      ],
+      "searchTitle": "タスクの詳細をコピー",
+      "searchKeywords": "コピー, クリップボード, 共有, テキスト, スワイプ, copy, clipboard",
+      "searchBody": "タスクのタイトル・メモ・期限・優先度をテキストとしてコピー。 タスクをスワイプしてコピーをタップするか、デスクトップではコピーボタンを使うと、タイトル・メモ・期限・優先度をプレーンテキストとしてコピーでき、どこにでも貼り付けられます。 メッセージやメール、他のアプリにタスクを貼り付けたいときに、入力し直さずに済んで便利です。"
+    },
+    {
+      "id": "long-press-actions",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "hand",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "タスクを長押しする",
+      "summary": "長押しでその他のオプションを開き、並べ替えを開始。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "タスクを長押しすると、そのオプションを開いたり、つまんでリスト内の新しい位置へドラッグしたりできます。"
+          ]
+        }
+      ],
+      "searchTitle": "タスクを長押しする",
+      "searchKeywords": "長押し, ホールド, コンテキストメニュー, オプション, 並べ替え, ドラッグ, long press, hold, reorder",
+      "searchBody": "長押しでその他のオプションを開き、並べ替えを開始。 タスクを長押しすると、そのオプションを開いたり、つまんでリスト内の新しい位置へドラッグしたりできます。"
+    },
+    {
+      "id": "drag-reorder",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "ドラッグで並べ替える",
+      "summary": "タスクを好きな順番にドラッグ。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "リストは自分で決めた順番を保ちます。タスクを上下にドラッグして、自分の考え方に合わせて一日を組み立てましょう。"
+          ]
+        }
+      ],
+      "searchTitle": "ドラッグで並べ替える",
+      "searchKeywords": "ドラッグ, 並べ替え, 移動, ソート, 順番, 整理, drag, reorder, sort",
+      "searchBody": "タスクを好きな順番にドラッグ。 リストは自分で決めた順番を保ちます。タスクを上下にドラッグして、自分の考え方に合わせて一日を組み立てましょう。"
+    },
+    {
+      "id": "swipe-sheet-away",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.23",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "シートを下にスワイプして閉じる",
+      "summary": "新規タスクのシートを下に引いて閉じられます。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "新規タスクのシート上部にある小さなバーは、下に引けるという合図です。ドラッグすると指に追従し、4分の1ほど下げたところで放すと閉じます — 背後の暗い部分をタップしたときとまったく同じです。短くはじくだけでも構いません。放した位置ではなく、向かっていた先で判断されます。途中で気が変わって戻せば、元の位置に収まります。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "中身がスクロールするシートでは、カードの上部をつかんでください。中央はリストのものです。"
+          ]
+        }
+      ],
+      "searchTitle": "シートを下にスワイプして閉じる",
+      "searchKeywords": "スワイプ, ドラッグ, 引く, 閉じる, 破棄, シート, ハンドル, ジェスチャー, 下, swipe, drag, dismiss, sheet",
+      "searchBody": "新規タスクのシートを下に引いて閉じられます。 新規タスクのシート上部にある小さなバーは、下に引けるという合図です。ドラッグすると指に追従し、4分の1ほど下げたところで放すと閉じます — 背後の暗い部分をタップしたときとまったく同じです。短くはじくだけでも構いません。放した位置ではなく、向かっていた先で判断されます。途中で気が変わって戻せば、元の位置に収まります。 中身がスクロールするシートでは、カードの上部をつかんでください。中央はリストのものです。"
+    },
+    {
+      "id": "floaters-vs-todos",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "フローターと予定付きタスク",
+      "summary": "日付なしのタスクはエニタイムに、日付ありのタスクは「予定」に。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "日付付きタスクには締め切り日があり、「予定」とカレンダーに表示されます。フローターには日付がなく — 準備ができるまでエニタイムフィードで静かに待ちます。今日を散らかしたくない「いつか」やることには、フローターを使いましょう。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "フローターはカレンダーには一切表示されません — その場所は日付のある予定だけのものです。"
+          ]
+        }
+      ],
+      "searchTitle": "フローターと予定付きタスク",
+      "searchKeywords": "フローター, エニタイム, 未予定, 日付なし, todo, 予定付き, 違い, floater, anytime, scheduled",
+      "searchBody": "日付なしのタスクはエニタイムに、日付ありのタスクは「予定」に。 日付付きタスクには締め切り日があり、「予定」とカレンダーに表示されます。フローターには日付がなく — 準備ができるまでエニタイムフィードで静かに待ちます。今日を散らかしたくない「いつか」やることには、フローターを使いましょう。 フローターはカレンダーには一切表示されません — その場所は日付のある予定だけのものです。"
+    },
+    {
+      "id": "resting-floaters",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "休眠フローター",
+      "summary": "手つかずの Anytime タスクは静かに薄れて休み、リストを穏やかに保ちます。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "1か月触れていない Anytime タスクはそっと薄くなり、3か月後には下部の穏やかな「休眠」グループにまとまります。削除はされません。あなたが戻るまで注目を求めなくなるだけです。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "表示上の合図だけです。タップすればすぐに呼び戻せます。"
+          ]
+        }
+      ],
+      "searchTitle": "休眠フローター",
+      "searchKeywords": "休眠, フローター, anytime, フェード, 薄く, 経年, 休止, 古い, 静か",
+      "searchBody": "手つかずの anytime タスクは静かに薄れて休み、リストを穏やかに保ちます。 1か月触れていない anytime タスクはそっと薄くなり、3か月後には下部の穏やかな「休眠」グループにまとまります。削除はされません。あなたが戻るまで注目を求めなくなるだけです。 表示上の合図だけです。タップすればすぐに呼び戻せます。"
+    },
+    {
+      "id": "promote-and-float",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "昇格とフロート",
+      "summary": "フローターを実際のタスクとして予定するか、滞ったタスクをフロートに戻します。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "フローターが本当の作業になったら、「予定する」アクションで時間を選びましょう。日付付きタスクとして「予定」フィードに移動します。逆方向も可能です。先延ばしが続く期限切れタスクは静かにフロートさせられます。降格すると日付なしで「いつでも」に戻り、タイトル・メモ・優先度はそのまま保持されます。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "繰り返しタスクはフロートできません。日付なしにしたい場合は、先に繰り返しを終了してください。"
+          ]
+        }
+      ],
+      "searchTitle": "昇格とフロート",
+      "searchKeywords": "昇格, フローターを予定, 降格, フロートさせる, 変換, いつでも, 移動, 期限切れ",
+      "searchBody": "フローターを実際のタスクとして予定するか、滞ったタスクをフロートに戻します。 フローターが本当の作業になったら、「予定する」アクションで時間を選びましょう。日付付きタスクとして「予定」フィードに移動します。逆方向も可能です。先延ばしが続く期限切れタスクは静かにフロートさせられます。降格すると日付なしで「いつでも」に戻り、タイトル・メモ・優先度はそのまま保持されます。 繰り返しタスクはフロートできません。日付なしにしたい場合は、先に繰り返しを終了してください。"
+    },
+    {
+      "id": "quick-defer",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "クイック延期",
+      "summary": "ワンタップでタスクを今日の後で・今夜・明日・来週に移動します。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "タスクを少しだけ動かしたいときは、日付ピッカーを開く必要はありません。「延期」アクションなら、今日の後で（+3時間）、今夜（19:00）、明日の朝（9:00）、来週（月曜 9:00）をワンタップで選べます。編集シートで行う変更と同じ内容を、より速く行えます。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "繰り返しタスクは編集シートから回ごとに延期するため、ワンタップメニューは表示されません。"
+          ]
+        }
+      ],
+      "searchTitle": "クイック延期",
+      "searchKeywords": "延期, 先送り, 後で, 今夜, 明日, 来週, 予定変更",
+      "searchBody": "ワンタップでタスクを今日の後で・今夜・明日・来週に移動します。 タスクを少しだけ動かしたいときは、日付ピッカーを開く必要はありません。「延期」アクションなら、今日の後で（+3時間）、今夜（19:00）、明日の朝（9:00）、来週（月曜 9:00）をワンタップで選べます。編集シートで行う変更と同じ内容を、より速く行えます。 繰り返しタスクは編集シートから回ごとに延期するため、ワンタップメニューは表示されません。"
+    },
+    {
+      "id": "day-done",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "今日は完了",
+      "summary": "今日の分をすべて終えると、「今日」画面が静かに祝ってくれます。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "今日予定していたタスクをすべて完了すると（単にタスクがない場合とは区別されます）、「今日」画面は「タスクなし」の表示を穏やかな完了状態に切り替えます。柔らかなダブルチェック、「今日のタスクはすべて完了」の文字、そして日付。連続記録もスコアもなく、本当に終えた一日のささやかなご褒美だけです。"
+          ]
+        }
+      ],
+      "searchTitle": "今日は完了",
+      "searchKeywords": "今日完了, すべて完了, 終わった, 全部済んだ, 今日が空",
+      "searchBody": "今日の分をすべて終えると、「今日」画面が静かに祝ってくれます。 今日予定していたタスクをすべて完了すると（単にタスクがない場合とは区別されます）、「今日」画面は「タスクなし」の表示を穏やかな完了状態に切り替えます。柔らかなダブルチェック、「今日のタスクはすべて完了」の文字、そして日付。連続記録もスコアもなく、本当に終えた一日のささやかなご褒美だけです。"
+    },
+    {
+      "id": "floater-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "list",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "フローターのリスト",
+      "summary": "エニタイムのタスクを専用のリストにまとめる。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "フローターを別々のリスト — 買い物、荷造り、アイデアなど — に整理できます。それぞれに独自の名前と色、そして独自の完了履歴があります。"
+          ]
+        }
+      ],
+      "searchTitle": "フローターのリスト",
+      "searchKeywords": "フローターリスト, エニタイム, グループ, リスト, カテゴリ, 買い物, 荷造り, floater list, group",
+      "searchBody": "エニタイムのタスクを専用のリストにまとめる。 フローターを別々のリスト — 買い物、荷造り、アイデアなど — に整理できます。それぞれに独自の名前と色、そして独自の完了履歴があります。"
+    },
+    {
+      "id": "reusable-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "再利用リスト",
+      "summary": "チェックリストをリセットしてもう一度使えます。荷造り・家事・買い物に。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Anytime リストを再利用に設定すると「リセット」が表示されます。一度タップすると全項目のチェックが外れ、同じリストを作り直さずにもう一度使えます。"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "フローターリストを開き、設定で「再利用」をオンにします。",
+            "いつも通り項目をチェックしていきます。",
+            "また必要になったら「リセット」をタップして全て外します。"
+          ]
+        }
+      ],
+      "searchTitle": "再利用リスト",
+      "searchKeywords": "再利用, リセット, チェックリスト, フローター, 繰り返し, テンプレート",
+      "searchBody": "チェックリストをリセットしてもう一度使えます。荷造り・家事・買い物に。 anytime リストを再利用に設定すると「リセット」が表示されます。一度タップすると全項目のチェックが外れ、同じリストを作り直さずにもう一度使えます。 フローターリストを開き、設定で「再利用」をオンにします。 いつも通り項目をチェックしていきます。 また必要になったら「リセット」をタップして全て外します。"
+    },
+    {
+      "id": "scheduled-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "list-todo",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "予定付きタスクのリスト",
+      "summary": "日付ありのタスクを名前と色付きのリストに分類。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "予定付きタスクにリストを割り当てて、関連する作業をまとめておけます。リストには名前と色があり、絞り込みもできます。"
+          ]
+        }
+      ],
+      "searchTitle": "予定付きタスクのリスト",
+      "searchKeywords": "リスト, プロジェクト, グループ, 色, 予定付き, カテゴリ, list, project, color",
+      "searchBody": "日付ありのタスクを名前と色付きのリストに分類。 予定付きタスクにリストを割り当てて、関連する作業をまとめておけます。リストには名前と色があり、絞り込みもできます。"
+    },
+    {
+      "id": "list-icons",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.28",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "リストアイコンの自動設定",
+      "summary": "アイコンを選んでいないリストは、その名前に合ったアイコンを自動で受け取ります。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "リストを Groceries と名付けるとショッピングカートが付き、Gym にはダンベル、Work にはブリーフケースが付きます。T'Day が推測するのは、自分でアイコンを選んでいないときだけです。名前がはっきりしない場合は既定のアイコンのままにします。今のところ名前は英語で照合されます。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "アイコンはリストの設定からいつでも選べます。一度選べばそのまま保持され、推測で上書きされることはありません。"
+          ]
+        }
+      ],
+      "searchTitle": "リストアイコンの自動設定",
+      "searchKeywords": "リストアイコン, 自動, 提案, グリフ, 名前, 買い物, ジム, 仕事",
+      "searchBody": "アイコンを選んでいないリストは、その名前に合ったアイコンを自動で受け取ります。 リストを groceries と名付けるとショッピングカートが付き、gym にはダンベル、work にはブリーフケースが付きます。t'day が推測するのは、自分でアイコンを選んでいないときだけです。名前がはっきりしない場合は既定のアイコンのままにします。今のところ名前は英語で照合されます。 アイコンはリストの設定からいつでも選べます。一度選べばそのまま保持され、推測で上書きされることはありません。"
+    },
+    {
+      "id": "completed-history",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "完了履歴",
+      "summary": "終えたことすべてを、後から振り返れるように保存。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "終えたタスクは捨てられません — 日付ごとにまとめられた完了履歴に移り、実際に何をやり遂げたかを見返せます。"
+          ]
+        }
+      ],
+      "searchTitle": "完了履歴",
+      "searchKeywords": "完了, 済み, 履歴, 終了, アーカイブ, 過去, completed, done, history",
+      "searchBody": "終えたことすべてを、後から振り返れるように保存。 終えたタスクは捨てられません — 日付ごとにまとめられた完了履歴に移り、実際に何をやり遂げたかを見返せます。"
+    },
+    {
+      "id": "overdue-view",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": "overdue",
+        "android": "todos/overdue",
+        "ios": "overdueTodos"
+      },
+      "helpAnchors": [],
+      "title": "期限切れ",
+      "summary": "時間が過ぎたタスクのための専用の場所。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "締め切り時刻が過ぎたタスクは期限切れビューに集まり、何も静かに抜け落ちることがありません。準備ができたら予定を組み直しましょう。"
+          ]
+        }
+      ],
+      "searchTitle": "期限切れ",
+      "searchKeywords": "期限切れ, 遅れ, 期限超過, 見逃し, 繰り越し, 未処理, overdue, late, past due",
+      "searchBody": "時間が過ぎたタスクのための専用の場所。 締め切り時刻が過ぎたタスクは期限切れビューに集まり、何も静かに抜け落ちることがありません。準備ができたら予定を組み直しましょう。"
+    },
+    {
+      "id": "morning-sweep",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "hand",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": {
+        "web": "overdue",
+        "android": "morning-sweep",
+        "ios": "morning-sweep"
+      },
+      "helpAnchors": [],
+      "title": "朝のスイープ",
+      "summary": "持ち越したタスクをカード1枚ずつ整理します。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "遅れがつらくなくなります。期限切れ画面の「スイープ」ボタンは、持ち越したタスクをカード1枚ずつ確認していきます。今日・明日・日付を選ぶ・フローターにする・手放す、から選ぶだけ。急いでいるなら「すべて今日へ」で一括移動でき、取り消しも1回で済みます。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "繰り返しタスクはスイープの対象外です。シリーズを保つため、編集シートから回ごとに予定を変更してください。"
+          ]
+        }
+      ],
+      "searchTitle": "朝のスイープ",
+      "searchKeywords": "スイープ, 期限切れ, 整理, 持ち越し, 挽回, 溜まったタスク, 朝",
+      "searchBody": "持ち越したタスクをカード1枚ずつ整理します。 遅れがつらくなくなります。期限切れ画面の「スイープ」ボタンは、持ち越したタスクをカード1枚ずつ確認していきます。今日・明日・日付を選ぶ・フローターにする・手放す、から選ぶだけ。急いでいるなら「すべて今日へ」で一括移動でき、取り消しも1回で済みます。 繰り返しタスクはスイープの対象外です。シリーズを保つため、編集シートから回ごとに予定を変更してください。"
+    },
+    {
+      "id": "bulk-actions",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "circle-check-big",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.4",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "一括操作",
+      "summary": "複数のタスクをまとめて選び、一度に処理します。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "タスクリストのヘッダーで「選択」をタップすると選択モードになります。タスクを1件ずつ選ぶか「すべて選択」を使い、選んだ全体に1つの操作を適用します。完了にする、優先度を変える、別のリストへ移す、削除する、のいずれかです。"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "タスクリストを開き、ヘッダーの「選択」をタップします。",
+            "タスクをタップして選ぶか、「すべて選択」で画面上のすべてを選びます。",
+            "下部のバーから「完了」「優先度」「移動」「削除」を選びます。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "削除では先に正確な件数の確認があり、そのうえで取り消しの通知も表示されます。繰り返しタスクは一括操作の対象から完全に外れるため、シリーズ全体が誤って変わることはありません。個別に開いて完了・移動・削除してください。"
+          ]
+        }
+      ],
+      "searchTitle": "一括操作",
+      "searchKeywords": "一括, 複数選択, すべて選択, まとめて, 完了, 削除, 優先度, 移動, 選択",
+      "searchBody": "複数のタスクをまとめて選び、一度に処理します。 タスクリストのヘッダーで「選択」をタップすると選択モードになります。タスクを1件ずつ選ぶか「すべて選択」を使い、選んだ全体に1つの操作を適用します。完了にする、優先度を変える、別のリストへ移す、削除する、のいずれかです。 タスクリストを開き、ヘッダーの「選択」をタップします。 タスクをタップして選ぶか、「すべて選択」で画面上のすべてを選びます。 下部のバーから「完了」「優先度」「移動」「削除」を選びます。 削除では先に正確な件数の確認があり、そのうえで取り消しの通知も表示されます。繰り返しタスクは一括操作の対象から完全に外れるため、シリーズ全体が誤って変わることはありません。個別に開いて完了・移動・削除してください。"
+    },
+    {
+      "id": "search-tasks",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "search",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "タスクを検索する",
+      "summary": "タイトル・メモ・リスト名からどんなタスクも見つける。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "検索欄を使えば、タイトル・説明・リスト名でタスクをすぐに絞り込めます — スクロールする必要はありません。"
+          ]
+        }
+      ],
+      "searchTitle": "タスクを検索する",
+      "searchKeywords": "検索, 見つける, 絞り込み, ルックアップ, クエリ, search, find, filter",
+      "searchBody": "タイトル・メモ・リスト名からどんなタスクも見つける。 検索欄を使えば、タイトル・説明・リスト名でタスクをすぐに絞り込めます — スクロールする必要はありません。"
+    },
+    {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "通知",
+      "summary": "T'Day が通知してよいかどうかを、ひとつのスイッチで決めます。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "設定には通知のスイッチがひとつだけあり、届くものはすべてそこを通ります — タスクのリマインダーと翌日のダイジェストです。オフにするとミュートではなくキューが空になるため、再びオンにしても遅れて届くものはありません。システムの権限も必要です。端末で T'Day の通知がブロックされている間、スイッチはオフのままになり、システム設定を開く案内を表示します。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "両方がオンである必要があります。システムの権限がなければ、ここでどう設定していてもスイッチはオフと表示されます。"
+          ]
+        }
+      ],
+      "searchTitle": "通知",
+      "searchKeywords": "通知, 権限, スイッチ, 許可, ミュート, 消音, リマインダー, ダイジェスト, システム設定",
+      "searchBody": "t'day が通知してよいかどうかを、ひとつのスイッチで決めます。 設定には通知のスイッチがひとつだけあり、届くものはすべてそこを通ります — タスクのリマインダーと翌日のダイジェストです。オフにするとミュートではなくキューが空になるため、再びオンにしても遅れて届くものはありません。システムの権限も必要です。端末で t'day の通知がブロックされている間、スイッチはオフのままになり、システム設定を開く案内を表示します。 両方がオンである必要があります。システムの権限がなければ、ここでどう設定していてもスイッチはオフと表示されます。"
+    },
+    {
+      "id": "recurrence-presets",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "recurrence-picker"
+      ],
+      "title": "繰り返しタスク",
+      "summary": "タスクを毎日・毎週などで繰り返す。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "タスクを繰り返しに設定すると、決めたスケジュールで自動的に戻ってきます。プリセット — 毎日、平日、毎週、毎月 — から選べて、1回分を完了しても残りのシリーズはそのまま残ります。"
+          ]
+        },
+        {
+          "type": "EXAMPLE",
+          "texts": [
+            "植物に水やり · 毎週"
+          ]
+        }
+      ],
+      "searchTitle": "繰り返しタスク",
+      "searchKeywords": "繰り返し, 定期, リピート, 毎日, 毎週, 毎月, スケジュール, repeat, recurring, weekly, rrule",
+      "searchBody": "タスクを毎日・毎週などで繰り返す。 タスクを繰り返しに設定すると、決めたスケジュールで自動的に戻ってきます。プリセット — 毎日、平日、毎週、毎月 — から選べて、1回分を完了しても残りのシリーズはそのまま残ります。 植物に水やり · 毎週"
+    },
+    {
+      "id": "repeat-suggestions",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "繰り返しの提案",
+      "summary": "T'Day はリズムよく終える作業を見つけ、繰り返しを提案します。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "同じ作業を一定のリズムで終え続けると——毎週の水やり、毎月の家賃——T'Day がそれに気づき、ワンタップで繰り返しにするチップを表示します。読み取るのは端末内の完了履歴だけで、データは端末から出ません。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "不要ですか？ ✕ をタップすれば、そのタイトルは再び尋ねません。"
+          ]
+        }
+      ],
+      "searchTitle": "繰り返しの提案",
+      "searchKeywords": "繰り返し, 提案, 定期, リズム, 習慣, パターン, 自動",
+      "searchBody": "t'day はリズムよく終える作業を見つけ、繰り返しを提案します。 同じ作業を一定のリズムで終え続けると——毎週の水やり、毎月の家賃——t'day がそれに気づき、ワンタップで繰り返しにするチップを表示します。読み取るのは端末内の完了履歴だけで、データは端末から出ません。 不要ですか？ ✕ をタップすれば、そのタイトルは再び尋ねません。"
+    },
+    {
+      "id": "reminders",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "リマインダー",
+      "summary": "タスクの締め切り前に通知を受け取る。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "予定付きタスクにリマインダーを追加すると、適切なタイミングで端末が通知します。リマインダーは端末上で設定されるため、ローカルモードでも動作します。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "リマインダーの事前通知のタイミングはタスクによって少し異なります — 十分に余裕を持てるものを選びましょう。"
+          ]
+        }
+      ],
+      "searchTitle": "リマインダー",
+      "searchKeywords": "リマインダー, 通知, アラート, アラーム, 知らせる, 事前, reminder, notification, alert",
+      "searchBody": "タスクの締め切り前に通知を受け取る。 予定付きタスクにリマインダーを追加すると、適切なタイミングで端末が通知します。リマインダーは端末上で設定されるため、ローカルモードでも動作します。 リマインダーの事前通知のタイミングはタスクによって少し異なります — 十分に余裕を持てるものを選びましょう。"
+    },
+    {
+      "id": "reminder-snooze",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "リマインダーの再通知",
+      "summary": "リマインダー通知には「1時間後に再通知」と「今夜」のアクションがあります。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "タイミングの悪いリマインダーは、アプリを開かなくて大丈夫です。「1時間後に再通知」は同じリマインダーを1時間後に再送し、「今夜」はタスク自体を今日の19:00に移動します。「今夜」は単発タスク用です。繰り返しタスクはシリーズを保つため、アプリ内で予定を変更してください。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "再通知は通知を遅らせるだけです。タスクを移動するまで、期限は元のままです。"
+          ]
+        }
+      ],
+      "searchTitle": "リマインダーの再通知",
+      "searchKeywords": "再通知, スヌーズ, リマインダー, 通知, 後で, 今夜",
+      "searchBody": "リマインダー通知には「1時間後に再通知」と「今夜」のアクションがあります。 タイミングの悪いリマインダーは、アプリを開かなくて大丈夫です。「1時間後に再通知」は同じリマインダーを1時間後に再送し、「今夜」はタスク自体を今日の19:00に移動します。「今夜」は単発タスク用です。繰り返しタスクはシリーズを保つため、アプリ内で予定を変更してください。 再通知は通知を遅らせるだけです。タスクを移動するまで、期限は元のままです。"
+    },
+    {
+      "id": "quiet-hours",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-notifications"
+      ],
+      "title": "サイレント時間",
+      "summary": "夜間はリマインダーを保留し、睡眠中に鳴らないようにします。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "時間帯（例: 22:00〜07:00）を設定すると、その中で鳴るはずのリマインダーは終了まで保留されます。端末内のみで、ローカルのリマインダーは朝まで待ちます。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "時間帯は深夜をまたげます（22:00 → 07:00）。計算が対応します。"
+          ]
+        }
+      ],
+      "searchTitle": "サイレント時間",
+      "searchKeywords": "サイレント, 時間, おやすみ, 夜, 睡眠, リマインダー, スケジュール",
+      "searchBody": "夜間はリマインダーを保留し、睡眠中に鳴らないようにします。 時間帯（例: 22:00〜07:00）を設定すると、その中で鳴るはずのリマインダーは終了まで保留されます。端末内のみで、ローカルのリマインダーは朝まで待ちます。 時間帯は深夜をまたげます（22:00 → 07:00）。計算が対応します。"
+    },
+    {
+      "id": "day-ahead",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell-ring",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "今日のダイジェスト",
+      "summary": "毎朝1件、今日のタスク数を知らせる静かな通知です。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "設定でオンにして時刻を選ぶと、毎朝1件の通知が今日の様子を知らせます。「今日のタスクは4件、持ち越し2件」——タップすると「今日」画面が開き、持ち越しがあるときは朝のスイープに直行します。完全にデバイス内で動作し、データが端末の外に出ることはありません。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "タスクのない日は通知されません。便りがないのは良い便りです。"
+          ]
+        }
+      ],
+      "searchTitle": "今日のダイジェスト",
+      "searchKeywords": "ダイジェスト, 今日の予定, 朝, 毎日の通知, 概要",
+      "searchBody": "毎朝1件、今日のタスク数を知らせる静かな通知です。 設定でオンにして時刻を選ぶと、毎朝1件の通知が今日の様子を知らせます。「今日のタスクは4件、持ち越し2件」——タップすると「今日」画面が開き、持ち越しがあるときは朝のスイープに直行します。完全にデバイス内で動作し、データが端末の外に出ることはありません。 タスクのない日は通知されません。便りがないのは良い便りです。"
+    },
+    {
+      "id": "home-widget",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "ホーム画面ウィジェット",
+      "summary": "アプリを開かずに今日のタスクを確認。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day ウィジェットをホーム画面に追加すれば、今日のタスクをひと目で確認できます。ウィジェットをタップすると、アプリが適切な場所で開きます。"
+          ]
+        }
+      ],
+      "searchTitle": "ホーム画面ウィジェット",
+      "searchKeywords": "ウィジェット, ホーム画面, ひと目, 今日, ロック画面, widget, home screen, today",
+      "searchBody": "アプリを開かずに今日のタスクを確認。 t'day ウィジェットをホーム画面に追加すれば、今日のタスクをひと目で確認できます。ウィジェットをタップすると、アプリが適切な場所で開きます。"
+    },
+    {
+      "id": "widget-list-selection",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "list-todo",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "ウィジェットに表示するリストを選ぶ",
+      "summary": "ウィジェットをフィード全体ではなく特定のリストに絞り込めます。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day ウィジェットを長押しして「ウィジェットを編集」を選ぶと、表示するリストを正確に指定できます — 予定リストでもフローターリストでも構いません。予定リストは締切時刻を表示し、期限切れを知らせます。フローターリストは締切時刻のないオープンなリストを表示します。未設定のままにすると、ウィジェットはこれまで通り Today または Floater のフィード全体を表示します。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "それぞれ別のリストを指す複数のウィジェットを追加すれば、ホーム画面で一度に見渡せます。"
+          ]
+        }
+      ],
+      "searchTitle": "ウィジェットに表示するリストを選ぶ",
+      "searchKeywords": "ウィジェット, リスト, 設定, ウィジェットを編集, リストごと, ホーム画面, ios, widget, list",
+      "searchBody": "ウィジェットをフィード全体ではなく特定のリストに絞り込めます。 t'day ウィジェットを長押しして「ウィジェットを編集」を選ぶと、表示するリストを正確に指定できます — 予定リストでもフローターリストでも構いません。予定リストは締切時刻を表示し、期限切れを知らせます。フローターリストは締切時刻のないオープンなリストを表示します。未設定のままにすると、ウィジェットはこれまで通り today または floater のフィード全体を表示します。 それぞれ別のリストを指す複数のウィジェットを追加すれば、ホーム画面で一度に見渡せます。"
+    },
+    {
+      "id": "list-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.45",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "リストウィジェット",
+      "summary": "好きな組み込みビューまたはリストを1つ表示する、3つ目のウィジェットです。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "「今日」と「エニタイム」に加えて、リストウィジェットがあります。配置すると、何を表示するかを尋ねられます — 組み込みの「予定」ビューと「期限超過」ビュー、または任意の予定リストやエニタイムリストを選べます。以降はその選択だけを表示し、+ を押すとタスクを追加します（リストを選んだ場合はそのリストに直接追加）。別のビューやリスト用にもう1つ配置すれば、それぞれが自分の設定を保ちます。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "リストウィジェットを別のリストに切り替えるには、長押しして「編集」(iPhoneでは「ウィジェットを編集」)を選びます。"
+          ]
+        }
+      ],
+      "searchTitle": "リストウィジェット",
+      "searchKeywords": "ウィジェット, ホーム画面, リスト, 設定, ピッカー, エニタイム, 予定, 追加",
+      "searchBody": "好きな組み込みビューまたはリストを1つ表示する、3つ目のウィジェットです。 「今日」と「エニタイム」に加えて、リストウィジェットがあります。配置すると、何を表示するかを尋ねられます — 組み込みの「予定」ビューと「期限超過」ビュー、または任意の予定リストやエニタイムリストを選べます。以降はその選択だけを表示し、+ を押すとタスクを追加します（リストを選んだ場合はそのリストに直接追加）。別のビューやリスト用にもう1つ配置すれば、それぞれが自分の設定を保ちます。 リストウィジェットを別のリストに切り替えるには、長押しして「編集」(iphoneでは「ウィジェットを編集」)を選びます。"
+    },
+    {
+      "id": "widget-quick-add",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "square-plus",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "ウィジェットからクイック追加",
+      "summary": "ウィジェットから直接、新しいタスクを開始。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "ウィジェットには作成ボタンがあり、まずアプリを開かなくてもホーム画面からタスクを入力できます — ローカルモードでも動作します。"
+          ]
+        }
+      ],
+      "searchTitle": "ウィジェットからクイック追加",
+      "searchKeywords": "ウィジェット, クイック追加, 作成, ショートカット, ホーム画面, widget, quick add, shortcut",
+      "searchBody": "ウィジェットから直接、新しいタスクを開始。 ウィジェットには作成ボタンがあり、まずアプリを開かなくてもホーム画面からタスクを入力できます — ローカルモードでも動作します。"
+    },
+    {
+      "id": "interactive-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "check-check",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "ウィジェットから完了",
+      "summary": "ホーム画面のウィジェットでそのままタスクを完了できます。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "今日のタスクとフローターのウィジェットがタップに対応しました。行の先頭にあるリングをタップすると、アプリを開かずにそのタスクを完了できます。行はすぐに消え、完了はほかの操作と同じように同期されます。オフラインでのタップも順番に記録され、オンラインに戻ると自動で反映されます。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "タップを間違えても、アプリの完了履歴からタスクを元に戻せます。"
+          ]
+        }
+      ],
+      "searchTitle": "ウィジェットから完了",
+      "searchKeywords": "ウィジェット, 完了, チェック, ホーム画面, インタラクティブ, タップ",
+      "searchBody": "ホーム画面のウィジェットでそのままタスクを完了できます。 今日のタスクとフローターのウィジェットがタップに対応しました。行の先頭にあるリングをタップすると、アプリを開かずにそのタスクを完了できます。行はすぐに消え、完了はほかの操作と同じように同期されます。オフラインでのタップも順番に記録され、オンラインに戻ると自動で反映されます。 タップを間違えても、アプリの完了履歴からタスクを元に戻せます。"
+    },
+    {
+      "id": "today-widget-progress",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "circle-check-big",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.44",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "今日のウィジェットをひと目で",
+      "summary": "今日どこまで進んだか、期限切れのもの、次に来るものがわかります。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "今日のウィジェットは日付と進捗リングから始まります。今日が期限のタスクのうち、いくつ完了したかを示します。期限切れのタスクは今日のタスクの下に専用のセクションでまとめられ、期限だった日が表示されます。今日が期限のタスクがないときは、次にタスクがある日の予定を表示します。タスクにチェックを入れると、少しのあいだチェックと取り消し線が付いたまま残り、その後消えます。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "リングが数えるのは今日が期限のタスクだけです。ほかの日のタスクを完了してもリングは増えません。"
+          ]
+        }
+      ],
+      "searchTitle": "今日のウィジェットをひと目で",
+      "searchKeywords": "ウィジェット, 今日, 進捗, リング, 完了, 期限超過, 明日, 日付, ホーム画面",
+      "searchBody": "今日どこまで進んだか、期限切れのもの、次に来るものがわかります。 今日のウィジェットは日付と進捗リングから始まります。今日が期限のタスクのうち、いくつ完了したかを示します。期限切れのタスクは今日のタスクの下に専用のセクションでまとめられ、期限だった日が表示されます。今日が期限のタスクがないときは、次にタスクがある日の予定を表示します。タスクにチェックを入れると、少しのあいだチェックと取り消し線が付いたまま残り、その後消えます。 リングが数えるのは今日が期限のタスクだけです。ほかの日のタスクを完了してもリングは増えません。"
+    },
+    {
+      "id": "share-into-tday",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "share-2",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "T'Day に共有",
+      "summary": "ほかのアプリのテキストをそのまま新しいタスクに送れます。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "ほかのアプリで気になるものを見つけたら、システムの共有シートから T'Day を選ぶだけ。共有したテキストは新規タスクのフォームに入ります。ページを共有するとタイトルがタスク名になり、リンクはメモに収まります。Android と Web アプリではフォームがすぐ開き、iOS では共有が即座に保存されて、次にアプリを開いたときに入力済みのフォームが表示されます。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "日付の入ったテキストを共有すると、パーサーが期限を自動で設定します。"
+          ]
+        }
+      ],
+      "searchTitle": "t'day に共有",
+      "searchKeywords": "共有, シェアシート, 送る, キャプチャ, インポート, 他のアプリから",
+      "searchBody": "ほかのアプリのテキストをそのまま新しいタスクに送れます。 ほかのアプリで気になるものを見つけたら、システムの共有シートから t'day を選ぶだけ。共有したテキストは新規タスクのフォームに入ります。ページを共有するとタイトルがタスク名になり、リンクはメモに収まります。android と web アプリではフォームがすぐ開き、ios では共有が即座に保存されて、次にアプリを開いたときに入力済みのフォームが表示されます。 日付の入ったテキストを共有すると、パーサーが期限を自動で設定します。"
+    },
+    {
+      "id": "carplay",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "car",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "CarPlay 上の T'Day",
+      "summary": "運転中も安全にタスクを確認・入力。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "CarPlay では、T'Day は車向けに作られた見やすく絞り込んだリストを表示します。スマホに手を伸ばさずに、次にやることを確認したり、音声でタスクを追加したりできます。"
+          ]
+        }
+      ],
+      "searchTitle": "carplay 上の t'day",
+      "searchKeywords": "carplay, 車, 運転, 音声, apple, ハンズフリー, car, driving, voice",
+      "searchBody": "運転中も安全にタスクを確認・入力。 carplay では、t'day は車向けに作られた見やすく絞り込んだリストを表示します。スマホに手を伸ばさずに、次にやることを確認したり、音声でタスクを追加したりできます。"
+    },
+    {
+      "id": "focus-filters",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "集中モードフィルタ",
+      "summary": "iOS の集中モードに、今日のフィードに表示するリストを決めてもらいましょう。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day は iOS の集中モードと連携します。仕事やプライベートなどの集中モードを選び、表示するリストを指定すると、その集中モードがオンの間は今日のフィードとホーム画面ウィジェットがそれ以外を静かに隠します。集中モードをオフにすればすべてのタスクが戻ります——何も削除されません。"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "iPhone で 設定 ▸ 集中モード を開き、集中モードを選びます。",
+            "集中モードフィルタを追加して T'Day を選び、リストを指定します。",
+            "集中モードをオンにすると、今日とウィジェットにはそのリストだけが表示されます。"
+          ]
+        }
+      ],
+      "searchTitle": "集中モードフィルタ",
+      "searchKeywords": "集中モード, フィルタ, ios, 仕事, プライベート, おやすみモード, リスト, 非表示, focus",
+      "searchBody": "ios の集中モードに、今日のフィードに表示するリストを決めてもらいましょう。 t'day は ios の集中モードと連携します。仕事やプライベートなどの集中モードを選び、表示するリストを指定すると、その集中モードがオンの間は今日のフィードとホーム画面ウィジェットがそれ以外を静かに隠します。集中モードをオフにすればすべてのタスクが戻ります——何も削除されません。 iphone で 設定 ▸ 集中モード を開き、集中モードを選びます。 集中モードフィルタを追加して t'day を選び、リストを指定します。 集中モードをオンにすると、今日とウィジェットにはそのリストだけが表示されます。"
+    },
+    {
+      "id": "apple-watch",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "alarm-clock",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Apple Watch",
+      "summary": "今日のタスクを手首に。iPhone からライブでミラーリングされます。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Apple Watch に T'Day をインストールすると、今日のタスクが手首でも確認できます。Watch は iPhone が作成する今日のリストをそのままミラーリングし（別途ログインは不要）、文字盤のコンプリケーションには残りのタスク数が表示されるので、アプリを開かなくてもひと目で確認できます。iPhone が同期するたびに更新されます。"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "iPhone で Watch アプリを開き、T'Day をインストールします。",
+            "文字盤に T'Day のコンプリケーションを追加します。",
+            "件数をひと目で確認するか、アプリを開いて全リストを見ましょう。"
+          ]
+        }
+      ],
+      "searchTitle": "apple watch",
+      "searchKeywords": "apple watch, watch, 手首, コンプリケーション, watchos, 今日, ひと目, ミラーリング",
+      "searchBody": "今日のタスクを手首に。iphone からライブでミラーリングされます。 apple watch に t'day をインストールすると、今日のタスクが手首でも確認できます。watch は iphone が作成する今日のリストをそのままミラーリングし（別途ログインは不要）、文字盤のコンプリケーションには残りのタスク数が表示されるので、アプリを開かなくてもひと目で確認できます。iphone が同期するたびに更新されます。 iphone で watch アプリを開き、t'day をインストールします。 文字盤に t'day のコンプリケーションを追加します。 件数をひと目で確認するか、アプリを開いて全リストを見ましょう。"
+    },
+    {
+      "id": "local-mode",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "wifi-off",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "ローカルモード",
+      "summary": "サーバーもアカウントも不要で、T'Day を完全オフラインで使う。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "ローカルモードはすべてを端末内に保ちます — ログインなし、サーバーなし、アップロードなし。T'Day をプライベートに使うための本格的な方法で、ローカルのデータが勝手にどこかへ送信されることは決してありません。 ブラウザではそのブラウザ自身のストレージに保存されるため、Cookie とサイトデータを消すとワークスペースも一緒に消えます。残したい場合は先にエクスポートしてください。 クラッシュレポートをオンにした場合でも、何かが失敗したときに短い技術レポートが送信されるだけで、タスクやリストが送信されることはありません。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "サーバー限定の機能にはここで「サーバーモード」バッジを付けているので、サインインすると何が変わるかがわかります。"
+          ]
+        }
+      ],
+      "searchTitle": "ローカルモード",
+      "searchKeywords": "ローカルモード, オフライン, プライベート, アカウント不要, サーバー不要, オンデバイス, local mode, offline, private",
+      "searchBody": "サーバーもアカウントも不要で、t'day を完全オフラインで使う。 ローカルモードはすべてを端末内に保ちます — ログインなし、サーバーなし、アップロードなし。t'day をプライベートに使うための本格的な方法で、ローカルのデータが勝手にどこかへ送信されることは決してありません。 ブラウザではそのブラウザ自身のストレージに保存されるため、cookie とサイトデータを消すとワークスペースも一緒に消えます。残したい場合は先にエクスポートしてください。 クラッシュレポートをオンにした場合でも、何かが失敗したときに短い技術レポートが送信されるだけで、タスクやリストが送信されることはありません。 サーバー限定の機能にはここで「サーバーモード」バッジを付けているので、サインインすると何が変わるかがわかります。"
+    },
+    {
+      "id": "server-mode",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "cloud",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "サーバーモード",
+      "summary": "自分専用のプライベートサーバーを通じて、複数の端末間で同期。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "自作のセルフホストサーバーにサインインすると、複数の端末間でタスクをリアルタイムに同期できます。書き込みは端末上で即座に反映され、サーバーへ再送されるため、接続が不安定でもアプリは軽快なままです。"
+          ]
+        }
+      ],
+      "searchTitle": "サーバーモード",
+      "searchKeywords": "サーバーモード, 同期, セルフホスト, アカウント, ログイン, 端末, リアルタイム, server mode, sync, self hosted",
+      "searchBody": "自分専用のプライベートサーバーを通じて、複数の端末間で同期。 自作のセルフホストサーバーにサインインすると、複数の端末間でタスクをリアルタイムに同期できます。書き込みは端末上で即座に反映され、サーバーへ再送されるため、接続が不安定でもアプリは軽快なままです。"
+    },
+    {
+      "id": "offline-sync",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "refresh-cw",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "オフライン同期",
+      "summary": "オフラインでも作業を続け、再接続時に変更を再送。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "サーバーモードでは、変更はまずローカルに保存され、オフラインのときはキューに入ります。再接続するとすぐに、T'Day が順番どおりにサーバーへ再送します。"
+          ]
+        }
+      ],
+      "searchTitle": "オフライン同期",
+      "searchKeywords": "オフライン, 同期, 保留中, キュー, 再送, 接続, 競合, offline, sync, queue",
+      "searchBody": "オフラインでも作業を続け、再接続時に変更を再送。 サーバーモードでは、変更はまずローカルに保存され、オフラインのときはキューに入ります。再接続するとすぐに、t'day が順番どおりにサーバーへ再送します。"
+    },
+    {
+      "id": "export-your-data",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "download",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "データをエクスポート",
+      "summary": "すべてを 1 つの持ち運べるファイルにダウンロードし、いつでも戻せます。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "設定から、アカウント全体（タスク、リスト、完了履歴、設定）を 1 つの JSON ファイルとしてダウンロードできます。別の T'Day（サーバー、またはローカルモードの端末）にインポートすると、すべて新しい項目として入ります。インポートは常に「追加」で上書きはしないので、既存のものが失われることはありません。サーバーでは説明文が復号されてファイルに入るため、鍵の異なるサーバーへ移っても読める状態が保たれます。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "ファイルは読みやすいプレーンな JSON です。個人用のバックアップとして 1 部保管しておきましょう。"
+          ]
+        }
+      ],
+      "searchTitle": "データをエクスポート",
+      "searchKeywords": "エクスポート, インポート, ダウンロード, バックアップ, マイデータ, 移行, 復元",
+      "searchBody": "すべてを 1 つの持ち運べるファイルにダウンロードし、いつでも戻せます。 設定から、アカウント全体（タスク、リスト、完了履歴、設定）を 1 つの json ファイルとしてダウンロードできます。別の t'day（サーバー、またはローカルモードの端末）にインポートすると、すべて新しい項目として入ります。インポートは常に「追加」で上書きはしないので、既存のものが失われることはありません。サーバーでは説明文が復号されてファイルに入るため、鍵の異なるサーバーへ移っても読める状態が保たれます。 ファイルは読みやすいプレーンな json です。個人用のバックアップとして 1 部保管しておきましょう。"
+    },
+    {
+      "id": "local-to-server-migration",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "cloud",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "この端末からサーバーへ移行",
+      "summary": "サーバーモードに切り替えるとき、端末内のタスクを一緒に持っていけます。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "ローカルモードで始めて、あとでサーバーを用意しましたか？勝手にアップロードされることは一切ありません。データを移すには、まず設定からエクスポートし、サーバーにサインインして、そこでファイルをインポートします。タスク・リスト・履歴が意図した 1 ステップで移動します。タイミングはあなたが選び、それまで端末のデータはそのまま残ります。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "インポート後、すべて移ったことを確認するまでエクスポートしたファイルを残しておきましょう。そのままバックアップにもなります。"
+          ]
+        }
+      ],
+      "searchTitle": "この端末からサーバーへ移行",
+      "searchKeywords": "移行, ローカルからサーバー, データ移動, モード切替, アップロード, サインイン, 転送",
+      "searchBody": "サーバーモードに切り替えるとき、端末内のタスクを一緒に持っていけます。 ローカルモードで始めて、あとでサーバーを用意しましたか？勝手にアップロードされることは一切ありません。データを移すには、まず設定からエクスポートし、サーバーにサインインして、そこでファイルをインポートします。タスク・リスト・履歴が意図した 1 ステップで移動します。タイミングはあなたが選び、それまで端末のデータはそのまま残ります。 インポート後、すべて移ったことを確認するまでエクスポートしたファイルを残しておきましょう。そのままバックアップにもなります。"
+    },
+    {
+      "id": "crash-reports",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "activity",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.8.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-privacy"
+      ],
+      "title": "クラッシュと問題のレポート",
+      "summary": "デフォルトではオフ。誰が決めるかはプラットフォームによって異なります。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "クラッシュと問題のレポートは任意で、デフォルトではオフです。誰が決めるかはプラットフォームごとに異なります。Web アプリでは、管理者の1つの回答がサーバー全体（このサイト、サーバー自身のエラー、利用者全員）に適用され、個々の利用者に確認することはありません。Android と iOS では、サインインの流れで一人ひとりに確認するため、回答は端末ごとになり、サインインのたびに質問が再度表示されます。Crashlytics のような仕組みで、目的はバグを直すことであり、アプリの使い方を測ることではありません。正常に動作している間は、お使いの端末で、利用状況の分析、セッションの追跡、パフォーマンスの監視は一切行われません。"
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "レポートに含まれるのは、アプリのバージョン、端末のモデルとOSのバージョン（またはブラウザとそのバージョン）、エラーの内容とコード上で発生した場所、そこに至るまでのラベル付きの数ステップ、ID を含まない画面名や API ルート名、ステータスコード、そしてモバイルでは空きメモリ、バッテリー残量、オンラインだったかどうかといったおおまかな端末の状態です。日付はタスクプランナーの中心となるため、タイムゾーンのオフセット（例：UTC+2）と言語も含まれます。"
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "レポートに含まれないもの：名前、ユーザー名、メールアドレス、その他あらゆるアカウント情報、IPアドレスや位置情報、サーバーのアドレス、タスク・リスト・メモのタイトルと内容、データベースの内容、パスワード・Cookie・トークン、スクリーンショットや録画。エラーメッセージは、送信前にお使いの端末上でアドレス、識別子、引用されたテキストが取り除かれますが、これはベストエフォートです。レポートにはユーザー ID が付かないため、レポートからあなたを特定することも、個人ごとに削除することもできません。"
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "レポートは、何かが失敗したときにだけ、しかもそのプラットフォームでレポートがオンになっている場合にだけ送信されます。Web アプリでは管理者がサーバーに対してオンにした後、モバイルでは端末であなたが同意した後です。レポートがオフの間に何かが失敗しても、何も保存されず、送信待ちにもなりません。あとからオンにしても、それ以前の失敗が送信されることはありません。何を失敗とみなすかはプラットフォームによって異なります。Android ではクラッシュ、フリーズ、メモリ不足によるクラッシュを報告し、iOS ではクラッシュ、フリーズ、メモリを使いすぎてシステムがアプリを終了させたことを報告します。Web アプリが報告するのは、予期しないエラーのみです。T'Day はメモリリークを検出しません。"
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "レポートは、クラッシュレポートサービスの Sentry を通じて T'Day のメンテナーに届きます。30日間保存され、バグの修正にのみ使われ、販売されることも、広告のために共有されることもありません。レポートは、お使いのサーバーを経由せず、Sentry に直接送信されます。Sentry は、あらゆるオンラインサービスと同様、接続元のネットワークアドレスを目にしますが、保存しない設定になっています。また Web アプリは、レポートの送信元の Web サイトも Sentry に伝えます。自前のサーバーを運用している場合、同じ管理者の回答がそのサーバー自身のエラーレポートと、一部のリクエストのサンプルの所要時間にも適用されます。そこにあなたのタスクが含まれることはありません。ご自身でビルドしたものなど、レポートの送信先を持たないビルドでは、この設定は表示されません。"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "設定を開きます。",
+            "Web アプリでは管理者が「プライバシー」で「サーバーのエラー報告」をオフにします。モバイルではご自身で「クラッシュと問題のレポート」をオフにします。",
+            "レポートの送信はすぐに止まり、送信待ちのものはすべて削除されます。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "断っても不利益はありません。回答は「設定 → プライバシー」でいつでも変更できます（Web では管理者、モバイルではご自身）。技術的な詳細は、T'Day リポジトリの docs/TELEMETRY.md をご覧ください。"
+          ]
+        }
+      ],
+      "searchTitle": "クラッシュと問題のレポート",
+      "searchKeywords": "クラッシュ, エラー, レポート, 不具合, 問題, プライバシー, 診断, テレメトリ, フリーズ, 応答なし, メモリ, 分析, アナリティクス, crash, error, report, sentry, privacy, diagnostics, telemetry, hang, anr, memory, analytics",
+      "searchBody": "デフォルトではオフ。誰が決めるかはプラットフォームによって異なります。 クラッシュと問題のレポートは任意で、デフォルトではオフです。誰が決めるかはプラットフォームごとに異なります。web アプリでは、管理者の1つの回答がサーバー全体（このサイト、サーバー自身のエラー、利用者全員）に適用され、個々の利用者に確認することはありません。android と ios では、サインインの流れで一人ひとりに確認するため、回答は端末ごとになり、サインインのたびに質問が再度表示されます。crashlytics のような仕組みで、目的はバグを直すことであり、アプリの使い方を測ることではありません。正常に動作している間は、お使いの端末で、利用状況の分析、セッションの追跡、パフォーマンスの監視は一切行われません。 レポートに含まれるのは、アプリのバージョン、端末のモデルとosのバージョン（またはブラウザとそのバージョン）、エラーの内容とコード上で発生した場所、そこに至るまでのラベル付きの数ステップ、id を含まない画面名や api ルート名、ステータスコード、そしてモバイルでは空きメモリ、バッテリー残量、オンラインだったかどうかといったおおまかな端末の状態です。日付はタスクプランナーの中心となるため、タイムゾーンのオフセット（例：utc+2）と言語も含まれます。 レポートに含まれないもの：名前、ユーザー名、メールアドレス、その他あらゆるアカウント情報、ipアドレスや位置情報、サーバーのアドレス、タスク・リスト・メモのタイトルと内容、データベースの内容、パスワード・cookie・トークン、スクリーンショットや録画。エラーメッセージは、送信前にお使いの端末上でアドレス、識別子、引用されたテキストが取り除かれますが、これはベストエフォートです。レポートにはユーザー id が付かないため、レポートからあなたを特定することも、個人ごとに削除することもできません。 レポートは、何かが失敗したときにだけ、しかもそのプラットフォームでレポートがオンになっている場合にだけ送信されます。web アプリでは管理者がサーバーに対してオンにした後、モバイルでは端末であなたが同意した後です。レポートがオフの間に何かが失敗しても、何も保存されず、送信待ちにもなりません。あとからオンにしても、それ以前の失敗が送信されることはありません。何を失敗とみなすかはプラットフォームによって異なります。android ではクラッシュ、フリーズ、メモリ不足によるクラッシュを報告し、ios ではクラッシュ、フリーズ、メモリを使いすぎてシステムがアプリを終了させたことを報告します。web アプリが報告するのは、予期しないエラーのみです。t'day はメモリリークを検出しません。 レポートは、クラッシュレポートサービスの sentry を通じて t'day のメンテナーに届きます。30日間保存され、バグの修正にのみ使われ、販売されることも、広告のために共有されることもありません。レポートは、お使いのサーバーを経由せず、sentry に直接送信されます。sentry は、あらゆるオンラインサービスと同様、接続元のネットワークアドレスを目にしますが、保存しない設定になっています。また web アプリは、レポートの送信元の web サイトも sentry に伝えます。自前のサーバーを運用している場合、同じ管理者の回答がそのサーバー自身のエラーレポートと、一部のリクエストのサンプルの所要時間にも適用されます。そこにあなたのタスクが含まれることはありません。ご自身でビルドしたものなど、レポートの送信先を持たないビルドでは、この設定は表示されません。 設定を開きます。 web アプリでは管理者が「プライバシー」で「サーバーのエラー報告」をオフにします。モバイルではご自身で「クラッシュと問題のレポート」をオフにします。 レポートの送信はすぐに止まり、送信待ちのものはすべて削除されます。 断っても不利益はありません。回答は「設定 → プライバシー」でいつでも変更できます（web では管理者、モバイルではご自身）。技術的な詳細は、t'day リポジトリの docs/telemetry.md をご覧ください。"
+    },
+    {
+      "id": "ai-summary",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": true,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "タスクの要約",
+      "summary": "一日を短く静かに読み解く — 任意でローカル AI も。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day は一日を1〜2文で要約できます。ローカルの Ollama モデルがあれば自然な文章になり、なくても温かみのある決まった形の振り返りに切り替わります — どちらの場合も、何もサーバーの外には出ません。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "要約がクラウド AI サービスに頼ることは決してありません — ローカルで行うか、何も行わないかのどちらかです。"
+          ]
+        }
+      ],
+      "searchTitle": "タスクの要約",
+      "searchKeywords": "要約, ai, ollama, 概要, ダイジェスト, ローカル, プライベート, summary, overview, local",
+      "searchBody": "一日を短く静かに読み解く — 任意でローカル ai も。 t'day は一日を1〜2文で要約できます。ローカルの ollama モデルがあれば自然な文章になり、なくても温かみのある決まった形の振り返りに切り替わります — どちらの場合も、何もサーバーの外には出ません。 要約がクラウド ai サービスに頼ることは決してありません — ローカルで行うか、何も行わないかのどちらかです。"
+    },
+    {
+      "id": "device-calendar-sync",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "calendar",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "端末のカレンダーにタスクを表示",
+      "summary": "日付のあるタスクを端末の T'Day カレンダーに反映します。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "これをオンにすると、日付のあるタスクがすべて端末上の「T'Day」というカレンダーにコピーされ、他のカレンダーと並んで表示されます。Anytime タスクは日付がないため含まれません。同期は一方向です。T'Day がそのカレンダーに書き込むため、カレンダー側での編集は次にタスクが変わった時点で上書きされます。"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "設定で「予定されたタスクをカレンダーに追加」をオンにします。",
+            "端末から求められたらカレンダーへのアクセスを許可します。",
+            "カレンダーアプリを開くと、日付のあるタスクが T'Day カレンダーに入っています。"
+          ]
+        }
+      ],
+      "searchTitle": "端末のカレンダーにタスクを表示",
+      "searchKeywords": "カレンダー, 端末カレンダー, 同期, google カレンダー, apple カレンダー, eventkit, スマホのカレンダー, ミラー",
+      "searchBody": "日付のあるタスクを端末の t'day カレンダーに反映します。 これをオンにすると、日付のあるタスクがすべて端末上の「t'day」というカレンダーにコピーされ、他のカレンダーと並んで表示されます。anytime タスクは日付がないため含まれません。同期は一方向です。t'day がそのカレンダーに書き込むため、カレンダー側での編集は次にタスクが変わった時点で上書きされます。 設定で「予定されたタスクをカレンダーに追加」をオンにします。 端末から求められたらカレンダーへのアクセスを許可します。 カレンダーアプリを開くと、日付のあるタスクが t'day カレンダーに入っています。"
+    }
+  ]
+}

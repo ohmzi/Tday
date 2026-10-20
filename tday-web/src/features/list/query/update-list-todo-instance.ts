@@ -1,0 +1,114 @@
+import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api-client";
+import { todoInstanceSchema } from "@/schema";
+import { canonicalTodoId } from "@/lib/todo/todo-id";
+import { TodoItemType } from "@/types";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { endOfDay } from "date-fns";
+
+async function patchTodo({ ghostTodo }: { ghostTodo: TodoItemType }) {
+  //validate input for the ghost todo
+  const parsedObj = todoInstanceSchema.safeParse({
+    title: ghostTodo.title,
+    description: ghostTodo.description,
+    priority: ghostTodo.priority,
+    due: ghostTodo.due,
+    rrule: ghostTodo.rrule,
+    instanceDate: ghostTodo.instanceDate,
+  });
+  if (!parsedObj.success) {
+    console.error(parsedObj.error.issues[0]);
+    return;
+  }
+  const todoId = canonicalTodoId(ghostTodo.id);
+
+  await api.PATCH({
+    url: "/api/todo/instance",
+    headers: { "Content-Type": "application/json" },
+    // `todoId`, not `id`: TodoInstancePatchRequest names the field todoId, and a
+    // missing required field 400s before the handler runs.
+    body: JSON.stringify({ ...parsedObj.data, todoId }),
+  });
+}
+
+export const useEditListTodoInstance = (
+  setEditInstanceOnly:
+    | React.Dispatch<React.SetStateAction<boolean>>
+    | undefined,
+) => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { mutate: editTodoInstanceMutateFn, status: editTodoInstanceStatus } =
+    useMutation({
+      mutationFn: (ghostTodo: TodoItemType) => patchTodo({ ghostTodo }),
+
+      onMutate: async (newTodo) => {
+        await queryClient.cancelQueries({ queryKey: ["todo"] });
+        await queryClient.cancelQueries({ queryKey: ["list"] });
+
+        const oldTodos = queryClient.getQueryData<TodoItemType[]>(["todo"]);
+        const oldListTodos = queryClient.getQueryData<TodoItemType[]>(["list"]);
+
+        // update todo cache
+        queryClient.setQueryData<TodoItemType[]>(["todo"], (oldTodos) =>
+          oldTodos?.flatMap((oldTodo) => {
+            if (oldTodo.id === newTodo.id) {
+              if (newTodo.due > endOfDay(new Date())) {
+                return [];
+              }
+              return {
+                ...oldTodo,
+                title: newTodo.title,
+                description: newTodo.description,
+                priority: newTodo.priority,
+                due: newTodo.due,
+              };
+            }
+            return oldTodo;
+          }),
+        );
+
+        // update list cache
+        queryClient.setQueriesData<TodoItemType[]>(
+          { queryKey: ["list"] },
+          (oldTodos) =>
+            oldTodos?.map((oldTodo) => {
+              if (oldTodo.id === newTodo.id) {
+                return {
+                  ...oldTodo,
+                  title: newTodo.title,
+                  description: newTodo.description,
+                  priority: newTodo.priority,
+                  due: newTodo.due,
+                };
+              }
+              return oldTodo;
+            }),
+        );
+
+        return { oldTodos, oldListTodos };
+      },
+
+      onSettled: () => {
+        if (setEditInstanceOnly) setEditInstanceOnly(false);
+        queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
+        queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
+      },
+
+      onError: (error, _, context) => {
+        queryClient.setQueryData(["todo"], context?.oldTodos);
+        queryClient.setQueryData(["list"], context?.oldListTodos);
+
+        toast({
+          description:
+            error.message === "Failed to fetch"
+              ? "failed to connect to server"
+              : error.message,
+          variant: "destructive",
+        });
+      },
+    });
+
+  return { editTodoInstanceMutateFn, editTodoInstanceStatus };
+};

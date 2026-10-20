@@ -1,0 +1,18 @@
+package com.ohmz.tday.compose.core.push
+
+import com.ohmz.tday.compose.core.data.server.ServerConfigRepository
+import com.ohmz.tday.compose.core.network.TdayApiService
+import com.ohmz.tday.compose.core.notification.NotificationPreferenceStore
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+
+/** Hilt access for the UnifiedPush service, which is created by the connector library rather than injected. */
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface UnifiedPushEntryPoint {
+    fun apiService(): TdayApiService
+    fun serverConfigRepository(): ServerConfigRepository
+    fun unifiedPushStore(): UnifiedPushPreferenceStore
+    fun notificationPreferenceStore(): NotificationPreferenceStore
+}

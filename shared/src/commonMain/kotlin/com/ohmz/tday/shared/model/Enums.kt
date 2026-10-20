@@ -1,0 +1,101 @@
+package com.ohmz.tday.shared.model
+
+import kotlinx.serialization.Serializable
+
+@Serializable
+enum class UserRole {
+    ADMIN,
+    USER,
+}
+
+@Serializable
+enum class ApprovalStatus {
+    APPROVED,
+    PENDING,
+}
+
+@Serializable
+enum class SortBy {
+    due,
+    priority,
+}
+
+@Serializable
+enum class GroupBy {
+    due,
+    priority,
+    rrule,
+    project;
+
+    companion object {
+        // Unknown/future values fall back to `due` rather than throwing
+        // IllegalArgumentException (valueOf) — a persisted or client-sent string we
+        // don't recognize should degrade gracefully, not crash preference loading.
+        fun fromApi(value: String): GroupBy = when (value) {
+            "list" -> project
+            else -> entries.firstOrNull { it.name == value } ?: due
+        }
+
+        fun toApi(value: GroupBy): String = when (value) {
+            project -> "list"
+            else -> value.name
+        }
+    }
+}
+
+@Serializable
+enum class Direction {
+    Ascending,
+    Descending,
+}
+
+/**
+ * Which root feed (Scheduled or Floaters) opens on a fresh cold launch.
+ *
+ * Lowercase entries are deliberate, matching [SortBy]/[GroupBy]/`ListColor`-adjacent precedent:
+ * `.name` is the wire value the API and every client read/write directly (see the backend's
+ * `DefaultHomeScreen.valueOf(...)`), so this stays a literal mirror of the
+ * lowercase `"scheduled"`/`"floater"` strings rather than the usual `SCREAMING_SNAKE_CASE`.
+ */
+@Serializable
+enum class DefaultHomeScreen {
+    scheduled, // skipcq: KT-C1001 — deliberate, see class doc
+    floater, // skipcq: KT-C1001 — deliberate, see class doc
+}
+
+@Serializable
+enum class Priority {
+    // `Lowest` (UI label "Low") is the newest, least-urgent tier — added below the original
+    // `Low` (UI label "Normal", still the default). See TaskSortEngine for the sort-rank
+    // scheme and PgEnums/the Flyway migration for why the Postgres native enum orders it
+    // `Lowest` < `Low` < `Medium` < `High`.
+    Lowest,
+    Low,
+    Medium,
+    High;
+
+    companion object {
+        /** Non-throwing parse for the raw `priority` strings carried in DTOs. */
+        fun fromApiOrDefault(value: String?, default: Priority = Low): Priority =
+            entries.firstOrNull { it.name == value } ?: default
+    }
+}
+
+@Serializable
+enum class ListColor {
+    RED,
+    ORANGE,
+    YELLOW,
+    LIME,
+    BLUE,
+    PURPLE,
+    PINK,
+    TEAL,
+    CORAL,
+    GOLD,
+    DEEP_BLUE,
+    ROSE,
+    LIGHT_RED,
+    BRICK,
+    SLATE,
+}

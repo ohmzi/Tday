@@ -1,0 +1,1808 @@
+{
+  "currentVersion": "0.8.5",
+  "ui": {
+    "title": "Anleitung & Tipps",
+    "subtitle": "Alles, was T'Day kann — das Offensichtliche und das Verborgene.",
+    "searchPlaceholder": "Funktionen suchen…",
+    "searchAria": "Anleitung durchsuchen",
+    "whatsNew": "Neuigkeiten",
+    "tryIt": "Ausprobieren",
+    "clearSearch": "Löschen",
+    "noResults": "Keine Treffer. Versuch ein anderes Wort.",
+    "results": "{{count}} Ergebnisse",
+    "badges.hiddenGem": "Geheimtipp",
+    "badges.proTip": "Profi-Tipp",
+    "badges.new": "Neu",
+    "badges.server": "Servermodus",
+    "sections.gettingStarted": "Erste Schritte",
+    "sections.captureAndDates": "Erfassen & Termine",
+    "sections.gestures": "Gesten",
+    "sections.organizing": "Organisieren",
+    "sections.recurrenceAndReminders": "Wiederholung & Erinnerungen",
+    "sections.widgetsAndSurfaces": "Widgets & Oberflächen",
+    "sections.modesAndSync": "Modi & Sync",
+    "sections.integrations": "Integrationen",
+    "sections.keyboardShortcuts": "Tastenkürzel"
+  },
+  "sections": [
+    {
+      "id": "GETTING_STARTED",
+      "title": "Erste Schritte",
+      "order": 0
+    },
+    {
+      "id": "CAPTURE_AND_DATES",
+      "title": "Erfassen & Termine",
+      "order": 1
+    },
+    {
+      "id": "GESTURES",
+      "title": "Gesten",
+      "order": 2
+    },
+    {
+      "id": "ORGANIZING",
+      "title": "Organisieren",
+      "order": 3
+    },
+    {
+      "id": "RECURRENCE_AND_REMINDERS",
+      "title": "Wiederholung & Erinnerungen",
+      "order": 4
+    },
+    {
+      "id": "WIDGETS_AND_SURFACES",
+      "title": "Widgets & Oberflächen",
+      "order": 5
+    },
+    {
+      "id": "MODES_AND_SYNC",
+      "title": "Modi & Sync",
+      "order": 6
+    },
+    {
+      "id": "INTEGRATIONS",
+      "title": "Integrationen",
+      "order": 7
+    },
+    {
+      "id": "KEYBOARD_SHORTCUTS",
+      "title": "Tastenkürzel",
+      "order": 8
+    }
+  ],
+  "topics": [
+    {
+      "id": "root-feeds",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "layout-dashboard",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Geplant und Jederzeit",
+      "summary": "Zwei ruhige Hauptfeeds, zwischen denen du über das Dock wechselst.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day hat zwei verwandte Feeds. Geplant enthält deine terminierten Aufgaben für heute und darüber hinaus. Jederzeit enthält Floater — Aufgaben ohne Datum. Wechsle über das Dock unten zwischen ihnen und lege aus jedem von beiden eine Aufgabe an."
+          ]
+        }
+      ],
+      "searchTitle": "geplant und jederzeit",
+      "searchKeywords": "geplant, jederzeit, feed, dock, hauptfeed, navigieren, tabs, wechseln",
+      "searchBody": "zwei ruhige hauptfeeds, zwischen denen du uber das dock wechselst. t'day hat zwei verwandte feeds. geplant enthalt deine terminierten aufgaben fur heute und daruber hinaus. jederzeit enthalt floater — aufgaben ohne datum. wechsle uber das dock unten zwischen ihnen und lege aus jedem von beiden eine aufgabe an."
+    },
+    {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Standard-Startbildschirm",
+      "summary": "Wähle, ob T'Day mit Geplant oder Jederzeit startet.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "In den Einstellungen gibt es einen Bereich „Verhalten“, in dem du festlegst, welcher Feed zuerst geöffnet wird — Geplant oder Jederzeit. Das legt nur fest, was dich beim Start begrüßt; über das Dock wechselst du weiterhin jederzeit zwischen beiden."
+          ]
+        }
+      ],
+      "searchTitle": "standard-startbildschirm",
+      "searchKeywords": "standard, startbildschirm, start, launch, geplant, jederzeit, verhalten, einstellungen",
+      "searchBody": "wahle, ob t'day mit geplant oder jederzeit startet. in den einstellungen gibt es einen bereich „verhalten“, in dem du festlegst, welcher feed zuerst geoffnet wird — geplant oder jederzeit. das legt nur fest, was dich beim start begrust; uber das dock wechselst du weiterhin jederzeit zwischen beiden."
+    },
+    {
+      "id": "create-task",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "plus",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Aufgabe erstellen",
+      "summary": "Füge mit wenigen Tipps eine geplante Aufgabe oder einen Floater ohne Datum hinzu.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tippe auf die Erstellen-Schaltfläche, um eine Aufgabe hinzuzufügen. Gib ihr einen Titel und, falls sie ein Datum hat, eine Fälligkeitszeit. Lass das Datum weg, und sie wird stattdessen zu einem Floater in deinem Jederzeit-Feed."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tippe ein Datum direkt in den Titel — T'Day liest es für dich aus. Siehe „Das Datum eintippen“."
+          ]
+        }
+      ],
+      "searchTitle": "aufgabe erstellen",
+      "searchKeywords": "erstellen, hinzufugen, neu, aufgabe, plus, fab, verfassen",
+      "searchBody": "fuge mit wenigen tipps eine geplante aufgabe oder einen floater ohne datum hinzu. tippe auf die erstellen-schaltflache, um eine aufgabe hinzuzufugen. gib ihr einen titel und, falls sie ein datum hat, eine falligkeitszeit. lass das datum weg, und sie wird stattdessen zu einem floater in deinem jederzeit-feed. tippe ein datum direkt in den titel — t'day liest es fur dich aus. siehe „das datum eintippen“."
+    },
+    {
+      "id": "nlp-date-syntax",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "nlp-title-input"
+      ],
+      "title": "Das Datum eintippen",
+      "summary": "Schreib das Datum in den Titel, und T'Day plant es für dich ein.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Keine Auswahlfelder nötig. Tippe ein Datum (\"morgen 15 Uhr\"), eine Wiederholung (\"every day\", \"weekly\", \"every weekday\") oder eine Priorität (\"!\", \"!!\" oder \"high\"/\"low\" am Ende) direkt in den Titel. T'Day wertet das auf dem Gerät aus — ohne Konto oder Netz —, hebt das erkannte Datum hervor und füllt Termin, Wiederholung und Priorität aus."
+          ]
+        },
+        {
+          "type": "EXAMPLE",
+          "texts": [
+            "Zahnarzt Dienstag 15 Uhr every weekday !!"
+          ]
+        }
+      ],
+      "searchTitle": "das datum eintippen",
+      "searchKeywords": "naturliche sprache, datum, morgen, nachste woche, erkennen, schnell, smart, nlp, auf dem gerat",
+      "searchBody": "schreib das datum in den titel, und t'day plant es fur dich ein. keine auswahlfelder notig. tippe ein datum (\"morgen 15 uhr\"), eine wiederholung (\"every day\", \"weekly\", \"every weekday\") oder eine prioritat (\"!\", \"!!\" oder \"high\"/\"low\" am ende) direkt in den titel. t'day wertet das auf dem gerat aus — ohne konto oder netz —, hebt das erkannte datum hervor und fullt termin, wiederholung und prioritat aus. zahnarzt dienstag 15 uhr every weekday !!"
+    },
+    {
+      "id": "calendar-views",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "calendar",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": "calendar",
+        "android": "calendar",
+        "ios": "calendar"
+      },
+      "helpAnchors": [],
+      "title": "Kalenderansichten",
+      "summary": "Sieh deine geplanten Aufgaben nach Monat, Woche oder Tag.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Öffne den Kalender, um geplante Aufgaben nach Monat, Woche oder Tag angeordnet zu sehen. Wische oder nutze die Pfeile, um zwischen den Zeiträumen zu wechseln; die Schaltfläche oben rechts bringt dich zu heute zurück, ohne die Ansicht zu ändern."
+          ]
+        }
+      ],
+      "searchTitle": "kalenderansichten",
+      "searchKeywords": "kalender, monat, woche, tag, agenda, ansicht, termine",
+      "searchBody": "sieh deine geplanten aufgaben nach monat, woche oder tag. offne den kalender, um geplante aufgaben nach monat, woche oder tag angeordnet zu sehen. wische oder nutze die pfeile, um zwischen den zeitraumen zu wechseln; die schaltflache oben rechts bringt dich zu heute zuruck, ohne die ansicht zu andern."
+    },
+    {
+      "id": "priorities",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "flag",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Prioritäten",
+      "summary": "Markiere Wichtiges mit Niedrig, Mittel oder Hoch.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Gib einer Aufgabe eine Priorität, um zu kennzeichnen, wie wichtig sie ist. Die Priorität erscheint als kleiner Akzentpunkt an der Aufgabe und hilft dabei, zu sortieren, was zuerst Aufmerksamkeit verdient."
+          ]
+        }
+      ],
+      "searchTitle": "prioritaten",
+      "searchKeywords": "prioritat, hoch, mittel, niedrig, wichtig, dringend, markieren",
+      "searchBody": "markiere wichtiges mit niedrig, mittel oder hoch. gib einer aufgabe eine prioritat, um zu kennzeichnen, wie wichtig sie ist. die prioritat erscheint als kleiner akzentpunkt an der aufgabe und hilft dabei, zu sortieren, was zuerst aufmerksamkeit verdient."
+    },
+    {
+      "id": "pin-task",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "pin",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Aufgabe anheften",
+      "summary": "Halte eine wichtige Aufgabe oben in ihrer Liste.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Hefte eine Aufgabe an, um sie über der normalen Reihenfolge ganz oben in ihrem Feed zu halten. Löse die Anheftung, damit sie wieder an ihren Platz rutscht."
+          ]
+        }
+      ],
+      "searchTitle": "aufgabe anheften",
+      "searchKeywords": "anheften, angeheftet, festhalten, oben, wichtig, behalten",
+      "searchBody": "halte eine wichtige aufgabe oben in ihrer liste. hefte eine aufgabe an, um sie uber der normalen reihenfolge ganz oben in ihrem feed zu halten. lose die anheftung, damit sie wieder an ihren platz rutscht."
+    },
+    {
+      "id": "swipe-actions",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "pointer",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": null,
+        "android": "todos/today",
+        "ios": "today"
+      },
+      "helpAnchors": [],
+      "title": "Wischaktionen",
+      "summary": "Wische über eine Aufgabenzeile für schnelle Aktionen, ohne sie zu öffnen.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Wische über eine Aufgabenzeile, um schnelle Aktionen einzublenden — sie abschließen oder entfernen —, ohne die Aufgabe überhaupt zu öffnen."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Eine abgeschlossene Aufgabe zeigt für ein paar Sekunden einen Rückgängig-Hinweis, sodass ein versehentliches Wischen nie endgültig ist."
+          ]
+        }
+      ],
+      "searchTitle": "wischaktionen",
+      "searchKeywords": "wischen, geste, streichen, abschliesen, loschen, schnell, zeile",
+      "searchBody": "wische uber eine aufgabenzeile fur schnelle aktionen, ohne sie zu offnen. wische uber eine aufgabenzeile, um schnelle aktionen einzublenden — sie abschliesen oder entfernen —, ohne die aufgabe uberhaupt zu offnen. eine abgeschlossene aufgabe zeigt fur ein paar sekunden einen ruckgangig-hinweis, sodass ein versehentliches wischen nie endgultig ist."
+    },
+    {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.8",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Aufgabendetails kopieren",
+      "summary": "Kopiere Titel, Notizen, Fälligkeitsdatum und Priorität einer Aufgabe als Text.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Wische eine Aufgabe und tippe auf Kopieren — oder nutze die Kopieren-Schaltfläche am Desktop —, um Titel, Notizen, Fälligkeitsdatum und Priorität als reinen Text zu kopieren, bereit zum Einfügen überall."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Praktisch, um eine Aufgabe in eine Nachricht, E-Mail oder eine andere App einzufügen, ohne sie neu zu tippen."
+          ]
+        }
+      ],
+      "searchTitle": "aufgabendetails kopieren",
+      "searchKeywords": "kopieren, zwischenablage, teilen, text, wischen",
+      "searchBody": "kopiere titel, notizen, falligkeitsdatum und prioritat einer aufgabe als text. wische eine aufgabe und tippe auf kopieren — oder nutze die kopieren-schaltflache am desktop —, um titel, notizen, falligkeitsdatum und prioritat als reinen text zu kopieren, bereit zum einfugen uberall. praktisch, um eine aufgabe in eine nachricht, e-mail oder eine andere app einzufugen, ohne sie neu zu tippen."
+    },
+    {
+      "id": "long-press-actions",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "hand",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Aufgabe gedrückt halten",
+      "summary": "Drücken und halten für weitere Optionen und zum Umsortieren.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Halte eine Aufgabe gedrückt, um ihre Optionen zu öffnen oder um sie aufzunehmen und an eine neue Position in der Liste zu ziehen."
+          ]
+        }
+      ],
+      "searchTitle": "aufgabe gedruckt halten",
+      "searchKeywords": "gedruckt halten, halten, kontextmenu, optionen, umsortieren, ziehen",
+      "searchBody": "drucken und halten fur weitere optionen und zum umsortieren. halte eine aufgabe gedruckt, um ihre optionen zu offnen oder um sie aufzunehmen und an eine neue position in der liste zu ziehen."
+    },
+    {
+      "id": "drag-reorder",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Per Ziehen umsortieren",
+      "summary": "Zieh Aufgaben in die Reihenfolge, die du willst.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Deine Listen behalten die Reihenfolge, die du ihnen gibst. Zieh eine Aufgabe nach oben oder unten, um deinen Tag so anzuordnen, wie du ihn dir vorstellst."
+          ]
+        }
+      ],
+      "searchTitle": "per ziehen umsortieren",
+      "searchKeywords": "ziehen, umsortieren, verschieben, sortieren, reihenfolge, anordnen",
+      "searchBody": "zieh aufgaben in die reihenfolge, die du willst. deine listen behalten die reihenfolge, die du ihnen gibst. zieh eine aufgabe nach oben oder unten, um deinen tag so anzuordnen, wie du ihn dir vorstellst."
+    },
+    {
+      "id": "swipe-sheet-away",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.23",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Karte nach unten wegziehen",
+      "summary": "Zieh die Karte für neue Aufgaben nach unten, um sie zu schließen.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Der kleine Balken oben auf der Karte für neue Aufgaben heißt: Du kannst sie nach unten ziehen. Zieh sie, und sie folgt deinem Finger; lass etwa ab einem Viertel des Weges los, und sie schließt sich — genau so, als hättest du auf den abgedunkelten Bereich dahinter getippt. Ein kurzer Schwung zählt ebenfalls: Entscheidend ist, wohin du unterwegs warst, nicht wo du losgelassen hast. Und ein Zug, den du dir anders überlegst, federt an seinen Platz zurück."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Wenn sich der Inhalt einer Karte scrollen lässt, zieh sie oben an: Die Mitte gehört der Liste."
+          ]
+        }
+      ],
+      "searchTitle": "karte nach unten wegziehen",
+      "searchKeywords": "wischen, ziehen, schliesen, verwerfen, karte, blatt, griff, geste, nach unten",
+      "searchBody": "zieh die karte fur neue aufgaben nach unten, um sie zu schliesen. der kleine balken oben auf der karte fur neue aufgaben heist: du kannst sie nach unten ziehen. zieh sie, und sie folgt deinem finger; lass etwa ab einem viertel des weges los, und sie schliest sich — genau so, als hattest du auf den abgedunkelten bereich dahinter getippt. ein kurzer schwung zahlt ebenfalls: entscheidend ist, wohin du unterwegs warst, nicht wo du losgelassen hast. und ein zug, den du dir anders uberlegst, federt an seinen platz zuruck. wenn sich der inhalt einer karte scrollen lasst, zieh sie oben an: die mitte gehort der liste."
+    },
+    {
+      "id": "floaters-vs-todos",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Floater vs. geplante Aufgaben",
+      "summary": "Aufgaben ohne Datum leben in Jederzeit; Aufgaben mit Datum in Geplant.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Eine terminierte Aufgabe hat ein Fälligkeitsdatum und erscheint in Geplant und im Kalender. Ein Floater hat kein Datum — er wartet still in deinem Jederzeit-Feed, bis du bereit bist. Nutze Floater für „irgendwann“-Vorhaben, die den heutigen Tag nicht überladen sollen."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Floater erscheinen nie im Kalender — dieser Platz ist nur für datierte Vorhaben."
+          ]
+        }
+      ],
+      "searchTitle": "floater vs. geplante aufgaben",
+      "searchKeywords": "floater, jederzeit, ungeplant, ohne datum, todo, geplant, unterschied",
+      "searchBody": "aufgaben ohne datum leben in jederzeit; aufgaben mit datum in geplant. eine terminierte aufgabe hat ein falligkeitsdatum und erscheint in geplant und im kalender. ein floater hat kein datum — er wartet still in deinem jederzeit-feed, bis du bereit bist. nutze floater fur „irgendwann“-vorhaben, die den heutigen tag nicht uberladen sollen. floater erscheinen nie im kalender — dieser platz ist nur fur datierte vorhaben."
+    },
+    {
+      "id": "resting-floaters",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Ruhende Floater",
+      "summary": "Unberührte Anytime-Aufgaben verblassen und ruhen, damit die Liste ruhig bleibt.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Anytime-Aufgaben, die du einen Monat nicht angefasst hast, verblassen sanft, und nach drei Monaten sammeln sie sich in einer ruhigen Gruppe „Ruhend“ unten. Nichts wird gelöscht – sie fordern nur keine Aufmerksamkeit mehr."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Nur ein Anzeigehinweis; ein Tippen weckt einen Floater sofort."
+          ]
+        }
+      ],
+      "searchTitle": "ruhende floater",
+      "searchKeywords": "ruhen, floater, anytime, verblassen, altern, inaktiv, alt, ruhe",
+      "searchBody": "unberuhrte anytime-aufgaben verblassen und ruhen, damit die liste ruhig bleibt. anytime-aufgaben, die du einen monat nicht angefasst hast, verblassen sanft, und nach drei monaten sammeln sie sich in einer ruhigen gruppe „ruhend“ unten. nichts wird geloscht – sie fordern nur keine aufmerksamkeit mehr. nur ein anzeigehinweis; ein tippen weckt einen floater sofort."
+    },
+    {
+      "id": "promote-and-float",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Hochstufen & treiben lassen",
+      "summary": "Plane einen Floater als echte Aufgabe ein – oder lass eine liegengebliebene Aufgabe treiben.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Wenn ein Floater zu echter Arbeit werden soll, nutze seine Planen-Aktion: Wähle eine Zeit, und er wandert als terminierte Aufgabe zu Geplant. Auch andersherum: Eine überfällige Aufgabe, die du immer wieder verschiebst, kann leise treiben – stufe sie herab und sie kehrt ohne Datum zu Jederzeit zurück, mit Titel, Notizen und Priorität."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Wiederholende Aufgaben können nicht treiben – beende zuerst die Serie, wenn sie datumslos sein soll."
+          ]
+        }
+      ],
+      "searchTitle": "hochstufen & treiben lassen",
+      "searchKeywords": "hochstufen, floater planen, herabstufen, treiben lassen, umwandeln, jederzeit, verschieben, uberfallig",
+      "searchBody": "plane einen floater als echte aufgabe ein – oder lass eine liegengebliebene aufgabe treiben. wenn ein floater zu echter arbeit werden soll, nutze seine planen-aktion: wahle eine zeit, und er wandert als terminierte aufgabe zu geplant. auch andersherum: eine uberfallige aufgabe, die du immer wieder verschiebst, kann leise treiben – stufe sie herab und sie kehrt ohne datum zu jederzeit zuruck, mit titel, notizen und prioritat. wiederholende aufgaben konnen nicht treiben – beende zuerst die serie, wenn sie datumslos sein soll."
+    },
+    {
+      "id": "quick-defer",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Schnell verschieben",
+      "summary": "Ein Tipp verschiebt eine Aufgabe auf später heute, heute Abend, morgen oder nächste Woche.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Wenn eine Aufgabe wandern muss, aber nicht weit, spare dir den Datumswähler: Die Verschieben-Aktion bietet Später heute (+3 Stunden), Heute Abend (19:00), Morgen früh (09:00) und Nächste Woche (Montag 09:00) mit einem Tipp. Es ist dieselbe Änderung wie im Bearbeiten-Blatt – nur schneller."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Wiederholende Aufgaben verschiebst du pro Termin über das Bearbeiten-Blatt; das Ein-Tipp-Menü bleibt ihnen fern."
+          ]
+        }
+      ],
+      "searchTitle": "schnell verschieben",
+      "searchKeywords": "verschieben, aufschieben, spater, heute abend, morgen, nachste woche, umplanen",
+      "searchBody": "ein tipp verschiebt eine aufgabe auf spater heute, heute abend, morgen oder nachste woche. wenn eine aufgabe wandern muss, aber nicht weit, spare dir den datumswahler: die verschieben-aktion bietet spater heute (+3 stunden), heute abend (19:00), morgen fruh (09:00) und nachste woche (montag 09:00) mit einem tipp. es ist dieselbe anderung wie im bearbeiten-blatt – nur schneller. wiederholende aufgaben verschiebst du pro termin uber das bearbeiten-blatt; das ein-tipp-menu bleibt ihnen fern."
+    },
+    {
+      "id": "day-done",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Tag geschafft",
+      "summary": "Erledige alles für heute und der Heute-Bildschirm feiert leise mit.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Wenn jede für heute geplante Aufgabe erledigt ist — und nicht bloß fehlt — tauscht der Heute-Bildschirm seine „Keine Aufgaben“-Meldung gegen einen ruhigen Geschafft-Zustand: ein sanftes Doppelhäkchen, die Worte „Alles erledigt für heute“ und das Datum. Keine Serien, keine Punkte; nur die kleine Belohnung eines wirklich beendeten Tages."
+          ]
+        }
+      ],
+      "searchTitle": "tag geschafft",
+      "searchKeywords": "tag geschafft, alles erledigt, fertig, alles abgeschlossen, heute leer",
+      "searchBody": "erledige alles fur heute und der heute-bildschirm feiert leise mit. wenn jede fur heute geplante aufgabe erledigt ist — und nicht blos fehlt — tauscht der heute-bildschirm seine „keine aufgaben“-meldung gegen einen ruhigen geschafft-zustand: ein sanftes doppelhakchen, die worte „alles erledigt fur heute“ und das datum. keine serien, keine punkte; nur die kleine belohnung eines wirklich beendeten tages."
+    },
+    {
+      "id": "floater-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "list",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Floater-Listen",
+      "summary": "Gruppiere deine Jederzeit-Aufgaben in eigene Listen.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Organisiere Floater in getrennte Listen — Einkäufe, Packliste, Ideen — jede mit eigenem Namen und eigener Farbe und eigener abgeschlossener Historie."
+          ]
+        }
+      ],
+      "searchTitle": "floater-listen",
+      "searchKeywords": "floater-liste, jederzeit, gruppieren, liste, kategorie, einkauf, packen",
+      "searchBody": "gruppiere deine jederzeit-aufgaben in eigene listen. organisiere floater in getrennte listen — einkaufe, packliste, ideen — jede mit eigenem namen und eigener farbe und eigener abgeschlossener historie."
+    },
+    {
+      "id": "reusable-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Wiederverwendbare Listen",
+      "summary": "Setze eine Liste zurück, um sie erneut zu nutzen: Packen, Aufgaben, Einkauf.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Markiere eine Anytime-Liste als wiederverwendbar, und ein Zurücksetzen erscheint. Ein Tippen hebt alle Häkchen auf, sodass du dieselbe Liste erneut durchgehen kannst – ohne sie neu zu erstellen."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Öffne eine Floater-Liste und aktiviere „Wiederverwendbar“ in den Einstellungen.",
+            "Arbeite sie ab und hake Punkte wie gewohnt ab.",
+            "Wenn du sie wieder brauchst, tippe auf Zurücksetzen."
+          ]
+        }
+      ],
+      "searchTitle": "wiederverwendbare listen",
+      "searchKeywords": "wiederverwendbar, zurucksetzen, liste, floater, wiederholen, vorlage",
+      "searchBody": "setze eine liste zuruck, um sie erneut zu nutzen: packen, aufgaben, einkauf. markiere eine anytime-liste als wiederverwendbar, und ein zurucksetzen erscheint. ein tippen hebt alle hakchen auf, sodass du dieselbe liste erneut durchgehen kannst – ohne sie neu zu erstellen. offne eine floater-liste und aktiviere „wiederverwendbar“ in den einstellungen. arbeite sie ab und hake punkte wie gewohnt ab. wenn du sie wieder brauchst, tippe auf zurucksetzen."
+    },
+    {
+      "id": "scheduled-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "list-todo",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Listen für geplante Aufgaben",
+      "summary": "Sortiere datierte Aufgaben in benannte, farbige Listen.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Gib geplanten Aufgaben eine Liste, damit Zusammengehöriges beisammen bleibt. Listen tragen einen Namen und eine Farbe und lassen sich filtern."
+          ]
+        }
+      ],
+      "searchTitle": "listen fur geplante aufgaben",
+      "searchKeywords": "liste, projekt, gruppieren, farbe, geplant, kategorie",
+      "searchBody": "sortiere datierte aufgaben in benannte, farbige listen. gib geplanten aufgaben eine liste, damit zusammengehoriges beisammen bleibt. listen tragen einen namen und eine farbe und lassen sich filtern."
+    },
+    {
+      "id": "list-icons",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.28",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Automatische Listensymbole",
+      "summary": "Eine Liste ohne eigenes Symbol erhält eines, das zu ihrem Namen passt.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Nenne eine Liste Groceries und sie trägt einen Einkaufswagen; Gym bekommt eine Hantel, Work einen Aktenkoffer. T'Day rät nur, wenn du selbst kein Symbol gewählt hast, und behält das Standardsymbol, sobald der Name nicht eindeutig genug ist. Namen werden vorerst auf Englisch erkannt."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Wähle jederzeit ein Symbol in den Listeneinstellungen – einmal gewählt, bleibt es erhalten und wird nie überraten."
+          ]
+        }
+      ],
+      "searchTitle": "automatische listensymbole",
+      "searchKeywords": "listensymbol, automatisch, vorgeschlagen, glyphe, name, einkauf, fitness, arbeit",
+      "searchBody": "eine liste ohne eigenes symbol erhalt eines, das zu ihrem namen passt. nenne eine liste groceries und sie tragt einen einkaufswagen; gym bekommt eine hantel, work einen aktenkoffer. t'day rat nur, wenn du selbst kein symbol gewahlt hast, und behalt das standardsymbol, sobald der name nicht eindeutig genug ist. namen werden vorerst auf englisch erkannt. wahle jederzeit ein symbol in den listeneinstellungen – einmal gewahlt, bleibt es erhalten und wird nie uberraten."
+    },
+    {
+      "id": "completed-history",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Abgeschlossene Historie",
+      "summary": "Alles, was du erledigt hast, aufbewahrt zum Zurückblicken.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Erledigte Aufgaben werden nicht verworfen — sie wandern in deine abgeschlossene Historie, nach Tag gruppiert, sodass du sehen kannst, was du tatsächlich geschafft hast."
+          ]
+        }
+      ],
+      "searchTitle": "abgeschlossene historie",
+      "searchKeywords": "abgeschlossen, erledigt, historie, fertig, archiv, vergangenheit",
+      "searchBody": "alles, was du erledigt hast, aufbewahrt zum zuruckblicken. erledigte aufgaben werden nicht verworfen — sie wandern in deine abgeschlossene historie, nach tag gruppiert, sodass du sehen kannst, was du tatsachlich geschafft hast."
+    },
+    {
+      "id": "overdue-view",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": "overdue",
+        "android": "todos/overdue",
+        "ios": "overdueTodos"
+      },
+      "helpAnchors": [],
+      "title": "Überfällig",
+      "summary": "Ein eigener Ort für Aufgaben, deren Zeit verstrichen ist.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Aufgaben, deren Fälligkeitszeit verstrichen ist, sammeln sich in der Ansicht Überfällig, damit nichts stillschweigend durchrutscht. Plane sie neu ein, wenn du bereit bist."
+          ]
+        }
+      ],
+      "searchTitle": "uberfallig",
+      "searchKeywords": "uberfallig, verspatet, fallig, verpasst, ubertragen, ruckstand",
+      "searchBody": "ein eigener ort fur aufgaben, deren zeit verstrichen ist. aufgaben, deren falligkeitszeit verstrichen ist, sammeln sich in der ansicht uberfallig, damit nichts stillschweigend durchrutscht. plane sie neu ein, wenn du bereit bist."
+    },
+    {
+      "id": "morning-sweep",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "hand",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": {
+        "web": "overdue",
+        "android": "morning-sweep",
+        "ios": "morning-sweep"
+      },
+      "helpAnchors": [],
+      "title": "Morgendliches Aufräumen",
+      "summary": "Sortiere liegengebliebene Aufgaben Karte für Karte.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Rückstand tut nicht mehr weh: Der Aufräumen-Knopf auf dem Überfällig-Bildschirm geht deine liegengebliebenen Aufgaben Karte für Karte durch — Heute, Morgen, Datum wählen, Zum Floater machen oder Loslassen. In Eile? „Alles auf heute schieben“ verschiebt alles auf einmal, mit einem einzigen Rückgängig."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Wiederholende Aufgaben bleiben außen vor; ihre Termine planst du im Bearbeiten-Blatt um, damit die Serie intakt bleibt."
+          ]
+        }
+      ],
+      "searchTitle": "morgendliches aufraumen",
+      "searchKeywords": "aufraumen, uberfallig, sortieren, liegengeblieben, aufholen, ruckstand, morgen",
+      "searchBody": "sortiere liegengebliebene aufgaben karte fur karte. ruckstand tut nicht mehr weh: der aufraumen-knopf auf dem uberfallig-bildschirm geht deine liegengebliebenen aufgaben karte fur karte durch — heute, morgen, datum wahlen, zum floater machen oder loslassen. in eile? „alles auf heute schieben“ verschiebt alles auf einmal, mit einem einzigen ruckgangig. wiederholende aufgaben bleiben ausen vor; ihre termine planst du im bearbeiten-blatt um, damit die serie intakt bleibt."
+    },
+    {
+      "id": "bulk-actions",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "circle-check-big",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.4",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Sammelaktionen",
+      "summary": "Mehrere Aufgaben auf einmal auswählen und gemeinsam bearbeiten.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tippe in der Kopfzeile einer Aufgabenliste auf Auswählen, um in den Auswahlmodus zu wechseln. Wähle Aufgaben einzeln oder tippe auf Alle auswählen und wende dann eine einzige Aktion auf alles an: als erledigt markieren, Priorität ändern, in eine andere Liste verschieben oder löschen."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Öffne eine Aufgabenliste und tippe in der Kopfzeile auf Auswählen.",
+            "Tippe Aufgaben an, um sie zu wählen, oder nutze Alle auswählen für alles auf dem Bildschirm.",
+            "Wähle unten in der Leiste Erledigen, Priorität, Verschieben oder Löschen."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Beim Löschen musst du zuerst die genaue Anzahl bestätigen — und danach bleibt trotzdem ein Hinweis zum Rückgängigmachen. Wiederkehrende Aufgaben bleiben bei Sammelaktionen komplett außen vor, damit nie versehentlich eine ganze Serie geändert wird — öffne sie einzeln, um sie zu erledigen, zu verschieben oder zu löschen."
+          ]
+        }
+      ],
+      "searchTitle": "sammelaktionen",
+      "searchKeywords": "sammelaktion, mehrfachauswahl, alle auswahlen, stapel, mehrere, erledigen, loschen, prioritat, verschieben, auswahl",
+      "searchBody": "mehrere aufgaben auf einmal auswahlen und gemeinsam bearbeiten. tippe in der kopfzeile einer aufgabenliste auf auswahlen, um in den auswahlmodus zu wechseln. wahle aufgaben einzeln oder tippe auf alle auswahlen und wende dann eine einzige aktion auf alles an: als erledigt markieren, prioritat andern, in eine andere liste verschieben oder loschen. offne eine aufgabenliste und tippe in der kopfzeile auf auswahlen. tippe aufgaben an, um sie zu wahlen, oder nutze alle auswahlen fur alles auf dem bildschirm. wahle unten in der leiste erledigen, prioritat, verschieben oder loschen. beim loschen musst du zuerst die genaue anzahl bestatigen — und danach bleibt trotzdem ein hinweis zum ruckgangigmachen. wiederkehrende aufgaben bleiben bei sammelaktionen komplett ausen vor, damit nie versehentlich eine ganze serie geandert wird — offne sie einzeln, um sie zu erledigen, zu verschieben oder zu loschen."
+    },
+    {
+      "id": "search-tasks",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "search",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Aufgaben durchsuchen",
+      "summary": "Finde jede Aufgabe nach Titel, Notiz oder Listenname.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Nutze das Suchfeld, um deine Aufgaben sofort nach Titel, Beschreibung oder Listenname zu filtern — ganz ohne Scrollen."
+          ]
+        }
+      ],
+      "searchTitle": "aufgaben durchsuchen",
+      "searchKeywords": "suchen, finden, filtern, nachschlagen, abfrage",
+      "searchBody": "finde jede aufgabe nach titel, notiz oder listenname. nutze das suchfeld, um deine aufgaben sofort nach titel, beschreibung oder listenname zu filtern — ganz ohne scrollen."
+    },
+    {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Benachrichtigungen",
+      "summary": "Ein Schalter entscheidet, ob T'Day dich überhaupt unterbrechen darf.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "In den Einstellungen gibt es einen einzigen Schalter für Benachrichtigungen, und alles, was dich erreicht, läuft darüber — Aufgabenerinnerungen und die Tagesvorschau. Ausschalten leert die Warteschlange, statt sie nur stummzuschalten: Beim Wiedereinschalten kommt also nichts verspätet an. Zusätzlich wird die Systemberechtigung gebraucht: Solange Benachrichtigungen für T'Day auf deinem Gerät blockiert sind, bleibt der Schalter aus und bietet an, die Systemeinstellungen zu öffnen."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Beide Hälften müssen an sein. Fehlt die Systemberechtigung, zeigt der Schalter Aus — egal, wie du ihn hier hinterlassen hast."
+          ]
+        }
+      ],
+      "searchTitle": "benachrichtigungen",
+      "searchKeywords": "benachrichtigungen, berechtigung, schalter, erlauben, stumm, stummschalten, erinnerung, ubersicht, systemeinstellungen",
+      "searchBody": "ein schalter entscheidet, ob t'day dich uberhaupt unterbrechen darf. in den einstellungen gibt es einen einzigen schalter fur benachrichtigungen, und alles, was dich erreicht, lauft daruber — aufgabenerinnerungen und die tagesvorschau. ausschalten leert die warteschlange, statt sie nur stummzuschalten: beim wiedereinschalten kommt also nichts verspatet an. zusatzlich wird die systemberechtigung gebraucht: solange benachrichtigungen fur t'day auf deinem gerat blockiert sind, bleibt der schalter aus und bietet an, die systemeinstellungen zu offnen. beide halften mussen an sein. fehlt die systemberechtigung, zeigt der schalter aus — egal, wie du ihn hier hinterlassen hast."
+    },
+    {
+      "id": "recurrence-presets",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "recurrence-picker"
+      ],
+      "title": "Wiederkehrende Aufgaben",
+      "summary": "Lass eine Aufgabe täglich, wöchentlich und mehr wiederkehren.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Stell eine Aufgabe auf Wiederholung, und sie kommt nach ihrem eigenen Zeitplan zurück. Wähle aus den Vorlagen — jeden Tag, Wochentag, jede Woche oder jeden Monat —, und das Abschließen eines Termins lässt den Rest der Serie unberührt."
+          ]
+        },
+        {
+          "type": "EXAMPLE",
+          "texts": [
+            "Pflanzen gießen · jede Woche"
+          ]
+        }
+      ],
+      "searchTitle": "wiederkehrende aufgaben",
+      "searchKeywords": "wiederholen, wiederkehrend, wiederholung, jeden tag, wochentlich, monatlich, rrule, zeitplan",
+      "searchBody": "lass eine aufgabe taglich, wochentlich und mehr wiederkehren. stell eine aufgabe auf wiederholung, und sie kommt nach ihrem eigenen zeitplan zuruck. wahle aus den vorlagen — jeden tag, wochentag, jede woche oder jeden monat —, und das abschliesen eines termins lasst den rest der serie unberuhrt. pflanzen giesen · jede woche"
+    },
+    {
+      "id": "repeat-suggestions",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Wiederholungs-Vorschläge",
+      "summary": "T'Day erkennt Aufgaben mit Rhythmus und bietet an, sie zu wiederholen.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Wenn du dieselbe Aufgabe in gleichmäßigem Rhythmus erledigst – Pflanzen jede Woche gießen, Miete monatlich zahlen – bemerkt T'Day das und bietet einen Ein-Tipp-Chip zum Wiederholen an. Es liest nur deinen lokalen Erledigt-Verlauf; nichts verlässt das Gerät."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Kein Interesse? Tippe auf das ✕ und dieser Titel fragt nicht wieder."
+          ]
+        }
+      ],
+      "searchTitle": "wiederholungs-vorschlage",
+      "searchKeywords": "wiederholen, vorschlag, wiederkehrend, rhythmus, gewohnheit, muster, automatisch",
+      "searchBody": "t'day erkennt aufgaben mit rhythmus und bietet an, sie zu wiederholen. wenn du dieselbe aufgabe in gleichmasigem rhythmus erledigst – pflanzen jede woche giesen, miete monatlich zahlen – bemerkt t'day das und bietet einen ein-tipp-chip zum wiederholen an. es liest nur deinen lokalen erledigt-verlauf; nichts verlasst das gerat. kein interesse? tippe auf das ✕ und dieser titel fragt nicht wieder."
+    },
+    {
+      "id": "reminders",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Erinnerungen",
+      "summary": "Erhalte eine Benachrichtigung, bevor eine Aufgabe fällig ist.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Füge einer geplanten Aufgabe eine Erinnerung hinzu, und dein Gerät benachrichtigt dich zur richtigen Zeit. Erinnerungen werden auf deinem Gerät geplant, sodass sie auch im lokalen Modus funktionieren."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Die Optionen für die Vorlaufzeit einer Erinnerung variieren je nach Aufgabe leicht — wähle die, die dir genug Vorwarnung gibt."
+          ]
+        }
+      ],
+      "searchTitle": "erinnerungen",
+      "searchKeywords": "erinnerung, benachrichtigung, hinweis, wecker, benachrichtigen, vorher",
+      "searchBody": "erhalte eine benachrichtigung, bevor eine aufgabe fallig ist. fuge einer geplanten aufgabe eine erinnerung hinzu, und dein gerat benachrichtigt dich zur richtigen zeit. erinnerungen werden auf deinem gerat geplant, sodass sie auch im lokalen modus funktionieren. die optionen fur die vorlaufzeit einer erinnerung variieren je nach aufgabe leicht — wahle die, die dir genug vorwarnung gibt."
+    },
+    {
+      "id": "reminder-snooze",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Erinnerung später wiederholen",
+      "summary": "Erinnerungs-Benachrichtigungen bieten „1 Std. später“ und „Heute Abend“.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Kommt eine Erinnerung ungelegen, musst du die App nicht öffnen: „1 Std. später“ stellt dieselbe Erinnerung eine Stunde später erneut zu, „Heute Abend“ verschiebt die Aufgabe selbst auf 19:00 heute. Heute Abend gilt für einmalige Aufgaben — wiederkehrende Termine planst du in der App um, damit die Serie intakt bleibt."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Später wiederholen verzögert nur die Benachrichtigung; die Aufgabe behält ihre ursprüngliche Zeit, bis du sie verschiebst."
+          ]
+        }
+      ],
+      "searchTitle": "erinnerung spater wiederholen",
+      "searchKeywords": "spater erinnern, erinnerung, benachrichtigung, snooze, heute abend, verschieben",
+      "searchBody": "erinnerungs-benachrichtigungen bieten „1 std. spater“ und „heute abend“. kommt eine erinnerung ungelegen, musst du die app nicht offnen: „1 std. spater“ stellt dieselbe erinnerung eine stunde spater erneut zu, „heute abend“ verschiebt die aufgabe selbst auf 19:00 heute. heute abend gilt fur einmalige aufgaben — wiederkehrende termine planst du in der app um, damit die serie intakt bleibt. spater wiederholen verzogert nur die benachrichtigung; die aufgabe behalt ihre ursprungliche zeit, bis du sie verschiebst."
+    },
+    {
+      "id": "quiet-hours",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-notifications"
+      ],
+      "title": "Ruhezeiten",
+      "summary": "Halte Erinnerungen nachts zurück, damit nichts im Schlaf summt.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Lege ein Fenster fest – etwa 22:00 bis 07:00 – und jede Erinnerung, die darin ausgelöst würde, wird bis zum Ende gehalten. Nur auf dem Gerät; lokale Erinnerungen warten bis zum Morgen."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Das Fenster darf Mitternacht überschreiten (22:00 → 07:00); die Berechnung passt."
+          ]
+        }
+      ],
+      "searchTitle": "ruhezeiten",
+      "searchKeywords": "ruhe, zeiten, nicht storen, nacht, schlaf, erinnerungen, zeitplan",
+      "searchBody": "halte erinnerungen nachts zuruck, damit nichts im schlaf summt. lege ein fenster fest – etwa 22:00 bis 07:00 – und jede erinnerung, die darin ausgelost wurde, wird bis zum ende gehalten. nur auf dem gerat; lokale erinnerungen warten bis zum morgen. das fenster darf mitternacht uberschreiten (22:00 → 07:00); die berechnung passt."
+    },
+    {
+      "id": "day-ahead",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell-ring",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Tagesüberblick",
+      "summary": "Eine leise Morgenbenachrichtigung mit den Zahlen des Tages.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "In den Einstellungen aktivieren und eine Uhrzeit wählen: Jeden Morgen sagt dir eine Benachrichtigung, wie der Tag aussieht — „4 Aufgaben heute, 2 liegengeblieben“ — und öffnet Heute, oder springt direkt ins morgendliche Aufräumen, wenn etwas liegengeblieben ist. Vollständig auf dem Gerät: Nichts verlässt dein Telefon."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "An aufgabenfreien Tagen bleibt der Überblick stumm — keine Nachrichten sind gute Nachrichten."
+          ]
+        }
+      ],
+      "searchTitle": "tagesuberblick",
+      "searchKeywords": "tagesuberblick, digest, morgens, tagliche benachrichtigung, uberblick",
+      "searchBody": "eine leise morgenbenachrichtigung mit den zahlen des tages. in den einstellungen aktivieren und eine uhrzeit wahlen: jeden morgen sagt dir eine benachrichtigung, wie der tag aussieht — „4 aufgaben heute, 2 liegengeblieben“ — und offnet heute, oder springt direkt ins morgendliche aufraumen, wenn etwas liegengeblieben ist. vollstandig auf dem gerat: nichts verlasst dein telefon. an aufgabenfreien tagen bleibt der uberblick stumm — keine nachrichten sind gute nachrichten."
+    },
+    {
+      "id": "home-widget",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Startbildschirm-Widget",
+      "summary": "Sieh die heutigen Aufgaben, ohne die App zu öffnen.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Füge das T'Day-Widget zu deinem Startbildschirm hinzu, um einen Blick auf die heutigen Aufgaben zu werfen. Ein Tipp auf das Widget öffnet die App an der richtigen Stelle."
+          ]
+        }
+      ],
+      "searchTitle": "startbildschirm-widget",
+      "searchKeywords": "widget, startbildschirm, blick, heute, sperrbildschirm",
+      "searchBody": "sieh die heutigen aufgaben, ohne die app zu offnen. fuge das t'day-widget zu deinem startbildschirm hinzu, um einen blick auf die heutigen aufgaben zu werfen. ein tipp auf das widget offnet die app an der richtigen stelle."
+    },
+    {
+      "id": "widget-list-selection",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "list-todo",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Liste für dein Widget wählen",
+      "summary": "Ein Widget auf eine bestimmte Liste statt den ganzen Feed richten.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Widget lange gedrückt halten und „Widget bearbeiten\" wählen, um genau festzulegen, welche Liste es zeigt – jede deiner geplanten Listen oder Floater-Listen. Eine geplante Liste zeigt Fälligkeitszeiten und markiert Überfälliges; eine Floater-Liste zeigt eine offene Liste ohne Fälligkeitszeiten. Bleibt die Auswahl leer, zeigt das Widget weiterhin den vollständigen Today- oder Floater-Feed."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Füge mehrere Widgets hinzu, jedes auf eine andere Liste ausgerichtet, um sie alle gleichzeitig auf deinem Startbildschirm zu sehen."
+          ]
+        }
+      ],
+      "searchTitle": "liste fur dein widget wahlen",
+      "searchKeywords": "widget, liste, konfigurieren, widget bearbeiten, pro liste, startbildschirm, ios",
+      "searchBody": "ein widget auf eine bestimmte liste statt den ganzen feed richten. widget lange gedruckt halten und „widget bearbeiten\" wahlen, um genau festzulegen, welche liste es zeigt – jede deiner geplanten listen oder floater-listen. eine geplante liste zeigt falligkeitszeiten und markiert uberfalliges; eine floater-liste zeigt eine offene liste ohne falligkeitszeiten. bleibt die auswahl leer, zeigt das widget weiterhin den vollstandigen today- oder floater-feed. fuge mehrere widgets hinzu, jedes auf eine andere liste ausgerichtet, um sie alle gleichzeitig auf deinem startbildschirm zu sehen."
+    },
+    {
+      "id": "list-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.45",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Listen-Widget",
+      "summary": "Ein drittes Widget, für eine eingebaute Ansicht oder eine Liste deiner Wahl.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Neben Heute und Jederzeit gibt es ein Listen-Widget. Platziere es, und es fragt, was es zeigen soll — die eingebauten Ansichten Geplant und Überfällig oder jede geplante Liste oder Jederzeit-Liste. Danach zeigt es nur diese Auswahl, und sein + legt eine Aufgabe an: in der Liste, wenn du eine gewählt hast. Platziere ein weiteres für eine andere Ansicht oder Liste; jedes behält seine eigene."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Um ein Listen-Widget auf eine andere Liste umzustellen, halte es gedrückt und wähle Bearbeiten (auf dem iPhone: Widget bearbeiten)."
+          ]
+        }
+      ],
+      "searchTitle": "listen-widget",
+      "searchKeywords": "widget, startbildschirm, liste, einrichtung, auswahl, jederzeit, geplant, hinzufugen",
+      "searchBody": "ein drittes widget, fur eine eingebaute ansicht oder eine liste deiner wahl. neben heute und jederzeit gibt es ein listen-widget. platziere es, und es fragt, was es zeigen soll — die eingebauten ansichten geplant und uberfallig oder jede geplante liste oder jederzeit-liste. danach zeigt es nur diese auswahl, und sein + legt eine aufgabe an: in der liste, wenn du eine gewahlt hast. platziere ein weiteres fur eine andere ansicht oder liste; jedes behalt seine eigene. um ein listen-widget auf eine andere liste umzustellen, halte es gedruckt und wahle bearbeiten (auf dem iphone: widget bearbeiten)."
+    },
+    {
+      "id": "widget-quick-add",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "square-plus",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Schnell hinzufügen aus dem Widget",
+      "summary": "Starte eine neue Aufgabe direkt aus dem Widget.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Das Widget hat eine Erstellen-Schaltfläche, sodass du eine Aufgabe von deinem Startbildschirm erfassen kannst, ohne zuerst die App zu öffnen — und das funktioniert auch im lokalen Modus."
+          ]
+        }
+      ],
+      "searchTitle": "schnell hinzufugen aus dem widget",
+      "searchKeywords": "widget, schnell hinzufugen, erstellen, verknupfung, startbildschirm",
+      "searchBody": "starte eine neue aufgabe direkt aus dem widget. das widget hat eine erstellen-schaltflache, sodass du eine aufgabe von deinem startbildschirm erfassen kannst, ohne zuerst die app zu offnen — und das funktioniert auch im lokalen modus."
+    },
+    {
+      "id": "interactive-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "check-check",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Direkt im Widget abhaken",
+      "summary": "Hake Aufgaben direkt im Widget auf dem Startbildschirm ab.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Die Today- und Floater-Widgets reagieren jetzt auf Tippen: Tippe auf den Ring am Anfang einer Zeile, um die Aufgabe abzuschließen, ohne die App zu öffnen. Die Zeile verschwindet sofort und der Abschluss synchronisiert wie jeder andere — offline getippte Häkchen warten in der Warteschlange und werden übernommen, sobald du wieder online bist."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Vertippt? Öffne in der App die Abgeschlossene Historie und stelle die Aufgabe von dort wieder her."
+          ]
+        }
+      ],
+      "searchTitle": "direkt im widget abhaken",
+      "searchKeywords": "widget, abhaken, erledigen, startbildschirm, interaktiv, tippen",
+      "searchBody": "hake aufgaben direkt im widget auf dem startbildschirm ab. die today- und floater-widgets reagieren jetzt auf tippen: tippe auf den ring am anfang einer zeile, um die aufgabe abzuschliesen, ohne die app zu offnen. die zeile verschwindet sofort und der abschluss synchronisiert wie jeder andere — offline getippte hakchen warten in der warteschlange und werden ubernommen, sobald du wieder online bist. vertippt? offne in der app die abgeschlossene historie und stelle die aufgabe von dort wieder her."
+    },
+    {
+      "id": "today-widget-progress",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "circle-check-big",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.44",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Das Heute-Widget auf einen Blick",
+      "summary": "Sieh, wie weit du im Tag bist, was überfällig ist und was als Nächstes kommt.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Das Heute-Widget beginnt mit dem Datum und einem Fortschrittsring: wie viele der heute fälligen Aufgaben erledigt sind, von allen. Überfälliges steht in einem eigenen Abschnitt unter den heutigen Aufgaben, mit dem Tag, an dem es fällig war. Ist heute nichts fällig, zeigt das Widget, was am nächsten Tag mit Aufgaben ansteht. Eine abgehakte Aufgabe bleibt kurz abgehakt und durchgestrichen, bevor sie verschwindet."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Der Ring zählt nur heute fällige Aufgaben. Etwas von einem anderen Tag zu erledigen, füllt ihn nicht."
+          ]
+        }
+      ],
+      "searchTitle": "das heute-widget auf einen blick",
+      "searchKeywords": "widget, heute, fortschritt, ring, erledigt, uberfallig, morgen, datum, startbildschirm",
+      "searchBody": "sieh, wie weit du im tag bist, was uberfallig ist und was als nachstes kommt. das heute-widget beginnt mit dem datum und einem fortschrittsring: wie viele der heute falligen aufgaben erledigt sind, von allen. uberfalliges steht in einem eigenen abschnitt unter den heutigen aufgaben, mit dem tag, an dem es fallig war. ist heute nichts fallig, zeigt das widget, was am nachsten tag mit aufgaben ansteht. eine abgehakte aufgabe bleibt kurz abgehakt und durchgestrichen, bevor sie verschwindet. der ring zahlt nur heute fallige aufgaben. etwas von einem anderen tag zu erledigen, fullt ihn nicht."
+    },
+    {
+      "id": "share-into-tday",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "share-2",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "In T'Day teilen",
+      "summary": "Schicke Text aus jeder App direkt in eine neue Aufgabe.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Etwas in einer anderen App gefunden? Öffne das System-Teilen-Menü und wähle T'Day. Der geteilte Text landet in einem Neue-Aufgabe-Formular — bei einer geteilten Seite wird ihr Titel zum Aufgabennamen und der Link wandert in die Notizen. Auf Android und im Web öffnet sich das Formular sofort; auf iOS wird die Aufnahme sofort gespeichert und das vorausgefüllte Formular erscheint beim nächsten Öffnen der App."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Teile Text mit einer Datumsangabe — der Parser setzt das Fälligkeitsdatum für dich."
+          ]
+        }
+      ],
+      "searchTitle": "in t'day teilen",
+      "searchKeywords": "teilen, share sheet, senden an, erfassen, import, aus anderer app",
+      "searchBody": "schicke text aus jeder app direkt in eine neue aufgabe. etwas in einer anderen app gefunden? offne das system-teilen-menu und wahle t'day. der geteilte text landet in einem neue-aufgabe-formular — bei einer geteilten seite wird ihr titel zum aufgabennamen und der link wandert in die notizen. auf android und im web offnet sich das formular sofort; auf ios wird die aufnahme sofort gespeichert und das vorausgefullte formular erscheint beim nachsten offnen der app. teile text mit einer datumsangabe — der parser setzt das falligkeitsdatum fur dich."
+    },
+    {
+      "id": "carplay",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "car",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "T'Day auf CarPlay",
+      "summary": "Aufgaben sicher im Blick behalten und erfassen, während du fährst.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Auf CarPlay zeigt T'Day eine fokussierte, überschaubare Liste, die für das Auto gemacht ist, sodass du prüfen kannst, was als Nächstes ansteht, oder per Sprache eine Aufgabe hinzufügst, ohne zum Telefon zu greifen."
+          ]
+        }
+      ],
+      "searchTitle": "t'day auf carplay",
+      "searchKeywords": "carplay, auto, fahren, sprache, apple, freihandig",
+      "searchBody": "aufgaben sicher im blick behalten und erfassen, wahrend du fahrst. auf carplay zeigt t'day eine fokussierte, uberschaubare liste, die fur das auto gemacht ist, sodass du prufen kannst, was als nachstes ansteht, oder per sprache eine aufgabe hinzufugst, ohne zum telefon zu greifen."
+    },
+    {
+      "id": "focus-filters",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Fokus-Filter",
+      "summary": "Lass einen iOS-Fokus entscheiden, welche Listen in deinem Heute-Feed erscheinen.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day nutzt den iOS-Fokus. Wähle einen Fokus wie Arbeit oder Privat, lege fest, welche deiner Listen er anzeigen soll, und während dieser Fokus aktiv ist, blenden dein Heute-Feed und das Home-Bildschirm-Widget alles andere still aus. Schalte den Fokus aus, und jede Aufgabe kommt zurück – nichts wird gelöscht."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Öffne Einstellungen ▸ Fokus auf dem iPhone und wähle einen Fokus.",
+            "Füge einen Fokusfilter hinzu, wähle T'Day und dann deine Listen.",
+            "Aktiviere den Fokus – Heute und das Widget zeigen jetzt nur diese Listen."
+          ]
+        }
+      ],
+      "searchTitle": "fokus-filter",
+      "searchKeywords": "fokus, filter, ios, arbeit, privat, nicht storen, listen, ausblenden, konzentrieren, focus",
+      "searchBody": "lass einen ios-fokus entscheiden, welche listen in deinem heute-feed erscheinen. t'day nutzt den ios-fokus. wahle einen fokus wie arbeit oder privat, lege fest, welche deiner listen er anzeigen soll, und wahrend dieser fokus aktiv ist, blenden dein heute-feed und das home-bildschirm-widget alles andere still aus. schalte den fokus aus, und jede aufgabe kommt zuruck – nichts wird geloscht. offne einstellungen ▸ fokus auf dem iphone und wahle einen fokus. fuge einen fokusfilter hinzu, wahle t'day und dann deine listen. aktiviere den fokus – heute und das widget zeigen jetzt nur diese listen."
+    },
+    {
+      "id": "apple-watch",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "alarm-clock",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Apple Watch",
+      "summary": "Deine Heute-Aufgaben am Handgelenk, live von deinem iPhone gespiegelt.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Installiere T'Day auf der Apple Watch, und die heutigen Aufgaben wandern mit ans Handgelenk. Die Watch spiegelt genau die Heute-Liste, die dein iPhone erstellt – ohne separate Anmeldung – und eine Komplikation auf dem Zifferblatt zeigt, wie viele Aufgaben noch offen sind, sodass du sie mit einem Blick siehst, ohne die App zu öffnen. Sie aktualisiert sich, sobald dein iPhone synchronisiert."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Öffne die Watch-App auf dem iPhone und installiere T'Day.",
+            "Füge die T'Day-Komplikation zu deinem Zifferblatt hinzu.",
+            "Wirf einen Blick auf die Anzahl oder öffne die App für die vollständige Liste."
+          ]
+        }
+      ],
+      "searchTitle": "apple watch",
+      "searchKeywords": "apple watch, watch, uhr, handgelenk, komplikation, watchos, heute, blick, spiegeln",
+      "searchBody": "deine heute-aufgaben am handgelenk, live von deinem iphone gespiegelt. installiere t'day auf der apple watch, und die heutigen aufgaben wandern mit ans handgelenk. die watch spiegelt genau die heute-liste, die dein iphone erstellt – ohne separate anmeldung – und eine komplikation auf dem zifferblatt zeigt, wie viele aufgaben noch offen sind, sodass du sie mit einem blick siehst, ohne die app zu offnen. sie aktualisiert sich, sobald dein iphone synchronisiert. offne die watch-app auf dem iphone und installiere t'day. fuge die t'day-komplikation zu deinem zifferblatt hinzu. wirf einen blick auf die anzahl oder offne die app fur die vollstandige liste."
+    },
+    {
+      "id": "local-mode",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "wifi-off",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Lokaler Modus",
+      "summary": "Nutze T'Day vollständig offline, ohne Server oder Konto.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Der lokale Modus behält alles auf deinem Gerät — kein Login, kein Server, kein Upload. Es ist eine vollwertige Art, T'Day privat zu nutzen, und deine lokalen Daten werden von sich aus nirgendwohin gesendet. Im Browser liegt er im Speicher dieses Browsers – wer Cookies und Websitedaten löscht, löscht den Arbeitsbereich mit. Exportiere ihn vorher, wenn du ihn behalten möchtest. Wenn du Absturzberichte aktivierst, wird nur dann ein kurzer technischer Bericht gesendet, wenn etwas fehlschlägt, nie deine Aufgaben oder Listen."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Nur im Servermodus verfügbare Funktionen sind hier mit einem „Servermodus“-Abzeichen gekennzeichnet, damit du weißt, was sich beim Anmelden ändert."
+          ]
+        }
+      ],
+      "searchTitle": "lokaler modus",
+      "searchKeywords": "lokaler modus, offline, privat, kein konto, kein server, auf dem gerat",
+      "searchBody": "nutze t'day vollstandig offline, ohne server oder konto. der lokale modus behalt alles auf deinem gerat — kein login, kein server, kein upload. es ist eine vollwertige art, t'day privat zu nutzen, und deine lokalen daten werden von sich aus nirgendwohin gesendet. im browser liegt er im speicher dieses browsers – wer cookies und websitedaten loscht, loscht den arbeitsbereich mit. exportiere ihn vorher, wenn du ihn behalten mochtest. wenn du absturzberichte aktivierst, wird nur dann ein kurzer technischer bericht gesendet, wenn etwas fehlschlagt, nie deine aufgaben oder listen. nur im servermodus verfugbare funktionen sind hier mit einem „servermodus“-abzeichen gekennzeichnet, damit du weist, was sich beim anmelden andert."
+    },
+    {
+      "id": "server-mode",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "cloud",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Servermodus",
+      "summary": "Synchronisiere über deinen eigenen privaten Server geräteübergreifend.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Melde dich an deinem selbst gehosteten Server an, um Aufgaben in Echtzeit geräteübergreifend zu synchronisieren. Änderungen geschehen sofort auf deinem Gerät und werden an den Server übertragen, sodass die App auch bei wackliger Verbindung flott bleibt."
+          ]
+        }
+      ],
+      "searchTitle": "servermodus",
+      "searchKeywords": "servermodus, sync, selbst gehostet, konto, login, gerate, echtzeit",
+      "searchBody": "synchronisiere uber deinen eigenen privaten server gerateubergreifend. melde dich an deinem selbst gehosteten server an, um aufgaben in echtzeit gerateubergreifend zu synchronisieren. anderungen geschehen sofort auf deinem gerat und werden an den server ubertragen, sodass die app auch bei wackliger verbindung flott bleibt."
+    },
+    {
+      "id": "offline-sync",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "refresh-cw",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Offline-Sync",
+      "summary": "Arbeite offline weiter; Änderungen werden bei erneuter Verbindung übertragen.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Im Servermodus werden deine Änderungen zuerst lokal gespeichert und in die Warteschlange gestellt, wenn du offline bist. Sobald du wieder verbunden bist, überträgt T'Day sie der Reihe nach an den Server."
+          ]
+        }
+      ],
+      "searchTitle": "offline-sync",
+      "searchKeywords": "offline, sync, ausstehend, warteschlange, ubertragen, verbindung, konflikt",
+      "searchBody": "arbeite offline weiter; anderungen werden bei erneuter verbindung ubertragen. im servermodus werden deine anderungen zuerst lokal gespeichert und in die warteschlange gestellt, wenn du offline bist. sobald du wieder verbunden bist, ubertragt t'day sie der reihe nach an den server."
+    },
+    {
+      "id": "export-your-data",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "download",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Deine Daten exportieren",
+      "summary": "Lade alles als eine portable Datei herunter — und hol es jederzeit zurück.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "In den Einstellungen kannst du dein ganzes Konto — Aufgaben, Listen, abgeschlossene Historie und Einstellungen — als einzelne JSON-Datei herunterladen. Importiere sie in ein anderes T'Day (einen Server oder ein Gerät im lokalen Modus), und alles landet als neue Einträge: Der Import fügt immer hinzu und überschreibt nie, sodass nichts Vorhandenes verloren geht. Auf einem Server werden Beschreibungen in die Datei entschlüsselt, damit sie lesbar bleibt, selbst wenn du zu einem anders verschlüsselten Server wechselst."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Die Datei ist einfaches, lesbares JSON — bewahre eine Kopie als persönliches Backup auf."
+          ]
+        }
+      ],
+      "searchTitle": "deine daten exportieren",
+      "searchKeywords": "export, import, herunterladen, backup, meine daten, portabel, wiederherstellen, migrieren",
+      "searchBody": "lade alles als eine portable datei herunter — und hol es jederzeit zuruck. in den einstellungen kannst du dein ganzes konto — aufgaben, listen, abgeschlossene historie und einstellungen — als einzelne json-datei herunterladen. importiere sie in ein anderes t'day (einen server oder ein gerat im lokalen modus), und alles landet als neue eintrage: der import fugt immer hinzu und uberschreibt nie, sodass nichts vorhandenes verloren geht. auf einem server werden beschreibungen in die datei entschlusselt, damit sie lesbar bleibt, selbst wenn du zu einem anders verschlusselten server wechselst. die datei ist einfaches, lesbares json — bewahre eine kopie als personliches backup auf."
+    },
+    {
+      "id": "local-to-server-migration",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "cloud",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Von diesem Gerät auf einen Server umziehen",
+      "summary": "Nimm deine Aufgaben vom Gerät mit, wenn du in den Server-Modus wechselst.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Im lokalen Modus gestartet und später einen Server eingerichtet? Es wird nie etwas von selbst hochgeladen. So ziehst du deine Daten um: Exportiere sie zuerst in den Einstellungen, melde dich an deinem Server an und importiere dort die Datei. Aufgaben, Listen und Historie ziehen in einem bewussten Schritt um — du wählst den Moment, und deine Gerätedaten bleiben bis dahin unberührt."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Behalte die exportierte Datei nach dem Import, bis du geprüft hast, dass alles angekommen ist — dann dient sie zugleich als Backup."
+          ]
+        }
+      ],
+      "searchTitle": "von diesem gerat auf einen server umziehen",
+      "searchKeywords": "migration, lokal zu server, daten umziehen, modus wechseln, hochladen, anmelden, ubertragen",
+      "searchBody": "nimm deine aufgaben vom gerat mit, wenn du in den server-modus wechselst. im lokalen modus gestartet und spater einen server eingerichtet? es wird nie etwas von selbst hochgeladen. so ziehst du deine daten um: exportiere sie zuerst in den einstellungen, melde dich an deinem server an und importiere dort die datei. aufgaben, listen und historie ziehen in einem bewussten schritt um — du wahlst den moment, und deine geratedaten bleiben bis dahin unberuhrt. behalte die exportierte datei nach dem import, bis du gepruft hast, dass alles angekommen ist — dann dient sie zugleich als backup."
+    },
+    {
+      "id": "crash-reports",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "activity",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.8.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-privacy"
+      ],
+      "title": "Absturz- und Problemberichte",
+      "summary": "Standardmäßig aus. Wer entscheidet, hängt von der Plattform ab.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Absturz- und Problemberichte sind optional und standardmäßig ausgeschaltet. Wer entscheidet, ist je nach Plattform anders: In der Web-App gilt eine einzige Admin-Antwort für den ganzen Server – die Website, die Fehler des Servers selbst und alle, die ihn nutzen – und einzelne Nutzer werden nicht gefragt. Auf Android und iOS wird jede Person im Anmeldeablauf gefragt; die Antwort gilt also pro Gerät und die Frage kommt bei jeder Anmeldung zurück. Das funktioniert wie Crashlytics: Es dient dazu, Fehler zu beheben, nicht dazu, zu messen, wie du die App nutzt. Solange alles normal läuft, gibt es auf deinem Gerät keine Nutzungsanalyse, kein Sitzungs-Tracking und keine Leistungsüberwachung."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Ein Bericht enthält die App-Version, dein Gerätemodell und die Version deines Betriebssystems (oder Browser und Version), den Fehler und die Stelle im Code, an der er aufgetreten ist, ein paar benannte Schritte davor, Namen von Bildschirmen oder API-Routen ohne jegliche IDs, Statuscodes sowie auf Mobilgeräten grobe Gerätezustände wie freien Arbeitsspeicher, Akkustand und ob du online warst. Außerdem enthält er deinen Zeitzonenversatz (zum Beispiel UTC+2) und deine Sprache, weil Datumsangaben für einen Aufgabenplaner zentral sind."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Nie enthalten sind: dein Name, Benutzername, deine E-Mail-Adresse oder sonstige Kontodetails; deine IP-Adresse oder dein Standort; die Adresse deines Servers; Titel und Inhalte von Aufgaben, Listen oder Notizen; der Inhalt deiner Datenbank; Passwörter, Cookies oder Tokens; Screenshots oder Aufzeichnungen. Fehlermeldungen werden auf deinem Gerät von Adressen, Kennungen und zitiertem Text bereinigt, bevor sie gesendet werden, nach bestem Bemühen. Berichte enthalten keine Nutzer-ID, sodass sie nicht auf dich zurückgeführt und auch nicht pro Person gelöscht werden können."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Berichte werden nur gesendet, wenn etwas fehlschlägt, und nur, wenn Berichte für die jeweilige Plattform eingeschaltet sind: in der Web-App, nachdem ein Admin sie für den Server einschaltet; auf dem Gerät, nachdem du dort zugestimmt hast. Schlägt etwas fehl, während Berichte aus sind, wird nichts gespeichert oder in eine Warteschlange gestellt, und wenn du sie später einschaltest, werden frühere Fehler nicht nachgesendet. Was als Fehler gilt, hängt von der Plattform ab: Android meldet Abstürze, Einfrieren und Abstürze wegen Speichermangels; iOS meldet Abstürze, Einfrieren und das Beenden der App durch das System wegen zu hohen Speicherverbrauchs; die Web-App meldet nur unerwartete Fehler. T'Day erkennt keine Speicherlecks."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Berichte gehen über Sentry, einen Dienst für Absturzberichte, an den Maintainer von T'Day. Sie werden 30 Tage lang aufbewahrt und ausschließlich zur Fehlerbehebung verwendet, nie verkauft oder für Werbung weitergegeben. Sie werden direkt an Sentry gesendet, nicht über deinen Server. Sentry sieht die Netzwerkadresse jeder Verbindung, wie jeder Onlinedienst, ist aber so eingestellt, dass sie nicht gespeichert wird, und die Web-App teilt Sentry außerdem mit, von welcher Website der Bericht stammt. Betreibst du einen eigenen Server, deckt dieselbe Admin-Antwort auch dessen eigene Fehlerberichte ab, plus Zeitmessungen für eine kleine Stichprobe von Anfragen; deine Aufgaben sind darin nie enthalten. Builds ohne Endpunkt für Berichte, etwa selbst gebaute, zeigen diese Einstellung nicht an."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Öffne die Einstellungen.",
+            "In der Web-App schaltet ein Admin unter Privatsphäre „Server-Fehlerberichte“ aus; auf dem Gerät schaltest du selbst „Absturz- und Problemberichte“ aus.",
+            "Es werden sofort keine Berichte mehr gesendet, und alles, was noch auf das Senden wartet, wird gelöscht."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Nein zu sagen kostet nichts. Die Antwort lässt sich jederzeit unter Einstellungen → Privatsphäre ändern – in der Web-App durch einen Admin, auf dem Gerät von dir. Technische Details: docs/TELEMETRY.md im Repository von T'Day."
+          ]
+        }
+      ],
+      "searchTitle": "absturz- und problemberichte",
+      "searchKeywords": "absturz, absturze, crash, fehler, fehlerbericht, bericht, problembericht, sentry, privatsphare, datenschutz, diagnose, telemetrie, einfrieren, hanger, anr, speicher, arbeitsspeicher, analyse, nutzungsdaten",
+      "searchBody": "standardmasig aus. wer entscheidet, hangt von der plattform ab. absturz- und problemberichte sind optional und standardmasig ausgeschaltet. wer entscheidet, ist je nach plattform anders: in der web-app gilt eine einzige admin-antwort fur den ganzen server – die website, die fehler des servers selbst und alle, die ihn nutzen – und einzelne nutzer werden nicht gefragt. auf android und ios wird jede person im anmeldeablauf gefragt; die antwort gilt also pro gerat und die frage kommt bei jeder anmeldung zuruck. das funktioniert wie crashlytics: es dient dazu, fehler zu beheben, nicht dazu, zu messen, wie du die app nutzt. solange alles normal lauft, gibt es auf deinem gerat keine nutzungsanalyse, kein sitzungs-tracking und keine leistungsuberwachung. ein bericht enthalt die app-version, dein geratemodell und die version deines betriebssystems (oder browser und version), den fehler und die stelle im code, an der er aufgetreten ist, ein paar benannte schritte davor, namen von bildschirmen oder api-routen ohne jegliche ids, statuscodes sowie auf mobilgeraten grobe geratezustande wie freien arbeitsspeicher, akkustand und ob du online warst. auserdem enthalt er deinen zeitzonenversatz (zum beispiel utc+2) und deine sprache, weil datumsangaben fur einen aufgabenplaner zentral sind. nie enthalten sind: dein name, benutzername, deine e-mail-adresse oder sonstige kontodetails; deine ip-adresse oder dein standort; die adresse deines servers; titel und inhalte von aufgaben, listen oder notizen; der inhalt deiner datenbank; passworter, cookies oder tokens; screenshots oder aufzeichnungen. fehlermeldungen werden auf deinem gerat von adressen, kennungen und zitiertem text bereinigt, bevor sie gesendet werden, nach bestem bemuhen. berichte enthalten keine nutzer-id, sodass sie nicht auf dich zuruckgefuhrt und auch nicht pro person geloscht werden konnen. berichte werden nur gesendet, wenn etwas fehlschlagt, und nur, wenn berichte fur die jeweilige plattform eingeschaltet sind: in der web-app, nachdem ein admin sie fur den server einschaltet; auf dem gerat, nachdem du dort zugestimmt hast. schlagt etwas fehl, wahrend berichte aus sind, wird nichts gespeichert oder in eine warteschlange gestellt, und wenn du sie spater einschaltest, werden fruhere fehler nicht nachgesendet. was als fehler gilt, hangt von der plattform ab: android meldet absturze, einfrieren und absturze wegen speichermangels; ios meldet absturze, einfrieren und das beenden der app durch das system wegen zu hohen speicherverbrauchs; die web-app meldet nur unerwartete fehler. t'day erkennt keine speicherlecks. berichte gehen uber sentry, einen dienst fur absturzberichte, an den maintainer von t'day. sie werden 30 tage lang aufbewahrt und ausschlieslich zur fehlerbehebung verwendet, nie verkauft oder fur werbung weitergegeben. sie werden direkt an sentry gesendet, nicht uber deinen server. sentry sieht die netzwerkadresse jeder verbindung, wie jeder onlinedienst, ist aber so eingestellt, dass sie nicht gespeichert wird, und die web-app teilt sentry auserdem mit, von welcher website der bericht stammt. betreibst du einen eigenen server, deckt dieselbe admin-antwort auch dessen eigene fehlerberichte ab, plus zeitmessungen fur eine kleine stichprobe von anfragen; deine aufgaben sind darin nie enthalten. builds ohne endpunkt fur berichte, etwa selbst gebaute, zeigen diese einstellung nicht an. offne die einstellungen. in der web-app schaltet ein admin unter privatsphare „server-fehlerberichte“ aus; auf dem gerat schaltest du selbst „absturz- und problemberichte“ aus. es werden sofort keine berichte mehr gesendet, und alles, was noch auf das senden wartet, wird geloscht. nein zu sagen kostet nichts. die antwort lasst sich jederzeit unter einstellungen → privatsphare andern – in der web-app durch einen admin, auf dem gerat von dir. technische details: docs/telemetry.md im repository von t'day."
+    },
+    {
+      "id": "ai-summary",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": true,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Aufgaben-Zusammenfassungen",
+      "summary": "Ein kurzer, ruhiger Blick auf deinen Tag — mit optionaler lokaler KI.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day kann deinen Tag in ein, zwei Sätzen zusammenfassen. Mit einem lokalen Ollama-Modell liest es sich natürlich; ohne eines greift es auf eine warme, deterministische Zusammenfassung zurück — so oder so verlässt nichts deinen Server."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Die Zusammenfassung hängt nie von einem Cloud-KI-Dienst ab — sie ist lokal oder gar nicht."
+          ]
+        }
+      ],
+      "searchTitle": "aufgaben-zusammenfassungen",
+      "searchKeywords": "zusammenfassung, ki, ollama, uberblick, digest, lokal, privat",
+      "searchBody": "ein kurzer, ruhiger blick auf deinen tag — mit optionaler lokaler ki. t'day kann deinen tag in ein, zwei satzen zusammenfassen. mit einem lokalen ollama-modell liest es sich naturlich; ohne eines greift es auf eine warme, deterministische zusammenfassung zuruck — so oder so verlasst nichts deinen server. die zusammenfassung hangt nie von einem cloud-ki-dienst ab — sie ist lokal oder gar nicht."
+    },
+    {
+      "id": "device-calendar-sync",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "calendar",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Aufgaben im Gerätekalender",
+      "summary": "Spiegle deine terminierten Aufgaben in einen T'Day-Kalender auf deinem Handy.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Wenn du das aktivierst, wird jede Aufgabe mit Datum in einen Kalender namens T'Day auf deinem Handy kopiert – neben deinen anderen Kalendern. Anytime-Aufgaben bleiben außen vor, weil sie kein Datum haben. Die Synchronisierung läuft nur in eine Richtung: T'Day schreibt in diesen Kalender, deine dortigen Änderungen werden beim nächsten Abgleich überschrieben."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Aktiviere in den Einstellungen „Terminierte Aufgaben zu meinem Kalender hinzufügen“.",
+            "Erlaube den Kalenderzugriff, wenn dein Handy danach fragt.",
+            "Öffne deine Kalender-App – deine terminierten Aufgaben stehen im T'Day-Kalender."
+          ]
+        }
+      ],
+      "searchTitle": "aufgaben im geratekalender",
+      "searchKeywords": "kalender, geratekalender, synchronisieren, google kalender, apple kalender, eventkit, handykalender, spiegeln",
+      "searchBody": "spiegle deine terminierten aufgaben in einen t'day-kalender auf deinem handy. wenn du das aktivierst, wird jede aufgabe mit datum in einen kalender namens t'day auf deinem handy kopiert – neben deinen anderen kalendern. anytime-aufgaben bleiben ausen vor, weil sie kein datum haben. die synchronisierung lauft nur in eine richtung: t'day schreibt in diesen kalender, deine dortigen anderungen werden beim nachsten abgleich uberschrieben. aktiviere in den einstellungen „terminierte aufgaben zu meinem kalender hinzufugen“. erlaube den kalenderzugriff, wenn dein handy danach fragt. offne deine kalender-app – deine terminierten aufgaben stehen im t'day-kalender."
+    }
+  ]
+}

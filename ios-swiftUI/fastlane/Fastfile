@@ -1,0 +1,1010 @@
+# iOS TestFlight lane for T'Day.
+#
+# Signing model: App Store Connect API key (.p8) + Xcode automatic signing driven by
+# `-allowProvisioningUpdates`, plus — on CI only — one persistent Apple Development certificate
+# imported from a secret (see "CI signing keychain" below for why the archive needs it). No
+# `match`, no committed certificates. Xcode mints and renews the development and App Store
+# profiles itself, authenticating with the same API key that authorises the upload, and the
+# App Store export is cloud-signed with the team's Apple-managed distribution certificate. The
+# five App IDs and the `group.com.ohmz.tday` App Group must already exist in the Developer
+# portal; see docs/DEPLOYMENT.md § One-time setup.
+#
+# Versioning: root `version.json` is the only source of truth. `scripts/version.mjs sync` has
+# already mirrored it into the pbxproj as MARKETING_VERSION / CURRENT_PROJECT_VERSION by the
+# time the release tag is cut, so this lane never derives, computes or increments a build
+# number — no `increment_build_number` anywhere. It reads the manifest purely to answer one
+# question: "is this exact build already on TestFlight?"
+
+require "json"
+require "openssl"
+require "securerandom"
+require "shellwords"
+require "tmpdir"
+
+# 2.232.0, not 2.228.0: `import_certificate` only grew `certificate_format:` in 2.232.0
+# (fastlane#29868, released 2026-02-06). On 2.228.0-2.231.1 the lane aborts at the import with
+# "Could not find option 'certificate_format' in the list of available options: certificate_path,
+# certificate_password, keychain_name, keychain_path, keychain_password, log_output" — raised by
+# FastlaneCore::Configuration before `security import` runs, and after the throwaway keychain has
+# already been created. The switch is kept rather than dropped to widen the floor: without
+# `-f pkcs12`, `security import` rejects a .p12 that OpenSSL 3 wrote without `-legacy` with "MAC
+# verification failed" (fastlane#29867) — and a .p12 built by the recipe in docs/DEPLOYMENT.md
+# § One-time setup step 5 is exactly an OpenSSL 3 export. `ios-swiftUI/Gemfile` carries the
+# matching `~> 2.232`; the two have to move together, or bundler installs a version this file
+# only rejects afterwards.
+min_fastlane_version("2.232.0")
+default_platform(:ios)
+
+# Privacy-first repo: no anonymous usage metrics to fastlane's servers.
+opt_out_usage
+
+SCHEME = "Tday".freeze
+CONFIGURATION = "Release".freeze
+DEFAULT_TEAM_ID = "JUFACN2FS3".freeze
+DEFAULT_BUNDLE_ID = "com.ohmz.tday.ios".freeze
+
+# App Store Connect's terminal states for a build's `processingState`. FAILED/INVALID mean the
+# (version, buildNumber) pair is permanently spent; VALID means processing finished cleanly
+# (this is what "Ready to Submit" reflects). PROCESSING, and "no matching build yet" (nil), are
+# the only non-terminal answers — both the `beta` lane's duplicate guard and the `await_processing`
+# poll lane below share this one list rather than each hardcoding it.
+PROCESSING_FAILURE_STATES = %w[FAILED INVALID].freeze
+PROCESSING_SUCCESS_STATE = "VALID".freeze
+
+# base64 (standard or URL-safe) with optional padding. Anything outside this alphabet is not a
+# key this app can decode, and `/` in particular has to be rejected before it reaches an
+# xcconfig, where a `//` sequence starts a comment and would silently truncate the value.
+PROBE_KEY_SHAPE = %r{\A[A-Za-z0-9+/=_-]+\z}
+
+# A Sentry DSN is `https://<public key>@<host>/<project id>`: a hex key, a hostname, a numeric
+# project. Anything else is not a DSN the SDK can use, so it fails the lane here rather than
+# shipping as a build whose crash reporting silently never starts. It also guarantees the only
+# `//` in the value is the scheme's, which is what the xcconfig escape in `beta` relies on.
+SENTRY_DSN_SHAPE = %r{\Ahttps://[0-9a-f]+@[a-z0-9.-]+/\d+\z}i
+
+# The Sentry project the iOS dSYMs belong to — the same organization the web and Android
+# projects live in (tday-web/vite.config.ts, android-compose/app/build.gradle.kts).
+SENTRY_ORG = "tday-kb".freeze
+SENTRY_IOS_PROJECT = "tday-ios".freeze
+
+# Apple Development certificates are valid for one year. Warn this far ahead of expiry so the
+# secret gets rotated before the archive silently goes back to minting throwaway certificates.
+DEVELOPMENT_CERT_RENEWAL_WARNING_DAYS = 30
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+# fastlane's working directory depends on how it was invoked, so the repository root is located
+# explicitly rather than inferred. CI passes GITHUB_WORKSPACE through TDAY_REPO_ROOT; the
+# walk-up is the local-developer fallback.
+def repo_root
+  explicit = ENV["TDAY_REPO_ROOT"].to_s
+  return explicit unless explicit.empty?
+
+  dir = Dir.pwd
+  8.times do
+    return dir if File.exist?(File.join(dir, "version.json"))
+
+    parent = File.dirname(dir)
+    break if parent == dir
+
+    dir = parent
+  end
+
+  UI.user_error!("Could not locate the T'Day repository root (no version.json at or above #{Dir.pwd}).")
+end
+
+def tday_manifest
+  JSON.parse(File.read(File.join(repo_root, "version.json")))
+end
+
+# An environment variable set to the empty string is unset as far as this lane is concerned.
+# GitHub Actions writes `FOO: ${{ vars.MISSING }}` as "", and Ruby's `||` treats "" as present —
+# which would hand gym an empty output_directory and scatter the .ipa into the checkout.
+def env_or(name, fallback)
+  value = ENV[name].to_s.strip
+  value.empty? ? fallback : value
+end
+
+def required_env(name, hint)
+  value = ENV[name].to_s.strip
+  return value unless value.empty?
+
+  UI.user_error!("Missing required environment variable #{name}. #{hint}")
+end
+
+# Decodes the base64 secret in memory. The key itself is never logged — only its shape is
+# checked, and the failure message describes the *encoding* rather than echoing any content.
+def decode_private_key(encoded)
+  pem = encoded.unpack1("m").to_s
+  unless pem.include?("BEGIN PRIVATE KEY")
+    UI.user_error!(
+      "ASC_KEY_P8_BASE64 did not decode to a PKCS#8 private key. Re-encode the .p8 with " \
+      "`base64 -i AuthKey_XXXXXXXXXX.p8 | pbcopy` (macOS) or `base64 -w0 AuthKey_XXXXXXXXXX.p8` (Linux)."
+    )
+  end
+  pem
+end
+
+# xcodebuild's `-authenticationKeyPath` takes a path, so `-allowProvisioningUpdates` cannot work
+# from an in-memory key — the .p8 has to touch disk. It is written 0600 into RUNNER_TEMP, which
+# sits OUTSIDE the checked-out workspace, so it can never be picked up by `git add`, swept into
+# the .ipa, or collected by actions/upload-artifact. The caller deletes it in an `ensure`.
+def write_private_key(key_id, pem)
+  path = File.join(scratch_dir, "AuthKey_#{key_id}.p8")
+  File.open(path, File::WRONLY | File::CREAT | File::TRUNC, 0o600) { |file| file.write(pem) }
+  path
+end
+
+# RUNNER_TEMP on CI, the OS temp dir locally. Never the workspace.
+def scratch_dir
+  root = ENV["RUNNER_TEMP"].to_s
+  root.empty? || !File.directory?(root) ? Dir.tmpdir : root
+end
+
+# `Tday/Info.plist` publishes `TdayProbeEncryptionKey` as `$(TDAY_PROBE_ENCRYPTION_KEY)`, and an
+# undefined build setting expands to the empty string — which makes `ProbeDecryptor` return nil
+# and silently disables the whole server version-compatibility gate. It publishes `SENTRY_DSN`
+# the same way, so an undefined one leaves crash reporting off. Both values are passed through a
+# temporary xcconfig rather than `xcargs` on purpose: gym echoes the assembled xcodebuild
+# command into the build log, and xcargs would put the secret in it.
+#
+# `-xcconfig` outranks every other source of a build setting, the target-level `SENTRY_DSN = ""`
+# in the pbxproj included, so the value reaches Info.plist without touching the project.
+def write_build_settings_xcconfig(settings) # skipcq: SCT-A000
+  path = File.join(scratch_dir, "tday-build-settings.xcconfig")
+  File.open(path, File::WRONLY | File::CREAT | File::TRUNC, 0o600) do |file|
+    settings.each { |name, value| file.write("#{name} = #{value}\n") } # skipcq: SCT-A000
+  end
+  path
+end
+
+# Sentry cannot symbolicate an iOS crash without this build's dSYMs: a report would be a list of
+# raw addresses. It runs BEFORE `upload_to_testflight`, deliberately — App Store Connect spends the
+# (version, buildNumber) pair the moment it accepts an upload, so a failure here has to cost a
+# re-run, not a build number.
+#
+# Skipped without SENTRY_AUTH_TOKEN (a local `fastlane beta`, a fork). With one, anything short of
+# a successful upload fails the lane: a release whose crash reports cannot be read is not the
+# release that was meant. sentry-cli reads the token from the environment itself, so it is never
+# on a command line or in the log.
+def upload_dsyms_to_sentry(dsym_zip_path)
+  if ENV["SENTRY_AUTH_TOKEN"].to_s.strip.empty? # skipcq: SCT-A000
+    UI.important(
+      "SENTRY_AUTH_TOKEN is not set: the dSYMs are not uploaded, so crash reports from this " \
+      "build will not symbolicate."
+    )
+    return
+  end
+
+  if dsym_zip_path.to_s.empty? || !File.exist?(dsym_zip_path)
+    UI.user_error!(
+      "SENTRY_AUTH_TOKEN is set but the archive produced no dSYM zip to upload. Nothing was " \
+      "sent to TestFlight, so the build number is still free."
+    )
+  end
+
+  begin
+    sh(
+      "sentry-cli", "debug-files", "upload",
+      "--org", SENTRY_ORG, "--project", SENTRY_IOS_PROJECT,
+      dsym_zip_path
+    )
+  rescue StandardError => e
+    UI.user_error!(
+      "sentry-cli could not upload the dSYMs to Sentry (#{e.class}; its own output is above). " \
+      "Nothing was sent to TestFlight, so the build number is still free — fix the cause (the " \
+      "SENTRY_AUTH_TOKEN scope, or sentry-cli missing from PATH) and re-run."
+    )
+  end
+
+  UI.success("Uploaded the dSYMs to Sentry (#{SENTRY_ORG}/#{SENTRY_IOS_PROJECT}).")
+end
+
+# ---------------------------------------------------------------------------
+# CI signing keychain
+# ---------------------------------------------------------------------------
+#
+# WHY CI IMPORTS AN APPLE DEVELOPMENT CERTIFICATE WHEN THE EXPORT IS APP STORE.
+#
+# Under CODE_SIGN_STYLE = Automatic the `archive` action is always signed for development —
+# Xcode refuses a distribution identity there outright: "<target> is automatically signed for
+# development, but a conflicting code signing identity Apple Distribution has been manually
+# specified" (run 33939427858, all five targets, before a single file compiled). Cloud signing,
+# where Apple holds the Apple Distribution private key, exists only in the distribution step,
+# i.e. `-exportArchive`. So every archive needs an Apple Development identity whose PRIVATE KEY
+# is in a keychain on the machine doing the archiving.
+#
+# A fresh runner has none, and `-allowProvisioningUpdates` fills the gap by minting one —
+# "Apple Development: Created via API" — whose private key dies with the runner. Each run mints
+# another, until the team hits Apple's certificate quota and every archive fails with "Choose a
+# certificate to revoke. Your account has reached the maximum number of certificates" (run
+# 33830438480, the v0.7.7 release). Importing ONE long-lived development certificate from a
+# secret is what stops the minting: with a usable identity in the search list, Xcode creates
+# nothing and only manages profiles. See docs/DEPLOYMENT.md § CI development certificate.
+#
+# Local `fastlane beta` on a Mac is unchanged unless the same two variables are set: without
+# them the developer's own keychain is used, exactly as Xcode itself would.
+
+def decode_development_certificate(encoded)
+  p12 = encoded.unpack1("m").to_s
+  # PKCS#12 is DER, so the file starts with a SEQUENCE tag (0x30). Anything else is not the
+  # secret this lane expects — most often a PEM, a bare .cer with no private key, or base64 of
+  # base64. The content itself is never printed.
+  unless p12.bytesize > 64 && p12.getbyte(0) == 0x30
+    UI.user_error!(
+      "IOS_DEVELOPMENT_CERT_P12_BASE64 did not decode to a PKCS#12 (.p12) file. Re-encode the " \
+      "export with `base64 -w0 development.p12` (Linux) or `base64 -i development.p12` (macOS). " \
+      "See docs/DEPLOYMENT.md § CI development certificate."
+    )
+  end
+  p12
+end
+
+# Same handling as the .p8: 0600, under RUNNER_TEMP, deleted by the caller in an `ensure`.
+def write_development_certificate(p12)
+  path = File.join(scratch_dir, "tday-ios-development.p12")
+  File.open(path, File::WRONLY | File::CREAT | File::TRUNC, 0o600) { |file| file.write(p12) }
+  path
+end
+
+# The throwaway keychain's path. A helper rather than a literal inside the installer so the LANE
+# can hold the path BEFORE the keychain exists — see `install_development_certificate`. Nothing
+# else may build this path by hand.
+def ci_keychain_path
+  File.join(scratch_dir, "tday-ios-ci.keychain-db")
+end
+
+# The keychain a Mac should point at when this lane is not running. `security` writes
+# ~/Library/Keychains/login.keychain-db; the un-suffixed name is the pre-Sierra spelling. nil when
+# neither exists (a daemon account), where nothing here should guess.
+def login_keychain_path
+  ["login.keychain-db", "login.keychain"]
+    .map { |name| File.expand_path("~/Library/Keychains/#{name}") }
+    .find { |path| File.exist?(path) }
+end
+
+# The current default keychain, or nil when there is none. `security default-keychain` prints the
+# path indented and quoted, and exits non-zero when no default is set — a state a Mac can
+# genuinely be found in (see the pin below), so that failure is an answer here, not an error.
+def current_default_keychain
+  path = sh("security default-keychain", log: false).strip.delete('"').strip
+  path.empty? ? nil : path
+rescue StandardError
+  nil
+end
+
+def same_keychain?(one, other)
+  return false if one.to_s.empty? || other.to_s.empty?
+
+  resolve = lambda do |path|
+    expanded = File.expand_path(path)
+    File.exist?(expanded) ? File.realpath(expanded) : expanded
+  end
+  resolve.call(one) == resolve.call(other)
+end
+
+# Creates a throwaway keychain at `keychain_path`, imports the .p12 into it and makes the identity
+# usable by codesign without a UI prompt. The caller deletes it in an `ensure`.
+#
+# THE PATH IS A PARAMETER RATHER THAN THE RETURN VALUE ON PURPOSE. `create_keychain` below makes
+# this keychain the machine's default and adds it to the search list as its very first act, and
+# everything after that can raise — `install_missing_wwdr_certificates` calls
+# `UI.user_error!("Could not install WWDR certificate")` when a single curl to apple.com fails,
+# the flake FASTLANE_WWDR_USE_HTTP1_AND_RETRIES softens but does not remove. If the caller only
+# learned the path from a successful return, that failure would leave its `ensure` with nothing to
+# clean up: on CI a keychain still in the search list, so the workflow's "Report the signing
+# identities" step blames Xcode for minting the very certificate this lane imported; on a Mac, the
+# developer's default keychain left pointing at a file under $TMPDIR.
+def install_development_certificate(keychain_path, p12_path, p12_password)
+  keychain_password = SecureRandom.hex(24)
+
+  # WHAT THE DEFAULT KEYCHAIN IS PUT BACK TO AT THE END OF THE LANE — read here, before anything
+  # is deleted, because `security delete-keychain` does NOT fall back to login.keychain when it
+  # deletes the default one. It writes an EMPTY `DefaultKeychain` array into
+  # ~/Library/Preferences/com.apple.security.plist, and an empty array is not an absent key, so
+  # Security's login fallback never runs: the Mac is left with NO default keychain at all, and
+  # stays that way across reboots ("SecKeychainCopyDefault: A default keychain could not be
+  # found"). fastlane cannot repair that by itself — `delete_keychain` restores only what
+  # `create_keychain` put in lane_context in the SAME process, and the stale delete below runs
+  # before any create, in a process whose lane_context is empty.
+  original_default = current_default_keychain
+  original_default = nil if same_keychain?(original_default, keychain_path)
+  original_default ||= login_keychain_path
+
+  # Only ever true locally, after a run was killed before its `ensure` ran. A runner is fresh.
+  delete_keychain(keychain_path: keychain_path) if File.exist?(keychain_path)
+
+  create_keychain(
+    path: keychain_path,
+    password: keychain_password,
+    # Default AND in the search list. Xcode's automatic signing looks identities up through the
+    # keychain search list, and the default keychain is where it would store anything it
+    # created — so a minted certificate lands in here and is caught by the identity diff the
+    # lane prints afterwards. The default is put back by `delete_keychain`, from the value
+    # pinned just below.
+    default_keychain: true,
+    unlock: true,
+    # 0 = never auto-lock. A 40-minute archive must not find the keychain locked halfway
+    # through CodeSign.
+    timeout: 0,
+    lock_when_sleeps: false,
+    add_to_search_list: true,
+    require_create: true
+  )
+
+  # PIN WHAT `delete_keychain` WILL RESTORE. `create_keychain` has just stored whatever
+  # `security default-keychain` answered a moment ago, which after an interrupted run is either
+  # nil — the stale delete above unset the default and create_keychain's own probe failed into an
+  # empty `rescue` — or this very keychain, whose file create_keychain recreated at the same
+  # deterministic path just before probing. Restoring either is useless or actively wrong:
+  # pointing the default at the keychain the `ensure` is about to delete unsets it all over again.
+  # Shell-escaped because `delete_keychain` interpolates the value into
+  # `security default-keychain -s #{original}` unquoted — create_keychain's own capture is
+  # shell-safe only because it keeps the quotes `security` prints around the path.
+  if original_default
+    Fastlane::Actions.lane_context[Fastlane::Actions::SharedValues::ORIGINAL_DEFAULT_KEYCHAIN] =
+      original_default.shellescape
+  end
+
+  import_certificate(
+    certificate_path: p12_path,
+    certificate_password: p12_password,
+    certificate_format: "pkcs12",
+    keychain_name: File.basename(keychain_path),
+    keychain_path: keychain_path,
+    # Handing fastlane the keychain password makes it also run `security set-key-partition-list`,
+    # which is what lets codesign use the private key headlessly instead of blocking on a
+    # keychain dialog that nothing on a runner can click.
+    keychain_password: keychain_password,
+    log_output: false
+  )
+
+  # `import_certificate` CANNOT fail this lane on its own: fastlane's KeychainImporter prints a
+  # failed `security import` with `UI.error` and returns normally. Both mistakes a first run
+  # actually makes — a wrong IOS_DEVELOPMENT_CERT_P12_PASSWORD, and a .p12 exported by OpenSSL 3
+  # without `-legacy` — produce the same "MAC verification failed during PKCS12 import (wrong
+  # password?)" on that swallowed line, and would otherwise surface much further down as
+  # `verify_development_certificate`'s "holds no valid 'Apple Development' identity", which names
+  # three other causes and neither of these. Check the import here, where the diagnosis is exact.
+  #
+  # `valid_only: false` because the WWDR intermediates are installed on the next line: right now a
+  # correctly imported identity has no resolvable issuer chain, so `-v` would list nothing.
+  if codesigning_identities(keychain_path, valid_only: false).empty?
+    UI.user_error!(
+      "`security import` put no code-signing identity in the CI keychain: the .p12 was not " \
+      "imported, and its own error is the red line just above this one. The usual causes are a " \
+      "wrong IOS_DEVELOPMENT_CERT_P12_PASSWORD, and a .p12 exported by OpenSSL 3 without " \
+      "`-legacy` — macOS rejects both with the same 'MAC verification failed during PKCS12 " \
+      "import (wrong password?)'. A .p12 holding a certificate but no private key lands here " \
+      "too. Re-export it and re-set BOTH secrets; see docs/DEPLOYMENT.md § CI development " \
+      "certificate."
+    )
+  end
+
+  # An identity only counts as valid when its issuer chain resolves, and a brand-new keychain
+  # holds none of Apple's WWDR intermediates. This is the same helper `match` and `cert` use.
+  FastlaneCore::CertChecker.install_missing_wwdr_certificates(in_keychain: keychain_path)
+end
+
+# SHA-1 → common name of the code-signing identities in a keychain. `valid_only` (the default) is
+# `security find-identity -v`: certificates that have their private key present AND whose issuer
+# chain resolves. Pass false to also see an identity whose chain does not resolve yet — the state
+# a freshly imported certificate is in until the WWDR intermediates are installed.
+def codesigning_identities(keychain_path, valid_only: true)
+  flag = valid_only ? " -v" : ""
+  output = sh("security find-identity#{flag} -p codesigning #{keychain_path.shellescape}", log: false)
+  output.scan(/^\s*\d+\)\s+([0-9A-F]{40})\s+"([^"]+)"/).to_h
+end
+
+# Fails fast — on the Linux-cheap side of a 40-minute archive — when the imported .p12 is not
+# an Apple Development identity for this team, or has expired. Prints what was imported so the
+# run log says which certificate signed the archive. Certificate names, team IDs and expiry
+# dates are not secrets; they are printed on every provisioning profile.
+def verify_development_certificate(keychain_path, team_id)
+  identities = codesigning_identities(keychain_path)
+  pems = sh("security find-certificate -a -p #{keychain_path.shellescape}", log: false)
+  certificates = pems.scan(/-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----/m)
+                     .map { |pem| OpenSSL::X509::Certificate.new(pem) }
+                     .select { |cert| identities.key?(OpenSSL::Digest.new("SHA1").hexdigest(cert.to_der).upcase) }
+
+  development = certificates.select do |cert|
+    cert.subject.to_a.any? { |name, value, _| name == "CN" && value.to_s.start_with?("Apple Development") }
+  end
+
+  if development.empty?
+    found = identities.values.map(&:inspect).join(", ")
+    UI.user_error!(
+      "The imported .p12 holds no valid 'Apple Development' identity (found: " \
+      "#{found.empty? ? 'nothing' : found}). " \
+      "It must contain an Apple Development certificate AND its private key, exported as " \
+      "PKCS#12, and its issuer chain must resolve. A distribution certificate, a bare .cer, or " \
+      "a .p12 without the key will not archive. If `security import` printed an error earlier in " \
+      "this log, the .p12 never reached the keychain at all — check " \
+      "IOS_DEVELOPMENT_CERT_P12_PASSWORD and re-export it with `openssl pkcs12 -export -legacy`. " \
+      "See docs/DEPLOYMENT.md § CI development certificate."
+    )
+  end
+
+  development.each do |cert|
+    subject = cert.subject.to_a.to_h { |name, value, _| [name, value.to_s] }
+    common_name = subject.fetch("CN", "")
+    cert_team = subject.fetch("OU", "")
+    days_left = ((cert.not_after - Time.now) / 86_400).floor
+
+    UI.message(
+      "Imported development identity: #{common_name} (team #{cert_team}), expires " \
+      "#{cert.not_after.utc.strftime('%Y-%m-%d')} — #{days_left} days from now."
+    )
+
+    unless cert_team == team_id
+      UI.user_error!(
+        "The imported development certificate belongs to team #{cert_team}, but this build " \
+        "signs as team #{team_id} (IOS_TEAM_ID / DEVELOPMENT_TEAM). Xcode would ignore it and " \
+        "mint a throwaway one. Export a certificate from the right team."
+      )
+    end
+
+    if days_left.negative?
+      UI.user_error!(
+        "The imported development certificate expired on #{cert.not_after.utc.strftime('%Y-%m-%d')}. " \
+        "Xcode would ignore it and mint a throwaway one — the failure mode this secret exists to " \
+        "prevent. Create a new Apple Development certificate and rotate " \
+        "IOS_DEVELOPMENT_CERT_P12_BASE64 / IOS_DEVELOPMENT_CERT_P12_PASSWORD; see " \
+        "docs/DEPLOYMENT.md § CI development certificate."
+      )
+    elsif days_left < DEVELOPMENT_CERT_RENEWAL_WARNING_DAYS
+      # Plain `puts` so the `::warning::` workflow command starts the line — see the note on the
+      # `::error::` in await_processing below.
+      puts "::warning::The CI development certificate (#{common_name}) expires in #{days_left} " \
+           "days. Create a new Apple Development certificate and rotate " \
+           "IOS_DEVELOPMENT_CERT_P12_BASE64 / IOS_DEVELOPMENT_CERT_P12_PASSWORD before then, or " \
+           "the archive goes back to minting throwaway certificates. See docs/DEPLOYMENT.md."
+    end
+  end
+end
+
+# The whole point of importing a certificate is that Xcode then creates none. This says so, or
+# says loudly that it did not work: any identity in the CI keychain that was not there before the
+# archive was minted by `-allowProvisioningUpdates`, its private key is about to die with this
+# runner, and it now counts against the team's quota. A warning rather than a failure — the
+# archive that just succeeded is still good, and this must never be what fails a release.
+def report_minted_identities(keychain_path, before)
+  minted = codesigning_identities(keychain_path).reject { |sha1, _| before.key?(sha1) }
+  if minted.empty?
+    UI.success("Xcode created no certificate on this runner: the imported development identity was used.")
+    return
+  end
+
+  names = minted.map { |sha1, name| "#{name} [#{sha1}]" }.join(", ")
+  puts "::warning::Xcode minted #{minted.size} certificate(s) on this runner during the archive " \
+       "(#{names}) instead of using the imported development identity. Its private key is gone " \
+       "with the runner and it now counts against the team's certificate quota — revoke it in " \
+       "the Developer portal, and check the imported .p12 (team, expiry, private key present). " \
+       "See docs/DEPLOYMENT.md § CI development certificate."
+end
+
+# Asks App Store Connect what state it is holding this exact (marketing version, build number)
+# pair in, so a skip can say *why* it is skipping. Returns nil when it cannot tell.
+#
+# Deliberately rescued: this is diagnostics. Spaceship's private API surface moves between
+# fastlane releases and a signature change here must not be able to take a release down. When it
+# cannot answer, the caller degrades to the same conservative skip it did before.
+def testflight_processing_state(key_id, issuer_id, pem, bundle_id, marketing_version, build_number)
+  require "spaceship"
+
+  Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.create(
+    key_id: key_id,
+    issuer_id: issuer_id,
+    key: pem
+  )
+
+  app = Spaceship::ConnectAPI::App.find(bundle_id)
+  return nil if app.nil?
+
+  builds = Spaceship::ConnectAPI::Build.all(app_id: app.id, sort: "-uploadedDate", limit: 100)
+  match = Array(builds).find do |build|
+    build.version.to_s == build_number.to_s &&
+      build_marketing_version(build).to_s == marketing_version.to_s
+  end
+  return nil if match.nil?
+
+  match.processing_state.to_s
+rescue StandardError => e
+  UI.important("Could not read the App Store Connect processing state (#{e.class}: #{e.message}).")
+  nil
+end
+
+# `Build#app_version` is the friendly accessor, but it is not present on every fastlane version;
+# the preReleaseVersion association is the underlying source. Returns nil when neither answers,
+# which the caller treats as "cannot confirm" rather than "no match".
+def build_marketing_version(build)
+  return build.app_version if build.respond_to?(:app_version) && build.app_version
+
+  pre_release = build.pre_release_version if build.respond_to?(:pre_release_version)
+  pre_release&.version
+end
+
+# ---------------------------------------------------------------------------
+# Lanes
+# ---------------------------------------------------------------------------
+
+platform :ios do
+  desc "Archive the Tday scheme and upload it to TestFlight (skips cleanly if already uploaded)"
+  lane :beta do
+    manifest = tday_manifest
+    marketing_version = manifest.fetch("version")
+    build_number = Integer(manifest.fetch("ios").fetch("buildNumber"))
+
+    team_id = env_or("IOS_TEAM_ID", DEFAULT_TEAM_ID)
+    bundle_id = env_or("IOS_APP_IDENTIFIER", DEFAULT_BUNDLE_ID)
+    skip_upload = ENV["TDAY_SKIP_UPLOAD"].to_s.strip.casecmp("true").zero?
+
+    # SECOND, INDEPENDENT UPLOAD GATE.
+    #
+    # `.github/workflows/ios-testflight.yml` decides the mode and passes TDAY_SKIP_UPLOAD in.
+    # This re-derives the same predicate from GitHub's own environment instead of trusting that
+    # value, so a mistake in the workflow's expressions — a deleted step, a renamed output, a
+    # mis-parenthesised `&&`/`||` — cannot on its own turn a manual run on a branch into a real
+    # upload. Only the push of a tag may upload from CI; anything else is downgraded here.
+    #
+    # This matters more than the usual belt-and-braces because App Store Connect spends a
+    # (version, buildNumber) pair the instant it accepts an upload and never accepts that pair
+    # again. A branch reads the same version.json a release does, so an accidental upload from
+    # `develop` burns the number the next real release needs, permanently.
+    #
+    # Outside GitHub Actions nothing changes: a local `fastlane beta` still uploads unless the
+    # developer sets TDAY_SKIP_UPLOAD.
+    if ENV["GITHUB_ACTIONS"].to_s == "true" && !skip_upload
+      event_name = ENV["GITHUB_EVENT_NAME"].to_s
+      github_ref = ENV["GITHUB_REF"].to_s
+
+      unless event_name == "push" && github_ref.start_with?("refs/tags/")
+        UI.important(
+          "Forcing a build-only run: this is a CI run on #{github_ref.empty? ? '<unknown ref>' : github_ref} " \
+          "from a '#{event_name}' event, and only the push of a tag may upload. " \
+          "TDAY_SKIP_UPLOAD said otherwise, which means the workflow and this lane disagree — " \
+          "the lane wins, because a wrong upload cannot be undone."
+        )
+        skip_upload = true
+      end
+    end
+
+    key_id = required_env(
+      "ASC_KEY_ID",
+      "It is the 10-character Key ID of the App Store Connect API key " \
+      "(App Store Connect -> Users and Access -> Integrations -> App Store Connect API)."
+    )
+    unless key_id.match?(/\A[A-Za-z0-9]+\z/)
+      UI.user_error!("ASC_KEY_ID must be alphanumeric — got a #{key_id.length}-character value that is not.")
+    end
+
+    issuer_id = required_env(
+      "ASC_ISSUER_ID",
+      "It is the UUID shown above the key list on that same App Store Connect page."
+    )
+    encoded_key = required_env( # skipcq: SCT-A000 — read from ENV; nothing is hardcoded here.
+      "ASC_KEY_P8_BASE64",
+      "It is the base64 of the .p8 file Apple let you download exactly once when the key was created."
+    )
+
+    # EVERY SECRET THAT TOUCHES DISK IS WRITTEN INSIDE THIS `begin`, so the one `ensure` at the
+    # bottom of the lane cannot be skipped by a validation failure between two of the writes.
+    # Everything above this line only reads and validates the environment, and raises before
+    # anything exists to clean up.
+    key_path = nil
+    xcconfig_path = nil
+    p12_path = nil
+    keychain_path = nil
+    identities_before = nil
+
+    begin
+      pem = decode_private_key(encoded_key)
+      key_path = write_private_key(key_id, pem)
+
+      # Everything the build reads from the environment rather than from the project: written to
+      # one temporary xcconfig below, so no value ever reaches an xcodebuild command line.
+      build_settings = {}
+
+      # Not fatal: a local `fastlane beta` should not need the production probe key. CI enforces
+      # its presence in the `decide` job instead, so a real release cannot ship without it.
+      probe_setting = ENV["TDAY_PROBE_ENCRYPTION_KEY"].to_s.strip # skipcq: SCT-A000
+      if probe_setting.empty?
+        UI.important(
+          "TDAY_PROBE_ENCRYPTION_KEY is not set. TdayProbeEncryptionKey will ship empty, " \
+          "ProbeDecryptor will return nil, and the server version-compatibility gate will be " \
+          "inert in this build."
+        )
+      elsif !probe_setting.match?(PROBE_KEY_SHAPE) || probe_setting.include?("//")
+        UI.user_error!(
+          "TDAY_PROBE_ENCRYPTION_KEY is not base64-shaped (or contains `//`, which starts a " \
+          "comment in an xcconfig). Re-check the secret; its value is not printed here."
+        )
+      else
+        build_settings["TDAY_PROBE_ENCRYPTION_KEY"] = probe_setting
+      end
+
+      # Optional and silent when absent: with no DSN the app ships with crash reporting off and no
+      # consent card. Garbage is the opposite case and fails loudly — a typo'd secret would
+      # otherwise produce exactly that silent absence in a build that was meant to have it.
+      #
+      # The `//` trap again, and here it cannot be rejected as it is for the probe key: every DSN
+      # contains one, in `https://`. In an xcconfig `//` starts a comment, so written as-is the
+      # setting would be cut off at `https:` and ship as a DSN that fails to parse. `$()` is an
+      # empty variable reference — it breaks the sequence and expands to nothing, so Info.plist
+      # still receives the original value. SENTRY_DSN_SHAPE has already guaranteed the scheme's is
+      # the only `//` in it.
+      sentry_dsn = ENV["SENTRY_DSN"].to_s.strip # skipcq: SCT-A000
+      unless sentry_dsn.empty?
+        unless sentry_dsn.match?(SENTRY_DSN_SHAPE)
+          UI.user_error!(
+            "SENTRY_DSN is not shaped like a Sentry DSN (https://<key>@<host>/<project id>). " \
+            "Re-check the SENTRY_DSN_IOS secret; its value is not printed here."
+          )
+        end
+        build_settings["SENTRY_DSN"] = sentry_dsn.sub("//", "/$()/")
+      end
+
+      xcconfig_path = write_build_settings_xcconfig(build_settings) unless build_settings.empty?
+
+      # The persistent Apple Development certificate the archive is signed with — see "CI signing
+      # keychain" above. REQUIRED on GitHub Actions: without it the archive would fall back to
+      # minting a throwaway certificate, which is exactly the quota failure this exists to stop,
+      # so a missing secret is refused here rather than allowed to "work" a few more times.
+      # Optional everywhere else: a local `fastlane beta` archives with whatever Apple Development
+      # identity the developer's own keychain already holds, unchanged.
+      #
+      # Validated and decoded here, written further down — like the keychain, the .p12 is created
+      # after the duplicate check, so a run that is going to skip never puts it on disk at all.
+      p12_encoded = ENV["IOS_DEVELOPMENT_CERT_P12_BASE64"].to_s.strip # skipcq: SCT-A000
+      p12_password = ENV["IOS_DEVELOPMENT_CERT_P12_PASSWORD"].to_s # skipcq: SCT-A000
+      p12 = nil
+      if p12_encoded.empty?
+        if ENV["GITHUB_ACTIONS"].to_s == "true"
+          UI.user_error!(
+            "IOS_DEVELOPMENT_CERT_P12_BASE64 is not set. On a fresh runner there is no Apple " \
+            "Development identity to sign the archive with, and -allowProvisioningUpdates would " \
+            "mint a throwaway one that counts against the team's certificate quota. Refusing to " \
+            "archive. See docs/DEPLOYMENT.md § CI development certificate."
+          )
+        end
+        UI.message(
+          "IOS_DEVELOPMENT_CERT_P12_BASE64 is not set: archiving with the Apple Development " \
+          "identity already in this machine's keychain."
+        )
+      else
+        if p12_password.empty?
+          UI.user_error!(
+            "IOS_DEVELOPMENT_CERT_P12_PASSWORD is not set. The .p12 must be exported with a " \
+            "password — `security import` does not reliably accept a passwordless PKCS#12."
+          )
+        end
+        p12 = decode_development_certificate(p12_encoded)
+      end
+
+      api_key = app_store_connect_api_key( # skipcq: SCT-A000 — every value comes from ENV above.
+        key_id: key_id,
+        issuer_id: issuer_id,
+        key_filepath: key_path,
+        # Enterprise ("in-house") distribution is a different Apple programme entirely. This is
+        # a regular Apple Developer Program account shipping through TestFlight.
+        in_house: false
+      )
+
+      UI.message("version.json says v#{marketing_version} build #{build_number} for #{bundle_id}.")
+
+      if skip_upload
+        # BUILD-ONLY RUN: App Store Connect is not consulted at all.
+        #
+        # The duplicate check below exists to keep a re-run from attempting an upload Apple
+        # would reject. A run that is never going to upload has nothing to protect, and asking
+        # anyway would actively break the verification case: once a build number IS spent, the
+        # check would either skip `build_app` entirely — reporting a green run that compiled
+        # nothing — or, for a FAILED/INVALID build, fail a run whose only job was to prove the
+        # project still compiles. Neither is an answer to "does this branch build?".
+        UI.important(
+          "Build-only run (TDAY_SKIP_UPLOAD=true): skipping the TestFlight duplicate check. " \
+          "Nothing will be uploaded, so whether v#{marketing_version} build #{build_number} " \
+          "is already spent is irrelevant to this run."
+        )
+      else
+        # Re-running this workflow on the same tag would otherwise re-archive and re-upload an
+        # identical (version, build number) pair, which App Store Connect rejects outright with
+        # "The bundle version must be higher than the previously uploaded version". Asking
+        # TestFlight what it already holds turns that failure into a clean, green no-op.
+        latest_uploaded = latest_testflight_build_number(
+          api_key: api_key,
+          app_identifier: bundle_id,
+          version: marketing_version,
+          platform: "ios",
+          # Without this, fastlane raises when the version has no builds yet — which is exactly
+          # the state of the very first upload.
+          initial_build_number: 0
+        ).to_i
+
+        if latest_uploaded >= build_number
+          # A build number is consumed the moment App Store Connect accepts the upload — even if
+          # processing then FAILS. So "already taken" does NOT imply "testers can install it",
+          # and re-uploading is not a recovery path: Apple rejects the duplicate either way. The
+          # only fix for a failed build is a new build number, i.e. a version.json bump. Say so.
+          state = testflight_processing_state(key_id, issuer_id, pem, bundle_id, marketing_version, build_number)
+
+          if PROCESSING_FAILURE_STATES.include?(state)
+            UI.user_error!(
+              "v#{marketing_version} build #{build_number} was already uploaded and App Store " \
+              "Connect marked it #{state}. That build number is spent — re-uploading it will be " \
+              "rejected. Bump the release (`node scripts/version.mjs bump patch`) and cut a new " \
+              "tag. Check the ASC build page for the processing error before you do."
+            )
+          end
+
+          UI.important(
+            "TestFlight already holds build #{latest_uploaded} for v#{marketing_version} " \
+            "(processing state: #{state || 'unknown'}); this run would upload #{build_number}."
+          )
+          UI.important(
+            "Nothing was uploaded. If this build is NOT visible in TestFlight, it failed " \
+            "processing — the build number is spent and a version bump is required."
+          )
+          next
+        end
+      end
+
+      # After the duplicate check, so a run that is going to skip never writes the .p12 and never
+      # touches a keychain.
+      if p12
+        p12_path = write_development_certificate(p12)
+        # ASSIGNED BEFORE THE KEYCHAIN IS CREATED, DELIBERATELY NOT FROM A RETURN VALUE. The
+        # `ensure` below is the only thing that deletes this keychain and puts the default
+        # keychain back, and it has to be able to do that when the install raises half-way
+        # through — after `create_keychain` has already switched the default. See
+        # `install_development_certificate`.
+        keychain_path = ci_keychain_path
+        install_development_certificate(keychain_path, p12_path, p12_password)
+        verify_development_certificate(keychain_path, team_id)
+        identities_before = codesigning_identities(keychain_path)
+      end
+
+      # `-allowProvisioningUpdates` lets Xcode mint and renew the development profiles the
+      # archive is signed with and the five App Store profiles the export re-signs with, on
+      # demand, against App IDs and an App Group that already exist (see docs/DEPLOYMENT.md §
+      # One-time setup — it does not create the App Group). On a runner with no signed-in Xcode
+      # account it can only reach the Developer portal if it is handed the same API key, hence
+      # the -authentication* trio. It would also mint a CERTIFICATE if it found no usable one —
+      # which is why the development identity is imported above before it runs.
+      #
+      # This string is passed to gym ONCE, as `xcargs`, and gym puts it on both xcodebuild
+      # invocations for us — see the comment on `xcargs:` below. Adding `export_xcargs:` as
+      # well is what produced "option '-authenticationKeyPath' may only be provided once".
+      auth_args = [
+        "-allowProvisioningUpdates",
+        "-authenticationKeyPath", key_path.shellescape,
+        "-authenticationKeyID", key_id.shellescape,
+        "-authenticationKeyIssuerID", issuer_id.shellescape
+      ].join(" ")
+
+      build_options = {
+        project: File.join(repo_root, "ios-swiftUI", "TdayApp.xcodeproj"),
+        scheme: SCHEME,
+        configuration: CONFIGURATION,
+        export_method: "app-store",
+        export_team_id: team_id,
+        # DEVELOPMENT_TEAM passed as a command-line build setting outranks both the project-
+        # and target-level values, so every one of the five bundles is signed by the same team
+        # and moving to a different Apple account is a repository-variable change rather than a
+        # pbxproj edit.
+        #
+        # THIS IS THE ONLY PLACE THE AUTH FLAGS ARE PASSED, AND THERE IS DELIBERATELY NO
+        # `export_xcargs:` NEXT TO IT.
+        #
+        # gym's documentation splits the two ("the build phase" / "the package phase"), which
+        # reads as though the export gets `export_xcargs` and nothing else. It does not. The
+        # export command generator appends BOTH, `export_xcargs` first and `xcargs` second:
+        #
+        #     options << config[:export_xcargs] if config[:export_xcargs]
+        #     options << config[:xcargs] if config[:xcargs]
+        #     -- gym/lib/gym/generators/package_command_generator_xcode7.rb, .options
+        #
+        # while the archive command generator appends `xcargs` alone
+        # (gym/lib/gym/generators/build_command_generator.rb, .options). Both files read the
+        # same way at 2.232.0 and at 2.239.0, i.e. across the whole `~> 2.232` range the
+        # Gemfile allows.
+        #
+        # So setting both put the -authentication* trio on `-exportArchive` twice, and
+        # xcodebuild refused the command outright: "option '-authenticationKeyPath' may only
+        # be provided once" (run 33050382351, after ** ARCHIVE SUCCEEDED **). Repeated value
+        # options are a usage error there, not a last-one-wins override.
+        #
+        # The export still needs the trio — it is where automatic signing resolves the Apple
+        # Distribution identity and downloads the App Store profiles — and it still gets it,
+        # exactly once, because gym forwards this line to both commands. Leaving
+        # `export_xcargs` out therefore cannot starve the export of authentication; putting it
+        # back is what re-creates the duplicate.
+        xcargs: "#{auth_args} DEVELOPMENT_TEAM=#{team_id.shellescape}",
+        export_options: {
+          signingStyle: "automatic",
+          destination: "export",
+          # Load-bearing. Left at Apple's default, the export step is allowed to rewrite
+          # CFBundleVersion, which would silently desynchronise the uploaded build from
+          # version.json — and therefore from the duplicate check above.
+          manageAppVersionAndBuildNumber: false
+        },
+        cloned_source_packages_path: env_or("IOS_SPM_CACHE_PATH", File.join(repo_root, "ios-swiftUI", ".spm-cache")),
+        output_directory: env_or("IOS_OUTPUT_DIR", File.join(repo_root, "ios-swiftUI", "build")),
+        output_name: "Tday-#{marketing_version}-#{build_number}.ipa"
+      }
+      build_options[:xcconfig] = xcconfig_path if xcconfig_path
+
+      ipa_path = build_app(build_options)
+
+      if skip_upload
+        UI.success(
+          "Build-only run (TDAY_SKIP_UPLOAD=true): archived and exported v#{marketing_version} " \
+          "(#{build_number}) without uploading. Compilation, signing, provisioning profiles " \
+          "and the export all worked; the build number is untouched and still available to a " \
+          "real release."
+        )
+        next
+      end
+
+      # Before the TestFlight upload, never after it: see `upload_dsyms_to_sentry`.
+      upload_dsyms_to_sentry(
+        Fastlane::Actions.lane_context[Fastlane::Actions::SharedValues::DSYM_OUTPUT_PATH]
+      )
+
+      # Deliberately the last thing the lane does. Everything that can fail — resolving SPM,
+      # compiling five targets, minting profiles, exporting the .ipa — has already either
+      # succeeded or aborted the run, so a re-run after a failure cannot leave a duplicate
+      # upload behind.
+      #
+      # skip_waiting_for_build_processing: App Store Connect processing routinely takes 10-30
+      # minutes and would bill macOS runner minutes (10x the Linux rate) for a result nothing
+      # downstream consumes; worse, a timeout while waiting would turn an upload that already
+      # succeeded into a red run, tempting exactly the re-run that hits the duplicate rejection.
+      # The cost of not waiting is that a processing failure is invisible until someone looks —
+      # which is what the FAILED/INVALID check above exists to surface on the next run.
+      #
+      # This flag is only safe because the app declares ITSAppUsesNonExemptEncryption in
+      # Tday/Info.plist. Not waiting means fastlane never gets a chance to answer the
+      # export-compliance question after the fact, so without that key every build would park
+      # at "Missing Compliance" forever. See docs/DEPLOYMENT.md § Export compliance.
+      upload_to_testflight(
+        api_key: api_key,
+        app_identifier: bundle_id,
+        ipa: ipa_path,
+        skip_waiting_for_build_processing: true
+      )
+
+      UI.success("Uploaded v#{marketing_version} (#{build_number}) to TestFlight.")
+      UI.important(
+        "Upload accepted, processing NOT waited on. Confirm the build reaches 'Ready to " \
+        "Submit' in App Store Connect — a processing failure will not show up here."
+      )
+    ensure
+      File.delete(key_path) if key_path && File.exist?(key_path)
+      File.delete(xcconfig_path) if xcconfig_path && File.exist?(xcconfig_path)
+      File.delete(p12_path) if p12_path && File.exist?(p12_path)
+      if keychain_path && File.exist?(keychain_path)
+        # Both rescued: cleanup must never replace the error that actually failed the run.
+        begin
+          # Runs on failure too: a run that died inside xcodebuild is exactly the one whose
+          # keychain should be inspected for a minted certificate.
+          report_minted_identities(keychain_path, identities_before) if identities_before
+        rescue StandardError => e
+          UI.important("Could not diff the CI keychain's identities (#{e.class}: #{e.message}).")
+        end
+        begin
+          # Also restores the default keychain pinned in `install_development_certificate` — this
+          # is the only thing that puts it back, which is why `keychain_path` is recorded before
+          # the keychain is created rather than after. The identity and its private key leave with
+          # the keychain, so nothing persists on the runner after the lane.
+          delete_keychain(keychain_path: keychain_path)
+        rescue StandardError => e
+          UI.important(
+            "Could not delete the CI keychain #{keychain_path} (#{e.class}: #{e.message}). " \
+            "A GitHub runner is discarded after the job, so nothing outlives it there."
+          )
+        end
+      end
+    end
+  end
+
+  desc "Poll App Store Connect for the processing result of the (version, buildNumber) pair " \
+       "version.json currently names. Read-only — never uploads, never touches xcodebuild — so " \
+       "it needs no Xcode. Meant to run as a follow-up job on a Linux runner right after `beta` " \
+       "has uploaded; see the `confirm-processing` job in .github/workflows/ios-testflight.yml."
+  lane :await_processing do
+    manifest = tday_manifest
+    marketing_version = manifest.fetch("version")
+    build_number = Integer(manifest.fetch("ios").fetch("buildNumber"))
+    bundle_id = env_or("IOS_APP_IDENTIFIER", DEFAULT_BUNDLE_ID)
+
+    key_id = required_env(
+      "ASC_KEY_ID",
+      "It is the 10-character Key ID of the App Store Connect API key " \
+      "(App Store Connect -> Users and Access -> Integrations -> App Store Connect API)."
+    )
+    issuer_id = required_env(
+      "ASC_ISSUER_ID",
+      "It is the UUID shown above the key list on that same App Store Connect page."
+    )
+    encoded_key = required_env( # skipcq: SCT-A000 — read from ENV; nothing is hardcoded here.
+      "ASC_KEY_P8_BASE64",
+      "It is the base64 of the .p8 file Apple let you download exactly once when the key was created."
+    )
+    pem = decode_private_key(encoded_key)
+    key_path = write_private_key(key_id, pem)
+
+    # A bounded window, not an unbounded wait. App Store Connect processing routinely takes
+    # 10-30 minutes and this job's only purpose is to surface a FAILED/INVALID result sooner
+    # than "whoever notices at the next release" — it does not need to block on every build
+    # actually finishing. Defaults land on ~20 minutes of polling; both knobs are overridable
+    # (repository variables, or workflow env) without a code change if that proves too short.
+    max_attempts = Integer(env_or("TDAY_PROCESSING_POLL_MAX_ATTEMPTS", "20"))
+    interval_seconds = Integer(env_or("TDAY_PROCESSING_POLL_INTERVAL_SECONDS", "60"))
+
+    begin
+      state = nil
+      attempt = 0
+
+      loop do
+        attempt += 1
+        # SAME HELPER THE `beta` LANE'S DUPLICATE GUARD CALLS — see testflight_processing_state
+        # above. This lane exists to call it repeatedly from a cheap Linux runner, not to teach
+        # a second client how to talk to App Store Connect.
+        state = testflight_processing_state(key_id, issuer_id, pem, bundle_id, marketing_version, build_number)
+        UI.message(
+          "[#{attempt}/#{max_attempts}] v#{marketing_version} build #{build_number}: " \
+          "#{state || 'not visible on App Store Connect yet'}"
+        )
+
+        break if PROCESSING_FAILURE_STATES.include?(state)
+        break if state == PROCESSING_SUCCESS_STATE
+        break if attempt >= max_attempts
+
+        sleep(interval_seconds)
+      end
+
+      if PROCESSING_FAILURE_STATES.include?(state)
+        # A plain `puts` (not UI.important/UI.error, which wrap the line in colour codes) so the
+        # `::error::` workflow command lands at the very start of the line — GitHub Actions reads
+        # this from any process's stdout, not only from `run:` steps written in bash. The
+        # UI.user_error! right after is what actually fails the job.
+        puts "::error::v#{marketing_version} build #{build_number} failed App Store Connect " \
+             "processing (#{state}). That (version, buildNumber) pair is now permanently spent " \
+             "— the next release must ship as build #{build_number + 1}."
+        UI.user_error!(
+          "v#{marketing_version} build #{build_number} was uploaded to App Store Connect and " \
+          "failed processing (state: #{state}). That exact (version, buildNumber) pair is now " \
+          "permanently spent — App Store Connect will never accept it again, even though this " \
+          "job never attempted a re-upload. The next release must ship as build " \
+          "#{build_number + 1}: bump the release (`node scripts/version.mjs bump patch`, or " \
+          "minor/major) and cut a new tag. Check the App Store Connect build page for the " \
+          "processing error before you do."
+        )
+      elsif state == PROCESSING_SUCCESS_STATE
+        UI.success(
+          "v#{marketing_version} build #{build_number} finished processing: VALID. It is " \
+          "'Ready to Submit' and already visible to TestFlight testers."
+        )
+      else
+        # Timing out is explicitly NOT a failure — processing time varies, and this poll job
+        # deciding "too slow" must never make a genuinely successful release look red. A
+        # FAILED/INVALID result that only appears after this window closes is still caught by
+        # the `beta` lane's own duplicate guard the next time a release runs.
+        puts "::warning::v#{marketing_version} build #{build_number} was still " \
+             "'#{state || 'not visible on App Store Connect yet'}' after #{max_attempts} " \
+             "checks (~#{max_attempts * interval_seconds / 60} min). Processing time varies " \
+             "— this is not a failure. Check App Store Connect directly if you want to confirm " \
+             "sooner."
+        UI.important(
+          "Timed out waiting for a terminal processing state — not treating this as a failure. " \
+          "See docs/DEPLOYMENT.md - iOS TestFlight Releases."
+        )
+      end
+    ensure
+      File.delete(key_path) if key_path && File.exist?(key_path)
+    end
+  end
+end

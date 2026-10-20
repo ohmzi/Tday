@@ -1,0 +1,1052 @@
+package com.ohmz.tday.routes
+
+import arrow.core.Either
+import arrow.core.right
+import com.ohmz.tday.models.response.FloaterResponse
+import com.ohmz.tday.models.response.TodoResponse
+import com.ohmz.tday.plugins.AuthUserKey
+import com.ohmz.tday.plugins.configureSerialization
+import com.ohmz.tday.plugins.configureStatusPages
+import com.ohmz.tday.security.JwtUserClaims
+import com.ohmz.tday.services.FloaterService
+import com.ohmz.tday.services.NlpParseResult
+import com.ohmz.tday.services.TodoNlpService
+import com.ohmz.tday.services.TodoService
+import com.ohmz.tday.services.TodoSummaryService
+import com.ohmz.tday.shared.model.CreateTodoRequest
+import com.ohmz.tday.shared.model.FloaterUncompleteResponse
+import com.ohmz.tday.shared.model.TodoSummaryRequest
+import com.ohmz.tday.shared.model.TodoSummaryResponse
+import com.ohmz.tday.shared.model.UpdateTodoRequest
+import com.ohmz.tday.shared.summary.SummaryEngine
+import com.ohmz.tday.shared.summary.SummaryScope as SharedSummaryScope
+import io.ktor.client.request.delete
+import io.ktor.client.request.patch
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
+import io.ktor.server.application.*
+import io.ktor.server.routing.route
+import io.ktor.server.routing.routing
+import io.ktor.server.testing.testApplication
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import org.junit.jupiter.api.Test
+import org.koin.dsl.module
+import org.koin.ktor.plugin.Koin
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+class TodoRoutesTest {
+    private val json = Json { ignoreUnknownKeys = true }
+
+    @Test
+    fun `create todo accepts UTC timestamps from clients`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.post("/api/todo") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                json.encodeToString(
+                    CreateTodoRequest(
+                        title = "description",
+                        description = "details",
+                        priority = "Low",
+                        due = "2026-03-27T15:42:00Z",
+                    ),
+                ),
+            )
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(LocalDateTime.of(2026, 3, 27, 15, 42, 0), todoService.lastCreateDue)
+    }
+
+    @Test
+    fun `create todo rejects blank due date`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.post("/api/todo") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"title":"Floater belongs elsewhere","description":null,"priority":"Low","due":""}""")
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals("due is required", payload.getValue("message").jsonPrimitive.content)
+        assertNull(todoService.lastCreateDue)
+    }
+
+    @Test
+    fun `create todo rejects recurring task with blank due date`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.post("/api/todo") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                    {
+                      "title": "Repeating task",
+                      "description": null,
+                      "priority": "Low",
+                      "due": "",
+                      "rrule": "RRULE:FREQ=DAILY;INTERVAL=1"
+                    }
+                """.trimIndent(),
+            )
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals(
+            "due is required",
+            payload.getValue("message").jsonPrimitive.content,
+        )
+        assertNull(todoService.lastCreateDue)
+    }
+
+    @Test
+    fun `create todo returns bad request when timestamp is invalid`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.post("/api/todo") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                json.encodeToString(
+                    CreateTodoRequest(
+                        title = "description",
+                        description = null,
+                        priority = "Low",
+                        due = "not-a-date",
+                    ),
+                ),
+            )
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals(
+            "due must be a valid ISO-8601 datetime",
+            payload.getValue("message").jsonPrimitive.content,
+        )
+        assertNull(todoService.lastCreateDue)
+    }
+
+    @Test
+    fun `create todo rejects invalid priority`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.post("/api/todo") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                json.encodeToString(
+                    CreateTodoRequest(
+                        title = "Task",
+                        priority = "Urgent",
+                        due = "2026-03-27T15:42:00Z",
+                    ),
+                ),
+            )
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals("priority is invalid", payload.getValue("message").jsonPrimitive.content)
+        assertEquals("priority", payload.getValue("field").jsonPrimitive.content)
+        assertNull(todoService.lastCreateDue)
+    }
+
+    @Test
+    fun `create todo returns bad request for malformed json`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.post("/api/todo") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"title":""")
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals("Invalid request body", payload.getValue("message").jsonPrimitive.content)
+        assertNull(todoService.lastCreateDue)
+    }
+
+    @Test
+    fun `demote todo returns the created floater`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.post("/api/todo/todo_42/demote")
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals("todo_42", todoService.lastDemoteId)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals(
+            "floater_demoted",
+            payload.getValue("floater").jsonObject.getValue("id").jsonPrimitive.content,
+        )
+    }
+
+    @Test
+    fun `patch todo rejects due clear when dateChanged true and due is missing`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.patch("/api/todo") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                json.encodeToString(
+                    UpdateTodoRequest(
+                        id = "todo_123",
+                        dateChanged = true,
+                    ),
+                ),
+            )
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals("due is required", payload.getValue("message").jsonPrimitive.content)
+        assertNull(todoService.lastUpdateFields)
+    }
+
+    @Test
+    fun `patch todo rejects repeat rule when due is cleared`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.patch("/api/todo") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                json.encodeToString(
+                    UpdateTodoRequest(
+                        id = "todo_123",
+                        due = null,
+                        dateChanged = true,
+                        rrule = "RRULE:FREQ=DAILY;INTERVAL=1",
+                        rruleChanged = true,
+                    ),
+                ),
+            )
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals(
+            "due is required",
+            payload.getValue("message").jsonPrimitive.content,
+        )
+        assertNull(todoService.lastUpdateFields)
+    }
+
+    @Test
+    fun `summary returns ai source when model responds`() = testApplication {
+        // "today" scope is resolved against LocalDate.now(zoneId) in the route, so
+        // the task must be due *today* (UTC) for the test to be time-independent.
+        val dueToday = LocalDate.now(ZoneOffset.UTC).atTime(13, 0).toString()
+        val todoService = RecordingTodoService(
+            timeline = listOf(
+                makeTodo(title = "Submit taxes", priority = "High", due = dueToday),
+            ),
+        )
+        val summaryService = FakeTodoSummaryService(response = "You have one important task today.")
+
+        application {
+            configureTodoRoutesTestApp(todoService, summaryService = summaryService)
+        }
+
+        val response = client.postSummary(TodoSummaryRequest(mode = "today", timeZone = "UTC"))
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = json.decodeFromString<TodoSummaryResponse>(response.bodyAsText())
+        assertEquals("You have one important task today.", body.summary)
+        assertEquals("ai", body.source)
+        assertEquals("today", body.mode)
+        assertEquals(1, body.taskCount)
+        assertNull(body.fallbackReason)
+        assertTrue(summaryService.lastPrompt.orEmpty().contains("Submit taxes"))
+    }
+
+    @Test
+    fun `summary falls back to logic when model returns blank`() = testApplication {
+        val todoService = RecordingTodoService(
+            timeline = listOf(
+                makeTodo(title = "Pay bill", priority = "High", due = "2026-05-29T13:00:00"),
+            ),
+        )
+        val summaryService = FakeTodoSummaryService(response = "")
+
+        application {
+            configureTodoRoutesTestApp(todoService, summaryService = summaryService)
+        }
+
+        val response = client.postSummary(TodoSummaryRequest(mode = "overdue", timeZone = "UTC"))
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = json.decodeFromString<TodoSummaryResponse>(response.bodyAsText())
+        assertEquals("logic", body.source)
+        assertEquals("ai_unavailable", body.fallbackReason)
+        assertEquals("overdue", body.mode)
+        assertEquals(1, body.taskCount)
+        assertNotNull(body.summary)
+    }
+
+    @Test
+    fun `summary scopes scheduled custom lists`() = testApplication {
+        val todoService = RecordingTodoService(
+            timeline = listOf(
+                makeTodo(id = "todo_one", title = "List task", listID = "list_1"),
+                makeTodo(id = "todo_two", title = "Other task", listID = "list_2"),
+            ),
+        )
+        val summaryService = FakeTodoSummaryService(response = "List summary.")
+
+        application {
+            configureTodoRoutesTestApp(todoService, summaryService = summaryService)
+        }
+
+        val response = client.postSummary(TodoSummaryRequest(mode = "LIST", listId = "list_1", timeZone = "UTC"))
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = json.decodeFromString<TodoSummaryResponse>(response.bodyAsText())
+        assertEquals("ai", body.source)
+        assertEquals("list", body.mode)
+        assertEquals(1, body.taskCount)
+        val prompt = summaryService.lastPrompt.orEmpty()
+        assertTrue(prompt.contains("List task"))
+        assertTrue(!prompt.contains("Other task"))
+    }
+
+    @Test
+    fun `summary scopes floater lists`() = testApplication {
+        val todoService = RecordingTodoService()
+        val floaterService = RecordingFloaterService(
+            floaters = listOf(
+                makeFloater(id = "floater_one", title = "Anytime task", listID = "floater_list_1"),
+                makeFloater(id = "floater_two", title = "Other floater", listID = "floater_list_2"),
+            ),
+        )
+
+        application {
+            configureTodoRoutesTestApp(
+                todoService = todoService,
+                floaterService = floaterService,
+                summaryService = FakeTodoSummaryService(response = null),
+            )
+        }
+
+        val response = client.postSummary(TodoSummaryRequest(mode = "floater", listId = "floater_list_1"))
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = json.decodeFromString<TodoSummaryResponse>(response.bodyAsText())
+        assertEquals("logic", body.source)
+        assertEquals("floater", body.mode)
+        assertEquals(1, body.taskCount)
+        // This used to assert the summary contained the word "Anytime" — which it did only
+        // because the old copy recited the single row's title, "Anytime task". Scoping is proved
+        // by the count and by the absence of the other list's row; naming the one row on screen
+        // is the redundancy the Anytime rewrite removed, so the summary names neither.
+        assertFalse(body.summary.orEmpty().contains("Other floater"))
+        assertFalse(body.summary.orEmpty().contains("Anytime task"))
+    }
+
+    @Test
+    fun `empty anytime view gets the undated empty line, not the deadline one`() = testApplication {
+        // The route used to hand the engine SummaryScope.ALL for the empty case to mean "already
+        // filtered", so an empty Anytime view on web, iOS and online Android read "No tasks need
+        // attention in this view" — a sentence about deadlines, on the one screen without any.
+        application {
+            configureTodoRoutesTestApp(
+                todoService = RecordingTodoService(),
+                floaterService = RecordingFloaterService(floaters = emptyList()),
+                summaryService = FakeTodoSummaryService(response = null),
+            )
+        }
+
+        val response = client.postSummary(TodoSummaryRequest(mode = "floater", timeZone = "UTC"))
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = json.decodeFromString<TodoSummaryResponse>(response.bodyAsText())
+        assertEquals(0, body.taskCount)
+        assertEquals("empty", body.fallbackReason)
+        // Compared against the engine rather than against literal copy: the contract is that the
+        // route asks for the ANYTIME empty line, and the wording of that line belongs to the ten
+        // locale bundles, not to this test.
+        val anytimeEmpty = SummaryEngine.summarize(
+            tasks = emptyList(),
+            scope = SharedSummaryScope.FLOATER,
+            nowEpochMs = System.currentTimeMillis(),
+            timeZoneId = "UTC",
+            preFiltered = true,
+        )
+        val datedEmpty = SummaryEngine.summarize(
+            tasks = emptyList(),
+            scope = SharedSummaryScope.SCHEDULED,
+            nowEpochMs = System.currentTimeMillis(),
+            timeZoneId = "UTC",
+            preFiltered = true,
+        )
+        assertEquals(anytimeEmpty, body.summary)
+        assertNotEquals(datedEmpty, body.summary)
+    }
+
+    @Test
+    fun `anytime prompt never asks the model for urgency or a count`() = testApplication {
+        val summaryService = FakeTodoSummaryService(response = null)
+        application {
+            configureTodoRoutesTestApp(
+                todoService = RecordingTodoService(),
+                floaterService = RecordingFloaterService(
+                    floaters = listOf(makeFloater(title = "Renew passport")),
+                ),
+                summaryService = summaryService,
+            )
+        }
+
+        client.postSummary(TodoSummaryRequest(mode = "floater", timeZone = "UTC", locale = "fr-FR"))
+
+        val prompt = summaryService.lastPrompt.orEmpty()
+        assertFalse(prompt.contains("Mention urgency"), prompt)
+        assertFalse(prompt.contains("Task count"), prompt)
+        assertFalse(prompt.lowercase().contains("floater"), prompt)
+        assertTrue(prompt.contains("Anytime view"), prompt)
+        assertTrue(prompt.contains("fr-FR"), prompt)
+    }
+
+    @Test
+    fun `an ai answer stating a count the set cannot justify never reaches the user`() = testApplication {
+        val summaryService = FakeTodoSummaryService(response = "You have 9 things waiting here.")
+        application {
+            configureTodoRoutesTestApp(
+                todoService = RecordingTodoService(),
+                floaterService = RecordingFloaterService(
+                    floaters = listOf(makeFloater(title = "Renew passport")),
+                ),
+                summaryService = summaryService,
+            )
+        }
+
+        val response = client.postSummary(TodoSummaryRequest(mode = "floater", timeZone = "UTC"))
+
+        val body = json.decodeFromString<TodoSummaryResponse>(response.bodyAsText())
+        // One floater in, "9" out: the guard drops it for the deterministic line and says so in
+        // the reason, which is structural — the refused text is user content and is never logged.
+        assertEquals("logic", body.source)
+        assertEquals("ai_rejected", body.fallbackReason)
+        assertFalse(body.summary.orEmpty().contains("9"))
+    }
+
+    @Test
+    fun `a floater left untouched for months reaches the engine as dormant`() {
+        // The dormancy note was unreachable in the shipped app: nothing populated
+        // updatedAtEpochMs, so FloaterResting.tierFor answered ACTIVE for every row and three of
+        // the eight notes could never fire. Same set, two ages, two different summaries.
+        val nowUtc = LocalDateTime.now(ZoneOffset.UTC)
+        val dormant = anytimeSummaryAndPrompt(nowUtc.minusDays(200).toString())
+        val fresh = anytimeSummaryAndPrompt(nowUtc.minusDays(1).toString())
+
+        assertNotEquals(fresh.first, dormant.first, "updatedAt never reached the engine: dormancy changed nothing")
+        // The prompt sees it too, so the AI half is briefed on the same fact as the planner. Only
+        // the task LINES are read: the instruction paragraph names dormancy as a thing to look
+        // for, so a whole-prompt `contains` would pass without a single task being marked.
+        fun markedRows(prompt: String) = prompt.lines().count {
+            it.startsWith("- ") && it.contains("untouched for months")
+        }
+        assertEquals(3, markedRows(dormant.second), dormant.second)
+        assertEquals(0, markedRows(fresh.second), fresh.second)
+    }
+
+    /** Runs an Anytime summary over three floaters last written at [updatedAt]; (summary, prompt). */
+    private fun anytimeSummaryAndPrompt(updatedAt: String): Pair<String, String> {
+        var summary = ""
+        var prompt = ""
+        testApplication {
+            val summaryService = FakeTodoSummaryService(response = null)
+            application {
+                configureTodoRoutesTestApp(
+                    todoService = RecordingTodoService(),
+                    floaterService = RecordingFloaterService(
+                        floaters = (1..3).map {
+                            makeFloater(id = "floater_$it", title = "Waiting $it", updatedAt = updatedAt)
+                        },
+                    ),
+                    summaryService = summaryService,
+                )
+            }
+            val response = client.postSummary(TodoSummaryRequest(mode = "floater", timeZone = "UTC"))
+            summary = json.decodeFromString<TodoSummaryResponse>(response.bodyAsText()).summary.orEmpty()
+            prompt = summaryService.lastPrompt.orEmpty()
+        }
+        return summary to prompt
+    }
+
+    @Test
+    fun `summary returns empty logic response for empty scope`() = testApplication {
+        application {
+            configureTodoRoutesTestApp(RecordingTodoService())
+        }
+
+        val response = client.postSummary(TodoSummaryRequest(mode = "scheduled"))
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = json.decodeFromString<TodoSummaryResponse>(response.bodyAsText())
+        assertEquals("logic", body.source)
+        assertEquals("empty", body.fallbackReason)
+        assertEquals(0, body.taskCount)
+    }
+
+    // TodoInstancePatchRequest declares `todoId` — no default, no @JsonNames
+    // alias. `ignoreUnknownKeys = true` drops a body that names the todo `id`,
+    // leaving the required todoId missing, so the request 400s in deserialization
+    // before any handler logic runs. Three web hooks were sending `id`, which
+    // made per-instance edits fail for every recurring task.
+    @Test
+    fun `patch instance rejects body that names the todo id as id`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.patch("/api/todo/instance") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"id":"todo_123","instanceDate":"2026-03-27T15:42:00.000Z","title":"Water the plants"}""",
+            )
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertEquals(0, todoService.patchInstanceCalls)
+    }
+
+    @Test
+    fun `patch instance applies overrides addressed by todoId`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.patch("/api/todo/instance") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "todoId":"todo_123",
+                  "instanceDate":"2026-03-27T15:42:00.000Z",
+                  "title":"Water the plants",
+                  "description":"the ferns too",
+                  "priority":"High",
+                  "due":"2026-03-27T16:00:00.000Z"
+                }
+                """.trimIndent(),
+            )
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(1, todoService.patchInstanceCalls)
+        assertEquals("todo_123", todoService.lastPatchInstanceTodoId)
+        assertEquals(LocalDateTime.of(2026, 3, 27, 15, 42, 0), todoService.lastPatchInstanceDate)
+        assertEquals(
+            mapOf<String, Any?>(
+                "title" to "Water the plants",
+                "description" to "the ferns too",
+                "priority" to "High",
+                "due" to LocalDateTime.of(2026, 3, 27, 16, 0, 0),
+            ),
+            todoService.lastPatchInstanceFields,
+        )
+    }
+
+    // An instance override cannot change the series, so `rrule` is not declared on
+    // TodoInstancePatchRequest. The web hooks spread their todo-schema output into
+    // the body, which carries `rrule` along; this pins that it stays ignored rather
+    // than leaking into the override fields.
+    @Test
+    fun `patch instance ignores rrule in the body`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.patch("/api/todo/instance") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "todoId":"todo_123",
+                  "instanceDate":"2026-03-27T15:42:00.000Z",
+                  "title":"Water the plants",
+                  "rrule":"FREQ=WEEKLY"
+                }
+                """.trimIndent(),
+            )
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(1, todoService.patchInstanceCalls)
+        assertEquals(mapOf<String, Any?>("title" to "Water the plants"), todoService.lastPatchInstanceFields)
+    }
+
+    @Test
+    fun `summary fallback is localized by request locale`() = testApplication {
+        application {
+            configureTodoRoutesTestApp(
+                todoService = RecordingTodoService(timeline = listOf(makeTodo(title = "Pay rent"))),
+                summaryService = FakeTodoSummaryService(response = null),
+            )
+        }
+
+        val en = json.decodeFromString<TodoSummaryResponse>(
+            client.postSummary(TodoSummaryRequest(mode = "all", timeZone = "UTC", locale = "en")).bodyAsText(),
+        )
+        val fr = json.decodeFromString<TodoSummaryResponse>(
+            client.postSummary(TodoSummaryRequest(mode = "all", timeZone = "UTC", locale = "fr")).bodyAsText(),
+        )
+
+        assertEquals("logic", en.source)
+        assertEquals("logic", fr.source)
+        assertTrue(en.summary.orEmpty().contains("Pay rent"))
+        assertTrue(fr.summary.orEmpty().contains("Pay rent"))
+        assertTrue(fr.summary != en.summary, "expected localized difference: ${fr.summary} vs ${en.summary}")
+    }
+
+    // instanceDate is an ISO-8601 string on the wire. `isLenient = true` means an
+    // unquoted JSON number still *deserializes* (into the literal digits), so the
+    // request only blows up later in parseDueMinute — these pin that down so a
+    // client sending epoch millis fails loudly in tests instead of in production.
+    @Test
+    fun `complete todo rejects epoch millis instanceDate`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.patch("/api/todo/complete") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"id":"todo_123","instanceDate":1774624920000}""")
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals(
+            "instanceDate must be a valid ISO-8601 datetime",
+            payload.getValue("message").jsonPrimitive.content,
+        )
+        assertEquals(0, todoService.completeCalls)
+    }
+
+    @Test
+    fun `complete todo accepts ISO-8601 instanceDate`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.patch("/api/todo/complete") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"id":"todo_123","instanceDate":"2026-03-27T15:42:00.000Z"}""")
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(1, todoService.completeCalls)
+        assertEquals(LocalDateTime.of(2026, 3, 27, 15, 42, 0), todoService.lastCompleteInstanceDate)
+    }
+
+    @Test
+    fun `uncomplete todo rejects epoch millis instanceDate`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.patch("/api/todo/uncomplete") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"id":"todo_123","instanceDate":1774624920000}""")
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertEquals(
+            "instanceDate must be a valid ISO-8601 datetime",
+            json.parseToJsonElement(response.bodyAsText()).jsonObject
+                .getValue("message").jsonPrimitive.content,
+        )
+    }
+
+    @Test
+    fun `delete instance rejects epoch millis instanceDate`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.delete("/api/todo/instance") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"todoId":"todo_123","instanceDate":1774624920000}""")
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertEquals(0, todoService.deleteInstanceCalls)
+    }
+
+    @Test
+    fun `delete instance accepts ISO-8601 instanceDate`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.delete("/api/todo/instance") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"todoId":"todo_123","instanceDate":"2026-03-27T15:42:00.000Z"}""")
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(1, todoService.deleteInstanceCalls)
+        assertEquals(LocalDateTime.of(2026, 3, 27, 15, 42, 0), todoService.lastDeleteInstanceDate)
+    }
+
+    // The web client was sending `id` here; the route reads `todoId`, so the body
+    // failed to deserialize before any of the instanceDate handling ran.
+    @Test
+    fun `delete instance rejects body that names the todo id as id`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.delete("/api/todo/instance") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"id":"todo_123","instanceDate":"2026-03-27T15:42:00.000Z"}""")
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertEquals(0, todoService.deleteInstanceCalls)
+    }
+
+    private suspend fun io.ktor.client.HttpClient.postSummary(
+        payload: TodoSummaryRequest,
+    ) = post("/api/todo/summary") {
+        contentType(ContentType.Application.Json)
+        setBody(json.encodeToString(payload))
+    }
+
+    private fun Application.configureTodoRoutesTestApp(
+        todoService: TodoService,
+        floaterService: FloaterService = RecordingFloaterService(),
+        summaryService: TodoSummaryService = FakeTodoSummaryService(),
+    ) {
+        install(Koin) {
+            modules(
+                module {
+                    single<TodoService> { todoService }
+                    single<FloaterService> { floaterService }
+                    single<TodoNlpService> { FakeTodoNlpService() }
+                    single<TodoSummaryService> { summaryService }
+                    single<com.ohmz.tday.services.CompletedTodoService> { FakeCompletedTodoService() }
+                },
+            )
+        }
+        configureSerialization()
+        configureStatusPages()
+        intercept(ApplicationCallPipeline.Plugins) {
+            if (call.attributes.getOrNull(AuthUserKey) == null) {
+                call.attributes.put(
+                    AuthUserKey,
+                    JwtUserClaims(
+                        id = "user_123",
+                        name = "Test User",
+                        username = "testuser",
+                        role = "ADMIN",
+                        approvalStatus = "APPROVED",
+                        timeZone = "UTC",
+                    ),
+                )
+            }
+        }
+        routing {
+            route("/api") {
+                todoRoutes()
+            }
+        }
+    }
+
+    private class RecordingTodoService(
+        private val timeline: List<TodoResponse> = emptyList(),
+    ) : TodoService {
+        var lastCreateDue: LocalDateTime? = null
+        var lastUpdateFields: Map<String, Any?>? = null
+        var lastDemoteId: String? = null
+        var completeCalls = 0
+        var lastCompleteInstanceDate: LocalDateTime? = null
+        var patchInstanceCalls = 0
+        var lastPatchInstanceTodoId: String? = null
+        var lastPatchInstanceDate: LocalDateTime? = null
+        var lastPatchInstanceFields: Map<String, Any?>? = null
+        var deleteInstanceCalls = 0
+        var lastDeleteInstanceDate: LocalDateTime? = null
+
+        override suspend fun create(
+            userId: String,
+            title: String,
+            description: String?,
+            priority: String,
+            due: LocalDateTime,
+            rrule: String?,
+            listID: String?,
+        ): Either<com.ohmz.tday.domain.AppError, TodoResponse> {
+            lastCreateDue = due
+            return TodoResponse(
+                id = "todo_123",
+                title = title,
+                description = description,
+                priority = priority,
+                due = due.toString(),
+                listID = listID,
+                completed = false,
+                pinned = false,
+            ).right()
+        }
+
+        override suspend fun getByDateRange(
+            userId: String,
+            start: Long,
+            end: Long,
+            timeZone: String,
+            expand: Boolean,
+        ) = emptyList<TodoResponse>().right()
+
+        override suspend fun getTimeline(
+            userId: String,
+            timeZone: String,
+            recurringFutureDays: Int,
+            expand: Boolean,
+        ) = timeline.right()
+
+        override suspend fun update(userId: String, id: String, fields: Map<String, Any?>): Either<com.ohmz.tday.domain.AppError, Unit> {
+            lastUpdateFields = fields
+            return Unit.right()
+        }
+
+        override suspend fun delete(userId: String, id: String) = 1.right()
+
+        override suspend fun completeTodo(
+            userId: String,
+            todoId: String,
+            instanceDate: LocalDateTime?,
+        ): Either<com.ohmz.tday.domain.AppError, Unit> {
+            completeCalls++
+            lastCompleteInstanceDate = instanceDate
+            return Unit.right()
+        }
+
+        override suspend fun uncompleteTodo(
+            userId: String,
+            todoId: String,
+            instanceDate: LocalDateTime?,
+        ) = Unit.right()
+
+        override suspend fun prioritize(userId: String, todoId: String, priority: String) = Unit.right()
+
+        override suspend fun reorder(userId: String, todoId: String, newOrder: Int) = Unit.right()
+
+        override suspend fun getOverdue(userId: String, timeZone: String) = emptyList<TodoResponse>().right()
+
+        override suspend fun patchInstance(
+            userId: String,
+            todoId: String,
+            instanceDate: LocalDateTime,
+            fields: Map<String, Any?>,
+        ): Either<com.ohmz.tday.domain.AppError, Unit> {
+            patchInstanceCalls++
+            lastPatchInstanceTodoId = todoId
+            lastPatchInstanceDate = instanceDate
+            lastPatchInstanceFields = fields
+            return Unit.right()
+        }
+
+        override suspend fun deleteInstance(
+            userId: String,
+            todoId: String,
+            instanceDate: LocalDateTime,
+        ): Either<com.ohmz.tday.domain.AppError, Unit> {
+            deleteInstanceCalls++
+            lastDeleteInstanceDate = instanceDate
+            return Unit.right()
+        }
+
+        override suspend fun demoteToFloater(userId: String, todoId: String): Either<com.ohmz.tday.domain.AppError, FloaterResponse> {
+            lastDemoteId = todoId
+            return makeFloater(id = "floater_demoted", title = "Let it float").right()
+        }
+
+        override suspend fun getRecurrenceStates(
+            userId: String,
+            todoIds: List<String>,
+        ): Either<com.ohmz.tday.domain.AppError, Map<String, com.ohmz.tday.services.RecurrenceState>> =
+            emptyMap<String, com.ohmz.tday.services.RecurrenceState>().right()
+    }
+
+    private class RecordingFloaterService(
+        private val floaters: List<FloaterResponse> = emptyList(),
+    ) : FloaterService {
+        override suspend fun create(
+            userId: String,
+            title: String,
+            description: String?,
+            priority: String,
+            listID: String?,
+        ) = makeFloater(title = title, description = description, priority = priority, listID = listID).right()
+
+        override suspend fun getAll(userId: String) = floaters.right()
+
+        override suspend fun update(userId: String, id: String, fields: Map<String, Any?>) = Unit.right()
+
+        override suspend fun delete(userId: String, id: String) = 1.right()
+
+        override suspend fun completeFloater(userId: String, floaterId: String) = Unit.right()
+
+        override suspend fun uncompleteFloater(userId: String, floaterId: String) = FloaterUncompleteResponse().right()
+
+        override suspend fun prioritize(userId: String, floaterId: String, priority: String) = Unit.right()
+
+        override suspend fun reorder(userId: String, floaterId: String, newOrder: Int) = Unit.right()
+
+        override suspend fun promoteToTodo(
+            userId: String,
+            floaterId: String,
+            due: LocalDateTime,
+            rrule: String?,
+        ) = makeTodo(id = "todo_promoted", due = due.toString()).right()
+    }
+
+    private class FakeCompletedTodoService : com.ohmz.tday.services.CompletedTodoService {
+        override suspend fun getAll(userId: String) = arrow.core.Either.Right(emptyList<com.ohmz.tday.models.response.CompletedTodoResponse>())
+        override suspend fun deleteAll(userId: String) = arrow.core.Either.Right(0)
+        override suspend fun deleteById(userId: String, id: String) = arrow.core.Either.Right(0)
+        override suspend fun update(userId: String, id: String, fields: Map<String, Any?>) = arrow.core.Either.Right(0)
+    }
+
+    private class FakeTodoNlpService : TodoNlpService {
+        override fun parse(
+            text: String,
+            locale: String?,
+            referenceEpochMs: Long?,
+            timezoneOffsetMinutes: Int?,
+            defaultDurationMinutes: Int?,
+        ) = NlpParseResult(
+            cleanTitle = text,
+            matchedText = null,
+            matchStart = null,
+            dueEpochMs = null,
+        )
+    }
+
+    private class FakeTodoSummaryService(
+        private val response: String? = null,
+    ) : TodoSummaryService {
+        var lastPrompt: String? = null
+
+        override suspend fun generateSummary(prompt: String): String? {
+            lastPrompt = prompt
+            return response
+        }
+
+        override suspend fun isHealthy(): Boolean = true
+
+        override suspend fun warmUp() = Unit
+
+        override fun isConfigured(): Boolean = true
+
+        override suspend fun healthyCached(): Boolean = true
+    }
+
+    private companion object {
+        fun makeTodo(
+            id: String = "todo_123",
+            title: String = "Task",
+            priority: String = "Low",
+            due: String = "2026-05-30T10:00:00",
+            listID: String? = null,
+        ) = TodoResponse(
+            id = id,
+            title = title,
+            priority = priority,
+            due = due,
+            listID = listID,
+            completed = false,
+            pinned = false,
+        )
+
+        fun makeFloater(
+            id: String = "floater_123",
+            title: String = "Anytime task",
+            description: String? = null,
+            priority: String = "Low",
+            listID: String? = null,
+            updatedAt: String? = null,
+        ) = FloaterResponse(
+            id = id,
+            title = title,
+            description = description,
+            priority = priority,
+            listID = listID,
+            completed = false,
+            pinned = false,
+            updatedAt = updatedAt,
+        )
+    }
+}

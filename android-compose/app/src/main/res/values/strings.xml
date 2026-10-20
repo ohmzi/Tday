@@ -1,0 +1,775 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">T\'Day</string>
+    <string name="asset_statements" translatable="false">[{\"include\":\"https://tday.ohmz.cloud/.well-known/assetlinks.json\"}]</string>
+
+    <!-- Shared / reusable -->
+    <string name="action_back">Back</string>
+    <string name="action_close">Close</string>
+    <string name="action_search">Search</string>
+    <string name="action_close_search">Close search</string>
+    <string name="action_clear_search">Clear search</string>
+    <string name="action_search_in">Search in %1$s</string>
+    <string name="search_no_results_body">Try a different word, or clear the search.</string>
+    <string name="search_no_results_settings">No matching settings</string>
+    <!-- The guide's own strings are codegen'd out of tday-web/messages, so a
+         hand-written one has to live here or verifyGuideContent goes stale. -->
+    <string name="action_create_task">Create task</string>
+    <string name="action_create_list">Create list</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_edit_task">Edit task</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_copy_task">Copy task</string>
+    <string name="action_delete_task">Delete task</string>
+    <string name="action_delete_list">Delete list</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_schedule">Schedule</string>
+    <string name="action_schedule_task">Schedule task</string>
+    <string name="action_float">Float</string>
+    <string name="action_float_task">Let it float</string>
+    <string name="action_defer">Defer</string>
+    <string name="action_defer_task">Defer task</string>
+    <string name="quick_defer_later_today">Later today</string>
+    <string name="quick_defer_tonight">Tonight</string>
+    <string name="quick_defer_tomorrow">Tomorrow morning</string>
+    <string name="quick_defer_next_week">Next week</string>
+    <string name="reminder_action_snooze_hour">Snooze 1h</string>
+    <string name="sweep_title">Morning Sweep</string>
+    <string name="sweep_done">All caught up</string>
+    <string name="sweep_today">Today</string>
+    <string name="sweep_tomorrow">Tomorrow</string>
+    <string name="sweep_pick_date">Pick a date</string>
+    <string name="sweep_float">Make it a floater</string>
+    <string name="sweep_let_go">Let it go</string>
+    <string name="sweep_skip">Skip</string>
+    <string name="sweep_all_to_today">Sweep all to today</string>
+    <string name="sweep_swept_toast">Swept %1$d tasks</string>
+    <string name="day_ahead_setting">Day Ahead digest</string>
+    <string name="day_ahead_off">Off</string>
+    <string name="day_ahead_h7">7:00</string>
+    <string name="day_ahead_h8">8:00</string>
+    <string name="day_ahead_h9">9:00</string>
+    <string name="day_ahead_title">Your day ahead</string>
+    <string name="day_ahead_text">%1$d tasks today</string>
+    <string name="day_ahead_text_with_overdue">%1$d tasks today, %2$d carried over</string>
+    <string name="task_promote_failed">Could not schedule task</string>
+    <string name="task_float_failed">Could not float task</string>
+    <string name="action_complete">Complete</string>
+    <string name="action_more_options">More options</string>
+    <string name="action_save">Save</string>
+    <string name="action_save_task">Save task</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_done">Done</string>
+    <string name="action_ok">OK</string>
+    <string name="action_sign_out">Sign out</string>
+    <string name="action_expand_section">Expand section</string>
+    <string name="action_collapse_section">Collapse section</string>
+    <string name="label_completed">Completed</string>
+    <string name="label_mark_complete">Mark complete</string>
+    <string name="label_undo_complete">Undo complete</string>
+    <string name="label_task_list">Task list</string>
+    <string name="label_priority_task">Priority task</string>
+    <string name="label_loading">Loading…</string>
+    <string name="label_version_name">v%1$s</string>
+    <string name="label_server">Server</string>
+
+    <!-- Scheduled task home screen -->
+    <string name="scheduled_task_home_title">T\'Day</string>
+    <string name="scheduled_task_home_category_overdue">Overdue</string>
+    <string name="scheduled_task_home_category_scheduled">Scheduled</string>
+    <string name="scheduled_task_home_category_all">All</string>
+    <string name="scheduled_task_home_category_priority">Priority</string>
+    <string name="scheduled_task_home_category_completed">Completed</string>
+    <string name="scheduled_task_home_category_calendar">Calendar</string>
+    <string name="root_feed_tab_scheduled_task_home">Scheduled</string>
+    <string name="root_feed_tab_floater">Floater</string>
+    <string name="scheduled_task_home_search_no_results">No matching tasks</string>
+    <string name="scheduled_task_home_my_lists">My Lists</string>
+    <string name="scheduled_task_home_new_list">New list</string>
+    <string name="scheduled_task_home_list_name_placeholder">List name</string>
+    <string name="scheduled_task_home_section_list">List</string>
+    <string name="scheduled_task_home_section_color">Color</string>
+    <string name="scheduled_task_home_section_icon">Icon</string>
+    <string name="scheduled_task_home_list_icon_option">Select %1$s list icon</string>
+    <string name="scheduled_task_home_locked_list_name">Sign in to load your lists</string>
+
+    <string-array name="splash_taglines">
+        <item>Your server remembers, so you don’t have to</item>
+        <item>Hosted by you, haunted by deadlines</item>
+        <item>Because ‘I’ll remember later’ is always a lie</item>
+        <item>Self-hosted sanity, one task at a time</item>
+        <item>Nagging you from your own hardware</item>
+        <item>Your data, your server, your no-excuse zone</item>
+        <item>Making procrastination slightly harder since v0.1</item>
+        <item>Running on your server, running your life</item>
+        <item>Because sticky notes don’t have push notifications</item>
+        <item>Turning ‘I forgot’ into ‘I got this’</item>
+        <item>Your personal nudge machine</item>
+        <item>Self-hosted, self-organized… well, getting there</item>
+        <item>Where forgotten tasks go to get found</item>
+        <item>Adulting, but make it self-hosted</item>
+        <item>Taming chaos from a server near you</item>
+        <item>Future you says thanks in advance</item>
+        <item>The cloud is just someone else’s server. This one’s yours.</item>
+        <item>Organizing your life, no landlord required</item>
+        <item>Zero trust… except your own server</item>
+        <item>Syncing your tasks, judging your priorities</item>
+        <item>Today called. It wants a plan.</item>
+        <item>Making later file a formal request</item>
+        <item>Turning chaos into checkboxes</item>
+        <item>Your tasks are lining up nicely</item>
+        <item>A private server with opinions about your priorities</item>
+        <item>For when your brain opens too many tabs</item>
+        <item>Scheduling the chaos before it schedules you</item>
+        <item>Your lists have entered their productive era</item>
+        <item>A tiny operations desk for future you</item>
+        <item>Because vibes are not a task strategy</item>
+        <item>Private tasks. Better mornings.</item>
+        <item>Making your backlog feel seen, then sorted</item>
+        <item>Where scattered thoughts get assigned seating</item>
+        <item>Your priorities just got a home address</item>
+        <item>Sync first, panic later</item>
+        <item>Calendar drama, now with containment</item>
+        <item>Deadlines hate this one self-hosted trick</item>
+        <item>Helping your day stop freelancing</item>
+        <item>Your reminders came prepared</item>
+        <item>Turning I should into scheduled</item>
+        <item>Your task list, but it shows up</item>
+        <item>Outsmarting \'I\'ll do it tomorrow\'</item>
+        <item>A task list with a memory</item>
+        <item>Your executor, self-hosted</item>
+        <item>Procrastination\'s worst nightmare</item>
+        <item>Where \'someday\' gets a date</item>
+        <item>Productivity, hosted on your terms</item>
+        <item>One server. Zero excuses.</item>
+        <item>Keeping your promises for you</item>
+        <item>The \'later\' column, tamed</item>
+        <item>Your second brain, but reliable</item>
+        <item>Escalating \'maybe\' to \'scheduled\'</item>
+        <item>Chaos management, private edition</item>
+        <item>Your day\'s project manager</item>
+        <item>Because \'in my head\' is not a system</item>
+        <item>Task herding made official</item>
+        <item>Turning mental load into checkmarks</item>
+        <item>Serving tasks like a good server should</item>
+        <item>Your personal accountability server</item>
+        <item>Prioritizing so you don\'t have to</item>
+        <item>Your excuses are not on the schedule</item>
+        <item>Built for the version of you that shows up</item>
+        <item>Tomorrow you is watching</item>
+        <item>Where good intentions get timestamps</item>
+        <item>No cloud, no clutter, no forgetting</item>
+        <item>Your day, minus the guesswork</item>
+        <item>Quietly running the boring part of your life</item>
+        <item>Your brain gets a break, your server gets a job</item>
+        <item>Ambition, now with due dates</item>
+        <item>Small tasks, big server energy</item>
+        <item>Every list deserves a home you own</item>
+        <item>Uptime for your intentions</item>
+        <item>The nag you actually asked for</item>
+        <item>Because ‘sometime this week’ is not a time</item>
+        <item>Your plans, backed up and back on track</item>
+        <item>Reminding you from a box you can unplug</item>
+        <item>Fewer tabs, more done</item>
+        <item>Turning the mental pile into a plan</item>
+        <item>Localhost, but for your life</item>
+        <item>Your inbox of intentions, sorted</item>
+        <item>Deadlines respected, privacy included</item>
+        <item>Root access to your own routine</item>
+        <item>Making ‘busy’ mean something again</item>
+        <item>Your future self filed a request</item>
+        <item>The quiet part of getting things done</item>
+        <item>No subscription, no surprises, no forgetting</item>
+        <item>Order, served fresh from your own rack</item>
+        <item>Where ‘urgent’ finally meets ‘planned’</item>
+        <item>Your day compiles cleanly now</item>
+        <item>Off the cloud, on the ball</item>
+    </string-array>
+
+    <!-- Settings screen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_unknown_user">Unknown user</string>
+    <string name="settings_role_label">Role: %1$s</string>
+    <string name="settings_role_default">USER</string>
+    <!-- Account settings (profile name + password change) -->
+    <string name="settings_account_name_label">Name</string>
+    <string name="settings_account_username_label">Username</string>
+    <string name="settings_account_password_label">Password</string>
+    <string name="settings_account_change_password">Change</string>
+    <string name="settings_account_current_password">Current password</string>
+    <string name="settings_account_confirm_new_password">Confirm new password</string>
+    <string name="settings_account_forgot_password">Forgot password?</string>
+    <string name="settings_account_password_requirement">Password must be at least 8 characters, with an uppercase letter and a special character.</string>
+    <string name="settings_account_show_password">Show password</string>
+    <string name="settings_account_hide_password">Hide password</string>
+    <string name="settings_account_not_signed_in">You\'re not signed in.</string>
+    <string name="settings_account_name_required">Name cannot be empty.</string>
+    <string name="error_update_name_failed">Couldn\'t update your name. Please try again.</string>
+    <string name="error_change_password_failed">Couldn\'t change your password. Please try again.</string>
+    <string name="error_update_security_questions_failed">Couldn\'t update your security questions. Please try again.</string>
+    <string name="settings_account_security_questions_label">Security questions</string>
+    <string name="settings_account_change_security_questions">Change</string>
+    <string name="settings_account_security_questions_configured">Configured</string>
+    <string name="settings_account_security_questions_not_configured">Not configured</string>
+    <string name="settings_account_current_password_required">Enter your current password</string>
+    <string name="settings_account_security_questions_updated">Security questions updated</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_motion">Motion</string>
+    <string name="settings_reduce_motion">Reduce motion</string>
+    <string name="settings_reduce_motion_system">Animations are already off in Android settings.</string>
+    <string name="settings_behavior">Behavior</string>
+    <string name="settings_default_home_screen">Default home screen</string>
+    <string name="settings_reminders">Reminders</string>
+    <string name="settings_feature_toggle">Feature toggle</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_notifications_blocked">Notifications are off for T\'Day in Android settings.</string>
+    <string name="settings_notifications_declined">Notifications weren\'t allowed, so T\'Day can\'t deliver reminders.</string>
+    <string name="settings_ai_task_summary">Summary</string>
+    <string name="settings_default_reminder">Default reminder</string>
+    <string name="settings_update_available_version">v%1$s available</string>
+    <string name="settings_server_compatible">Compatible</string>
+    <string name="settings_server_incompatible">Incompatible</string>
+
+    <!-- Onboarding / wizard -->
+    <string name="onboarding_step_mode">Mode</string>
+    <string name="onboarding_step_server">Server</string>
+    <string name="onboarding_step_login">Login</string>
+    <string name="onboarding_step_privacy">Privacy</string>
+    <string name="onboarding_mode_title">Choose your setup</string>
+    <string name="onboarding_mode_subtitle">Pick where T\'Day keeps your tasks.</string>
+    <string name="onboarding_mode_server_title">Self-hosted server</string>
+    <string name="onboarding_mode_server_short_title">Self-hosted</string>
+    <string name="onboarding_mode_server_short_subtitle">Accounts and sync</string>
+    <string name="onboarding_mode_local_short_title">This device</string>
+    <string name="onboarding_mode_local_short_subtitle">No login</string>
+    <string name="onboarding_server_hero_subtitle">Connect your T\'Day endpoint.</string>
+    <string name="onboarding_server_url_label">Server URL</string>
+    <string name="onboarding_server_url_placeholder">https://app.example.com</string>
+    <string name="onboarding_reset_trust">Reset trusted server</string>
+    <string name="onboarding_resetting_trust">Resetting trust…</string>
+    <string name="onboarding_trust_dialog_title">Trust this server certificate?</string>
+    <string name="onboarding_trust_dialog_body">Your device cannot verify this server\'s certificate. Continue only if this fingerprint matches the one on your server:</string>
+    <string name="onboarding_trust_dialog_confirm">Trust this certificate</string>
+    <string name="onboarding_trust_dialog_cancel">Cancel</string>
+    <string name="onboarding_connect">Connect</string>
+    <string name="onboarding_connecting_title">Connecting to server…</string>
+    <string name="onboarding_connecting_subtitle">Checking endpoint, TLS, and workspace settings</string>
+    <string name="onboarding_username_label">Username</string>
+    <string name="onboarding_password_label">Password</string>
+    <string name="onboarding_sign_in">Sign in</string>
+    <string name="onboarding_create_account">Create account</string>
+    <string name="onboarding_change_setup">Change setup</string>
+    <string name="onboarding_first_name_label">First name</string>
+    <string name="onboarding_confirm_password_label">Confirm password</string>
+    <string name="onboarding_creating_account">Creating account…</string>
+    <string name="onboarding_back_to_sign_in">Back to sign in</string>
+    <string name="onboarding_authenticating_title">Authenticating…</string>
+    <string name="onboarding_authenticating_register_subtitle">Submitting registration and waiting for approval status</string>
+    <string name="onboarding_authenticating_login_subtitle">Encrypting session and loading your workspace</string>
+    <string name="onboarding_error_connect_fallback">Could not connect to server</string>
+    <string name="onboarding_error_reset_trust_fallback">Could not reset trusted server</string>
+    <string name="onboarding_validation_first_name_min">First name must be at least 2 characters</string>
+    <string name="onboarding_validation_username_required">Username is required</string>
+    <string name="onboarding_validation_username_invalid">Please enter a valid username</string>
+    <string name="onboarding_validation_password_required">Password and confirmation are required</string>
+    <string name="onboarding_validation_password_min">Password must be at least 8 characters</string>
+    <string name="onboarding_validation_password_uppercase">Password must include at least one uppercase letter</string>
+    <string name="onboarding_validation_password_special">Password must include at least one special character</string>
+    <string name="onboarding_validation_password_mismatch">Passwords do not match</string>
+
+    <!-- Security questions -->
+    <string name="security_questions_title">Security questions</string>
+    <string name="security_questions_question_1">Question 1</string>
+    <string name="security_questions_question_2">Question 2</string>
+    <string name="security_questions_question_3">Question 3</string>
+    <string name="pending_approval_title">Waiting for approval</string>
+    <string name="pending_approval_message">Your account (%1$s) is waiting for an administrator to approve it. We\'ll let you in as soon as it\'s approved.</string>
+    <string name="pending_approval_message_generic">Your account is waiting for an administrator to approve it. We\'ll let you in as soon as it\'s approved.</string>
+    <string name="pending_approval_check">Check approval status</string>
+    <string name="pending_approval_use_different_account">Use a different account</string>
+    <string name="security_questions_answer_label">Answer</string>
+    <string name="security_questions_back">Back</string>
+    <string name="security_questions_distinct_required">Choose three different questions</string>
+    <string name="security_questions_answers_required">Please answer all three questions</string>
+    <string name="security_questions_save">Save security questions</string>
+    <string name="security_questions_save_failed">Failed to save security questions</string>
+    <string name="security_questions_gate_title">Set up security questions</string>
+    <string name="security_questions_gate_subtitle">Choose three security questions. We\'ll use them to verify it\'s you if you ever need to reset your password.</string>
+
+    <!-- Forgot password -->
+    <string name="forgot_password_entry">Forgot password?</string>
+    <string name="forgot_password_title">Reset your password</string>
+    <string name="forgot_password_subtitle_locked">Too many incorrect attempts. You can request a password reset from an administrator.</string>
+    <string name="forgot_password_subtitle_requested">Your request has been sent. An administrator will reset your password and share a temporary one with you.</string>
+    <string name="forgot_password_username_required">Please enter your username</string>
+    <string name="forgot_password_questions_unavailable">Unable to load security questions.</string>
+    <string name="forgot_password_reset_failed">Those answers didn\'t match. Please try again.</string>
+    <string name="forgot_password_reset_failed_contact_admin">%1$s Please contact an administrator to reset your password.</string>
+    <string name="forgot_password_admin_request_failed">Unable to send request. Please try again.</string>
+    <string name="forgot_password_new_password">New password</string>
+    <string name="forgot_password_continue">Continue</string>
+    <string name="forgot_password_verify">Verify answers</string>
+    <string name="forgot_password_reset">Reset password</string>
+    <string name="forgot_password_reenter_answers">Please re-enter your security answers.</string>
+    <string name="forgot_password_success_title">Password changed</string>
+    <string name="forgot_password_ok">OK</string>
+    <string name="forgot_password_request_admin">Request reset from an administrator</string>
+    <string name="forgot_password_back_to_sign_in">Back to sign in</string>
+    <string name="forgot_password_reset_success">Password reset. Sign in with your new password.</string>
+
+    <!-- Authentication / credential messages -->
+    <string name="auth_pending_admin_approval">Account pending admin approval.</string>
+    <string name="auth_password_manager_save_server_url_failed">Android Password Manager could not save this server URL. Check that a password manager is enabled.</string>
+    <string name="auth_password_manager_save_login_failed">Android Password Manager could not save this login. Check that a password manager is enabled.</string>
+    <string name="auth_error_incorrect_credentials">Incorrect username or password</string>
+    <string name="error_cannot_reach">Can\'t reach the server. Check your internet connection and that the server address is correct.</string>
+    <string name="error_server_unavailable">The server isn\'t responding right now — it may be down or restarting. If this keeps happening, contact your administrator.</string>
+
+    <!-- Todo list screen -->
+    <string name="todos_summarize">Summarize tasks</string>
+    <string name="todos_title_tasks">Tasks</string>
+    <string name="todos_title_today">Today</string>
+    <string name="todos_title_tonight">Tonight</string>
+    <string name="todos_title_overdue">Overdue</string>
+    <string name="todos_title_scheduled">Scheduled</string>
+    <string name="todos_title_all_tasks">All Tasks</string>
+    <string name="todos_title_priority">Priority</string>
+    <string name="todos_title_floater">Floater</string>
+    <string name="todos_title_list">List</string>
+    <string name="todos_empty_today">No tasks for today</string>
+    <string name="todos_empty_tonight">No tasks for tonight</string>
+    <string name="todos_all_done_today">All done for today</string>
+    <string name="todos_all_done_tonight">All done for tonight</string>
+    <string name="todos_empty_overdue">No overdue tasks</string>
+    <string name="todos_empty_priority">No priority tasks</string>
+    <string name="todos_empty_scheduled">No scheduled tasks</string>
+    <string name="todos_empty_all">No tasks yet</string>
+    <string name="todos_empty_list">No tasks in this list</string>
+    <string name="todos_empty_today_body">Add something for today and it will show up right here.</string>
+    <string name="todos_empty_overdue_body">Nothing has slipped past its due date.</string>
+    <string name="todos_empty_priority_body">Flag a task as priority and it will move up here.</string>
+    <string name="todos_empty_scheduled_body">Give a task a date and it will line up here.</string>
+    <string name="todos_empty_all_body">Everything you add shows up here, whatever its date.</string>
+    <string name="todos_empty_list_body">Add your first task and it will show up right here.</string>
+    <string name="car_surface_title_today">T\'Day</string>
+    <string name="car_surface_title_floater">Floater</string>
+    <string name="car_surface_loading">Loading tasks</string>
+    <string name="car_surface_load_error">Could not load tasks</string>
+    <string name="car_voice_prompt_today">Say the task to add to T\'Day</string>
+    <string name="car_voice_prompt_floater">Say the floater to add</string>
+    <string name="car_voice_empty_result">No task was heard</string>
+    <string name="car_complete_dialog_title">Complete this task?</string>
+    <string name="car_complete_dialog_confirm">Complete</string>
+    <string name="todos_section_morning">Morning</string>
+    <string name="todos_section_afternoon">Afternoon</string>
+    <string name="todos_section_tonight">Tonight</string>
+    <string name="todos_section_earlier">Overdue</string>
+    <string name="todos_section_today">Today</string>
+    <string name="todos_section_tomorrow">Tomorrow</string>
+    <string name="todos_section_rest_of">Rest of %1$s</string>
+    <string name="todos_reschedule_recurring_title">Move repeating task?</string>
+    <string name="todos_reschedule_recurring_message">Choose whether to move only this task occurrence or the entire repeating series.</string>
+    <string name="todos_reschedule_this_occurrence">This occurrence</string>
+    <string name="todos_reschedule_entire_series">Entire series</string>
+    <string name="todos_summary_title">Summary</string>
+    <string name="todos_summary_close">Close summary</string>
+    <string name="todos_summary_loading">Creating your task summary…</string>
+    <string name="todos_summary_admin_disabled">Summary is disabled by admin</string>
+    <string name="todos_summary_offline_unavailable">No summary available while offline.</string>
+    <string name="summary_source_server">Server model</string>
+    <string name="summary_source_local">Local model</string>
+    <string name="todos_list_settings">List settings</string>
+    <string name="reusable_list">Reusable list</string>
+    <string name="reusable_list_hint">Show a Reset to un-check everything and run it again</string>
+    <string name="reset_floater_list">Reset list</string>
+    <string name="floater_list_reset">List reset — everything un-checked</string>
+    <string name="error_reset_list_failed">Could not reset list.</string>
+    <string name="share_list_action">Share list</string>
+    <string name="share_section_title">Sharing</string>
+    <string name="action_share">Share</string>
+    <string name="members_title">Members</string>
+    <string name="members_add_section">Add member</string>
+    <string name="members_add_action">Add</string>
+    <string name="members_search_placeholder">Search by name or username</string>
+    <string name="members_no_results">No users found</string>
+    <string name="members_already_member">Already a member</string>
+    <string name="members_remove">Remove member</string>
+    <string name="members_leave_list">Leave list</string>
+    <string name="members_shared_by">Shared by %1$s</string>
+    <string name="share_role_owner">Owner</string>
+    <string name="share_role_editor">Editor</string>
+    <string name="share_role_viewer">Viewer</string>
+    <string name="share_due_label">Due: %1$s</string>
+    <string name="share_priority_label">Priority: %1$s</string>
+    <plurals name="share_task_count">
+        <item quantity="one">%d task</item>
+        <item quantity="other">%d tasks</item>
+    </plurals>
+    <string name="todos_save_list_settings">Save list settings</string>
+    <string name="todos_delete_list_title">Delete list?</string>
+    <string name="todos_delete_list_message">This will delete this list, every task in it, and completed history for those tasks.</string>
+    <string name="todos_due_overdue_text">Overdue, %1$s</string>
+    <string name="todos_due_text">Due %1$s</string>
+
+    <!-- Create/edit task sheet -->
+    <string name="create_task_title_new">New task</string>
+    <string name="create_task_title_edit">Edit task</string>
+    <string name="create_task_section_schedule">Schedule</string>
+    <string name="create_task_due">Due</string>
+    <string name="create_task_section_details">Details</string>
+    <string name="create_task_list">List</string>
+    <string name="create_task_no_list">No list</string>
+    <string name="create_task_priority">Priority</string>
+    <string name="create_task_priority_low">Low</string>
+    <string name="create_task_priority_normal">Normal</string>
+    <string name="create_task_priority_important">Important</string>
+    <string name="create_task_priority_urgent">Urgent</string>
+    <string name="list_settings_default_priority_none">No default</string>
+    <string name="create_task_repeat">Repeat</string>
+    <string name="create_task_repeat_none">No repeat</string>
+    <string name="create_task_repeat_daily">Daily</string>
+    <string name="create_task_repeat_weekly">Weekly</string>
+    <string name="create_task_repeat_weekdays">Weekdays</string>
+    <string name="create_task_repeat_monthly">Monthly</string>
+    <string name="create_task_repeat_yearly">Yearly</string>
+    <string name="create_task_title_placeholder">Title</string>
+    <string name="create_task_notes_placeholder">Notes</string>
+    <string name="create_task_clear_formatting">Clear formatting</string>
+    <string name="create_task_format_bold">Bold</string>
+    <string name="create_task_format_italic">Italic</string>
+    <string name="create_task_format_underline">Underline</string>
+    <string name="create_task_format_strikethrough">Strikethrough</string>
+    <string name="create_task_format_bulleted_list">Bulleted list</string>
+    <string name="create_task_format_numbered_list">Numbered list</string>
+    <string name="create_task_schedule_enabled">Task has a due date</string>
+    <string name="create_task_schedule_disabled">Floater task</string>
+    <string name="create_task_select_date">Select date</string>
+    <string name="create_task_select_time">Select time</string>
+
+    <!-- Completed screen -->
+    <string name="completed_title">Completed</string>
+    <string name="completed_empty">No completed tasks yet</string>
+    <string name="completed_empty_body">Tick something off and it will land here.</string>
+    <string name="completed_floater_empty">No finished floaters yet</string>
+    <string name="completed_floater_empty_body">Tick something off in Floater and it will land here.</string>
+
+    <!-- Calendar screen -->
+    <string name="calendar_title">Calendar</string>
+    <string name="calendar_jump_to_today">Jump to today</string>
+    <string name="calendar_today">Today</string>
+    <string name="calendar_tasks_due">Tasks due %1$s</string>
+    <string name="calendar_no_pending">No pending task due for this day</string>
+    <string name="calendar_no_pending_body">Select another date on the calendar.</string>
+    <string name="calendar_prev_month">Previous month</string>
+    <string name="calendar_next_month">Next month</string>
+    <string name="calendar_prev_week">Previous week</string>
+    <string name="calendar_next_week">Next week</string>
+    <string name="calendar_prev_day">Previous day</string>
+    <string name="calendar_next_day">Next day</string>
+    <string name="calendar_task_count_one">1 task due</string>
+    <string name="calendar_task_count_many">%1$d tasks due</string>
+    <string name="calendar_task_count_cap">9+</string>
+
+    <!-- Error handling / retry / offline -->
+    <string name="action_retry">Retry</string>
+    <string name="action_undo">Undo</string>
+    <string name="offline_toast">You\'re offline — changes will sync when your connection returns.</string>
+    <string name="offline_toast_pending_one">You\'re offline — 1 change waiting to sync.</string>
+    <string name="offline_toast_pending_many">You\'re offline — %1$d changes waiting to sync.</string>
+    <string name="online_toast">Back online — syncing your latest changes…</string>
+    <string name="backend_down_toast">Server error — the backend or database may be down. Try again shortly.</string>
+    <string name="settings_about">About</string>
+    <string name="settings_workspace_local_title">Local workspace</string>
+    <string name="settings_workspace_local_detail">On this device only</string>
+    <string name="settings_workspace_leave">Leave local workspace</string>
+    <string name="settings_workspace_delete">Delete local data</string>
+    <string name="settings_workspace_delete_title">Delete local data?</string>
+    <string name="settings_workspace_delete_body">This permanently removes every task, list and completed entry stored on this device. There is no copy on a server — download your data first if you want to keep it.</string>
+    <string name="settings_workspace_delete_done">Local data deleted.</string>
+    <string name="settings_workspace_server_title">Server sync</string>
+    <string name="settings_sync_last_synced_label">Last synced</string>
+    <string name="settings_sync_last_synced_never">Not yet</string>
+    <string name="settings_sync_now">Sync now</string>
+    <string name="settings_sync_up_to_date">Up to date</string>
+    <string name="settings_sync_offline_short">Offline</string>
+    <string name="settings_sync_offline_message">Changes will sync when connection returns.</string>
+    <string name="settings_syncing_now">Syncing...</string>
+    <string name="error_auth_expired">Your session expired — please sign in again.</string>
+    <string name="error_app_outdated">This version of the app is out of date. Please update to continue.</string>
+    <string name="error_server_outdated">The server needs to be updated before this app can continue.</string>
+    <string name="error_server">Server error. Please try again later.</string>
+    <string name="error_permission_denied">You don\'t have permission to do that.</string>
+    <string name="error_not_found">The requested item was not found.</string>
+    <string name="error_connection">Connection error. Check your internet and try again.</string>
+    <string name="error_connectivity_title">No Internet Connection</string>
+    <string name="error_connectivity">Unable to connect. Please check your network connection and try again.</string>
+    <string name="error_generic">Something went wrong. Please try again.</string>
+    <string name="error_load_failed">Failed to load.</string>
+    <string name="error_load_dashboard_failed">Failed to load dashboard.</string>
+    <string name="error_load_calendar_failed">Failed to load calendar.</string>
+    <string name="error_load_tasks_failed">Failed to load tasks.</string>
+    <string name="error_create_task_failed">Could not create task.</string>
+    <string name="error_update_task_failed">Could not update task.</string>
+    <string name="error_delete_task_failed">Could not delete task.</string>
+    <string name="error_restore_task_failed">Could not restore task.</string>
+    <string name="error_create_list_failed">Could not create list.</string>
+    <string name="error_update_list_failed">Could not update list.</string>
+    <string name="error_delete_list_failed">Could not delete list.</string>
+    <string name="error_summarize_tasks_failed">Could not summarize tasks.</string>
+    <string name="error_reset_trusted_server_failed">Could not reset trusted server.</string>
+    <string name="error_connect_server_failed">Could not connect to server.</string>
+    <string name="server_setup_error_probe_timeout">Server probe timed out. Check URL and network, then try again.</string>
+    <string name="server_setup_error_invalid_url">Invalid server URL.</string>
+    <string name="server_setup_error_insecure_transport">Use HTTPS for remote server URLs.</string>
+    <string name="server_setup_error_not_tday_server">Server is reachable but does not appear to be a T\'Day server.</string>
+    <string name="server_setup_trust_mismatch">This server\'s certificate does not match the one you trusted. Someone may be intercepting the connection. Only reset the trusted server if you changed the certificate yourself.</string>
+    <string name="server_setup_trust_unknown">This server\'s certificate is not trusted by your device. Check its fingerprint before continuing.</string>
+
+    <string name="notification_channel_task_reminders_name">Task Reminders</string>
+    <string name="notification_channel_task_reminders_description">Reminders for upcoming task due dates</string>
+    <string name="notification_channel_app_updates_name">App Updates</string>
+    <string name="notification_channel_app_updates_description">Prompts to reopen T\'Day after an update finishes installing</string>
+    <string name="update_notification_title">Update installed</string>
+    <string name="update_notification_message">Tap to reopen T\'Day.</string>
+
+    <string name="app_update_required_title">Update Required</string>
+    <string name="app_update_required_message">An update to v%1$s is required to continue.</string>
+    <string name="app_update_download_not_ready">v%1$s is not yet available for download. Please ask an administrator to upload the update.</string>
+    <string name="server_update_required_title">Server Update Needed</string>
+    <string name="server_update_required_message">Your app requires a newer server version. The server is on v%1$s. Please contact your administrator to update the server.</string>
+    <string name="install_permission_return_to_app">Grant install permission, then return to the app.</string>
+    <string name="install_permission_return_here">Grant install permission, then return here.</string>
+    <string name="overlay_install_awaiting_permission">Awaiting Permission...</string>
+    <string name="overlay_install_downloading_progress">Downloading... %1$d%%</string>
+    <string name="overlay_install_downloading">Downloading...</string>
+    <string name="overlay_install_installing">Installing...</string>
+    <string name="overlay_install_download_and_install">Download &amp; Install</string>
+
+    <string name="widget_today_tasks_description">Shows today\'s tasks at a glance</string>
+    <string name="widget_today_tasks_title">Today\'s Tasks</string>
+    <string name="widget_today_tasks_title_small">Today\'s Tasks - Small</string>
+    <string name="widget_today_tasks_title_medium">Today\'s Tasks - Medium</string>
+    <string name="widget_today_tasks_title_large">Today\'s Tasks - Large</string>
+    <string name="widget_today_tasks_empty">No tasks due today</string>
+    <string name="widget_tonight_tasks_title">Tonight\'s Tasks</string>
+    <string name="widget_tonight_tasks_empty">No tasks due tonight</string>
+    <string name="widget_tonight_all_done">All done for tonight</string>
+    <string name="widget_today_tasks_add">Add one for today</string>
+    <string name="widget_today_tasks_add_tonight">Add one for tonight</string>
+    <string name="widget_today_tasks_count">%1$d due</string>
+    <string name="widget_today_progress">%1$d of %2$d done</string>
+    <string name="widget_today_tasks_setup_title">Open T\'Day</string>
+    <string name="widget_today_tasks_setup_message">Set up your workspace</string>
+    <string name="widget_floater_tasks_description">Shows floater tasks at a glance</string>
+    <string name="widget_floater_tasks_title">Floater Tasks</string>
+    <string name="widget_floater_tasks_title_small">Floater Tasks - Small</string>
+    <string name="widget_floater_tasks_title_medium">Floater Tasks - Medium</string>
+    <string name="widget_floater_tasks_title_large">Floater Tasks - Large</string>
+    <string name="widget_floater_tasks_empty">No floater tasks</string>
+    <string name="widget_floater_tasks_add">Add a floater</string>
+    <string name="widget_floater_tasks_count">%1$d open</string>
+    <string name="widget_locked_title">T\'Day is locked</string>
+    <string name="widget_locked_message">Tasks are hidden while app lock is on</string>
+    <string name="widget_loading">Loading tasks…</string>
+    <string name="widget_list_tasks_description">Shows one list of your choice at a glance</string>
+    <string name="widget_list_tasks_title">List</string>
+    <string name="widget_list_tasks_title_small">List — Small</string>
+    <string name="widget_list_tasks_title_medium">List — Medium</string>
+    <string name="widget_list_tasks_title_large">List — Large</string>
+    <string name="widget_list_tasks_setup_title">Choose a list</string>
+    <string name="widget_list_tasks_setup_message">Tap to pick which list this widget shows</string>
+    <string name="widget_list_tasks_missing_message">That list was deleted. Tap to choose another.</string>
+    <string name="widget_list_tasks_empty">Nothing left in this list</string>
+    <string name="widget_list_picker_title">Choose a list</string>
+    <string name="widget_list_picker_subtitle">This widget will show only this list, and its + adds tasks straight to it.</string>
+    <string name="widget_list_picker_empty_title">No lists yet</string>
+    <string name="widget_list_picker_empty">Create a list in T\'Day, then tap this widget again.</string>
+    <string name="widget_list_picker_section_views">Views</string>
+    <string name="widget_list_picker_section_todo">Scheduled lists</string>
+    <string name="widget_list_picker_section_floater">Floater lists</string>
+    <string name="widget_list_picker_selected">Currently selected</string>
+
+    <!-- Latest release screen -->
+    <string name="release_title">App Version</string>
+    <string name="release_error">Unable to fetch release information. Please check your connection and try again.</string>
+    <string name="release_installed_version">Installed Version</string>
+    <string name="release_installed_label">Installed</string>
+    <string name="release_server_not_connected">Not connected</string>
+    <string name="release_server_version_unavailable">Unavailable</string>
+    <string name="release_latest_label">Latest</string>
+    <string name="release_update_available">Update Available</string>
+    <string name="release_version_mismatch">Version Mismatch</string>
+    <string name="release_app_update_required_summary">The server requires v%1$s. Update the app to continue.</string>
+    <string name="release_server_update_required_summary">This app requires the server to be on v%1$s, but the server is on v%2$s.</string>
+    <string name="release_update_ready_version">Version %1$s is ready to install.</string>
+    <string name="release_update_ready_generic">A newer version is ready to install.</string>
+    <string name="release_up_to_date">Latest</string>
+    <string name="release_up_to_date_message">You\'re running the latest version</string>
+    <string name="release_published">Published %1$s</string>
+    <string name="release_whats_new_in_version">What\'s new in %1$s</string>
+    <string name="release_no_notes_for_version">No release notes available for this version</string>
+    <string name="release_download_and_install">Download and install update</string>
+    <string name="release_allow_install_permission">Allow install permission</string>
+    <string name="release_downloading_apk">Downloading update…</string>
+    <string name="release_downloading_apk_progress">Downloading update… %1$d%%</string>
+    <string name="release_preparing_update">Preparing update…</string>
+    <string name="release_opening_installer">Opening Android installer…</string>
+    <string name="release_install_permission_return_hint">Allow T\'Day to install updates, then return here to continue automatically.</string>
+    <string name="release_download_failed">Could not download the update. Please try again.</string>
+    <string name="release_install_failed">Could not install the update.</string>
+    <string name="release_install_cancelled">Installation was cancelled. Tap Download &amp; Install to try again.</string>
+    <string name="release_install_blocked">Installation was blocked by your device. Check your device settings and try again.</string>
+    <string name="release_install_storage">Not enough storage space. Free up some space and try again.</string>
+    <string name="release_install_incompatible">This update is not compatible with your device.</string>
+    <string name="release_signature_conflict">The installed version was signed with a different key and cannot be updated directly.</string>
+    <string name="release_signature_conflict_hint">Uninstall the current version first, then return here to install the update. App data will be lost.</string>
+    <string name="release_uninstall">Uninstall current version</string>
+    <string name="release_install_success">Update installed.</string>
+    <string name="release_no_apk">No APK attached to this release.</string>
+    <string name="release_launch_update_toast">Update %1$s is available.</string>
+    <string name="task_deleted_toast">Task deleted</string>
+    <string name="task_completed_toast">Task completed</string>
+    <string name="task_copied_toast">Copied to clipboard</string>
+    <string name="task_copy_failed_toast">Could not copy to clipboard</string>
+    <string name="list_deleted_toast">List deleted</string>
+    <string name="completed_floater_list_recreated_toast">Restored — recreated “%1$s”</string>
+    <string name="password_changed_toast">Password changed successfully</string>
+    <string name="profile_name_updated_toast">Name updated successfully</string>
+    <string name="release_view_on_github">View on GitHub</string>
+
+    <!-- Language picker -->
+    <string name="settings_language">Language</string>
+    <string name="settings_language_system_default">System default</string>
+    <string name="settings_language_dialog_title">Language</string>
+
+    <!-- Empty state -->
+    <string name="todos_empty_floater">No floater tasks</string>
+    <string name="todos_empty_floater_body">Floaters have no due date — write one down and it will wait until you are ready.</string>
+    <string name="todos_empty_floater_list">No floaters in this list</string>
+    <string name="todos_empty_floater_list_body">Add a floater and it will wait right here.</string>
+
+    <!-- Theme mode -->
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+
+    <!-- Reminder options -->
+    <string name="reminder_option_none">None</string>
+    <string name="reminder_option_at_time">At time of task</string>
+    <string name="reminder_option_minutes_5">5 minutes before</string>
+    <string name="reminder_option_minutes_10">10 minutes before</string>
+    <string name="reminder_option_minutes_15">15 minutes before</string>
+    <string name="reminder_option_minutes_30">30 minutes before</string>
+    <string name="reminder_option_hours_1">1 hour before</string>
+    <string name="reminder_option_hours_2">2 hours before</string>
+    <string name="reminder_option_days_1">1 day before</string>
+    <string name="reminder_option_days_2">2 days before</string>
+
+    <!-- Reminder notification -->
+    <string name="reminder_notification_default_title">Task reminder</string>
+    <string name="reminder_due_unknown">Task is due</string>
+    <string name="reminder_due_now">Due now</string>
+    <string name="reminder_due_less_than_minute">Due in less than a minute</string>
+    <string name="reminder_due_in_minutes_one">Due in %1$d minute</string>
+    <string name="reminder_due_in_minutes_other">Due in %1$d minutes</string>
+    <string name="reminder_due_in_hours_one">Due in %1$d hour</string>
+    <string name="reminder_due_in_hours_other">Due in %1$d hours</string>
+    <string name="reminder_due_in_days_one">Due in %1$d day</string>
+    <string name="reminder_due_in_days_other">Due in %1$d days</string>
+    <string name="settings_help_guide">How-To &amp; Tips</string>
+    <string name="settings_data_title">Your data</string>
+    <string name="settings_data_summary">%1$d tasks · %2$d lists · %3$d completed</string>
+    <string name="settings_data_download">Download my data</string>
+    <string name="settings_data_import">Import</string>
+    <string name="settings_data_export_done">Your data file was saved.</string>
+    <string name="settings_data_import_done">Import complete — added %1$d items.</string>
+    <string name="settings_data_import_failed">Could not import that file.</string>
+    <string name="settings_data_confirm_title">Import data?</string>
+    <string name="settings_data_confirm_body">This adds %1$d items to your account. Nothing you already have is changed or removed.</string>
+    <string name="settings_data_confirm_import">Import</string>
+    <string name="settings_data_confirm_cancel">Cancel</string>
+    <string name="settings_push_distributor_title">Push delivery app</string>
+    <string name="settings_push_distributor_subtitle">More than one push app is installed. Pick which one delivers T\'Day\'s notifications.</string>
+    <string name="settings_push_distributor_choose">Choose</string>
+    <string name="create_task_repeat_suggestion">Repeat %1$s?</string>
+    <string name="create_task_repeat_suggestion_dismiss">Dismiss</string>
+    <string name="settings_quiet_hours">Quiet hours</string>
+    <string name="settings_quiet_hours_start">Start</string>
+    <string name="settings_quiet_hours_end">End</string>
+    <string name="settings_resting_floaters">Resting floaters</string>
+    <string name="settings_calendar_sync">Add scheduled tasks to my calendar</string>
+    <string name="settings_calendar_sync_permission_denied">T\'Day needs calendar access to add your tasks.</string>
+    <string name="settings_privacy">Privacy</string>
+    <string name="settings_screenshot_protection">Hide content in screenshots</string>
+    <string name="settings_app_lock">Require unlock to open T\'Day</string>
+    <string name="settings_app_lock_unavailable">Set up a screen lock on this device first.</string>
+    <string name="settings_legacy_cache_warning_title">Older data is not encrypted yet</string>
+    <string name="settings_legacy_cache_warning_body">A cache file from an earlier version of T\'Day could not be moved into the encrypted database, so it is still readable on this device and may contain offline changes that never reached the server. Check that everything here also appears on your other devices, then reinstall T\'Day to remove the old file.</string>
+    <string name="app_lock_title">T\'Day is locked</string>
+    <string name="app_lock_unlock">Unlock</string>
+    <string name="app_lock_prompt_title">Unlock T\'Day</string>
+    <string name="app_lock_prompt_subtitle">Confirm it\'s you to see your tasks</string>
+    <string name="settings_crash_reports">Crash &amp; problem reports</string>
+    <string name="settings_crash_reports_toggle">Send crash &amp; problem reports when something fails</string>
+    <string name="settings_crash_reports_help">About crash &amp; problem reports</string>
+
+    <!-- Crash reports: the sign-in wizard's consent step and its card -->
+    <string name="telemetry_card_title">Send error reports?</string>
+    <string name="telemetry_card_intro">If something breaks, T\'Day can send a short technical report to help fix it. You can change this any time in Settings.</string>
+    <string name="telemetry_card_never_sent_label">Never sent</string>
+    <string name="telemetry_card_never_sent">names, accounts, or any task or list content.</string>
+    <string name="telemetry_card_footnote">Off by default. You can change this in Settings.</string>
+    <string name="telemetry_card_share">Send reports</string>
+    <string name="telemetry_card_not_now">Don\'t send</string>
+    <string name="telemetry_card_read_faq">Read the full FAQ</string>
+    <string name="root_feed_search_scheduled">Search Scheduled Task</string>
+    <string name="root_feed_search_floater">Search Floater Task</string>
+
+    <!-- Bulk selection: multi-select actions in a task list -->
+    <string name="bulk_select">Select</string>
+    <string name="bulk_select_all">Select all</string>
+    <string name="bulk_deselect_all">Deselect all</string>
+    <string name="bulk_selected">%1$d selected</string>
+    <string name="bulk_selected_capped">%1$d selected — the most one action can cover</string>
+    <string name="bulk_applies_to">Applies to %1$d of %2$d — repeating tasks are skipped.</string>
+    <string name="bulk_select_task">Select task</string>
+    <string name="bulk_deselect_task">Deselect task</string>
+    <string name="bulk_action_complete">Complete</string>
+    <string name="bulk_action_priority">Priority</string>
+    <string name="bulk_action_move">Move</string>
+    <string name="bulk_action_delete">Delete</string>
+    <string name="bulk_delete_body">This removes them from every list, along with their completed history. You\'ll have a few seconds to undo.</string>
+    <string name="bulk_move_body">These tasks come from different lists. Moving them can\'t be undone in one step — you\'d have to put each one back by hand.</string>
+    <plurals name="bulk_tasks_completed">
+        <item quantity="one">Task completed</item>
+        <item quantity="other">%d tasks completed</item>
+    </plurals>
+    <plurals name="bulk_tasks_deleted">
+        <item quantity="one">Task deleted</item>
+        <item quantity="other">%d tasks deleted</item>
+    </plurals>
+    <plurals name="bulk_delete_title">
+        <item quantity="one">Delete this task?</item>
+        <item quantity="other">Delete %d tasks?</item>
+    </plurals>
+    <plurals name="bulk_delete_confirm">
+        <item quantity="one">Delete task</item>
+        <item quantity="other">Delete %d tasks</item>
+    </plurals>
+    <plurals name="bulk_move_title">
+        <item quantity="one">Move this task?</item>
+        <item quantity="other">Move %d tasks?</item>
+    </plurals>
+    <plurals name="bulk_move_confirm">
+        <item quantity="one">Move task</item>
+        <item quantity="other">Move %d tasks</item>
+    </plurals>
+    <plurals name="bulk_delete_failed">
+        <item quantity="one">A task couldn\'t be deleted</item>
+        <item quantity="other">%d tasks couldn\'t be deleted</item>
+    </plurals>
+    <plurals name="bulk_update_failed">
+        <item quantity="one">A task couldn\'t be updated</item>
+        <item quantity="other">%d tasks couldn\'t be updated</item>
+    </plurals>
+</resources>

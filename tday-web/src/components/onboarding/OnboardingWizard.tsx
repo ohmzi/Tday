@@ -1,0 +1,916 @@
+import React from "react";
+import {
+  Check,
+  Globe,
+  Loader2,
+  Lock,
+  MonitorSmartphone,
+  MoonStar,
+  ShieldCheck,
+  Smartphone,
+  Sparkles,
+  Sun,
+  User,
+  UserPlus,
+} from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { useRouter } from "@/lib/navigation";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/providers/AuthProvider";
+import { api } from "@/lib/api-client";
+import { getErrorMessage } from "@/lib/error-message";
+import { getAppMode, setAppMode } from "@/lib/local/appMode";
+import { isDaytimeNow } from "@/lib/timeOfDay";
+import { createClientCredentialEnvelope } from "@/lib/security/clientCredentialEnvelope";
+import PendingApprovalScreen from "@/components/auth/PendingApprovalScreen";
+import AnimatedHeight from "@/components/ui/AnimatedHeight";
+import {
+  clearPendingApproval,
+  getPendingApproval,
+  setPendingApproval,
+} from "@/lib/pendingApproval";
+import {
+  fetchAllSecurityQuestions,
+  type SecurityQuestion,
+} from "@/lib/securityQuestions";
+import ForgotPasswordPanel from "@/components/auth/ForgotPasswordPanel";
+import MockScheduledTaskHomeBackdrop from "@/components/auth/MockScheduledTaskHomeBackdrop";
+import {
+  HeroTile,
+  TINT,
+  WizardPrimaryButton,
+  WizardTextButton,
+} from "./OnboardingPrimitives";
+import OnboardingTelemetryStep from "./OnboardingTelemetryStep";
+import { setOnboardingTelemetryHold } from "@/lib/privacy/onboardingTelemetryHold";
+import { isCrashReportingConfigured } from "@/lib/privacy/instanceTelemetry";
+
+/** The wizard's step ids: the union, the comparisons and the chips all read them from here. */
+const STEP_MODE = "mode";
+const STEP_LOGIN = "login";
+const STEP_PRIVACY = "privacy";
+
+type AuthMode = "signin" | "create" | "forgot";
+
+/**
+ * Which step of the wizard is on screen. The native apps have three (Mode →
+ * Server → Login); on the web the Server step is already answered — the app is
+ * served by the very backend it would ask for — so choosing "Self-hosted" goes
+ * straight to Login, and the Server chip renders as completed.
+ *
+ * "Privacy" is the admin's instance-wide error-report answer: it can only be asked once an admin is
+ * signed in, so it is the step after Login and nobody else ever sees it.
+ */
+type WizardStep = typeof STEP_MODE | typeof STEP_LOGIN | typeof STEP_PRIVACY;
+
+const USERNAME_REGEX = /^[a-z0-9](?:[a-z0-9._-]{1,28}[a-z0-9])$/;
+
+type RegisterResponse = {
+  requiresApproval?: boolean;
+};
+
+export default function OnboardingWizard({
+  initialMode = "signin",
+}: {
+  initialMode?: AuthMode;
+}) {
+  const router = useRouter();
+  const { login, refreshSession } = useAuth();
+  const [searchParams] = useSearchParams();
+
+  // Returning browsers that already picked a workspace skip straight to Login,
+  // exactly as the native wizard skips Mode/Server once a server URL is saved.
+  // /register and /forgot-password are direct entry points into the Login step.
+  const [step, setStep] = React.useState<WizardStep>(() =>
+    getAppMode() != null ||
+    initialMode !== "signin" ||
+    getPendingApproval() != null
+      ? STEP_LOGIN
+      : STEP_MODE,
+  );
+  const [enteringLocalMode, setEnteringLocalMode] = React.useState(false);
+  const [mode, setMode] = React.useState<AuthMode>(initialMode);
+  const [username, setUsername] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [firstName, setFirstName] = React.useState("");
+  const [registerPassword, setRegisterPassword] = React.useState("");
+  const [confirmPassword, setConfirmPassword] = React.useState("");
+  const [securityQuestions, setSecurityQuestions] = React.useState<SecurityQuestion[]>([]);
+  const [questionId1, setQuestionId1] = React.useState<number | null>(null);
+  const [answer1, setAnswer1] = React.useState("");
+  const [questionId2, setQuestionId2] = React.useState<number | null>(null);
+  const [answer2, setAnswer2] = React.useState("");
+  const [questionId3, setQuestionId3] = React.useState<number | null>(null);
+  const [answer3, setAnswer3] = React.useState("");
+  const [errorMessage, setErrorMessage] = React.useState("");
+  const [infoMessage, setInfoMessage] = React.useState("");
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  // Initialise from the persisted marker synchronously so the holding screen is up on
+  // the first paint — the bare login form never flashes behind it on a pending reload.
+  const [pendingApprovalOpen, setPendingApprovalOpen] = React.useState(
+    () => getPendingApproval() != null,
+  );
+  // Held in memory only (never persisted) so "Check approval status" can silently
+  // re-attempt the login while the user stays on the holding screen this session.
+  const [pendingPassword, setPendingPassword] = React.useState("");
+  const [checkingApproval, setCheckingApproval] = React.useState(false);
+
+  const isCreating = mode === "create";
+  const daytime = isDaytimeNow();
+
+  // Reopen the holding screen on load whenever a pending marker is present (survives
+  // reload) or the post-redirect ?pending=1 hint is set.
+  React.useEffect(() => {
+    if (searchParams.get("pending") === "1" || getPendingApproval()) {
+      setStep(STEP_LOGIN);
+      setPendingApprovalOpen(true);
+    }
+  }, [searchParams]);
+
+  // "Self-hosted": the server step is already answered on the web, so record the
+  // choice (returning visits skip Mode) and drop straight into sign in.
+  const chooseServerMode = () => {
+    setAppMode("server");
+    setErrorMessage("");
+    setInfoMessage("");
+    setStep(STEP_LOGIN);
+  };
+
+  // "This device": no account, no network — the workspace lives in this browser's
+  // storage. Refreshing the session picks up the synthetic local user.
+  const chooseLocalMode = async () => {
+    setErrorMessage("");
+    setInfoMessage("");
+    setEnteringLocalMode(true);
+    setAppMode("local");
+    clearPendingApproval();
+    try {
+      await refreshSession();
+      router.replace("/app");
+    } catch (error) {
+      console.error(error);
+      setAppMode(null);
+      setEnteringLocalMode(false);
+      setErrorMessage("Could not open a local workspace in this browser.");
+    }
+  };
+
+  const backToModeStep = () => {
+    setAppMode(null);
+    setStep(STEP_MODE);
+    setMode("signin");
+    setErrorMessage("");
+    setInfoMessage("");
+    setPassword("");
+    setRegisterPassword("");
+    setConfirmPassword("");
+  };
+
+  // The one way off the admin's error-report step: lower the hold the auth guards are waiting on,
+  // then go where the answer (or the FAQ link) points. Stable identity, because the step closes
+  // over it in an effect.
+  const finishTelemetryStep = React.useCallback(
+    (destination: string) => {
+      setOnboardingTelemetryHold(false);
+      router.replace(destination);
+    },
+    [router],
+  );
+
+  // Nobody is asking once this wizard is gone (a back button mid-sign-in, say), so the latch must
+  // not outlive it and hold a later visit to the login route on a screen with no question.
+  React.useEffect(() => () => setOnboardingTelemetryHold(false), []);
+
+  // Load the question catalogue when the user switches to account creation, then
+  // default to the first two distinct questions.
+  React.useEffect(() => {
+    if (!isCreating || securityQuestions.length > 0) return;
+    let cancelled = false;
+    void fetchAllSecurityQuestions().then((questions) => {
+      if (cancelled) return;
+      setSecurityQuestions(questions);
+      if (questions[0]) setQuestionId1((prev) => prev ?? questions[0].id);
+      if (questions[1]) setQuestionId2((prev) => prev ?? questions[1].id);
+      if (questions[2]) setQuestionId3((prev) => prev ?? questions[2].id);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isCreating, securityQuestions.length]);
+
+  const clearMessages = () => {
+    if (errorMessage) setErrorMessage("");
+    if (infoMessage) setInfoMessage("");
+  };
+
+  const switchMode = (next: AuthMode) => {
+    setMode(next);
+    setErrorMessage("");
+    setPassword("");
+    setRegisterPassword("");
+    setConfirmPassword("");
+  };
+
+  const validateRegistration = (): boolean => {
+    const normalizedFirstName = firstName.trim();
+    const normalizedUsername = username.trim().toLowerCase();
+    if (normalizedFirstName.length < 2) {
+      setErrorMessage("First name must be at least 2 characters");
+      return false;
+    }
+    if (!USERNAME_REGEX.test(normalizedUsername)) {
+      setErrorMessage("Please enter a valid username");
+      return false;
+    }
+    if (registerPassword.length < 8) {
+      setErrorMessage("Password must be at least 8 characters");
+      return false;
+    }
+    if (!/[A-Z]/.test(registerPassword)) {
+      setErrorMessage("Password must include at least one uppercase letter");
+      return false;
+    }
+    if (!/[^A-Za-z0-9]/.test(registerPassword)) {
+      setErrorMessage("Password must include at least one special character");
+      return false;
+    }
+    if (registerPassword !== confirmPassword) {
+      setErrorMessage("Passwords do not match");
+      return false;
+    }
+    if (questionId1 == null || questionId2 == null || questionId3 == null) {
+      setErrorMessage("Please choose three security questions");
+      return false;
+    }
+    if (new Set([questionId1, questionId2, questionId3]).size !== 3) {
+      setErrorMessage("Security questions must be different");
+      return false;
+    }
+    if (
+      answer1.trim().length === 0 ||
+      answer2.trim().length === 0 ||
+      answer3.trim().length === 0
+    ) {
+      setErrorMessage("Please answer all three security questions");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSignIn = async () => {
+    setErrorMessage("");
+    setInfoMessage("");
+    const normalizedUsername = username.trim().toLowerCase();
+    if (!normalizedUsername || !password) {
+      setErrorMessage("Username and password are required");
+      return;
+    }
+    // Raised before the request leaves: once the session exists the auth guards would otherwise
+    // hand the browser to the app and take the admin's error-report step with them. Lowered on
+    // every path that does not reach that step.
+    const telemetryStepPossible = isCrashReportingConfigured();
+    if (telemetryStepPossible) setOnboardingTelemetryHold(true);
+    setIsSubmitting(true);
+    try {
+      const credentialPayload = await createClientCredentialEnvelope(username, password);
+      const result = await login(
+        normalizedUsername,
+        credentialPayload as unknown as Record<string, string>,
+      );
+
+      if (!result.ok) {
+        if (telemetryStepPossible) setOnboardingTelemetryHold(false);
+        if (result.code === "pending_approval") {
+          setPendingApproval(normalizedUsername);
+          setPendingPassword(password);
+          setPendingApprovalOpen(true);
+          return;
+        }
+        setErrorMessage(result.message || "Unable to sign in. Please try again.");
+        return;
+      }
+
+      // Approved sign-in: drop any lingering holding-screen marker.
+      clearPendingApproval();
+      if (telemetryStepPossible) {
+        // The step decides whether this admin still has a question to answer.
+        setStep(STEP_PRIVACY);
+        return;
+      }
+      router.replace("/app");
+    } catch (error) {
+      if (telemetryStepPossible) setOnboardingTelemetryHold(false);
+      console.error(error);
+      setErrorMessage(
+        error instanceof Error && error.message
+          ? error.message
+          : "Unable to sign in. Please try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCreate = async () => {
+    setErrorMessage("");
+    setInfoMessage("");
+    if (!validateRegistration()) return;
+
+    setIsSubmitting(true);
+    try {
+      const body = (await api.POST({
+        url: "/api/auth/register",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          fname: firstName.trim(),
+          lname: "",
+          username: username.trim().toLowerCase(),
+          password: registerPassword,
+          securityAnswers: [
+            { questionId: questionId1, answer: answer1.trim() },
+            { questionId: questionId2, answer: answer2.trim() },
+            { questionId: questionId3, answer: answer3.trim() },
+          ],
+        }),
+      })) as RegisterResponse | null;
+
+      if (body?.requiresApproval) {
+        setPendingApproval(username.trim().toLowerCase());
+        setPendingPassword(registerPassword);
+        setPendingApprovalOpen(true);
+        return;
+      }
+
+      // Account created (no approval needed) — drop back to sign in with the
+      // username prefilled, mirroring the native flow's "open your workspace" step.
+      setMode("signin");
+      setPassword("");
+      setRegisterPassword("");
+      setConfirmPassword("");
+      setInfoMessage("Account created. Sign in to open your workspace.");
+    } catch (error) {
+      console.error(error);
+      setErrorMessage(
+        getErrorMessage(error, "Unable to create account. Please try again."),
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Re-attempt the credentials login (the only way to detect approval — pending
+  // accounts get no session). On success the user is approved → go to the app.
+  const handleCheckApprovalStatus = async () => {
+    const pendingUsername = getPendingApproval();
+    // After a reload the in-memory password is gone; fall back to the sign-in form
+    // (prefilled) so the user can re-enter it — we never persist the password.
+    if (!pendingUsername || !pendingPassword) {
+      setPendingApprovalOpen(false);
+      setMode("signin");
+      if (pendingUsername) setUsername(pendingUsername);
+      setInfoMessage("Sign in to check your approval status.");
+      return;
+    }
+    setCheckingApproval(true);
+    try {
+      const credentialPayload = await createClientCredentialEnvelope(
+        pendingUsername,
+        pendingPassword,
+      );
+      const result = await login(
+        pendingUsername,
+        credentialPayload as unknown as Record<string, string>,
+      );
+      if (result.ok) {
+        clearPendingApproval();
+        router.replace("/app");
+        return;
+      }
+      // Still pending (or a transient failure) — keep the holding screen up.
+    } catch {
+      // Swallow and stay on the holding screen; the user can retry.
+    } finally {
+      setCheckingApproval(false);
+    }
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (isCreating) {
+      void handleCreate();
+    } else {
+      void handleSignIn();
+    }
+  };
+
+  const signInEnabled = username.trim().length > 0 && password.length > 0;
+  const createEnabled =
+    firstName.trim().length > 0 &&
+    username.trim().length > 0 &&
+    registerPassword.length > 0 &&
+    confirmPassword.length > 0 &&
+    questionId1 != null &&
+    questionId2 != null &&
+    questionId3 != null &&
+    new Set([questionId1, questionId2, questionId3]).size === 3 &&
+    answer1.trim().length > 0 &&
+    answer2.trim().length > 0 &&
+    answer3.trim().length > 0;
+  const primaryEnabled = (isCreating ? createEnabled : signInEnabled) && !isSubmitting;
+
+  return (
+    <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-muted/35" />
+      <div className="absolute inset-0 bg-[radial-gradient(1200px_700px_at_12%_12%,hsla(var(--accent),0.11),transparent),radial-gradient(900px_500px_at_90%_18%,hsla(var(--primary),0.1),transparent)]" />
+
+      {/* Blurred scheduled task home dashboard behind the dialog — the same responsive backdrop the
+          pending-approval and reset screens use (desktop layout on wide screens, the
+          mobile scheduled task home view when narrow). */}
+      <div className="absolute inset-0 overflow-hidden" aria-hidden>
+        <div className="h-full w-full scale-[1.06] blur-lg">
+          <MockScheduledTaskHomeBackdrop />
+        </div>
+        <div className="absolute inset-0 bg-background/45" />
+      </div>
+
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-10">
+        <div className="relative w-full max-w-[440px] overflow-hidden rounded-[34px] border border-border bg-background/95 p-[18px] shadow-2xl backdrop-blur-md">
+          <div className="pointer-events-none absolute inset-0 rounded-[34px] bg-gradient-to-br from-white/10 to-transparent dark:from-white/[0.04]" />
+
+          <AnimatedHeight>
+          <div className="relative flex flex-col gap-3.5">
+            {/* Header */}
+            <div className="flex items-center gap-2">
+              {daytime ? (
+                <Sun className="h-6 w-6" style={{ color: TINT.sun }} strokeWidth={2} />
+              ) : (
+                <MoonStar className="h-6 w-6" style={{ color: TINT.sun }} strokeWidth={2} />
+              )}
+              <span className="text-[31px] font-extrabold leading-none tracking-tight text-foreground">
+                {"T'Day"}
+              </span>
+            </div>
+
+            {/* Step chips */}
+            <div className="flex items-center gap-2">
+              <StepChip
+                title="Mode"
+                Icon={Smartphone}
+                tint={TINT.modeGreen}
+                active={step === STEP_MODE}
+                completed={step !== STEP_MODE}
+                // The one step you can actually walk back to on web. Server has
+                // no step of its own here, so its chip stays inert.
+                onClick={step === STEP_LOGIN ? backToModeStep : undefined}
+              />
+              <StepChip
+                title="Server"
+                Icon={Globe}
+                tint={TINT.serverBlue}
+                completed={step !== STEP_MODE}
+              />
+              <StepChip
+                title="Login"
+                Icon={User}
+                tint={TINT.loginRose}
+                active={step === STEP_LOGIN}
+                completed={step === STEP_PRIVACY}
+              />
+              {/* Only ever active for an admin, and only while the instance answer is missing. */}
+              <StepChip
+                title="Privacy"
+                Icon={ShieldCheck}
+                tint={TINT.consentBlue}
+                active={step === STEP_PRIVACY}
+              />
+            </div>
+
+            {enteringLocalMode ? (
+              <WizardLoadingPanel
+                Icon={MonitorSmartphone}
+                title="Opening T'Day"
+                subtitle="Setting up a workspace in this browser."
+              />
+            ) : step === STEP_MODE ? (
+              <div className="flex flex-col gap-[11px]">
+                <HeroTile
+                  title="Choose your setup"
+                  subtitle="Pick where T'Day keeps your tasks."
+                  Icon={Sparkles}
+                  tint={TINT.serverBlue}
+                />
+                <div className="flex items-stretch gap-2.5">
+                  <ModeChoiceTile
+                    title="Self-hosted"
+                    subtitle="Accounts and sync"
+                    Icon={Globe}
+                    tint={TINT.serverBlue}
+                    onClick={chooseServerMode}
+                  />
+                  <ModeChoiceTile
+                    title="This device"
+                    subtitle="No login"
+                    Icon={Smartphone}
+                    tint={TINT.modeGreen}
+                    onClick={() => void chooseLocalMode()}
+                  />
+                </div>
+                <p className="px-1 pt-0.5 text-[12.5px] font-bold leading-snug text-foreground/55">
+                  This device keeps everything in this browser — no account, no
+                  sync. Clearing your browsing data deletes it. You&apos;ll
+                  choose whether to encrypt it with a passphrase.
+                </p>
+                {errorMessage && (
+                  <p className="text-[14px] font-bold text-destructive">{errorMessage}</p>
+                )}
+              </div>
+            ) : step === STEP_PRIVACY ? (
+              <OnboardingTelemetryStep onFinish={finishTelemetryStep} />
+            ) : mode === "forgot" ? (
+              <ForgotPasswordPanel
+                initialUsername={username}
+                onBackToLogin={(resetUsername) => {
+                  setMode("signin");
+                  if (resetUsername) setUsername(resetUsername);
+                  setPassword("");
+                  clearMessages();
+                }}
+              />
+            ) : isSubmitting ? (
+              <WizardLoadingPanel
+                Icon={isCreating ? UserPlus : Lock}
+                title={isCreating ? "Creating account" : "Authenticating"}
+                subtitle={
+                  isCreating
+                    ? "Preparing your new T'Day account."
+                    : "Completing encrypted sign in."
+                }
+              />
+            ) : (
+              <form onSubmit={handleSubmit} className="flex flex-col gap-[11px]">
+                <HeroTile
+                  title={isCreating ? "Create account" : "Sign in"}
+                  Icon={isCreating ? UserPlus : User}
+                  tint={TINT.heroRose}
+                />
+
+                {isCreating && (
+                  <WizardInput
+                    placeholder="First name"
+                    autoComplete="given-name"
+                    autoCapitalize="words"
+                    value={firstName}
+                    onChange={(value) => {
+                      setFirstName(value);
+                      clearMessages();
+                    }}
+                  />
+                )}
+
+                <WizardInput
+                  placeholder="Username"
+                  type="text"
+                  autoComplete="username"
+                  autoCapitalize="off"
+                  value={username}
+                  onChange={(value) => {
+                    setUsername(value);
+                    clearMessages();
+                  }}
+                />
+
+                {isCreating ? (
+                  <>
+                    <WizardInput
+                      placeholder="Password"
+                      type="password"
+                      autoComplete="new-password"
+                      value={registerPassword}
+                      onChange={(value) => {
+                        setRegisterPassword(value);
+                        clearMessages();
+                      }}
+                    />
+                    <WizardInput
+                      placeholder="Confirm password"
+                      type="password"
+                      autoComplete="new-password"
+                      value={confirmPassword}
+                      onChange={(value) => {
+                        setConfirmPassword(value);
+                        clearMessages();
+                      }}
+                    />
+                    <p className="-mb-0.5 mt-0.5 text-[12px] font-bold text-foreground/55">
+                      Security questions
+                    </p>
+                    <WizardQuestionSelect
+                      value={questionId1}
+                      questions={securityQuestions.filter(
+                        (q) => q.id !== questionId2,
+                      )}
+                      onChange={(id) => {
+                        setQuestionId1(id);
+                        clearMessages();
+                      }}
+                    />
+                    <WizardInput
+                      placeholder="Answer"
+                      autoComplete="off"
+                      value={answer1}
+                      onChange={(value) => {
+                        setAnswer1(value);
+                        clearMessages();
+                      }}
+                    />
+                    <WizardQuestionSelect
+                      value={questionId2}
+                      questions={securityQuestions.filter(
+                        (q) => q.id !== questionId1 && q.id !== questionId3,
+                      )}
+                      onChange={(id) => {
+                        setQuestionId2(id);
+                        clearMessages();
+                      }}
+                    />
+                    <WizardInput
+                      placeholder="Answer"
+                      autoComplete="off"
+                      value={answer2}
+                      onChange={(value) => {
+                        setAnswer2(value);
+                        clearMessages();
+                      }}
+                    />
+                    <WizardQuestionSelect
+                      value={questionId3}
+                      questions={securityQuestions.filter(
+                        (q) => q.id !== questionId1 && q.id !== questionId2,
+                      )}
+                      onChange={(id) => {
+                        setQuestionId3(id);
+                        clearMessages();
+                      }}
+                    />
+                    <WizardInput
+                      placeholder="Answer"
+                      autoComplete="off"
+                      value={answer3}
+                      onChange={(value) => {
+                        setAnswer3(value);
+                        clearMessages();
+                      }}
+                    />
+                  </>
+                ) : (
+                  <WizardInput
+                    placeholder="Password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(value) => {
+                      setPassword(value);
+                      clearMessages();
+                    }}
+                  />
+                )}
+
+                {!isCreating && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("forgot");
+                      clearMessages();
+                    }}
+                    className="-mt-0.5 self-start text-[13px] font-bold text-primary transition active:opacity-60"
+                  >
+                    Forgot password?
+                  </button>
+                )}
+
+                {(errorMessage || infoMessage) && (
+                  <p
+                    className={cn(
+                      "text-[14px] font-bold",
+                      errorMessage ? "text-destructive" : "text-muted-foreground",
+                    )}
+                  >
+                    {errorMessage || infoMessage}
+                  </p>
+                )}
+
+                <WizardPrimaryButton
+                  label={isCreating ? "Create account" : "Sign in"}
+                  enabled={primaryEnabled}
+                />
+
+                <div className="flex items-center justify-between gap-4 pt-1.5">
+                  <WizardTextButton
+                    onClick={() =>
+                      switchMode(isCreating ? "signin" : "create")
+                    }
+                  >
+                    {isCreating ? "I already have an account" : "Create account"}
+                  </WizardTextButton>
+                  <WizardTextButton onClick={backToModeStep}>
+                    Change setup
+                  </WizardTextButton>
+                </div>
+              </form>
+            )}
+          </div>
+          </AnimatedHeight>
+        </div>
+      </div>
+
+      <PendingApprovalScreen
+        open={pendingApprovalOpen}
+        username={getPendingApproval()}
+        isChecking={checkingApproval}
+        onCheckStatus={handleCheckApprovalStatus}
+        onUseDifferentAccount={() => {
+          clearPendingApproval();
+          setPendingPassword("");
+          setPendingApprovalOpen(false);
+          setMode("signin");
+          setPassword("");
+        }}
+      />
+    </main>
+  );
+}
+
+function StepChip({
+  title,
+  Icon,
+  tint,
+  active = false,
+  completed = false,
+  onClick,
+}: {
+  title: string;
+  Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  tint: string;
+  active?: boolean;
+  completed?: boolean;
+  /** Makes a completed chip a way back to that step. Inert without it. */
+  onClick?: () => void;
+}) {
+  // A step keeps its colour once it is the active step or has been completed;
+  // completed steps swap their glyph for a checkmark, matching iOS/Android.
+  const filled = active || completed;
+  const chipClass = cn(
+    "flex flex-1 items-center justify-center gap-1.5 rounded-[18px] border px-2.5 py-2 text-[13px] font-bold transition",
+    filled ? "border-transparent text-white" : "border-border bg-muted/50 text-foreground/65",
+    onClick && "cursor-pointer active:scale-[0.97] active:opacity-80",
+  );
+  const chipStyle = filled
+    ? { backgroundColor: tint, boxShadow: `0 5px 8px ${tint}2e` }
+    : undefined;
+  const chipBody = (
+    <>
+      {completed ? (
+        <Check className="h-3.5 w-3.5" strokeWidth={3} />
+      ) : (
+        <Icon className="h-3.5 w-3.5" strokeWidth={2.5} />
+      )}
+      <span className="truncate">{title}</span>
+    </>
+  );
+
+  if (!onClick) {
+    return (
+      <div className={chipClass} style={chipStyle}>
+        {chipBody}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`Back to ${title}`}
+      className={chipClass}
+      style={chipStyle}
+    >
+      {chipBody}
+    </button>
+  );
+}
+
+/** One of the two workspace choices on the Mode step (native WizardModeChoiceButton). */
+function ModeChoiceTile({
+  title,
+  subtitle,
+  Icon,
+  tint,
+  onClick,
+}: {
+  title: string;
+  subtitle: string;
+  Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  tint: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="relative flex h-[116px] flex-1 flex-col items-start overflow-hidden rounded-[26px] p-[13px] text-left transition active:scale-[0.985] active:opacity-90"
+      style={{ backgroundColor: tint, boxShadow: `0 7px 9px ${tint}29` }}
+    >
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(140px at 22% 18%, rgba(255,255,255,0.24), rgba(255,255,255,0.08) 38%, transparent 70%)",
+        }}
+      />
+      <Icon
+        className="pointer-events-none absolute -bottom-2 -right-1 h-[70px] w-[70px] text-white/20"
+        strokeWidth={1.5}
+      />
+      <Icon className="relative h-5 w-5 text-white" strokeWidth={2.5} />
+      <span className="relative mt-auto block text-[16px] font-bold leading-tight text-white">
+        {title}
+      </span>
+      <span className="relative mt-1 block text-[12px] font-bold leading-snug text-white/85">
+        {subtitle}
+      </span>
+    </button>
+  );
+}
+
+function WizardInput({
+  placeholder,
+  value,
+  onChange,
+  type = "text",
+  autoComplete,
+  autoCapitalize,
+}: {
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  autoComplete?: string;
+  autoCapitalize?: string;
+}) {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={placeholder}
+      autoComplete={autoComplete}
+      autoCapitalize={autoCapitalize}
+      aria-label={placeholder}
+      className="h-[54px] w-full rounded-[22px] border border-border bg-muted/50 px-4 text-[15px] font-bold text-foreground shadow-sm outline-none transition placeholder:font-bold placeholder:text-foreground/40 focus:border-primary/80 focus:ring-1 focus:ring-primary/40"
+    />
+  );
+}
+
+function WizardQuestionSelect({
+  value,
+  questions,
+  onChange,
+}: {
+  value: number | null;
+  questions: SecurityQuestion[];
+  onChange: (id: number) => void;
+}) {
+  return (
+    <select
+      value={value ?? ""}
+      onChange={(event) => onChange(Number(event.target.value))}
+      aria-label="Security question"
+      className="h-[54px] w-full rounded-[22px] border border-border bg-muted/50 px-4 text-[15px] font-bold text-foreground shadow-sm outline-none transition focus:border-primary/80 focus:ring-1 focus:ring-primary/40"
+    >
+      {questions.map((question) => (
+        <option key={question.id} value={question.id}>
+          {question.text}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function WizardLoadingPanel({
+  Icon,
+  title,
+  subtitle,
+}: {
+  Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-3 py-6 text-center">
+      <Icon className="h-8 w-8 text-primary" strokeWidth={2} />
+      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+      <p className="text-[22px] font-bold text-foreground">{title}</p>
+      <p className="text-[14px] font-bold text-foreground/60">{subtitle}</p>
+    </div>
+  );
+}

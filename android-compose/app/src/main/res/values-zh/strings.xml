@@ -1,0 +1,740 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">T\'Day</string>
+
+    <!-- Shared / reusable -->
+    <string name="action_back">返回</string>
+    <string name="action_close">关闭</string>
+    <string name="action_search">搜索</string>
+    <string name="action_close_search">关闭搜索</string>
+    <string name="action_clear_search">清除搜索</string>
+    <string name="action_search_in">在%1$s中搜索</string>
+    <string name="search_no_results_body">换个词试试，或者清除搜索。</string>
+    <string name="search_no_results_settings">没有匹配的设置</string>
+    <string name="action_create_task">创建任务</string>
+    <string name="action_create_list">创建列表</string>
+    <string name="action_edit">编辑</string>
+    <string name="action_edit_task">编辑任务</string>
+    <string name="action_copy">复制</string>
+    <string name="action_copy_task">复制任务</string>
+    <string name="action_delete_task">删除任务</string>
+    <string name="action_delete_list">删除列表</string>
+    <string name="action_delete">删除</string>
+    <string name="action_schedule">安排</string>
+    <string name="action_schedule_task">安排任务</string>
+    <string name="action_float">放漂</string>
+    <string name="action_float_task">放漂任务</string>
+    <string name="action_defer">推迟</string>
+    <string name="action_defer_task">推迟任务</string>
+    <string name="quick_defer_later_today">今天晚些时候</string>
+    <string name="quick_defer_tonight">今晚</string>
+    <string name="quick_defer_tomorrow">明天早上</string>
+    <string name="quick_defer_next_week">下周</string>
+    <string name="reminder_action_snooze_hour">暂停1小时</string>
+    <string name="sweep_title">晨间清理</string>
+    <string name="sweep_done">全部处理完毕</string>
+    <string name="sweep_today">今天</string>
+    <string name="sweep_tomorrow">明天</string>
+    <string name="sweep_pick_date">选择日期</string>
+    <string name="sweep_float">变为漂浮任务</string>
+    <string name="sweep_let_go">放手</string>
+    <string name="sweep_skip">跳过</string>
+    <string name="sweep_all_to_today">全部移到今天</string>
+    <string name="sweep_swept_toast">已清理 %1$d 项任务</string>
+    <string name="day_ahead_setting">今日摘要</string>
+    <string name="day_ahead_off">关闭</string>
+    <string name="day_ahead_h7">7:00</string>
+    <string name="day_ahead_h8">8:00</string>
+    <string name="day_ahead_h9">9:00</string>
+    <string name="day_ahead_title">你的一天</string>
+    <string name="day_ahead_text">今天有 %1$d 项任务</string>
+    <string name="day_ahead_text_with_overdue">今天有 %1$d 项任务，%2$d 项积压</string>
+    <string name="task_promote_failed">无法安排任务</string>
+    <string name="task_float_failed">无法放漂任务</string>
+    <string name="action_complete">完成</string>
+    <string name="action_more_options">更多选项</string>
+    <string name="action_save">保存</string>
+    <string name="action_save_task">保存任务</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_done">完成</string>
+    <string name="action_ok">确定</string>
+    <string name="action_sign_out">退出登录</string>
+    <string name="action_expand_section">展开此区块</string>
+    <string name="action_collapse_section">收起此区块</string>
+    <string name="label_completed">已完成</string>
+    <string name="label_mark_complete">标记为完成</string>
+    <string name="label_undo_complete">撤销完成</string>
+    <string name="label_task_list">任务列表</string>
+    <string name="label_priority_task">优先任务</string>
+    <string name="label_loading">加载中…</string>
+    <string name="label_version_name">v%1$s</string>
+    <string name="label_server">服务器</string>
+
+    <!-- Scheduled task home screen -->
+    <string name="scheduled_task_home_title">T\'Day</string>
+    <string name="scheduled_task_home_category_overdue">逾期</string>
+    <string name="scheduled_task_home_category_scheduled">已安排</string>
+    <string name="scheduled_task_home_category_all">全部</string>
+    <string name="scheduled_task_home_category_priority">优先</string>
+    <string name="scheduled_task_home_category_completed">已完成</string>
+    <string name="scheduled_task_home_category_calendar">日历</string>
+    <string name="root_feed_tab_scheduled_task_home">已安排</string>
+    <string name="root_feed_tab_floater">浮动任务</string>
+    <string name="scheduled_task_home_search_no_results">没有匹配的任务</string>
+    <string name="scheduled_task_home_my_lists">我的列表</string>
+    <string name="scheduled_task_home_new_list">新建列表</string>
+    <string name="scheduled_task_home_list_name_placeholder">列表名称</string>
+    <string name="scheduled_task_home_section_list">列表</string>
+    <string name="scheduled_task_home_section_color">颜色</string>
+    <string name="scheduled_task_home_section_icon">图标</string>
+    <string name="scheduled_task_home_list_icon_option">选择 %1$s 列表图标</string>
+    <string name="scheduled_task_home_locked_list_name">登录以加载你的列表</string>
+
+    <string-array name="splash_taglines">
+        <item>你的服务器记着，所以你不必记</item>
+        <item>由你托管，被截止日期纠缠</item>
+        <item>因为“我待会儿会记得”永远是个谎言</item>
+        <item>自托管的清醒，一次一个任务</item>
+        <item>用你自己的硬件唠叨你</item>
+        <item>你的数据，你的服务器，你的无借口专区</item>
+        <item>自 v0.1 起让拖延稍微更难一点</item>
+        <item>运行在你的服务器上，管理你的生活</item>
+        <item>因为便利贴没有推送通知</item>
+        <item>把“我忘了”变成“我搞定了”</item>
+        <item>你的私人提醒机器</item>
+        <item>自托管，自整理……嗯，快了</item>
+        <item>被遗忘的任务在这里被找回</item>
+        <item>当个成年人，不过要自托管</item>
+        <item>从离你不远的服务器驯服混乱</item>
+        <item>未来的你提前道谢</item>
+        <item>云不过是别人的服务器。这一个是你的。</item>
+        <item>整理你的生活，无需房东</item>
+        <item>零信任……除了你自己的服务器</item>
+        <item>同步你的任务，评判你的优先级</item>
+        <item>今天来电了。它想要一个计划。</item>
+        <item>让“待会儿”提交正式申请</item>
+        <item>把混乱变成勾选框</item>
+        <item>你的任务正乖乖排好队</item>
+        <item>一台对你的优先级有看法的私人服务器</item>
+        <item>当你的大脑打开太多标签页时</item>
+        <item>在混乱安排你之前先安排好它</item>
+        <item>你的列表已进入高效时代</item>
+        <item>为未来的你设的小小指挥台</item>
+        <item>因为“感觉”不是任务策略</item>
+        <item>私密任务。更好的早晨。</item>
+        <item>让你的待办被看见，然后被整理</item>
+        <item>散乱的念头在这里对号入座</item>
+        <item>你的优先级有了固定住址</item>
+        <item>先同步，后慌张</item>
+        <item>日历的戏码，如今得到控制</item>
+        <item>截止日期讨厌这个自托管的小技巧</item>
+        <item>帮你的一天别再打零工</item>
+        <item>你的提醒事项有备而来</item>
+        <item>把“我应该”变成“已安排”</item>
+        <item>你的待办清单，但它真的会出现</item>
+        <item>识破“我明天再做”</item>
+        <item>一份有记性的待办清单</item>
+        <item>你的执行者，自托管</item>
+        <item>拖延症最大的噩梦</item>
+        <item>让“某天”有了日期</item>
+        <item>高效，按你的方式托管</item>
+        <item>一台服务器。零借口。</item>
+        <item>替你信守承诺</item>
+        <item>被驯服的“以后”那一栏</item>
+        <item>你的第二大脑，但靠谱</item>
+        <item>把“也许”升级为“已安排”</item>
+        <item>混乱管理，私人版</item>
+        <item>你这一天的项目经理</item>
+        <item>因为“在我脑子里”不是一套系统</item>
+        <item>任务放牧正式上线</item>
+        <item>把心理负担变成勾选标记</item>
+        <item>像好服务器那样奉上任务</item>
+        <item>你的私人问责服务器</item>
+        <item>替你确定优先级</item>
+        <item>你的借口不在日程上</item>
+        <item>为会准时出现的那个你而做</item>
+        <item>明天的你正看着呢</item>
+        <item>好想法在这里获得时间戳</item>
+        <item>没有云，没有杂乱，没有遗忘</item>
+        <item>你的一天，不用再猜</item>
+        <item>默默打理你生活里无聊的那部分</item>
+        <item>大脑放假，服务器上班</item>
+        <item>野心，现在带上了截止日期</item>
+        <item>小任务，大服务器能量</item>
+        <item>每个清单都值得一个属于你的家</item>
+        <item>为你的决心提供在线时间</item>
+        <item>你自己要来的那种唠叨</item>
+        <item>因为“这周找个时间”不是时间</item>
+        <item>你的计划，已备份，已回到正轨</item>
+        <item>从一台你能拔掉电源的机器提醒你</item>
+        <item>少开标签页，多做点事</item>
+        <item>把脑子里那一堆变成计划</item>
+        <item>localhost，但用来管生活</item>
+        <item>你那一箱子的打算，都排好了</item>
+        <item>尊重截止日期，附赠隐私</item>
+        <item>你自己作息的 root 权限</item>
+        <item>让“很忙”重新有意义</item>
+        <item>未来的你已经提交了申请</item>
+        <item>把事做完的那份安静</item>
+        <item>不订阅，不意外，不遗忘</item>
+        <item>秩序，刚从你自己的机柜里端出来</item>
+        <item>“紧急”终于遇上了“已安排”</item>
+        <item>你的一天现在能顺利编译了</item>
+        <item>离开云端，抓住重点</item>
+    </string-array>
+
+    <!-- Settings screen -->
+    <string name="settings_title">设置</string>
+    <string name="settings_unknown_user">未知用户</string>
+    <string name="settings_role_label">角色：%1$s</string>
+    <string name="settings_role_default">用户</string>
+    <!-- Account settings (profile name + password change) -->
+    <string name="settings_account_name_label">姓名</string>
+    <string name="settings_account_username_label">用户名</string>
+    <string name="settings_account_password_label">密码</string>
+    <string name="settings_account_change_password">更改</string>
+    <string name="settings_account_current_password">当前密码</string>
+    <string name="settings_account_confirm_new_password">确认新密码</string>
+    <string name="settings_account_forgot_password">忘记密码？</string>
+    <string name="settings_account_password_requirement">密码至少需要 8 个字符，并包含一个大写字母和一个特殊字符。</string>
+    <string name="settings_account_show_password">显示密码</string>
+    <string name="settings_account_hide_password">隐藏密码</string>
+    <string name="settings_account_not_signed_in">您尚未登录。</string>
+    <string name="settings_account_name_required">姓名不能为空。</string>
+    <string name="error_update_name_failed">无法更新您的姓名，请重试。</string>
+    <string name="error_change_password_failed">无法更改您的密码，请重试。</string>
+    <string name="settings_appearance">外观</string>
+    <string name="settings_motion">动效</string>
+    <string name="settings_reduce_motion">减弱动效</string>
+    <string name="settings_reduce_motion_system">动画已在 Android 设置中关闭。</string>
+    <string name="settings_behavior">行为</string>
+    <string name="settings_default_home_screen">默认主屏幕</string>
+    <string name="settings_reminders">提醒</string>
+    <string name="settings_feature_toggle">功能开关</string>
+    <string name="settings_notifications">通知</string>
+    <string name="settings_notifications_blocked">T\'Day 的通知已在 Android 设置中关闭。</string>
+    <string name="settings_notifications_declined">未允许通知，因此 T\'Day 无法发送提醒。</string>
+    <string name="settings_ai_task_summary">摘要</string>
+    <string name="settings_default_reminder">默认提醒</string>
+    <string name="settings_update_available_version">v%1$s 可用</string>
+    <string name="settings_server_compatible">兼容</string>
+    <string name="settings_server_incompatible">不兼容</string>
+
+    <!-- Onboarding / wizard -->
+    <string name="onboarding_step_mode">模式</string>
+    <string name="onboarding_step_server">服务器</string>
+    <string name="onboarding_step_login">登录</string>
+    <string name="onboarding_step_privacy">隐私</string>
+    <string name="onboarding_mode_title">选择你的设置方式</string>
+    <string name="onboarding_mode_subtitle">选择 T\'Day 在哪里保存你的任务。</string>
+    <string name="onboarding_mode_server_title">自托管服务器</string>
+    <string name="onboarding_mode_server_short_title">自托管</string>
+    <string name="onboarding_mode_server_short_subtitle">账户与同步</string>
+    <string name="onboarding_mode_local_short_title">此设备</string>
+    <string name="onboarding_mode_local_short_subtitle">无需登录</string>
+    <string name="onboarding_server_hero_subtitle">连接你的 T\'Day 端点。</string>
+    <string name="onboarding_server_url_label">服务器网址</string>
+    <string name="onboarding_server_url_placeholder">https://app.example.com</string>
+    <string name="onboarding_reset_trust">重置受信任的服务器</string>
+    <string name="onboarding_resetting_trust">正在重置信任…</string>
+    <string name="onboarding_connect">连接</string>
+    <string name="onboarding_connecting_title">正在连接服务器…</string>
+    <string name="onboarding_connecting_subtitle">正在检查端点、TLS 和工作区设置</string>
+    <string name="onboarding_username_label">用户名</string>
+    <string name="onboarding_password_label">密码</string>
+    <string name="onboarding_sign_in">登录</string>
+    <string name="onboarding_create_account">创建账户</string>
+    <string name="onboarding_change_setup">更改设置</string>
+    <string name="onboarding_first_name_label">名字</string>
+    <string name="onboarding_confirm_password_label">确认密码</string>
+    <string name="onboarding_creating_account">正在创建账户…</string>
+    <string name="onboarding_back_to_sign_in">返回登录</string>
+    <string name="onboarding_authenticating_title">正在验证身份…</string>
+    <string name="onboarding_authenticating_register_subtitle">正在提交注册并等待审批状态</string>
+    <string name="onboarding_authenticating_login_subtitle">正在加密会话并加载你的工作区</string>
+    <string name="onboarding_error_connect_fallback">无法连接到服务器</string>
+    <string name="onboarding_error_reset_trust_fallback">无法重置受信任的服务器</string>
+    <string name="onboarding_validation_first_name_min">名字至少需要 2 个字符</string>
+    <string name="onboarding_validation_username_required">请填写用户名</string>
+    <string name="onboarding_validation_username_invalid">请输入有效的用户名</string>
+    <string name="onboarding_validation_password_required">请填写密码和确认密码</string>
+    <string name="onboarding_validation_password_min">密码至少需要 8 个字符</string>
+    <string name="onboarding_validation_password_uppercase">密码必须包含至少一个大写字母</string>
+    <string name="onboarding_validation_password_special">密码必须包含至少一个特殊字符</string>
+    <string name="onboarding_validation_password_mismatch">两次输入的密码不一致</string>
+
+    <!-- Authentication / credential messages -->
+    <string name="auth_pending_admin_approval">账户正在等待管理员审批。</string>
+    <string name="auth_password_manager_save_server_url_failed">Android 密码管理器无法保存此服务器网址。请检查是否已启用密码管理器。</string>
+    <string name="auth_password_manager_save_login_failed">Android 密码管理器无法保存此登录信息。请检查是否已启用密码管理器。</string>
+    <string name="auth_error_incorrect_credentials">用户名或密码不正确</string>
+
+    <!-- Todo list screen -->
+    <string name="todos_summarize">汇总任务</string>
+    <string name="todos_title_tasks">任务</string>
+    <string name="todos_title_today">今天</string>
+    <string name="todos_title_tonight">今晚</string>
+    <string name="todos_title_overdue">逾期</string>
+    <string name="todos_title_scheduled">已安排</string>
+    <string name="todos_title_all_tasks">所有任务</string>
+    <string name="todos_title_priority">优先</string>
+    <string name="todos_title_floater">浮动任务</string>
+    <string name="todos_title_list">列表</string>
+    <string name="todos_empty_today">今天没有任务</string>
+    <string name="todos_empty_tonight">今晚没有任务</string>
+    <string name="todos_all_done_today">今天的任务全部完成</string>
+    <string name="todos_all_done_tonight">今晚的任务全部完成</string>
+    <string name="todos_empty_overdue">没有逾期任务</string>
+    <string name="todos_empty_priority">没有优先任务</string>
+    <string name="todos_empty_scheduled">没有已安排的任务</string>
+    <string name="todos_empty_all">还没有任务</string>
+    <string name="todos_empty_list">此列表中没有任务</string>
+    <string name="todos_empty_today_body">添加今天要做的事，它就会出现在这里。</string>
+    <string name="todos_empty_overdue_body">没有任务超过截止日期。</string>
+    <string name="todos_empty_priority_body">把任务标记为优先，它就会移到这里。</string>
+    <string name="todos_empty_scheduled_body">给任务设置日期，它就会排在这里。</string>
+    <string name="todos_empty_all_body">你添加的所有任务都会出现在这里，无论日期。</string>
+    <string name="todos_empty_list_body">添加第一个任务，它就会出现在这里。</string>
+    <string name="car_surface_title_today">T\'Day</string>
+    <string name="car_surface_title_floater">浮动任务</string>
+    <string name="car_surface_loading">正在加载任务</string>
+    <string name="car_surface_load_error">无法加载任务</string>
+    <string name="car_voice_prompt_today">说出要添加到 T\'Day 的任务</string>
+    <string name="car_voice_prompt_floater">说出要添加的浮动任务</string>
+    <string name="car_voice_empty_result">未听到任务</string>
+    <string name="car_complete_dialog_title">完成此任务？</string>
+    <string name="car_complete_dialog_confirm">完成</string>
+    <string name="todos_section_morning">上午</string>
+    <string name="todos_section_afternoon">下午</string>
+    <string name="todos_section_tonight">今晚</string>
+    <string name="todos_section_earlier">逾期</string>
+    <string name="todos_section_today">今天</string>
+    <string name="todos_section_tomorrow">明天</string>
+    <string name="todos_section_rest_of">%1$s 的剩余时间</string>
+    <string name="todos_reschedule_recurring_title">移动重复任务？</string>
+    <string name="todos_reschedule_recurring_message">请选择仅移动此次任务，还是整个重复系列。</string>
+    <string name="todos_reschedule_this_occurrence">此次任务</string>
+    <string name="todos_reschedule_entire_series">整个系列</string>
+    <string name="todos_summary_title">摘要</string>
+    <string name="todos_summary_close">关闭摘要</string>
+    <string name="todos_summary_loading">正在生成你的任务摘要…</string>
+    <string name="todos_summary_admin_disabled">摘要已被管理员禁用</string>
+    <string name="todos_summary_offline_unavailable">离线时无法提供摘要。</string>
+    <string name="todos_list_settings">列表设置</string>
+    <string name="reusable_list">可重用清单</string>
+    <string name="reusable_list_hint">显示“重置”以取消所有勾选并再次使用</string>
+    <string name="reset_floater_list">重置清单</string>
+    <string name="floater_list_reset">清单已重置——全部取消勾选</string>
+    <string name="error_reset_list_failed">无法重置清单。</string>
+    <string name="share_list_action">分享列表</string>
+    <string name="share_section_title">共享</string>
+    <string name="action_share">分享</string>
+    <string name="members_title">成员</string>
+    <string name="members_add_section">添加成员</string>
+    <string name="members_add_action">添加</string>
+    <string name="members_search_placeholder">按姓名或用户名搜索</string>
+    <string name="members_no_results">未找到用户</string>
+    <string name="members_already_member">已是成员</string>
+    <string name="members_remove">移除成员</string>
+    <string name="members_leave_list">退出列表</string>
+    <string name="members_shared_by">由 %1$s 分享</string>
+    <string name="share_role_owner">所有者</string>
+    <string name="share_role_editor">编辑者</string>
+    <string name="share_role_viewer">查看者</string>
+    <string name="share_due_label">截止：%1$s</string>
+    <string name="share_priority_label">优先级：%1$s</string>
+    <plurals name="share_task_count">
+        <item quantity="other">%d个任务</item>
+    </plurals>
+    <string name="todos_save_list_settings">保存列表设置</string>
+    <string name="todos_delete_list_title">删除列表？</string>
+    <string name="todos_delete_list_message">这将删除此列表、其中的所有任务，以及这些任务的完成历史记录。</string>
+    <string name="todos_due_overdue_text">逾期，%1$s</string>
+    <string name="todos_due_text">截止 %1$s</string>
+
+    <!-- Create/edit task sheet -->
+    <string name="create_task_title_new">新任务</string>
+    <string name="create_task_title_edit">编辑任务</string>
+    <string name="create_task_section_schedule">安排</string>
+    <string name="create_task_due">截止</string>
+    <string name="create_task_section_details">详情</string>
+    <string name="create_task_list">列表</string>
+    <string name="create_task_no_list">无列表</string>
+    <string name="create_task_priority">优先级</string>
+    <string name="create_task_priority_low">低</string>
+    <string name="create_task_priority_normal">普通</string>
+    <string name="create_task_priority_important">重要</string>
+    <string name="create_task_priority_urgent">紧急</string>
+    <string name="create_task_repeat">重复</string>
+    <string name="create_task_repeat_none">不重复</string>
+    <string name="create_task_repeat_daily">每天</string>
+    <string name="create_task_repeat_weekly">每周</string>
+    <string name="create_task_repeat_weekdays">工作日</string>
+    <string name="create_task_repeat_monthly">每月</string>
+    <string name="create_task_repeat_yearly">每年</string>
+    <string name="create_task_title_placeholder">标题</string>
+    <string name="create_task_notes_placeholder">备注</string>
+    <string name="create_task_clear_formatting">清除格式</string>
+    <string name="create_task_format_bold">粗体</string>
+    <string name="create_task_format_italic">斜体</string>
+    <string name="create_task_format_underline">下划线</string>
+    <string name="create_task_format_strikethrough">删除线</string>
+    <string name="create_task_format_bulleted_list">项目符号列表</string>
+    <string name="create_task_format_numbered_list">编号列表</string>
+    <string name="create_task_schedule_enabled">任务有截止日期</string>
+    <string name="create_task_schedule_disabled">浮动任务</string>
+    <string name="create_task_select_date">选择日期</string>
+    <string name="create_task_select_time">选择时间</string>
+
+    <!-- Completed screen -->
+    <string name="completed_title">已完成</string>
+    <string name="completed_empty">还没有已完成的任务</string>
+    <string name="completed_empty_body">完成一个任务，它就会出现在这里。</string>
+    <string name="completed_floater_empty">还没有已完成的随手事项</string>
+    <string name="completed_floater_empty_body">在随手事项中勾选一项，它就会显示在这里。</string>
+
+    <!-- Calendar screen -->
+    <string name="calendar_title">日历</string>
+    <string name="calendar_jump_to_today">跳到今天</string>
+    <string name="calendar_today">今天</string>
+    <string name="calendar_tasks_due">%1$s 到期的任务</string>
+    <string name="calendar_no_pending">这一天没有待办任务到期</string>
+    <string name="calendar_no_pending_body">在日历上选择另一个日期。</string>
+    <string name="calendar_prev_month">上个月</string>
+    <string name="calendar_next_month">下个月</string>
+    <string name="calendar_prev_week">上一周</string>
+    <string name="calendar_next_week">下一周</string>
+    <string name="calendar_prev_day">前一天</string>
+    <string name="calendar_next_day">后一天</string>
+    <string name="calendar_task_count_one">1 个任务到期</string>
+    <string name="calendar_task_count_many">%1$d 个任务到期</string>
+    <string name="calendar_task_count_cap">9+</string>
+
+    <!-- Error handling / retry / offline -->
+    <string name="action_retry">重试</string>
+    <string name="action_undo">撤销</string>
+    <string name="settings_about">关于</string>
+    <string name="settings_workspace_local_title">本地工作区</string>
+    <string name="settings_workspace_local_detail">仅在此设备上</string>
+    <string name="settings_workspace_leave">退出本地工作区</string>
+    <string name="settings_workspace_delete">删除本地数据</string>
+    <string name="settings_workspace_delete_title">删除本地数据？</string>
+    <string name="settings_workspace_delete_body">这将永久删除保存在此设备上的所有任务、清单和已完成记录。服务器上没有副本 — 如果想保留，请先下载你的数据。</string>
+    <string name="settings_workspace_delete_done">本地数据已删除。</string>
+    <string name="settings_workspace_server_title">服务器同步</string>
+    <string name="settings_sync_last_synced_label">上次同步</string>
+    <string name="settings_sync_last_synced_never">尚未同步</string>
+    <string name="settings_sync_now">立即同步</string>
+    <string name="settings_sync_up_to_date">已是最新</string>
+    <string name="settings_sync_offline_short">离线</string>
+    <string name="settings_sync_offline_message">恢复连接后更改将自动同步。</string>
+    <string name="settings_syncing_now">正在同步...</string>
+    <string name="error_auth_expired">会话已过期。请重新登录。</string>
+    <string name="error_app_outdated">此应用版本已过时。请更新后继续。</string>
+    <string name="error_server_outdated">需要先更新服务器，此应用才能继续。</string>
+    <string name="error_server">服务器错误。请稍后重试。</string>
+    <string name="error_permission_denied">你没有执行此操作的权限。</string>
+    <string name="error_not_found">未找到所请求的项目。</string>
+    <string name="error_connection">连接错误。请检查网络后重试。</string>
+    <string name="error_connectivity_title">无网络连接</string>
+    <string name="error_connectivity">无法连接。请检查网络连接后重试。</string>
+    <string name="error_generic">出现了问题。请重试。</string>
+    <string name="error_load_failed">加载失败。</string>
+    <string name="error_load_dashboard_failed">加载仪表板失败。</string>
+    <string name="error_load_calendar_failed">加载日历失败。</string>
+    <string name="error_load_tasks_failed">加载任务失败。</string>
+    <string name="error_create_task_failed">无法创建任务。</string>
+    <string name="error_update_task_failed">无法更新任务。</string>
+    <string name="error_delete_task_failed">无法删除任务。</string>
+    <string name="error_restore_task_failed">无法恢复任务。</string>
+    <string name="error_create_list_failed">无法创建列表。</string>
+    <string name="error_update_list_failed">无法更新列表。</string>
+    <string name="error_delete_list_failed">无法删除列表。</string>
+    <string name="error_summarize_tasks_failed">无法汇总任务。</string>
+    <string name="error_reset_trusted_server_failed">无法重置受信任的服务器。</string>
+    <string name="error_connect_server_failed">无法连接到服务器。</string>
+    <string name="server_setup_error_probe_timeout">服务器探测超时。请检查网址和网络后重试。</string>
+    <string name="server_setup_error_invalid_url">服务器网址无效。</string>
+    <string name="server_setup_error_insecure_transport">远程服务器网址请使用 HTTPS。</string>
+    <string name="server_setup_error_not_tday_server">服务器可以访问，但似乎不是 T\'Day 服务器。</string>
+
+    <string name="notification_channel_task_reminders_name">任务提醒</string>
+    <string name="notification_channel_task_reminders_description">即将到期任务的提醒</string>
+    <string name="notification_channel_app_updates_name">应用更新</string>
+    <string name="notification_channel_app_updates_description">更新安装完成后提示重新打开 T\'Day</string>
+    <string name="update_notification_title">更新已安装</string>
+    <string name="update_notification_message">点按以重新打开 T\'Day。</string>
+
+    <string name="app_update_required_title">需要更新</string>
+    <string name="app_update_required_message">需要更新到 v%1$s 才能继续。</string>
+    <string name="app_update_download_not_ready">v%1$s 尚不可下载。请联系管理员上传更新。</string>
+    <string name="server_update_required_title">需要更新服务器</string>
+    <string name="server_update_required_message">你的应用需要更新的服务器版本。服务器当前为 v%1$s。请联系管理员更新服务器。</string>
+    <string name="install_permission_return_to_app">授予安装权限，然后返回应用。</string>
+    <string name="install_permission_return_here">授予安装权限，然后返回此处。</string>
+    <string name="overlay_install_awaiting_permission">正在等待权限...</string>
+    <string name="overlay_install_downloading_progress">正在下载... %1$d%%</string>
+    <string name="overlay_install_downloading">正在下载...</string>
+    <string name="overlay_install_installing">正在安装...</string>
+    <string name="overlay_install_download_and_install">下载并安装</string>
+
+    <string name="widget_today_tasks_description">一目了然地显示今天的任务</string>
+    <string name="widget_today_tasks_title">今天的任务</string>
+    <string name="widget_today_tasks_title_small">今天的任务 - 小</string>
+    <string name="widget_today_tasks_title_medium">今天的任务 - 中</string>
+    <string name="widget_today_tasks_title_large">今天的任务 - 大</string>
+    <string name="widget_today_tasks_empty">今天没有到期任务</string>
+    <string name="widget_tonight_tasks_title">今晚的任务</string>
+    <string name="widget_tonight_tasks_empty">今晚没有到期任务</string>
+    <string name="widget_tonight_all_done">今晚的任务全部完成</string>
+    <string name="widget_today_tasks_add">添加一个今天的任务</string>
+    <string name="widget_today_tasks_add_tonight">添加一个今晚的任务</string>
+    <string name="widget_today_tasks_count">%1$d 个到期</string>
+    <string name="widget_today_progress">已完成 %1$d/%2$d</string>
+    <string name="widget_today_tasks_setup_title">打开 T\'Day</string>
+    <string name="widget_today_tasks_setup_message">设置你的工作区</string>
+    <string name="widget_floater_tasks_description">一目了然地显示浮动任务</string>
+    <string name="widget_floater_tasks_title">浮动任务</string>
+    <string name="widget_floater_tasks_title_small">浮动任务 - 小</string>
+    <string name="widget_floater_tasks_title_medium">浮动任务 - 中</string>
+    <string name="widget_floater_tasks_title_large">浮动任务 - 大</string>
+    <string name="widget_floater_tasks_empty">没有浮动任务</string>
+    <string name="widget_floater_tasks_add">添加一个浮动任务</string>
+    <string name="widget_floater_tasks_count">%1$d 个未完成</string>
+    <string name="widget_loading">正在加载任务…</string>
+    <string name="widget_list_tasks_description">一目了然地显示你选择的一个清单</string>
+    <string name="widget_list_tasks_title">清单</string>
+    <string name="widget_list_tasks_title_small">清单 - 小</string>
+    <string name="widget_list_tasks_title_medium">清单 - 中</string>
+    <string name="widget_list_tasks_title_large">清单 - 大</string>
+    <string name="widget_list_tasks_setup_title">选择清单</string>
+    <string name="widget_list_tasks_setup_message">轻点以选择此小组件显示的清单</string>
+    <string name="widget_list_tasks_missing_message">该清单已删除。轻点以选择其他清单。</string>
+    <string name="widget_list_tasks_empty">此列表已清空</string>
+    <string name="widget_list_picker_title">选择清单</string>
+    <string name="widget_list_picker_subtitle">此小组件只显示这个清单，点 + 会直接向其中添加任务。</string>
+    <string name="widget_list_picker_empty_title">还没有清单</string>
+    <string name="widget_list_picker_empty">先在 T\'Day 中创建清单，然后再轻点此小组件。</string>
+    <string name="widget_list_picker_section_views">视图</string>
+    <string name="widget_list_picker_section_todo">计划清单</string>
+    <string name="widget_list_picker_section_floater">浮动清单</string>
+    <string name="widget_list_picker_selected">已选择</string>
+
+    <!-- Latest release screen -->
+    <string name="release_title">应用版本</string>
+    <string name="release_error">无法获取发布信息。请检查网络连接后重试。</string>
+    <string name="release_installed_version">已安装版本</string>
+    <string name="release_installed_label">已安装</string>
+    <string name="release_server_not_connected">未连接</string>
+    <string name="release_server_version_unavailable">不可用</string>
+    <string name="release_latest_label">最新</string>
+    <string name="release_update_available">有可用更新</string>
+    <string name="release_version_mismatch">版本不匹配</string>
+    <string name="release_app_update_required_summary">服务器要求 v%1$s。请更新应用以继续。</string>
+    <string name="release_server_update_required_summary">此应用要求服务器为 v%1$s，但服务器当前为 v%2$s。</string>
+    <string name="release_update_ready_version">版本 %1$s 已准备好安装。</string>
+    <string name="release_update_ready_generic">已有较新版本可供安装。</string>
+    <string name="release_up_to_date">最新</string>
+    <string name="release_up_to_date_message">你正在运行最新版本</string>
+    <string name="release_published">发布于 %1$s</string>
+    <string name="release_whats_new_in_version">%1$s 的新增内容</string>
+    <string name="release_no_notes_for_version">此版本没有可用的发布说明</string>
+    <string name="release_download_and_install">下载并安装更新</string>
+    <string name="release_allow_install_permission">允许安装权限</string>
+    <string name="release_downloading_apk">正在下载更新…</string>
+    <string name="release_downloading_apk_progress">正在下载更新… %1$d%%</string>
+    <string name="release_preparing_update">正在准备更新…</string>
+    <string name="release_opening_installer">正在打开 Android 安装程序…</string>
+    <string name="release_install_permission_return_hint">允许 T\'Day 安装更新，然后返回此处自动继续。</string>
+    <string name="release_download_failed">无法下载更新。请重试。</string>
+    <string name="release_install_failed">无法安装更新。</string>
+    <string name="release_install_cancelled">安装已取消。点按“下载并安装”重试。</string>
+    <string name="release_install_blocked">安装被你的设备阻止。请检查设备设置后重试。</string>
+    <string name="release_install_storage">存储空间不足。请释放一些空间后重试。</string>
+    <string name="release_install_incompatible">此更新与你的设备不兼容。</string>
+    <string name="release_signature_conflict">已安装的版本使用了不同的密钥签名，无法直接更新。</string>
+    <string name="release_signature_conflict_hint">请先卸载当前版本，然后返回此处安装更新。应用数据将会丢失。</string>
+    <string name="release_uninstall">卸载当前版本</string>
+    <string name="release_install_success">更新已安装。</string>
+    <string name="release_no_apk">此版本未附带 APK。</string>
+    <string name="release_launch_update_toast">更新 %1$s 已可用。</string>
+    <string name="task_deleted_toast">任务已删除</string>
+    <string name="task_copied_toast">已复制到剪贴板</string>
+    <string name="task_copy_failed_toast">无法复制到剪贴板</string>
+    <string name="list_deleted_toast">列表已删除</string>
+    <string name="release_view_on_github">在 GitHub 上查看</string>
+
+    <!-- Language picker -->
+    <string name="settings_language">语言</string>
+    <string name="settings_language_system_default">系统默认</string>
+    <string name="settings_language_dialog_title">语言</string>
+
+    <!-- Empty state -->
+    <string name="todos_empty_floater">没有浮动任务</string>
+    <string name="todos_empty_floater_body">浮动任务没有截止日期——记下一个，它会一直等你。</string>
+    <string name="todos_empty_floater_list">此列表中没有浮动任务</string>
+    <string name="todos_empty_floater_list_body">添加一个浮动任务，它会在这里等你。</string>
+
+    <!-- Theme mode -->
+    <string name="settings_theme_system">跟随系统</string>
+    <string name="settings_theme_light">浅色</string>
+    <string name="settings_theme_dark">深色</string>
+
+    <!-- Reminder options -->
+    <string name="reminder_option_none">无</string>
+    <string name="reminder_option_at_time">任务时刻</string>
+    <string name="reminder_option_minutes_5">提前5分钟</string>
+    <string name="reminder_option_minutes_10">提前10分钟</string>
+    <string name="reminder_option_minutes_15">提前15分钟</string>
+    <string name="reminder_option_minutes_30">提前30分钟</string>
+    <string name="reminder_option_hours_1">提前1小时</string>
+    <string name="reminder_option_hours_2">提前2小时</string>
+    <string name="reminder_option_days_1">提前1天</string>
+    <string name="reminder_option_days_2">提前2天</string>
+
+    <!-- Reminder notification -->
+    <string name="reminder_notification_default_title">任务提醒</string>
+    <string name="reminder_due_unknown">任务已到期</string>
+    <string name="reminder_due_now">现在到期</string>
+    <string name="reminder_due_less_than_minute">不到一分钟后到期</string>
+    <string name="reminder_due_in_minutes_one">%1$d分钟后到期</string>
+    <string name="reminder_due_in_minutes_other">%1$d分钟后到期</string>
+    <string name="reminder_due_in_hours_one">%1$d小时后到期</string>
+    <string name="reminder_due_in_hours_other">%1$d小时后到期</string>
+    <string name="reminder_due_in_days_one">%1$d天后到期</string>
+    <string name="reminder_due_in_days_other">%1$d天后到期</string>
+
+    <!-- Auth, offline toasts, security questions (lint MissingTranslation backfill) -->
+    <string name="error_cannot_reach">无法连接服务器。请检查网络连接以及服务器地址是否正确。</string>
+    <string name="error_server_unavailable">服务器当前没有响应——可能已停机或正在重启。如果持续出现，请联系管理员。</string>
+    <string name="error_update_security_questions_failed">无法更新你的安全问题。请重试。</string>
+    <string name="forgot_password_admin_request_failed">无法发送请求。请重试。</string>
+    <string name="forgot_password_back_to_sign_in">返回登录</string>
+    <string name="forgot_password_continue">继续</string>
+    <string name="forgot_password_entry">忘记密码？</string>
+    <string name="forgot_password_new_password">新密码</string>
+    <string name="forgot_password_ok">确定</string>
+    <string name="forgot_password_questions_unavailable">无法加载安全问题。</string>
+    <string name="forgot_password_reenter_answers">请重新输入你的安全答案。</string>
+    <string name="forgot_password_request_admin">向管理员请求重置</string>
+    <string name="forgot_password_reset">重置密码</string>
+    <string name="forgot_password_reset_failed">答案不匹配。请重试。</string>
+    <string name="forgot_password_reset_failed_contact_admin">%1$s 请联系管理员重置密码。</string>
+    <string name="forgot_password_reset_success">密码已重置。请使用新密码登录。</string>
+    <string name="forgot_password_subtitle_locked">错误次数过多。你可以向管理员请求重置密码。</string>
+    <string name="forgot_password_subtitle_requested">请求已发送。管理员将重置你的密码并提供临时密码。</string>
+    <string name="forgot_password_success_title">密码已更改</string>
+    <string name="forgot_password_title">重置你的密码</string>
+    <string name="forgot_password_username_required">请输入用户名</string>
+    <string name="forgot_password_verify">验证答案</string>
+    <string name="offline_toast">你已离线——恢复连接后将同步更改。</string>
+    <string name="offline_toast_pending_many">你已离线——%1$d 个更改等待同步。</string>
+    <string name="offline_toast_pending_one">你已离线——1 个更改等待同步。</string>
+    <string name="online_toast">已恢复在线——正在同步你的最新更改…</string>
+    <string name="backend_down_toast">服务器错误——后端或数据库可能已关闭。请稍后重试。</string>
+    <string name="password_changed_toast">密码修改成功</string>
+    <string name="pending_approval_check">查看审批状态</string>
+    <string name="pending_approval_message">你的账户（%1$s）正在等待管理员审批。审批通过后即可使用。</string>
+    <string name="pending_approval_message_generic">你的账户正在等待管理员审批。审批通过后即可使用。</string>
+    <string name="pending_approval_title">等待审批</string>
+    <string name="pending_approval_use_different_account">使用其他账户</string>
+    <string name="profile_name_updated_toast">姓名更新成功</string>
+    <string name="security_questions_answer_label">答案</string>
+    <string name="security_questions_answers_required">请回答全部三个问题</string>
+    <string name="security_questions_back">返回</string>
+    <string name="security_questions_distinct_required">选择三个不同的问题</string>
+    <string name="security_questions_gate_subtitle">选择三个安全问题。当你需要重置密码时，我们将用它们来验证你的身份。</string>
+    <string name="security_questions_gate_title">设置安全问题</string>
+    <string name="security_questions_question_1">问题 1</string>
+    <string name="security_questions_question_2">问题 2</string>
+    <string name="security_questions_question_3">问题 3</string>
+    <string name="security_questions_save">保存安全问题</string>
+    <string name="security_questions_save_failed">保存安全问题失败</string>
+    <string name="security_questions_title">安全问题</string>
+    <string name="settings_account_change_security_questions">更改</string>
+    <string name="settings_account_current_password_required">请输入当前密码</string>
+    <string name="settings_account_security_questions_configured">已设置</string>
+    <string name="settings_account_security_questions_label">安全问题</string>
+    <string name="settings_account_security_questions_not_configured">未设置</string>
+    <string name="settings_account_security_questions_updated">安全问题已更新</string>
+    <string name="summary_source_local">本地模型</string>
+    <string name="summary_source_server">服务器模型</string>
+    <string name="settings_help_guide">使用指南与技巧</string>
+    <string name="settings_data_title">你的数据</string>
+    <string name="settings_data_summary">%1$d 个任务 · %2$d 个清单 · %3$d 个已完成</string>
+    <string name="settings_data_download">下载我的数据</string>
+    <string name="settings_data_import">导入</string>
+    <string name="settings_data_export_done">已保存你的数据文件。</string>
+    <string name="settings_data_import_done">导入完成——已添加 %1$d 项。</string>
+    <string name="settings_data_import_failed">无法导入该文件。</string>
+    <string name="settings_data_confirm_title">导入数据？</string>
+    <string name="settings_data_confirm_body">这会向你的账户添加 %1$d 项。你已有的内容不会被更改或删除。</string>
+    <string name="settings_data_confirm_import">导入</string>
+    <string name="settings_data_confirm_cancel">取消</string>
+    <string name="settings_push_distributor_title">推送投递应用</string>
+    <string name="settings_push_distributor_subtitle">已安装多个推送应用。请选择由哪一个投递 T\'Day 的通知。</string>
+    <string name="settings_push_distributor_choose">选择</string>
+    <string name="create_task_repeat_suggestion">重复%1$s？</string>
+    <string name="create_task_repeat_suggestion_dismiss">忽略</string>
+    <string name="settings_quiet_hours">免打扰时段</string>
+    <string name="settings_quiet_hours_start">开始</string>
+    <string name="settings_quiet_hours_end">结束</string>
+    <string name="settings_resting_floaters">休眠浮动任务</string>
+    <string name="settings_calendar_sync">将预定任务添加到我的日历</string>
+    <string name="settings_privacy">隐私</string>
+    <string name="settings_crash_reports">崩溃与问题报告</string>
+    <string name="settings_crash_reports_toggle">出现故障时发送崩溃与问题报告</string>
+    <string name="settings_crash_reports_help">关于崩溃与问题报告</string>
+
+    <!-- Crash reports: the sign-in wizard's consent step and its card -->
+    <string name="telemetry_card_title">发送错误报告？</string>
+    <string name="telemetry_card_intro">出问题时，T\'Day 可以发送一份简短的技术报告来帮助修复。你可以随时在“设置”中更改。</string>
+    <string name="telemetry_card_never_sent_label">绝不发送</string>
+    <string name="telemetry_card_never_sent">姓名、账户，或任何任务和清单内容。</string>
+    <string name="telemetry_card_footnote">默认关闭。你可以在“设置”中更改。</string>
+    <string name="telemetry_card_share">发送报告</string>
+    <string name="telemetry_card_not_now">不发送</string>
+    <string name="telemetry_card_read_faq">阅读完整常见问题解答</string>
+    <string name="root_feed_search_scheduled">搜索计划任务</string>
+    <string name="root_feed_search_floater">搜索浮动任务</string>
+
+    <!-- Bulk selection: multi-select actions in a task list -->
+    <string name="bulk_select">选择</string>
+    <string name="bulk_select_all">全选</string>
+    <string name="bulk_deselect_all">取消全选</string>
+    <string name="bulk_selected">已选择 %1$d 个</string>
+    <string name="bulk_selected_capped">已选择 %1$d 个 — 单次操作最多只能处理这么多</string>
+    <string name="bulk_applies_to">将应用于 %2$d 个中的 %1$d 个 — 重复任务会被跳过。</string>
+    <string name="bulk_select_task">选择任务</string>
+    <string name="bulk_deselect_task">取消选择任务</string>
+    <string name="bulk_action_complete">完成</string>
+    <string name="bulk_action_priority">优先级</string>
+    <string name="bulk_action_move">移动</string>
+    <string name="bulk_action_delete">删除</string>
+    <string name="bulk_delete_body">这会将它们从所有列表中移除，连同它们的完成历史记录。你有几秒钟可以撤销。</string>
+    <string name="bulk_move_body">这些任务来自不同的列表。移动无法一步撤销 — 你得逐个手动放回去。</string>
+    <plurals name="bulk_tasks_completed">
+        <item quantity="other">已完成 %d 个任务</item>
+    </plurals>
+    <plurals name="bulk_tasks_deleted">
+        <item quantity="other">已删除 %d 个任务</item>
+    </plurals>
+    <plurals name="bulk_delete_title">
+        <item quantity="other">删除 %d 个任务？</item>
+    </plurals>
+    <plurals name="bulk_delete_confirm">
+        <item quantity="other">删除 %d 个</item>
+    </plurals>
+    <plurals name="bulk_move_title">
+        <item quantity="other">移动 %d 个任务？</item>
+    </plurals>
+    <plurals name="bulk_move_confirm">
+        <item quantity="other">移动 %d 个</item>
+    </plurals>
+    <plurals name="bulk_delete_failed">
+        <item quantity="other">有 %d 个任务无法删除</item>
+    </plurals>
+    <plurals name="bulk_update_failed">
+        <item quantity="other">有 %d 个任务无法更新</item>
+    </plurals>
+</resources>

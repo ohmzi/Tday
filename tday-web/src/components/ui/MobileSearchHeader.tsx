@@ -1,0 +1,436 @@
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Search, X, Command } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
+import {
+  NativePageBackButton,
+  nativePageBarClassName,
+  nativePageBarDockedTitleClassName,
+  nativePageBarTitleLayerClassName,
+  nativePageHeaderMetrics,
+  useNativePageBarResync,
+} from "@/components/app/NativePageHeader";
+import type { NativePageBarSlots } from "@/components/app/NativePageHeader";
+import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
+import { useExitSnapshot, useFadeUnmount } from "@/hooks/useFadeUnmount";
+import { SURFACE_TRANSITION_MS } from "@/lib/surfaceTransitionTiming";
+import { hapticButtonTap, hapticDismiss } from "@/lib/haptics";
+
+export interface SearchResultItem {
+  id: string;
+  title: string;
+  subtitle?: string;
+}
+
+interface MobileSearchHeaderProps {
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
+  placeholder?: string;
+  trailingAction?: React.ReactNode;
+  /** When provided, a results dropdown is shown under the input while searching. */
+  results?: SearchResultItem[];
+  onSelectResult?: (id: string) => void;
+  /**
+   * Hides the magnifier. For a scope with nothing in it: there is no set for a
+   * query to narrow, so the button would only raise a keyboard over the
+   * empty-state scene, which is the whole of what that screen has to say.
+   * Deliberately does not close a search already open — losing the last task
+   * mid-query should retire the affordance, not slam the field shut.
+   */
+  searchUnavailable?: boolean;
+  /**
+   * Lets this bar double as the dock for a collapsing page header: the page's
+   * title travels up into here as the block below it scrolls away, and this bar
+   * drops its own brand to make room. NativePageHeader owns the scroll maths
+   * and writes to these nodes; this component only places them.
+   */
+  pageCollapse?: NativePageBarSlots & { title: string; accentColor: string };
+}
+
+const collapsedButtonClassName = cn(
+  "flex h-14 w-14 shrink-0 items-center justify-center rounded-full",
+  "border border-white/70 bg-card/90 text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)]",
+  "transition-all duration-enter hover:-translate-y-0.5 hover:bg-card dark:border-white/10",
+);
+
+export default function MobileSearchHeader({
+  searchQuery: externalQuery,
+  onSearchChange,
+  placeholder = "Search tasks...",
+  trailingAction,
+  results,
+  onSelectResult,
+  searchUnavailable = false,
+  pageCollapse,
+}: MobileSearchHeaderProps) {
+  const [internalQuery, setInternalQuery] = useState("");
+  const { t: appDict } = useTranslation("app");
+  const [isExpanded, setIsExpanded] = useState(false);
+  const ownHeaderRef = useRef<HTMLElement>(null);
+  // The collapsing header measures its progress against this bar's bottom edge,
+  // so when it is driving us it has to hold the same node.
+  const headerRef = pageCollapse?.barRef ?? ownHeaderRef;
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const collapseTimerRef = useRef<number | null>(null);
+  const isMac =
+    typeof window !== "undefined" &&
+    navigator.userAgent.toLowerCase().includes("mac");
+
+  const searchQuery = externalQuery ?? internalQuery;
+  const setSearchQuery = onSearchChange ?? setInternalQuery;
+  const hasQuery = searchQuery.trim().length > 0;
+
+  // The results panel used to be `{onSelectResult && hasQuery && <div …>}` and
+  // nothing else, so it appeared and disappeared in a single paint over a
+  // calendar grid that does not move — the one place a hard cut is most
+  // obvious. `resultsPanelMounted` outlives `showResults` by
+  // `SURFACE_TRANSITION_MS` so `.tday-surface-exit` has frames to play in;
+  // `showResults` itself (never the presence value) is what picks enter vs
+  // exit, so deleting a character and retyping it goes straight back to
+  // entering rather than finishing a fade it has changed its mind about — the
+  // same rule `Modal`'s `data-state` follows.
+  //
+  // Deleting the last character empties the caller's result list on the same
+  // tick, so the panel keeps painting the last results it actually had while it
+  // leaves; otherwise the exit would play over "no matching tasks" that was
+  // never true.
+  const showResults = Boolean(onSelectResult) && hasQuery;
+  const resultsPanelMounted = useFadeUnmount(showResults, SURFACE_TRANSITION_MS);
+  const shownResults = useExitSnapshot(results, showResults);
+
+  const clearCollapseTimer = useCallback(() => {
+    if (collapseTimerRef.current != null) {
+      window.clearTimeout(collapseTimerRef.current);
+      collapseTimerRef.current = null;
+    }
+  }, []);
+
+  const openSearch = useCallback(() => {
+    hapticButtonTap();
+    clearCollapseTimer();
+    setIsExpanded(true);
+    window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+  }, [clearCollapseTimer]);
+
+  const closeSearch = useCallback(() => {
+    hapticDismiss();
+    clearCollapseTimer();
+    setSearchQuery("");
+    setIsSearchFocused(false);
+    setIsExpanded(false);
+    searchInputRef.current?.blur();
+  }, [clearCollapseTimer, setSearchQuery]);
+
+  useEffect(() => {
+    if (hasQuery) {
+      setIsExpanded(true);
+    }
+  }, [hasQuery]);
+
+  useEffect(() => {
+    return () => clearCollapseTimer();
+  }, [clearCollapseTimer]);
+
+  // A click anywhere off the bar puts the field away, matching the root feeds and
+  // both native clients.
+  //
+  // `click`, in the BUBBLE phase, and deliberately not `pointerdown`: closing
+  // clears the query, and on Settings the query is what filters the cards — so
+  // closing under the finger re-rendered the page before the control the user
+  // pressed had its own handler run, and the press landed on whatever moved into
+  // that spot. React's listener sits on the root container, inside `document`, so
+  // by the time this runs the pressed control has already done its work.
+  useEffect(() => {
+    if (!isExpanded) return;
+    const onDocumentClick = (event: MouseEvent) => {
+      const bar = headerRef.current;
+      if (!bar) return;
+      if (event.target instanceof Node && bar.contains(event.target)) return;
+      closeSearch();
+    };
+    document.addEventListener("click", onDocumentClick);
+    return () => document.removeEventListener("click", onDocumentClick);
+  }, [closeSearch, headerRef, isExpanded]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Deliberately NOT Cmd/Ctrl+K. That is the command palette's, app-wide
+      // (`useGlobalHotkeys`), and this listener is on `document` while that one
+      // is on `window` — so this ran first, called `preventDefault`, and the
+      // palette's handler bailed on `defaultPrevented`. Harmless while this bar
+      // was on two screens; it now sits on most of them, which would have taken
+      // the palette away almost everywhere. Escape stays: it is page-local and
+      // only fires when this bar has something to dismiss.
+      if (e.key === "Escape" && (isExpanded || isSearchFocused || hasQuery)) {
+        e.preventDefault();
+        if (hasQuery) {
+          setSearchQuery("");
+          return;
+        }
+        closeSearch();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [closeSearch, hasQuery, isExpanded, isSearchFocused, setSearchQuery]);
+
+  const handleBlur = () => {
+    setIsSearchFocused(false);
+    if (hasQuery) return;
+    clearCollapseTimer();
+    collapseTimerRef.current = window.setTimeout(() => {
+      setIsExpanded(false);
+    }, 120);
+  };
+
+  // The expanded field swaps the row's contents out, so anything the header has
+  // styled comes back bare; nudge it to re-apply on every toggle. Only when one
+  // is actually listening, or this would wake every scroll-driven component on
+  // the screen each time the field opens.
+  useNativePageBarResync(pageCollapse ? headerRef.current : null, isExpanded);
+
+  // A page sharing this bar leads with its back chevron, the same as every
+  // other non-root page; the brand only belongs on a root feed. Rendered
+  // outside the expanded/collapsed branch below, because unmounting it with the
+  // field open left the screen with no way back and no title either.
+  // Hidden rather than unmounted while the field is up: the collapsing header
+  // writes to this node every frame, and taking it out of the tree left it with
+  // a null ref. `hidden` keeps the ref attached and takes the chevron out of the
+  // layout, which is what the field needs — a back chevron beside an open search
+  // is a second way out that leaves the page rather than the query.
+  const leading = pageCollapse ? (
+    <div
+      ref={pageCollapse.leadingRef}
+      className={cn("flex shrink-0 items-center", isExpanded && "hidden")}
+    >
+      <NativePageBackButton />
+    </div>
+  ) : null;
+  const brandHome = pageCollapse ? null : (
+    <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
+  );
+
+  return (
+    <header
+      ref={headerRef}
+      className={cn(
+        // The shared pinned-toolbar geometry, not a restatement of it: a
+        // collapsing page header measures its handoff against this bar's bottom
+        // edge, so the two must not drift.
+        nativePageBarClassName,
+        // A rung rather than a number, and that is the whole of the claim — this
+        // is NOT the expand being timed. Swapping `justify-between` for
+        // `justify-stretch` redistributes every child in the bar, and measured in
+        // Chromium against this stylesheet the second one moves 778px on the
+        // first frame and sits there: `justify-content` is a discrete property
+        // that does not interpolate, and a parent cannot animate where its
+        // children land however long it asks for. The 300 this replaces timed
+        // exactly as much. Animating the redistribution would mean each child
+        // carrying its own transition, which is a bigger change than a bar that
+        // reflows in one frame is asking for.
+        //
+        // The declaration stays because it still covers the bar's own animatable
+        // surface — its background — and `Enter` is the rung for that by the
+        // ladder's own default clause: a motion with no reason to be another
+        // length.
+        "transition-all duration-enter",
+        isExpanded ? "justify-stretch" : "justify-between",
+      )}
+    >
+      {/* Opaque backing that extends above the pinned bar to cover the scroll
+          container's top padding + the status-bar area, so day/task titles can
+          never be seen above or behind the toolbar while scrolling. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background"
+      />
+      {/* Both out of flow, so they live outside the branch and never remount —
+          unmounting the title left the page with no heading at all while the
+          field was open. The title comes last so it paints over the dissolve
+          band; while the field is up, the field paints over it. */}
+      {pageCollapse ? (
+        <>
+          <div
+            ref={pageCollapse.fadeRef}
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-full bg-gradient-to-b from-background to-transparent"
+            style={{ height: nativePageHeaderMetrics.contentFadeHeight, opacity: 0 }}
+          />
+          {/* The bar's copy of the page title, at the same size as the block's
+              own. See NativePageHeader for the handoff, and for why the
+              centring is the layer's job rather than a `-translate-y-1/2` on
+              the title. `aria-hidden` because the block's h1 is the page's real
+              heading. */}
+          <div aria-hidden className={nativePageBarTitleLayerClassName}>
+            <span
+              ref={pageCollapse.dockedTitleRef}
+              className={nativePageBarDockedTitleClassName}
+              // Not a class: the collapse writes `opacity` inline every frame,
+              // so an `opacity-0` utility here never won and the title stayed
+              // visible under the open field. This is read by the frame callback
+              // instead — see NativePageHeader. `useNativePageBarResync` above
+              // already re-runs it whenever `isExpanded` flips.
+              data-bar-title-suppressed={isExpanded ? "true" : "false"}
+              style={{ color: pageCollapse.accentColor, opacity: 0, visibility: "hidden" }}
+            >
+              {pageCollapse.title}
+            </span>
+          </div>
+        </>
+      ) : null}
+      {leading}
+      {isExpanded ? (
+        <div className="relative flex min-w-0 flex-1 items-center">
+          <div
+            className={cn(
+              "relative flex w-full items-center",
+              "rounded-full",
+              "bg-card/90",
+              "border border-white/70 shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)]",
+              "transition-colors duration-enter",
+              "dark:border-white/10",
+              isSearchFocused && ["bg-card", "border-accent/45"],
+            )}
+          >
+            <Search
+              className={cn(
+                "pointer-events-none absolute left-4 h-4 w-4",
+                "transition-colors duration-enter",
+                isSearchFocused ? "text-accent" : "text-muted-foreground",
+              )}
+            />
+
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder={placeholder}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => {
+                clearCollapseTimer();
+                setIsSearchFocused(true);
+              }}
+              onBlur={handleBlur}
+              className={cn(
+                "h-14 w-full rounded-full bg-transparent pl-11 pr-20",
+                "text-base font-extrabold text-foreground md:text-sm",
+                "placeholder:text-muted-foreground/50",
+                "outline-none",
+              )}
+            />
+
+            <div className="absolute right-3 flex items-center gap-2">
+              {!hasQuery && (
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => searchInputRef.current?.focus()}
+                  className={cn(
+                    "hidden items-center gap-1 sm:flex",
+                    "rounded-full bg-muted/60 px-2 py-1",
+                    "text-xs font-black text-muted-foreground/60",
+                    "hover:bg-muted hover:text-muted-foreground",
+                    "transition-all duration-enter",
+                  )}
+                >
+                  {isMac ? (
+                    <>
+                      <Command className="h-3 w-3" />
+                      <span>K</span>
+                    </>
+                  ) : (
+                    <span>Ctrl+K</span>
+                  )}
+                </button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-full hover:bg-accent/15"
+                // The one control in the field, so it carries the job the root
+                // feed's X carries: it leaves the search. Closing clears the
+                // query on the way out, so there is nothing a separate clear
+                // would still be needed for.
+                aria-label="Close search"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={closeSearch}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {onSelectResult && resultsPanelMounted && (
+            <div
+              // A panel that hangs off the field drops out of it rather than
+              // rising into it — see `.tday-surface-from-top` in globals.css.
+              // The duration is inline because it is the SAME number
+              // `useFadeUnmount` above is holding the node for; a
+              // `duration-*` utility here would be a second one that only
+              // looks like it.
+              style={{ animationDuration: `${SURFACE_TRANSITION_MS}ms` }}
+              className={cn(
+                "absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-[28px] border border-white/70 bg-card/98 shadow-[0_24px_48px_-20px_hsl(var(--shadow)/0.5)] backdrop-blur-xl dark:border-white/10",
+                "tday-surface-from-top",
+                showResults ? "tday-surface-enter" : "tday-surface-exit",
+                // On the way out it is a picture of a list, not a list: a tap
+                // landing on a result that is already fading would jump the
+                // calendar somewhere the user has stopped asking about.
+                !showResults && "pointer-events-none",
+              )}
+            >
+              {shownResults && shownResults.length > 0 ? (
+                <ul className="max-h-72 overflow-y-auto py-1">
+                  {shownResults.map((result) => (
+                    <li key={result.id}>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => onSelectResult(result.id)}
+                        className="flex w-full flex-col items-start gap-0.5 px-4 py-2.5 text-left transition-colors hover:bg-muted/70"
+                      >
+                        <span className="line-clamp-1 text-sm font-black text-foreground">
+                          {result.title}
+                        </span>
+                        {result.subtitle && (
+                          <span className="line-clamp-1 text-xs font-extrabold text-muted-foreground">
+                            {result.subtitle}
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="px-4 py-3 text-sm font-extrabold text-muted-foreground">
+                  {appDict("noMatchingTasks")}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {brandHome}
+          <div ref={pageCollapse?.trailingRef} className="ml-auto flex shrink-0 items-center gap-2.5">
+            {searchUnavailable ? null : (
+              <button
+                type="button"
+                aria-label="Search"
+                onClick={openSearch}
+                className={collapsedButtonClassName}
+              >
+                <Search className="h-5 w-5 stroke-[2.4]" />
+              </button>
+            )}
+            {trailingAction}
+          </div>
+        </>
+      )}
+    </header>
+  );
+}

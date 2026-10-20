@@ -1,0 +1,570 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Share2, Trash2, Users } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import AppBottomSheet from "@/components/ui/AppBottomSheet";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { SheetCard, SheetSectionTitle } from "@/components/ui/sheet-chrome";
+import { api } from "@/lib/api-client";
+import { usePathname, useRouter } from "@/lib/navigation";
+import { cn, isSubmitEnter } from "@/lib/utils";
+import { hapticTick, hapticConfirm } from "@/lib/haptics";
+import {
+  DEFAULT_FLOATER_LIST_COLOR,
+  DEFAULT_FLOATER_LIST_COLOR_OPTION,
+  listColorMap,
+} from "@/lib/listColorMap";
+import {
+  DEFAULT_LIST_ICON_KEY,
+  getListIcon,
+  listIconOptions,
+  normalizeListIconKey,
+  resolveListIconKey,
+} from "@/lib/listIcons";
+import { inferListIconKey } from "@/lib/listIconInference";
+import { useToast } from "@/hooks/use-toast";
+import { useUndoableDelete } from "@/hooks/use-undoable-delete";
+import { useCreateFloaterList } from "@/features/floaterList/query/create-floater-list";
+import { prioritySwatchClass } from "@/components/ui/sheet-chrome/swatches";
+import { priorityLabelKey, type Priority } from "@/components/todo/component/TodoForm/labels";
+import type {
+  FloaterListItemMetaMapType,
+  FloaterListItemMetaType,
+  ListColor,
+} from "@/types";
+
+const DEFAULT_PRIORITY_OPTIONS: Priority[] = ["High", "Medium", "Low", "Lowest"];
+
+type EditableFloaterList = {
+  id: string;
+  name: string;
+  color?: ListColor;
+  iconKey?: string | null;
+  defaultPriority?: string | null;
+  reusable?: boolean;
+};
+
+type FloaterListFormSheetProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  list?: EditableFloaterList | null;
+  initialName?: string;
+  initialColor?: ListColor;
+  initialIconKey?: string;
+  onSaved?: (list?: FloaterListItemMetaType) => void;
+  // Sharing section (edit mode only): manage members + share externally.
+  onManageMembers?: () => void;
+  onShareList?: () => void;
+};
+
+function normalizeListName(value: string) {
+  return value.trim();
+}
+
+async function patchFloaterList({
+  id,
+  name,
+  color,
+  iconKey,
+  reusable,
+  defaultPriority,
+}: {
+  id: string;
+  name: string;
+  color: ListColor;
+  /**
+   * Omitted while the picker is only PREVIEWING an icon — see `ListFormSheet`, and
+   * `FloaterListService.update`, which writes the column only when one arrives.
+   */
+  iconKey?: string;
+  reusable: boolean;
+  defaultPriority: string | null;
+}) {
+  await api.PATCH({
+    url: "/api/floaterList",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id,
+      name,
+      color,
+      iconKey,
+      reusable,
+      defaultPriority,
+      // Always visible with a definite selection — see `ListFormSheet`'s `patchList`.
+      defaultPriorityChanged: true,
+    }),
+  });
+}
+
+async function deleteFloaterList(id: string) {
+  await api.DELETE({
+    url: "/api/floaterList",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, ids: [id] }),
+  });
+}
+
+export default function FloaterListFormSheet({
+  open,
+  onOpenChange,
+  list,
+  initialName = "",
+  initialColor = DEFAULT_FLOATER_LIST_COLOR,
+  initialIconKey = DEFAULT_LIST_ICON_KEY,
+  onSaved,
+  onManageMembers,
+  onShareList,
+}: FloaterListFormSheetProps) {
+  const { t: appDict } = useTranslation("app");
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const showUndoableDelete = useUndoableDelete();
+  const router = useRouter();
+  const pathname = usePathname();
+  const { createMutateAsync, createLoading } = useCreateFloaterList();
+  const isEditing = Boolean(list?.id);
+
+  /** The scheduled sheet's argument, unchanged — see `ListFormSheet`. */
+  const previewIconKeyFor = (listName: string) =>
+    normalizeListIconKey(inferListIconKey(listName) ?? initialIconKey);
+  const seedIconKey = () =>
+    list ? resolveListIconKey(list) : previewIconKeyFor(initialName);
+
+  const [name, setName] = useState(initialName);
+  const [color, setColor] = useState<ListColor>(list?.color ?? initialColor);
+  // Whether the picker holds a choice or a preview; the value alone cannot say. See
+  // `ListFormSheet` for why that distinction is the feature rather than a detail.
+  const [iconTouched, setIconTouched] = useState(false);
+  const [iconKey, setIconKey] = useState(() => seedIconKey());
+  const [reusable, setReusable] = useState(list?.reusable ?? false);
+  const [defaultPriority, setDefaultPriority] = useState<Priority | null>(
+    (list?.defaultPriority as Priority | null | undefined) ?? null,
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  // This sheet is rendered unconditionally by its host (only the Drawer's own
+  // content unmounts on close), so it must seed exactly once per open — not on
+  // every render where `list` merely has a new object identity. `list` is a
+  // fresh literal recomputed on every parent render (see FloaterListContainer),
+  // so keying this effect on it re-seeds on ANY incidental parent re-render
+  // while the sheet is still open — including the moment right after Save,
+  // when the mutation's own cache invalidation triggers a re-render with the
+  // still-stale pre-save data before the fresh response has landed. That
+  // silently overwrote the user's just-picked color/priority back to the old
+  // value for a frame, right as the sheet closed. Tracking the open transition
+  // with a ref decouples "seed" from "list object changed".
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    const justOpened = open && !wasOpenRef.current;
+    wasOpenRef.current = open;
+    if (!justOpened) return;
+    setName(list?.name ?? initialName);
+    setColor(list?.color ?? initialColor);
+    setIconKey(seedIconKey());
+    setIconTouched(false);
+    setReusable(list?.reusable ?? false);
+    setDefaultPriority((list?.defaultPriority as Priority | null | undefined) ?? null);
+    setError(null);
+    setConfirmingDelete(false);
+    // Deliberately keyed on `open` alone — see the comment above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // While the picker is a preview it follows the name being typed; editing is excluded
+  // for the reason given in `ListFormSheet`.
+  useEffect(() => {
+    if (isEditing || iconTouched) return;
+    setIconKey(previewIconKeyFor(name));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [iconTouched, isEditing, name]);
+
+  const selectedColor = useMemo(
+    () => listColorMap.find((option) => option.value === color) ?? DEFAULT_FLOATER_LIST_COLOR_OPTION,
+    [color],
+  );
+  const SelectedIcon = getListIcon(iconKey);
+  const nameColorClass = selectedColor.tailwind.replace("bg-", "text-");
+
+  const invalidateFloaterListQueries = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["floaterListMeta"] }),
+      queryClient.invalidateQueries({ queryKey: ["floater"] }),
+      queryClient.invalidateQueries({ queryKey: ["floaterList"] }),
+    ]);
+  };
+
+  const updateListMutation = useMutation({
+    mutationFn: patchFloaterList,
+    onSuccess: async () => {
+      await invalidateFloaterListQueries();
+      onSaved?.();
+      onOpenChange(false);
+    },
+    onError: (mutationError) => {
+      const message =
+        mutationError instanceof Error
+          ? mutationError.message
+          : "Failed to update floater list";
+      setError(message);
+      toast({ description: message, variant: "destructive" });
+    },
+  });
+
+  // Commit half of the delayed-commit delete: fires the real DELETE once the
+  // undo toast has closed without undo. Runs from a toast callback, possibly
+  // after this sheet unmounted, so it only touches the queryClient and the
+  // imperative toast (both safe after unmount).
+  const commitDeleteList = async (id: string) => {
+    try {
+      await deleteFloaterList(id);
+    } catch (mutationError) {
+      const message =
+        mutationError instanceof Error
+          ? mutationError.message
+          : "Failed to delete floater list";
+      toast({ description: message, variant: "destructive" });
+    } finally {
+      // Success: refresh caches around the cascade (list + its floaters).
+      // Failure: the same refetch restores the staged pruning.
+      await invalidateFloaterListQueries();
+    }
+  };
+
+  // Stage: prune the list from the cached metadata, close the sheet and leave
+  // the deleted list's page immediately — but DON'T send the DELETE yet; the
+  // undo toast decides whether the request ever fires.
+  const handleDeleteList = (id: string) => {
+    void queryClient.cancelQueries({ queryKey: ["floaterListMeta"] });
+    queryClient.setQueryData<FloaterListItemMetaMapType>(
+      ["floaterListMeta"],
+      (old = {}) => {
+        const next = { ...old };
+        delete next[id];
+        return next;
+      },
+    );
+    onOpenChange(false);
+    if (pathname.includes(`/app/floater-list/${id}`)) {
+      router.push("/app/floater");
+    }
+    showUndoableDelete({
+      message: appDict("listDeleted"),
+      commit: () => void commitDeleteList(id),
+      // The server still has the list — a refetch restores the pruned cache.
+      undo: () => void invalidateFloaterListQueries(),
+    });
+  };
+
+  const saving = createLoading || updateListMutation.isPending;
+  const canSubmit = Boolean(normalizeListName(name)) && !saving;
+
+  const handleSubmit = async () => {
+    const normalizedName = normalizeListName(name);
+    if (!normalizedName) {
+      setError("List name cannot be empty");
+      return;
+    }
+
+    setError(null);
+    if (isEditing && list) {
+      // Against the STORED value, not the normalised one: a null icon normalises to
+      // "inbox", so collapsing them would read a deliberate tap on Inbox as no change.
+      const storedIconKey = list.iconKey?.trim() ? normalizeListIconKey(list.iconKey) : null;
+      const iconChanged = iconTouched && iconKey !== storedIconKey;
+      if (
+        normalizedName === normalizeListName(list.name) &&
+        color === (list.color ?? DEFAULT_FLOATER_LIST_COLOR) &&
+        !iconChanged &&
+        reusable === (list.reusable ?? false) &&
+        defaultPriority === (list.defaultPriority ?? null)
+      ) {
+        onOpenChange(false);
+        return;
+      }
+      updateListMutation.mutate({
+        id: list.id,
+        name: normalizedName,
+        color,
+        iconKey: iconTouched ? iconKey : undefined,
+        reusable,
+        defaultPriority,
+      });
+      return;
+    }
+
+    try {
+      const created = await createMutateAsync({
+        name: normalizedName,
+        color,
+        // An untouched picker posts nothing, so the list is created with a null icon and
+        // is free to take one from its name. See `ListFormSheet`.
+        iconKey: iconTouched ? iconKey : undefined,
+        reusable,
+        defaultPriority,
+      });
+      onSaved?.(created);
+      onOpenChange(false);
+      setName("");
+      setColor(initialColor);
+      setIconKey(previewIconKeyFor(""));
+      setIconTouched(false);
+      setDefaultPriority(null);
+    } catch (createError) {
+      const message =
+        createError instanceof Error ? createError.message : "Failed to create floater list";
+      setError(message);
+    }
+  };
+
+  return (
+    <AppBottomSheet
+      variant="native"
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEditing ? appDict("listSettings") : appDict("newFloaterList")}
+      onClose={() => onOpenChange(false)}
+      onConfirm={() => void handleSubmit()}
+      confirmDisabled={!canSubmit}
+      confirmLabel={appDict("save")}
+      closeLabel={appDict("cancel")}
+    >
+      <div className="flex flex-col gap-3 pb-2">
+        <SheetCard className="p-[18px]">
+          <div className="flex flex-col items-center gap-4">
+            <span
+              className={cn(
+                "flex h-20 w-20 shrink-0 items-center justify-center rounded-full text-white shadow-inner",
+                selectedColor.tailwind,
+              )}
+            >
+              <SelectedIcon className="h-9 w-9 stroke-[2.4]" />
+            </span>
+            <Input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              enterKeyHint="done"
+              onKeyDown={(event) => {
+                if (!isSubmitEnter(event)) return;
+                // Enter is the header ✓. With nothing to save it just dismisses
+                // the keyboard.
+                event.preventDefault();
+                if (canSubmit) void handleSubmit();
+                else event.currentTarget.blur();
+              }}
+              placeholder={appDict("floaterListName")}
+              className={cn(
+                "h-14 w-full rounded-lg border-transparent bg-muted/60 text-center text-xl font-extrabold focus-visible:ring-0",
+                nameColorClass,
+              )}
+            />
+          </div>
+        </SheetCard>
+
+        <SheetSectionTitle>{appDict("color")}</SheetSectionTitle>
+        <SheetCard className="p-3.5">
+          <div className="flex gap-3 overflow-x-auto pb-1">
+            {listColorMap.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => { hapticTick(); setColor(option.value); }}
+                className={cn(
+                  "h-12 w-12 shrink-0 rounded-full transition-transform active:scale-95",
+                  option.tailwind,
+                  color === option.value && "ring-[3px] ring-foreground/30",
+                )}
+                aria-label={`Use ${option.name}`}
+                aria-pressed={color === option.value}
+              />
+            ))}
+          </div>
+        </SheetCard>
+
+        <SheetSectionTitle>{appDict("icon")}</SheetSectionTitle>
+        <SheetCard className="p-3.5">
+          <div className="flex gap-2.5 overflow-x-auto pb-1">
+            {listIconOptions.map((option) => {
+              const Icon = option.icon;
+              const selected = iconKey === option.key;
+
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => {
+                    hapticTick();
+                    setIconKey(option.key);
+                    setIconTouched(true);
+                  }}
+                  className={cn(
+                    "flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95",
+                    selected
+                      ? "bg-accent/15 text-accent ring-[2px] ring-accent/55"
+                      : "bg-muted/60 text-muted-foreground hover:text-foreground",
+                  )}
+                  aria-label={`Use ${option.label} icon`}
+                  aria-pressed={selected}
+                >
+                  <Icon className="h-5 w-5 stroke-[2.4]" />
+                </button>
+              );
+            })}
+          </div>
+        </SheetCard>
+
+        {/* Default priority — pre-fills new tasks created in this list; a save always
+            carries a definite value, so there is no "preview" state to guard. */}
+        <SheetSectionTitle>{appDict("defaultPriority")}</SheetSectionTitle>
+        <SheetCard className="p-3.5">
+          <div className="flex gap-2.5 overflow-x-auto pb-1">
+            <button
+              type="button"
+              onClick={() => { hapticTick(); setDefaultPriority(null); }}
+              className={cn(
+                "flex h-9 shrink-0 items-center rounded-full px-4 text-sm font-black transition-transform active:scale-95",
+                defaultPriority === null
+                  ? "bg-accent/15 text-accent ring-[2px] ring-accent/55"
+                  : "bg-muted/60 text-muted-foreground hover:text-foreground",
+              )}
+              aria-pressed={defaultPriority === null}
+            >
+              {appDict("noDefaultPriority")}
+            </button>
+            {DEFAULT_PRIORITY_OPTIONS.map((option) => {
+              const selected = defaultPriority === option;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => { hapticTick(); setDefaultPriority(option); }}
+                  className={cn(
+                    "flex h-9 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-black transition-transform active:scale-95",
+                    selected
+                      ? "bg-accent/15 text-accent ring-[2px] ring-accent/55"
+                      : "bg-muted/60 text-muted-foreground hover:text-foreground",
+                  )}
+                  aria-pressed={selected}
+                >
+                  <span className={cn("h-2.5 w-2.5 rounded-full", prioritySwatchClass(option))} />
+                  {appDict(priorityLabelKey[option])}
+                </button>
+              );
+            })}
+          </div>
+        </SheetCard>
+
+        <SheetCard className="p-[18px]">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={reusable}
+            onClick={() => { hapticTick(); setReusable((v) => !v); }}
+            className="flex w-full items-center justify-between gap-3 text-left"
+          >
+            <span className="min-w-0">
+              <span className="block text-[1.05rem] font-black text-foreground">
+                {appDict("reusableList")}
+              </span>
+              <span className="mt-0.5 block text-xs font-extrabold text-muted-foreground">
+                {appDict("reusableListHint")}
+              </span>
+            </span>
+            <span
+              className={cn(
+                "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors",
+                reusable ? "bg-accent" : "bg-muted-foreground/30",
+              )}
+            >
+              <span
+                className={cn(
+                  "inline-block h-5 w-5 rounded-full bg-white shadow transition-transform",
+                  reusable ? "translate-x-[22px]" : "translate-x-[2px]",
+                )}
+              />
+            </span>
+          </button>
+        </SheetCard>
+
+        {error ? (
+          <p className="px-1 text-sm font-extrabold text-destructive">{error}</p>
+        ) : null}
+
+        {isEditing && list && (onManageMembers || onShareList) ? (
+          <>
+            <SheetSectionTitle>{appDict("sharing")}</SheetSectionTitle>
+            <div className="grid grid-cols-2 gap-2.5">
+              {onManageMembers ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    hapticTick();
+                    onOpenChange(false);
+                    onManageMembers();
+                  }}
+                  className="flex items-center justify-center gap-2 rounded-lg border border-border/70 bg-muted/60 px-4 py-2.5 text-sm font-black text-foreground transition-colors hover:bg-muted active:scale-[0.99]"
+                >
+                  <Users className="h-4 w-4 stroke-[2.4]" />
+                  {appDict("members")}
+                </button>
+              ) : null}
+              {onShareList ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    hapticTick();
+                    onOpenChange(false);
+                    onShareList();
+                  }}
+                  className="flex items-center justify-center gap-2 rounded-lg border border-border/70 bg-muted/60 px-4 py-2.5 text-sm font-black text-foreground transition-colors hover:bg-muted active:scale-[0.99]"
+                >
+                  <Share2 className="h-4 w-4 stroke-[2.4]" />
+                  {appDict("share")}
+                </button>
+              ) : null}
+            </div>
+          </>
+        ) : null}
+
+        {isEditing && list ? (
+          confirmingDelete ? (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+              <p className="text-sm font-extrabold text-destructive">
+                Delete &ldquo;{normalizeListName(list.name) || list.name}&rdquo; and all of
+                its floaters? This can&apos;t be undone.
+              </p>
+              <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => { hapticConfirm(); setConfirmingDelete(false); }}
+                  className="rounded-lg border-border/70 bg-card px-5 font-black"
+                >
+                  Keep list
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => handleDeleteList(list.id)}
+                  className="rounded-lg px-5 font-black"
+                >
+                  {appDict("deleteFloaterList")}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-5 py-2.5 text-sm font-black text-destructive transition-colors hover:bg-destructive/10 active:scale-[0.99]"
+            >
+              <Trash2 className="h-4 w-4 stroke-[2.4]" />
+              {appDict("deleteFloaterList")}
+            </button>
+          )
+        ) : null}
+      </div>
+    </AppBottomSheet>
+  );
+}

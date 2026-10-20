@@ -1,0 +1,246 @@
+package com.ohmz.tday.compose.core.data
+
+import kotlinx.serialization.json.Json
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class OfflineSyncStateSerializationTest {
+
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
+
+    @Test
+    fun `empty state round-trips`() {
+        val state = OfflineSyncState()
+        val encoded = json.encodeToString(OfflineSyncState.serializer(), state)
+        val decoded = json.decodeFromString(OfflineSyncState.serializer(), encoded)
+
+        assertEquals(state, decoded)
+    }
+
+    @Test
+    fun `state with todos round-trips`() {
+        val state = OfflineSyncState(
+            lastSuccessfulSyncEpochMs = 1700000000000L,
+            todos = listOf(
+                CachedTodoRecord(
+                    id = "t1",
+                    canonicalId = "t1",
+                    title = "Test",
+                    dueEpochMs = 1700003600000L,
+                    priority = "High",
+                    listId = "list-1",
+                ),
+            ),
+        )
+        val encoded = json.encodeToString(OfflineSyncState.serializer(), state)
+        val decoded = json.decodeFromString(OfflineSyncState.serializer(), encoded)
+
+        assertEquals(state, decoded)
+        assertEquals(1, decoded.todos.size)
+        assertEquals("Test", decoded.todos[0].title)
+    }
+
+    @Test
+    fun `state with all entity types round-trips`() {
+        val state = OfflineSyncState(
+            lastSuccessfulSyncEpochMs = 1700000000000L,
+            lastSyncAttemptEpochMs = 1700000100000L,
+            todos = listOf(
+                CachedTodoRecord(
+                    id = "t1",
+                    canonicalId = "t1",
+                    title = "Todo",
+                    dueEpochMs = 1700003600000L,
+                ),
+            ),
+            completedItems = listOf(
+                CachedCompletedRecord(
+                    id = "c1",
+                    title = "Completed",
+                    priority = "Low",
+                    dueEpochMs = 1700003600000L,
+                    completedAtEpochMs = 1700004000000L,
+                    listId = "l1",
+                ),
+            ),
+            lists = listOf(
+                CachedListRecord(id = "l1", name = "Work"),
+            ),
+            pendingMutations = listOf(
+                PendingMutationRecord(
+                    mutationId = "m1",
+                    kind = MutationKind.DELETE_LIST,
+                    timestampEpochMs = 1700000000000L,
+                    targetId = "l1",
+                ),
+            ),
+            aiSummaryEnabled = false,
+        )
+
+        val encoded = json.encodeToString(OfflineSyncState.serializer(), state)
+        val decoded = json.decodeFromString(OfflineSyncState.serializer(), encoded)
+
+        assertEquals(state, decoded)
+        assertEquals(1, decoded.todos.size)
+        assertEquals(1, decoded.completedItems.size)
+        assertEquals(1, decoded.lists.size)
+        assertEquals(1, decoded.pendingMutations.size)
+        assertEquals(false, decoded.aiSummaryEnabled)
+    }
+
+    @Test
+    fun `promote and demote mutations round-trip with their payload fields`() {
+        val state = OfflineSyncState(
+            pendingMutations = listOf(
+                PendingMutationRecord(
+                    mutationId = "m-promote",
+                    kind = MutationKind.PROMOTE_FLOATER,
+                    targetId = "floater-1",
+                    timestampEpochMs = 1700000000000L,
+                    dueEpochMs = 1700003600000L,
+                    rrule = "RRULE:FREQ=WEEKLY;INTERVAL=1",
+                    // Carries the optimistic local todo id for replay remapping.
+                    name = "local-todo-abc",
+                ),
+                PendingMutationRecord(
+                    mutationId = "m-demote",
+                    kind = MutationKind.DEMOTE_TODO,
+                    targetId = "todo-1",
+                    timestampEpochMs = 1700000001000L,
+                    name = "local-floater-def",
+                ),
+            ),
+        )
+
+        val encoded = json.encodeToString(OfflineSyncState.serializer(), state)
+        val decoded = json.decodeFromString(OfflineSyncState.serializer(), encoded)
+
+        assertEquals(state, decoded)
+        assertEquals(MutationKind.PROMOTE_FLOATER, decoded.pendingMutations[0].kind)
+        assertEquals("local-todo-abc", decoded.pendingMutations[0].name)
+        assertEquals(MutationKind.DEMOTE_TODO, decoded.pendingMutations[1].kind)
+    }
+
+    @Test
+    fun `reset floater list mutation round-trips`() {
+        val state = OfflineSyncState(
+            pendingMutations = listOf(
+                PendingMutationRecord(
+                    mutationId = "m-reset",
+                    kind = MutationKind.RESET_FLOATER_LIST,
+                    targetId = "floater-list-1",
+                    timestampEpochMs = 1700000002000L,
+                ),
+            ),
+        )
+
+        val encoded = json.encodeToString(OfflineSyncState.serializer(), state)
+        val decoded = json.decodeFromString(OfflineSyncState.serializer(), encoded)
+
+        assertEquals(state, decoded)
+        assertEquals(MutationKind.RESET_FLOATER_LIST, decoded.pendingMutations[0].kind)
+        assertEquals("floater-list-1", decoded.pendingMutations[0].targetId)
+    }
+
+    @Test
+    fun `task-step mutations round-trip with their payload fields`() {
+        val state = OfflineSyncState(
+            pendingMutations = listOf(
+                PendingMutationRecord(
+                    mutationId = "m-create-step",
+                    kind = MutationKind.CREATE_STEP,
+                    targetId = "todo-1",
+                    timestampEpochMs = 1700000003000L,
+                    title = "Preheat oven",
+                    // Optimistic local step id for replay remapping.
+                    name = "local-step-xyz",
+                ),
+                PendingMutationRecord(
+                    mutationId = "m-toggle-step",
+                    kind = MutationKind.TOGGLE_STEP,
+                    targetId = "step-1",
+                    timestampEpochMs = 1700000004000L,
+                    completed = true,
+                ),
+                PendingMutationRecord(
+                    mutationId = "m-delete-step",
+                    kind = MutationKind.DELETE_STEP,
+                    targetId = "step-2",
+                    timestampEpochMs = 1700000005000L,
+                ),
+                PendingMutationRecord(
+                    mutationId = "m-reorder-steps",
+                    kind = MutationKind.REORDER_STEPS,
+                    targetId = "todo-1",
+                    timestampEpochMs = 1700000006000L,
+                    orderedIds = listOf("step-2", "step-1", "step-3"),
+                ),
+            ),
+        )
+
+        val encoded = json.encodeToString(OfflineSyncState.serializer(), state)
+        val decoded = json.decodeFromString(OfflineSyncState.serializer(), encoded)
+
+        assertEquals(state, decoded)
+        assertEquals(MutationKind.CREATE_STEP, decoded.pendingMutations[0].kind)
+        assertEquals("Preheat oven", decoded.pendingMutations[0].title)
+        assertEquals("local-step-xyz", decoded.pendingMutations[0].name)
+        assertEquals(true, decoded.pendingMutations[1].completed)
+        assertEquals(MutationKind.DELETE_STEP, decoded.pendingMutations[2].kind)
+        assertEquals(
+            listOf("step-2", "step-1", "step-3"),
+            decoded.pendingMutations[3].orderedIds,
+        )
+    }
+
+    @Test
+    fun `default field values are preserved when absent from JSON`() {
+        val minimalJson = """{"lastSuccessfulSyncEpochMs":0}"""
+        val decoded = json.decodeFromString(OfflineSyncState.serializer(), minimalJson)
+
+        assertEquals(0L, decoded.lastSuccessfulSyncEpochMs)
+        assertEquals(0L, decoded.lastSyncAttemptEpochMs)
+        assertTrue(decoded.todos.isEmpty())
+        assertTrue(decoded.completedItems.isEmpty())
+        assertTrue(decoded.lists.isEmpty())
+        assertTrue(decoded.pendingMutations.isEmpty())
+        assertTrue(decoded.aiSummaryEnabled)
+    }
+
+    @Test
+    fun `CachedTodoRecord default values are stable`() {
+        val minimalJson = """{"id":"x","canonicalId":"x","title":"T","dueEpochMs":0}"""
+        val record = json.decodeFromString(CachedTodoRecord.serializer(), minimalJson)
+
+        assertEquals("Low", record.priority)
+        assertEquals(null, record.description)
+        assertEquals(null, record.rrule)
+        assertEquals(null, record.instanceDateEpochMs)
+        assertEquals(false, record.pinned)
+        assertEquals(false, record.completed)
+        assertEquals(null, record.listId)
+        assertEquals(0L, record.updatedAtEpochMs)
+    }
+
+    @Test
+    fun `MutationKind all values serialize correctly`() {
+        for (kind in MutationKind.entries) {
+            val encoded = json.encodeToString(MutationKind.serializer(), kind)
+            val decoded = json.decodeFromString(MutationKind.serializer(), encoded)
+            assertEquals(kind, decoded)
+        }
+    }
+
+    @Test
+    fun `unknown fields in JSON are ignored`() {
+        val extraFieldJson = """{"lastSuccessfulSyncEpochMs":100,"futureField":"hello","todos":[]}"""
+        val decoded = json.decodeFromString(OfflineSyncState.serializer(), extraFieldJson)
+
+        assertEquals(100L, decoded.lastSuccessfulSyncEpochMs)
+        assertTrue(decoded.todos.isEmpty())
+    }
+}

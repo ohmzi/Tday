@@ -1,0 +1,570 @@
+package com.ohmz.tday.shared.guide
+
+import com.ohmz.tday.shared.guide.GuidePlatform.ANDROID
+import com.ohmz.tday.shared.guide.GuidePlatform.IOS
+import com.ohmz.tday.shared.guide.GuidePlatform.WEB
+
+/**
+ * The canonical, hand-authored list of guide topics — the single source of truth
+ * consumed natively by Android and the backend, and exported (structure + strings)
+ * to web and iOS.
+ *
+ * The rule that keeps this current (see AGENTS.md): a PR that ships user-visible
+ * behavior adds its topic here with [GuideTopic.sinceVersion] set, plus its
+ * `guide.topics.<id>.*` strings in every `messages/<locale>.json`. "What's New"
+ * then maintains itself.
+ */
+object GuideCatalog {
+
+    val topics: List<GuideTopic> = listOf(
+        // ── Getting started ──────────────────────────────────────────────
+        topic(
+            GuideTopicIds.ROOT_FEEDS, GuideSectionId.GETTING_STARTED, "layout-dashboard",
+            setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.ROOT_FEEDS)),
+        ),
+        topic(
+            // Right after Root feeds: this is the Settings control for the same
+            // Scheduled/Floaters choice that topic just introduced.
+            GuideTopicIds.DEFAULT_HOME_SCREEN, GuideSectionId.GETTING_STARTED, "house",
+            setOf(WEB, ANDROID, IOS), sinceVersion = "0.7.7",
+            body = listOf(para(GuideTopicIds.DEFAULT_HOME_SCREEN)),
+        ),
+        topic(
+            GuideTopicIds.CREATE_TASK, GuideSectionId.GETTING_STARTED, "plus",
+            setOf(WEB, ANDROID, IOS),
+            body = listOf(para(GuideTopicIds.CREATE_TASK), tip(GuideTopicIds.CREATE_TASK)),
+        ),
+
+        // ── Capture & dates ──────────────────────────────────────────────
+        topic(
+            GuideTopicIds.NLP_DATE_SYNTAX, GuideSectionId.CAPTURE_AND_DATES, "wand-sparkles",
+            setOf(WEB, ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM,
+            body = listOf(para(GuideTopicIds.NLP_DATE_SYNTAX), example(GuideTopicIds.NLP_DATE_SYNTAX)),
+            helpAnchors = listOf("nlp-title-input"),
+        ),
+        topic(
+            GuideTopicIds.BRAIN_DUMP, GuideSectionId.CAPTURE_AND_DATES, "wand-sparkles",
+            setOf(WEB), badge = GuideBadge.PRO_TIP, sinceVersion = "0.7.0",
+            body = listOf(para(GuideTopicIds.BRAIN_DUMP), steps(GuideTopicIds.BRAIN_DUMP, 3)),
+        ),
+        topic(
+            GuideTopicIds.TASK_STEPS, GuideSectionId.CAPTURE_AND_DATES, "list-todo",
+            setOf(WEB), badge = GuideBadge.PRO_TIP, sinceVersion = "0.7.0",
+            body = listOf(para(GuideTopicIds.TASK_STEPS), steps(GuideTopicIds.TASK_STEPS, 3)),
+        ),
+        topic(
+            GuideTopicIds.CALENDAR_VIEWS, GuideSectionId.CAPTURE_AND_DATES, "calendar",
+            setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.CALENDAR_VIEWS)),
+            deepLink = GuideDeepLink(web = "calendar", android = "calendar", ios = "calendar"),
+        ),
+        topic(
+            GuideTopicIds.PRIORITIES, GuideSectionId.CAPTURE_AND_DATES, "flag",
+            setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.PRIORITIES)),
+        ),
+        topic(
+            GuideTopicIds.PIN_TASK, GuideSectionId.CAPTURE_AND_DATES, "pin",
+            setOf(WEB, ANDROID, IOS), badge = GuideBadge.PRO_TIP,
+            body = listOf(para(GuideTopicIds.PIN_TASK)),
+        ),
+
+        // ── Gestures ─────────────────────────────────────────────────────
+        topic(
+            GuideTopicIds.SWIPE_ACTIONS, GuideSectionId.GESTURES, "pointer",
+            setOf(ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM,
+            body = listOf(para(GuideTopicIds.SWIPE_ACTIONS), tip(GuideTopicIds.SWIPE_ACTIONS)),
+            deepLink = GuideDeepLink(android = "todos/today", ios = "today"),
+        ),
+        topic(
+            // Right after Swipe actions: Copy is one of the pills that topic
+            // introduces, and on web it's reachable from the same task row (swipe
+            // on mobile, the hover actions on desktop) even though web has no
+            // separate swipe-actions topic of its own.
+            GuideTopicIds.COPY_TASK_TEXT, GuideSectionId.GESTURES, "copy",
+            setOf(WEB, ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.7.8",
+            body = listOf(para(GuideTopicIds.COPY_TASK_TEXT), tip(GuideTopicIds.COPY_TASK_TEXT)),
+        ),
+        topic(
+            GuideTopicIds.LONG_PRESS_ACTIONS, GuideSectionId.GESTURES, "hand",
+            setOf(ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM,
+            body = listOf(para(GuideTopicIds.LONG_PRESS_ACTIONS)),
+        ),
+        topic(
+            GuideTopicIds.DRAG_REORDER, GuideSectionId.GESTURES, "grip-vertical",
+            setOf(WEB, ANDROID, IOS), badge = GuideBadge.PRO_TIP,
+            body = listOf(para(GuideTopicIds.DRAG_REORDER)),
+        ),
+        topic(
+            // After Drag to reorder because it is the same hand doing the same
+            // thing to a different surface, and a reader arrives here already
+            // holding something.
+            //
+            // IOS only, and that is the topic rather than an oversight. Android's
+            // create sheet is a Material `ModalBottomSheet`, which arrives with
+            // the platform's own drag-to-dismiss and its own grabber already
+            // drawn, and web has no bottom sheet to pull at all. iOS is the one
+            // client whose create sheet is hand-rolled — the host drives its own
+            // entrance so the dim does not arrive as a sliding band — and so the
+            // one client that had to be handed the gesture on purpose.
+            //
+            // "grip-vertical" again, one topic after it: a grabber is the handle
+            // that glyph draws, turned on its side. A glyph of its own would mean
+            // an Android vector drawable and an iOS imageset for a topic only one
+            // platform shows, which is the trade Reduce motion below refuses for
+            // the same reason.
+            GuideTopicIds.SWIPE_SHEET_AWAY, GuideSectionId.GESTURES, "grip-vertical",
+            setOf(IOS), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.7.23",
+            body = listOf(
+                para(GuideTopicIds.SWIPE_SHEET_AWAY),
+                tip(GuideTopicIds.SWIPE_SHEET_AWAY),
+            ),
+        ),
+        topic(
+            // Last in Gestures because it is what the section's other topics feel
+            // like: the pop and the buzz are the app answering a finger, so a
+            // reader arrives here having just met the taps and drags being
+            // answered.
+            //
+            // WEB only, and that is the whole point of the topic. Android's
+            // TaskCompletionSound refuses to play unless the ringer is in
+            // RINGER_MODE_NORMAL, iOS's SoundManager runs on an .ambient session
+            // the silent switch silences, and native haptics go through
+            // performHapticFeedback / UIFeedbackGenerator, which the OS mutes with
+            // its own touch-feedback setting. The phone carries all three
+            // switches; a browser is handed none of them, so web is the only
+            // client with rows of its own to document.
+            //
+            // "waves" rather than a new glyph: a sound and a vibration are both a
+            // wave, it is already in the covered set, and a fresh glyph would mean
+            // an Android vector drawable plus an iOS imageset for a topic neither
+            // platform shows. The precedent is written up in Widgets & surfaces,
+            // where "layout-grid" covers three unrelated topics.
+            GuideTopicIds.SOUND_AND_VIBRATION, GuideSectionId.GESTURES, "waves",
+            setOf(WEB), sinceVersion = "0.7.23",
+            body = listOf(
+                para(GuideTopicIds.SOUND_AND_VIBRATION),
+                tip(GuideTopicIds.SOUND_AND_VIBRATION),
+            ),
+            deepLink = GuideDeepLink(web = "settings"),
+            helpAnchors = listOf("settings-feature-toggle"),
+        ),
+        topic(
+            // Beside Sound and vibration, and last for the same reason it is: these
+            // are the three ways the app answers a hand that is on it, and this is
+            // the one you turn down when the other two are not the problem.
+            //
+            // ANDROID only, and — like its neighbour — that is the topic. The other
+            // two clients already have a switch that reaches them: the browser hands
+            // web `prefers-reduced-motion`, and iOS hands SwiftUI
+            // `UIAccessibility.isReduceMotionEnabled`, both of them a system setting
+            // a user has already been taught to find. Android offers no such signal;
+            // what it has is the animator duration scale, which lives in the
+            // developer options on many builds and is device-wide when it is
+            // reachable at all. So Android is the one client whose users need to be
+            // told where the switch is, because it is the one client that had to
+            // grow its own.
+            //
+            // "activity": the glyph is a line that moves, which is the thing being
+            // turned down, and it already has a drawable and an imageset — a new
+            // glyph would mean drawing both for a topic only one platform shows.
+            GuideTopicIds.REDUCE_MOTION, GuideSectionId.GESTURES, "activity",
+            setOf(ANDROID), sinceVersion = "0.7.23",
+            body = listOf(
+                para(GuideTopicIds.REDUCE_MOTION),
+                tip(GuideTopicIds.REDUCE_MOTION),
+            ),
+            helpAnchors = listOf("settings-motion"),
+        ),
+
+        // ── Organizing ───────────────────────────────────────────────────
+        topic(
+            GuideTopicIds.FLOATERS_VS_TODOS, GuideSectionId.ORGANIZING, "waves",
+            setOf(WEB, ANDROID, IOS),
+            body = listOf(para(GuideTopicIds.FLOATERS_VS_TODOS), tip(GuideTopicIds.FLOATERS_VS_TODOS)),
+        ),
+        topic(
+            // The Settings "Feature toggle" card holds this too, but it stays in
+            // Organizing: the topic above it is what defines "floater", and a
+            // reader who meets resting floaters before that word has no footing.
+            GuideTopicIds.RESTING_FLOATERS, GuideSectionId.ORGANIZING, "waves",
+            setOf(WEB, ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.6.0",
+            body = listOf(para(GuideTopicIds.RESTING_FLOATERS), tip(GuideTopicIds.RESTING_FLOATERS)),
+            helpAnchors = listOf("settings-feature-toggle"),
+        ),
+        topic(
+            GuideTopicIds.PROMOTE_AND_FLOAT, GuideSectionId.ORGANIZING, "refresh-cw",
+            setOf(WEB, ANDROID, IOS), sinceVersion = "0.3.0",
+            body = listOf(para(GuideTopicIds.PROMOTE_AND_FLOAT), tip(GuideTopicIds.PROMOTE_AND_FLOAT)),
+        ),
+        topic(
+            GuideTopicIds.QUICK_DEFER, GuideSectionId.ORGANIZING, "alarm-clock",
+            setOf(WEB, ANDROID, IOS), sinceVersion = "0.3.0",
+            body = listOf(para(GuideTopicIds.QUICK_DEFER), tip(GuideTopicIds.QUICK_DEFER)),
+        ),
+        topic(
+            GuideTopicIds.DAY_DONE, GuideSectionId.ORGANIZING, "check-check",
+            setOf(WEB, ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.3.0",
+            body = listOf(para(GuideTopicIds.DAY_DONE)),
+        ),
+        topic(
+            GuideTopicIds.FLOATER_LISTS, GuideSectionId.ORGANIZING, "list",
+            setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.FLOATER_LISTS)),
+        ),
+        topic(
+            GuideTopicIds.REUSABLE_LISTS, GuideSectionId.ORGANIZING, "refresh-cw",
+            setOf(WEB, ANDROID, IOS), sinceVersion = "0.6.0",
+            body = listOf(para(GuideTopicIds.REUSABLE_LISTS), steps(GuideTopicIds.REUSABLE_LISTS, 3)),
+        ),
+        topic(
+            GuideTopicIds.SCHEDULED_LISTS, GuideSectionId.ORGANIZING, "list-todo",
+            setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.SCHEDULED_LISTS)),
+        ),
+        topic(
+            // All three now. Neither native client links the Kotlin — the pbxproj names
+            // none and web runs none — so iOS and web each read the same table through a
+            // committed artifact written by `:shared:exportListIconTable`, and Android
+            // calls it directly. One behaviour, one word list, three callers; listing
+            // fewer platforms here would understate what a reader will actually find.
+            GuideTopicIds.LIST_ICONS, GuideSectionId.ORGANIZING, "wand-sparkles",
+            setOf(WEB, ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.7.28",
+            body = listOf(para(GuideTopicIds.LIST_ICONS), tip(GuideTopicIds.LIST_ICONS)),
+        ),
+        topic(
+            GuideTopicIds.COMPLETED_HISTORY, GuideSectionId.ORGANIZING, "check-check",
+            setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.COMPLETED_HISTORY)),
+        ),
+        topic(
+            GuideTopicIds.OVERDUE_VIEW, GuideSectionId.ORGANIZING, "alarm-clock",
+            setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.OVERDUE_VIEW)),
+            deepLink = GuideDeepLink(web = "overdue", android = "todos/overdue", ios = "overdueTodos"),
+        ),
+        topic(
+            GuideTopicIds.MORNING_SWEEP, GuideSectionId.ORGANIZING, "hand",
+            setOf(WEB, ANDROID, IOS), sinceVersion = "0.3.0",
+            body = listOf(para(GuideTopicIds.MORNING_SWEEP), tip(GuideTopicIds.MORNING_SWEEP)),
+            deepLink = GuideDeepLink(web = "overdue", android = "morning-sweep", ios = "morning-sweep"),
+        ),
+        topic(
+            // Directly after Morning Sweep: they are the two "act on many tasks at
+            // once" topics, and a reader who just met the sweep is exactly the reader
+            // asking whether the same thing works outside the overdue screen.
+            // No deep link on purpose — selection mode is a button on list screens the
+            // guide already reaches, and every route in the whitelist is one more thing
+            // that can rot. See docs/design/bulk-selection.md.
+            GuideTopicIds.BULK_ACTIONS, GuideSectionId.ORGANIZING, "circle-check-big",
+            setOf(WEB, ANDROID, IOS), badge = GuideBadge.PRO_TIP, sinceVersion = "0.7.4",
+            body = listOf(
+                para(GuideTopicIds.BULK_ACTIONS),
+                steps(GuideTopicIds.BULK_ACTIONS, 3),
+                tip(GuideTopicIds.BULK_ACTIONS),
+            ),
+        ),
+        topic(
+            GuideTopicIds.SEARCH_TASKS, GuideSectionId.ORGANIZING, "search",
+            setOf(WEB, ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM,
+            body = listOf(para(GuideTopicIds.SEARCH_TASKS)),
+        ),
+
+        // ── Recurrence & reminders ───────────────────────────────────────
+        topic(
+            // First in the section because it gates the rest of it: with this switch off no
+            // reminder, snooze, quiet-hours shift or Day Ahead digest is delivered at all, so
+            // a reader who meets any of those topics before this one can follow every step and
+            // still hear nothing. Native only — web's equivalent is `push-notifications`,
+            // which is a server-sent subscription rather than an on-device switch.
+            GuideTopicIds.NOTIFICATIONS, GuideSectionId.RECURRENCE_AND_REMINDERS, "bell",
+            setOf(ANDROID, IOS), sinceVersion = "0.7.0",
+            body = listOf(para(GuideTopicIds.NOTIFICATIONS), tip(GuideTopicIds.NOTIFICATIONS)),
+            helpAnchors = listOf("settings-feature-toggle"),
+        ),
+        topic(
+            GuideTopicIds.RECURRENCE_PRESETS, GuideSectionId.RECURRENCE_AND_REMINDERS, "repeat",
+            setOf(WEB, ANDROID, IOS),
+            body = listOf(para(GuideTopicIds.RECURRENCE_PRESETS), example(GuideTopicIds.RECURRENCE_PRESETS)),
+            helpAnchors = listOf("recurrence-picker"),
+        ),
+        topic(
+            GuideTopicIds.REPEAT_SUGGESTIONS, GuideSectionId.RECURRENCE_AND_REMINDERS, "repeat",
+            setOf(WEB, ANDROID, IOS), sinceVersion = "0.6.0",
+            body = listOf(para(GuideTopicIds.REPEAT_SUGGESTIONS), tip(GuideTopicIds.REPEAT_SUGGESTIONS)),
+        ),
+        topic(
+            GuideTopicIds.REMINDERS, GuideSectionId.RECURRENCE_AND_REMINDERS, "bell",
+            setOf(ANDROID, IOS),
+            body = listOf(para(GuideTopicIds.REMINDERS), tip(GuideTopicIds.REMINDERS)),
+        ),
+        topic(
+            GuideTopicIds.REMINDER_SNOOZE, GuideSectionId.RECURRENCE_AND_REMINDERS, "bell",
+            setOf(ANDROID, IOS), sinceVersion = "0.3.0",
+            body = listOf(para(GuideTopicIds.REMINDER_SNOOZE), tip(GuideTopicIds.REMINDER_SNOOZE)),
+        ),
+        topic(
+            GuideTopicIds.QUIET_HOURS, GuideSectionId.RECURRENCE_AND_REMINDERS, "bell",
+            setOf(ANDROID, IOS), sinceVersion = "0.6.0",
+            body = listOf(para(GuideTopicIds.QUIET_HOURS), tip(GuideTopicIds.QUIET_HOURS)),
+            helpAnchors = listOf("settings-notifications"),
+        ),
+        topic(
+            GuideTopicIds.DAY_AHEAD, GuideSectionId.RECURRENCE_AND_REMINDERS, "bell-ring",
+            setOf(ANDROID, IOS), sinceVersion = "0.3.0",
+            body = listOf(para(GuideTopicIds.DAY_AHEAD), tip(GuideTopicIds.DAY_AHEAD)),
+        ),
+        topic(
+            // Web-only, and on web this switch lives in the Feature toggle card,
+            // not the Reminders card the other "settings-notifications" topics
+            // sit in — one anchor id meaning two different cards on two
+            // platforms is how a "?" ends up pointing at the wrong one.
+            GuideTopicIds.PUSH_NOTIFICATIONS, GuideSectionId.RECURRENCE_AND_REMINDERS, "bell-ring",
+            setOf(WEB), serverOnly = true, sinceVersion = "0.3.0",
+            body = listOf(para(GuideTopicIds.PUSH_NOTIFICATIONS)),
+            helpAnchors = listOf("settings-feature-toggle"),
+        ),
+        topic(
+            // Bumped off 0.5.0 deliberately, for a topic that is not new. What "What's New"
+            // has to carry this time is a control that DISAPPEARED: the Settings row that used
+            // to turn UnifiedPush on is gone and registration happens by itself, and a user who
+            // goes looking for the switch they remember has no other place to be told why it
+            // isn't there. A body rewrite alone reaches only the readers who already came here.
+            GuideTopicIds.UNIFIEDPUSH, GuideSectionId.RECURRENCE_AND_REMINDERS, "bell-ring",
+            setOf(ANDROID), serverOnly = true, sinceVersion = "0.7.28",
+            body = listOf(para(GuideTopicIds.UNIFIEDPUSH), steps(GuideTopicIds.UNIFIEDPUSH, 3)),
+            helpAnchors = listOf("settings-notifications"),
+        ),
+
+        // ── Widgets & surfaces ───────────────────────────────────────────
+        topic(
+            // "layout-grid" here, on FOCUS_FILTERS below, and on the new LIST_WIDGETS topic are
+            // three independently-chosen icons for unrelated topics that happen to share a
+            // glyph; a shared constant would assert a coupling that doesn't exist between them.
+            GuideTopicIds.HOME_WIDGET, GuideSectionId.WIDGETS_AND_SURFACES, "layout-grid",  // skipcq: KT-W1042
+            setOf(ANDROID, IOS), body = listOf(para(GuideTopicIds.HOME_WIDGET)),
+        ),
+        topic(
+            // iOS-only: the picker is a real AppIntentConfiguration widget
+            // (long-press ▸ Edit Widget) that re-targets an already-placed widget at a
+            // different list. Icon reused from the covered set
+            // (tday-web/tests/fixtures/guide-icons.json) rather than adding a new Lucide
+            // glyph across all three platforms blind.
+            GuideTopicIds.WIDGET_LIST_SELECTION, GuideSectionId.WIDGETS_AND_SURFACES, "list-todo",
+            setOf(IOS), sinceVersion = "0.7.7", badge = GuideBadge.PRO_TIP,
+            body = listOf(para(GuideTopicIds.WIDGET_LIST_SELECTION), tip(GuideTopicIds.WIDGET_LIST_SELECTION)),
+        ),
+        topic(
+            // The third widget kind, beside Today and Floater, on both platforms: placed without a
+            // list, it asks for one (Android opens its picker on a tap, iOS 18+ asks as it is
+            // added), then shows only that list and adds into it. Separate from iOS's
+            // WIDGET_LIST_SELECTION above, which re-points a Today or Floater widget instead.
+            GuideTopicIds.LIST_WIDGETS, GuideSectionId.WIDGETS_AND_SURFACES, "layout-grid",
+            setOf(ANDROID, IOS), sinceVersion = "0.7.45",
+            body = listOf(para(GuideTopicIds.LIST_WIDGETS), tip(GuideTopicIds.LIST_WIDGETS)),
+        ),
+        topic(
+            GuideTopicIds.WIDGET_QUICK_ADD, GuideSectionId.WIDGETS_AND_SURFACES, "square-plus",
+            setOf(ANDROID, IOS), badge = GuideBadge.PRO_TIP,
+            body = listOf(para(GuideTopicIds.WIDGET_QUICK_ADD)),
+        ),
+        topic(
+            GuideTopicIds.INTERACTIVE_WIDGETS, GuideSectionId.WIDGETS_AND_SURFACES, "check-check",
+            setOf(ANDROID, IOS), sinceVersion = "0.4.0",
+            body = listOf(para(GuideTopicIds.INTERACTIVE_WIDGETS), tip(GuideTopicIds.INTERACTIVE_WIDGETS)),
+        ),
+        topic(
+            // The Today widget's date-led header, progress ring, Overdue section and empty-day
+            // preview, and the tick-and-strike beat on completion.
+            GuideTopicIds.TODAY_WIDGET_PROGRESS, GuideSectionId.WIDGETS_AND_SURFACES, "circle-check-big",
+            setOf(ANDROID, IOS), sinceVersion = "0.7.44",
+            body = listOf(para(GuideTopicIds.TODAY_WIDGET_PROGRESS), tip(GuideTopicIds.TODAY_WIDGET_PROGRESS)),
+        ),
+        topic(
+            GuideTopicIds.SHARE_INTO_TDAY, GuideSectionId.WIDGETS_AND_SURFACES, "share-2",
+            setOf(WEB, ANDROID, IOS), sinceVersion = "0.4.0",
+            body = listOf(para(GuideTopicIds.SHARE_INTO_TDAY), tip(GuideTopicIds.SHARE_INTO_TDAY)),
+        ),
+        topic(
+            GuideTopicIds.ANDROID_SHORTCUTS, GuideSectionId.WIDGETS_AND_SURFACES, "square-plus",
+            setOf(ANDROID), sinceVersion = "0.4.0",
+            body = listOf(para(GuideTopicIds.ANDROID_SHORTCUTS), tip(GuideTopicIds.ANDROID_SHORTCUTS)),
+        ),
+        topic(
+            GuideTopicIds.CARPLAY, GuideSectionId.WIDGETS_AND_SURFACES, "car",
+            setOf(IOS), badge = GuideBadge.HIDDEN_GEM,
+            body = listOf(para(GuideTopicIds.CARPLAY)),
+        ),
+        topic(
+            GuideTopicIds.FOCUS_FILTERS, GuideSectionId.WIDGETS_AND_SURFACES, "layout-grid",
+            setOf(IOS), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.7.0",
+            body = listOf(para(GuideTopicIds.FOCUS_FILTERS), steps(GuideTopicIds.FOCUS_FILTERS, 3)),
+        ),
+        topic(
+            GuideTopicIds.APPLE_WATCH, GuideSectionId.WIDGETS_AND_SURFACES, "alarm-clock",
+            setOf(IOS), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.7.0",
+            body = listOf(para(GuideTopicIds.APPLE_WATCH), steps(GuideTopicIds.APPLE_WATCH, 3)),
+        ),
+        topic(
+            GuideTopicIds.ANDROID_CAR, GuideSectionId.WIDGETS_AND_SURFACES, "car-front",
+            setOf(ANDROID), body = listOf(para(GuideTopicIds.ANDROID_CAR)),
+        ),
+
+        // ── Modes & sync ─────────────────────────────────────────────────
+        topic(
+            // The web joined Local Mode too: its workspace lives in the browser's
+            // own storage, so the topic is no longer mobile-only.
+            GuideTopicIds.LOCAL_MODE, GuideSectionId.MODES_AND_SYNC, "wifi-off",
+            setOf(WEB, ANDROID, IOS),
+            body = listOf(para(GuideTopicIds.LOCAL_MODE), tip(GuideTopicIds.LOCAL_MODE)),
+        ),
+        topic(
+            GuideTopicIds.SERVER_MODE, GuideSectionId.MODES_AND_SYNC, "cloud",
+            setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.SERVER_MODE)),
+        ),
+        topic(
+            GuideTopicIds.OFFLINE_SYNC, GuideSectionId.MODES_AND_SYNC, "refresh-cw",
+            setOf(ANDROID, IOS), body = listOf(para(GuideTopicIds.OFFLINE_SYNC)),
+        ),
+        topic(
+            GuideTopicIds.IN_APP_UPDATE, GuideSectionId.MODES_AND_SYNC, "download",
+            setOf(ANDROID), body = listOf(para(GuideTopicIds.IN_APP_UPDATE)),
+        ),
+        topic(
+            GuideTopicIds.EXPORT_YOUR_DATA, GuideSectionId.MODES_AND_SYNC, "download",
+            setOf(WEB, ANDROID, IOS), sinceVersion = "0.5.0",
+            body = listOf(para(GuideTopicIds.EXPORT_YOUR_DATA), tip(GuideTopicIds.EXPORT_YOUR_DATA)),
+        ),
+        topic(
+            GuideTopicIds.LOCAL_TO_SERVER_MIGRATION, GuideSectionId.MODES_AND_SYNC, "cloud",
+            setOf(ANDROID, IOS), sinceVersion = "0.5.0",
+            body = listOf(para(GuideTopicIds.LOCAL_TO_SERVER_MIGRATION), tip(GuideTopicIds.LOCAL_TO_SERVER_MIGRATION)),
+        ),
+        topic(
+            // The consent surface's FAQ: what the opt-in crash reports hold, when they
+            // are sent and what never leaves the device. Five paragraphs because blocks
+            // are plain text (no list block), so each topic of the privacy contract
+            // gets its own paragraph — see docs/TELEMETRY.md for the source of truth.
+            GuideTopicIds.CRASH_REPORTS, GuideSectionId.MODES_AND_SYNC, "activity",
+            setOf(WEB, ANDROID, IOS), sinceVersion = "0.8.0",
+            body = listOf(
+                para(GuideTopicIds.CRASH_REPORTS),
+                paraSlot(GuideTopicIds.CRASH_REPORTS, 2),
+                paraSlot(GuideTopicIds.CRASH_REPORTS, 3),
+                paraSlot(GuideTopicIds.CRASH_REPORTS, 4),
+                paraSlot(GuideTopicIds.CRASH_REPORTS, 5),
+                steps(GuideTopicIds.CRASH_REPORTS, 3),
+                tip(GuideTopicIds.CRASH_REPORTS),
+            ),
+            helpAnchors = listOf("settings-privacy"),
+        ),
+
+        // ── Integrations ─────────────────────────────────────────────────
+        // The two topics the Settings "Feature toggle" card switches on lead the
+        // section, in the order that card lists them. Its single "?" lands on
+        // ai-summary, so anything else first would drop the reader into the
+        // middle of a section with the rest of the card behind them. The rest
+        // keeps its previous relative order, with the two calendar topics still
+        // adjacent — a feed you subscribe to elsewhere is the question anyone
+        // asks straight after device-calendar sync, and they are easy to confuse.
+        topic(
+            GuideTopicIds.AI_SUMMARY, GuideSectionId.INTEGRATIONS, "sparkles",
+            setOf(WEB, ANDROID, IOS), serverOnly = true,
+            body = listOf(para(GuideTopicIds.AI_SUMMARY), tip(GuideTopicIds.AI_SUMMARY)),
+            helpAnchors = listOf("settings-feature-toggle"),
+        ),
+        topic(
+            GuideTopicIds.DEVICE_CALENDAR_SYNC, GuideSectionId.INTEGRATIONS, "calendar",
+            setOf(ANDROID, IOS), sinceVersion = "0.7.0",
+            body = listOf(
+                para(GuideTopicIds.DEVICE_CALENDAR_SYNC),
+                steps(GuideTopicIds.DEVICE_CALENDAR_SYNC, 3),
+            ),
+            helpAnchors = listOf("settings-feature-toggle"),
+        ),
+        topic(
+            GuideTopicIds.API_KEY_HOMARR, GuideSectionId.INTEGRATIONS, "key-round",
+            setOf(WEB), serverOnly = true,
+            body = listOf(para(GuideTopicIds.API_KEY_HOMARR), steps(GuideTopicIds.API_KEY_HOMARR, 3)),
+            deepLink = GuideDeepLink(web = "settings"),
+            helpAnchors = listOf("settings-api-key"),
+        ),
+        topic(
+            GuideTopicIds.WEEK_IN_REVIEW, GuideSectionId.INTEGRATIONS, "check-check",
+            setOf(WEB), sinceVersion = "0.6.0",
+            body = listOf(para(GuideTopicIds.WEEK_IN_REVIEW), tip(GuideTopicIds.WEEK_IN_REVIEW)),
+        ),
+
+        // ── Keyboard shortcuts ───────────────────────────────────────────
+        topic(
+            GuideTopicIds.KEYBOARD_SUBMIT, GuideSectionId.KEYBOARD_SHORTCUTS, "keyboard",
+            setOf(WEB),
+            body = listOf(para(GuideTopicIds.KEYBOARD_SUBMIT), kbd(GuideTopicIds.KEYBOARD_SUBMIT)),
+        ),
+        topic(
+            GuideTopicIds.KEYBOARD_SHORTCUTS, GuideSectionId.KEYBOARD_SHORTCUTS, "keyboard",
+            setOf(WEB), sinceVersion = "0.4.0",
+            // Chords must stay in lockstep with useGlobalHotkeys and the "?"
+            // overlay in the web app.
+            body = listOf(
+                para(GuideTopicIds.KEYBOARD_SHORTCUTS),
+                kbd(GuideTopicIds.KEYBOARD_SHORTCUTS),
+                kbd(GuideTopicIds.KEYBOARD_SHORTCUTS, slot = 2),
+                kbd(GuideTopicIds.KEYBOARD_SHORTCUTS, slot = 3),
+                tip(GuideTopicIds.KEYBOARD_SHORTCUTS),
+            ),
+        ),
+    )
+
+    /** Fast id lookup. */
+    val byId: Map<String, GuideTopic> = topics.associateBy { it.id }
+
+    /** Topics that apply to [platform], in authored (section) order. */
+    fun topicsFor(platform: GuidePlatform): List<GuideTopic> =
+        topics.filter { platform in it.platforms }
+
+    /**
+     * Topics introduced in [currentVersion] for [platform] — the "What's New"
+     * group. Empty when nothing shipped in this version applies here.
+     */
+    fun whatsNew(currentVersion: String, platform: GuidePlatform): List<GuideTopic> =
+        topicsFor(platform).filter { it.sinceVersion == currentVersion }
+
+    // ── Authoring helpers ────────────────────────────────────────────────
+    private fun topic(
+        id: String,
+        section: GuideSectionId,
+        icon: String,
+        platforms: Set<GuidePlatform>,
+        body: List<GuideBlock>,
+        badge: GuideBadge? = null,
+        deepLink: GuideDeepLink? = null,
+        helpAnchors: List<String> = emptyList(),
+        serverOnly: Boolean = false,
+        sinceVersion: String? = null,
+    ) = GuideTopic(
+        id = id,
+        section = section,
+        icon = icon,
+        platforms = platforms,
+        titleKey = "guide.topics.$id.title",
+        summaryKey = "guide.topics.$id.summary",
+        keywordsKey = "guide.topics.$id.keywords",
+        body = body,
+        badge = badge,
+        deepLink = deepLink,
+        helpAnchors = helpAnchors,
+        serverOnly = serverOnly,
+        sinceVersion = sinceVersion,
+    )
+
+    private fun para(id: String) = GuideBlock(GuideBlockType.PARAGRAPH, listOf("guide.topics.$id.body"))
+
+    /** A further paragraph for topics long enough to need several: `body2`, `body3`, … */
+    private fun paraSlot(id: String, slot: Int) = GuideBlock(
+        GuideBlockType.PARAGRAPH,
+        listOf(if (slot <= 1) "guide.topics.$id.body" else "guide.topics.$id.body$slot"),
+    )
+    private fun tip(id: String) = GuideBlock(GuideBlockType.TIP, listOf("guide.topics.$id.tip"))
+    private fun example(id: String) = GuideBlock(GuideBlockType.EXAMPLE, listOf("guide.topics.$id.example"))
+    private fun kbd(id: String, slot: Int = 1) = GuideBlock(
+        GuideBlockType.KBD,
+        listOf(if (slot <= 1) "guide.topics.$id.kbd" else "guide.topics.$id.kbd$slot"),
+    )
+    private fun steps(id: String, count: Int) =
+        GuideBlock(GuideBlockType.STEPS, (0 until count).map { "guide.topics.$id.step$it" })
+}

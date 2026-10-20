@@ -1,0 +1,527 @@
+package com.ohmz.tday.compose.core.data.list
+
+import android.util.Log
+import com.ohmz.tday.compose.core.data.CachedCompletedFloaterRecord
+import com.ohmz.tday.compose.core.data.CachedFloaterListRecord
+import com.ohmz.tday.compose.core.data.CachedFloaterRecord
+import com.ohmz.tday.compose.core.data.MutationKind
+import com.ohmz.tday.compose.core.data.OfflineSyncState
+import com.ohmz.tday.compose.core.data.PendingMutationRecord
+import com.ohmz.tday.compose.core.data.SecureConfigStore
+import com.ohmz.tday.compose.core.data.cache.LOCAL_FLOATER_LIST_PREFIX
+import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.cache.floaterListFromCache
+import com.ohmz.tday.compose.core.data.cache.orderFloaterListsLikeWeb
+import com.ohmz.tday.compose.core.data.cache.parseOptionalInstant
+import com.ohmz.tday.compose.core.data.cache.replaceLocalFloaterListId
+import com.ohmz.tday.compose.core.data.isLikelyUnrecoverableMutationError
+import com.ohmz.tday.compose.core.data.requireApiBody
+import com.ohmz.tday.compose.core.data.sync.SyncManager
+import com.ohmz.tday.compose.core.model.CreateFloaterListRequest
+import com.ohmz.tday.compose.core.model.DeleteFloaterListRequest
+import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.UpdateFloaterListRequest
+import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
+import com.ohmz.tday.compose.core.network.TdayApiService
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class FloaterListRepository @Inject constructor(
+    private val api: TdayApiService,
+    private val cacheManager: OfflineCacheManager,
+    private val secureConfigStore: SecureConfigStore,
+    private val syncManager: SyncManager,
+) {
+    suspend fun fetchLists(): List<ListSummary> =
+        buildListsForState(cacheManager.loadOfflineState())
+
+    fun fetchListsSnapshot(): List<ListSummary> =
+        buildListsForState(cacheManager.loadOfflineStateBlocking())
+
+    suspend fun createList(
+        name: String,
+        color: String? = null,
+        iconKey: String? = null,
+        reusable: Boolean = false,
+        defaultPriority: String? = null,
+    ) {
+        val normalizedName = capitalizeFirstListLetter(name).trim()
+        if (normalizedName.isBlank()) return
+
+        val localListId = "$LOCAL_FLOATER_LIST_PREFIX${UUID.randomUUID()}"
+        val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
+        cacheManager.updateOfflineState { state ->
+            val newList = CachedFloaterListRecord(
+                id = localListId,
+                name = normalizedName,
+                color = color,
+                iconKey = iconKey,
+                todoCount = 0,
+                createdAtEpochMs = timestampMs,
+                updatedAtEpochMs = timestampMs,
+                reusable = reusable,
+                defaultPriority = defaultPriority,
+            )
+            state.copy(
+                floaterLists = state.floaterLists + newList,
+                pendingMutations = state.pendingMutations + PendingMutationRecord(
+                    mutationId = mutationId,
+                    kind = MutationKind.CREATE_FLOATER_LIST,
+                    targetId = localListId,
+                    timestampEpochMs = timestampMs,
+                    name = normalizedName,
+                    color = color,
+                    iconKey = iconKey,
+                    reusable = reusable,
+                    defaultPriority = defaultPriority,
+                    defaultPriorityChanged = true,
+                ),
+            )
+        }
+
+        if (syncManager.isLocalMode()) return
+
+        // Held for the whole request-plus-remap: a realtime self-echo of this
+        // very create can otherwise trigger a background sync whose fetch
+        // already contains the new server row while the placeholder above
+        // still carries its local_ id (see mergeRemoteWithLocal's doc
+        // comment) -- the union merge would then keep both. Sharing
+        // syncCachedData's lock means that fetch-and-merge can only run
+        // fully before this starts or fully after it finishes, never
+        // interleaved with it.
+        cacheManager.withSyncLock {
+            runCatching {
+                requireApiBody(
+                    api.createFloaterList(
+                        CreateFloaterListRequest(
+                            name = normalizedName,
+                            color = color,
+                            iconKey = iconKey,
+                            reusable = reusable,
+                            defaultPriority = defaultPriority,
+                        ),
+                    ),
+                    "Could not create floater list",
+                ).list
+            }.onSuccess { createdList ->
+                if (createdList == null) return@onSuccess
+                val createdAt =
+                    parseOptionalInstant(createdList.createdAt)?.toEpochMilli() ?: timestampMs
+                val updatedAt =
+                    parseOptionalInstant(createdList.updatedAt)?.toEpochMilli() ?: timestampMs
+                cacheManager.updateOfflineState { state ->
+                    val remapped = replaceLocalFloaterListId(
+                        state = state,
+                        localListId = localListId,
+                        serverListId = createdList.id,
+                    )
+                    val todoCount =
+                        remapped.floaters.count { !it.completed && it.listId == createdList.id }
+                    remapped.copy(
+                        floaterLists = remapped.floaterLists.map { list ->
+                            if (list.id == createdList.id) {
+                                list.copy(
+                                    name = createdList.name,
+                                    color = createdList.color,
+                                    iconKey = createdList.iconKey ?: list.iconKey,
+                                    todoCount = todoCount,
+                                    updatedAtEpochMs = updatedAt,
+                                    createdAtEpochMs = createdAt,
+                                    reusable = createdList.reusable,
+                                    defaultPriority = createdList.defaultPriority,
+                                )
+                            } else {
+                                list
+                            }
+                        },
+                        pendingMutations = remapped.pendingMutations.filterNot { it.mutationId == mutationId },
+                    )
+                }
+            }
+        }
+    }
+
+    suspend fun updateList(
+        listId: String,
+        name: String,
+        color: String? = null,
+        iconKey: String? = null,
+        reusable: Boolean? = null,
+        defaultPriority: String? = null,
+        defaultPriorityChanged: Boolean = false,
+    ) {
+        val trimmedName = capitalizeFirstListLetter(name).trim()
+        if (listId.isBlank()) return
+        require(trimmedName.isNotBlank()) { "List name is required" }
+
+        val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
+        if (listId.startsWith(LOCAL_FLOATER_LIST_PREFIX)) {
+            cacheManager.updateOfflineState { state ->
+                state.copy(
+                    floaterLists = state.floaterLists.map { list ->
+                        if (list.id == listId) {
+                            list.copy(
+                                name = trimmedName,
+                                color = color ?: list.color,
+                                iconKey = iconKey ?: list.iconKey,
+                                updatedAtEpochMs = timestampMs,
+                                reusable = reusable ?: list.reusable,
+                                defaultPriority = if (defaultPriorityChanged) defaultPriority else list.defaultPriority,
+                            )
+                        } else {
+                            list
+                        }
+                    },
+                    pendingMutations = state.pendingMutations.map { mutation ->
+                        if (mutation.kind == MutationKind.CREATE_FLOATER_LIST && mutation.targetId == listId) {
+                            mutation.copy(
+                                name = trimmedName,
+                                color = color ?: mutation.color,
+                                iconKey = iconKey ?: mutation.iconKey,
+                                timestampEpochMs = timestampMs,
+                                reusable = reusable ?: mutation.reusable,
+                                defaultPriority = if (defaultPriorityChanged) defaultPriority else mutation.defaultPriority,
+                            )
+                        } else {
+                            mutation
+                        }
+                    },
+                )
+            }
+            iconKey?.takeIf { it.isNotBlank() }?.let {
+                secureConfigStore.saveListIcon(listId, it)
+            }
+            if (syncManager.isLocalMode()) return
+            syncManager.syncCachedData(force = true, replayPendingMutations = true)
+            return
+        }
+
+        val pendingMutation = PendingMutationRecord(
+            mutationId = mutationId,
+            kind = MutationKind.UPDATE_FLOATER_LIST,
+            targetId = listId,
+            timestampEpochMs = timestampMs,
+            name = trimmedName,
+            color = color,
+            iconKey = iconKey,
+            reusable = reusable,
+            defaultPriority = defaultPriority,
+            defaultPriorityChanged = defaultPriorityChanged,
+        )
+        cacheManager.updateOfflineState { state ->
+            state.copy(
+                floaterLists = state.floaterLists.map { list ->
+                    if (list.id == listId) {
+                        list.copy(
+                            name = trimmedName,
+                            color = color ?: list.color,
+                            iconKey = iconKey ?: list.iconKey,
+                            updatedAtEpochMs = timestampMs,
+                            reusable = reusable ?: list.reusable,
+                            defaultPriority = if (defaultPriorityChanged) defaultPriority else list.defaultPriority,
+                        )
+                    } else {
+                        list
+                    }
+                },
+                pendingMutations = state.pendingMutations
+                    .filterNot { it.kind == MutationKind.UPDATE_FLOATER_LIST && it.targetId == listId } + pendingMutation,
+            )
+        }
+
+        if (syncManager.isLocalMode()) {
+            iconKey?.takeIf { it.isNotBlank() }?.let {
+                secureConfigStore.saveListIcon(listId, it)
+            }
+            return
+        }
+
+        val immediateError = runCatching {
+            requireApiBody(
+                api.patchFloaterListByBody(
+                    UpdateFloaterListRequest(
+                        id = listId,
+                        name = trimmedName,
+                        color = color,
+                        iconKey = iconKey,
+                        reusable = reusable,
+                        defaultPriority = defaultPriority,
+                        defaultPriorityChanged = defaultPriorityChanged,
+                    ),
+                ),
+                "Could not update floater list",
+            )
+        }.exceptionOrNull()
+
+        if (immediateError != null && isLikelyUnrecoverableMutationError(
+                immediateError,
+                pendingMutation
+            )
+        ) {
+            throw immediateError
+        }
+
+        iconKey?.takeIf { it.isNotBlank() }?.let {
+            secureConfigStore.saveListIcon(listId, it)
+        }
+
+        if (immediateError == null) {
+            cacheManager.updateOfflineState { state ->
+                state.copy(pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId })
+            }
+        } else {
+            Log.w(
+                LOG_TAG,
+                "updateFloaterList deferred reason=${immediateError.javaClass.simpleName}"
+            )
+        }
+    }
+
+    /** Reset a reusable list: locally un-complete all its floaters, then queue the reset. */
+    suspend fun resetFloaterList(listId: String) {
+        if (listId.isBlank()) return
+        val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
+        val pendingMutation = PendingMutationRecord(
+            mutationId = mutationId,
+            kind = MutationKind.RESET_FLOATER_LIST,
+            targetId = listId,
+            timestampEpochMs = timestampMs,
+        )
+
+        cacheManager.updateOfflineState { state ->
+            val updatedFloaters = state.floaters.map {
+                if (it.listId == listId && it.completed) {
+                    it.copy(completed = false, updatedAtEpochMs = timestampMs)
+                } else {
+                    it
+                }
+            }
+            state.copy(
+                floaters = updatedFloaters,
+                completedFloaters = state.completedFloaters.filterNot { it.listId == listId },
+                pendingMutations = state.pendingMutations
+                    .filterNot { it.kind == MutationKind.RESET_FLOATER_LIST && it.targetId == listId } + pendingMutation,
+            )
+        }
+
+        if (syncManager.isLocalMode() || listId.startsWith(LOCAL_FLOATER_LIST_PREFIX)) return
+
+        val immediateError = runCatching {
+            requireApiBody(api.resetFloaterList(listId), "Could not reset floater list")
+        }.exceptionOrNull()
+
+        if (immediateError == null) {
+            cacheManager.updateOfflineState { state ->
+                state.copy(pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId })
+            }
+        } else if (isLikelyUnrecoverableMutationError(immediateError, pendingMutation)) {
+            throw immediateError
+        } else {
+            Log.w(LOG_TAG, "resetFloaterList deferred reason=${immediateError.javaClass.simpleName}")
+        }
+    }
+
+    /**
+     * Stage step of the delayed-commit floater-list delete: prunes the list and
+     * its floaters from the local cache exactly like the prune-half of
+     * [deleteList]. Nothing is sent to the server here — the real
+     * DELETE_FLOATER_LIST mutation is added by the commit step — but a
+     * non-replayable *staged* marker of the same kind is written in its place so
+     * a sync's merge (a pull-to-refresh racing the undo window) still treats the
+     * list as deleted instead of writing it back from the server response; see
+     * [PendingMutationRecord.staged] and SyncManager's replay/merge handling of
+     * it. Completed floaters are deliberately left untouched — see [deleteList]
+     * for why — so [StagedFloaterListDeletion.removedCompletedFloaters] is always
+     * empty; the field stays so [undoStagedListDeletion] has nothing extra to
+     * special-case if that ever changes. The commit step is the existing
+     * [deleteList], whose prune-half re-runs as a no-op on the already-pruned
+     * state and whose own DELETE_FLOATER_LIST mutation naturally replaces this
+     * marker (same targetId).
+     *
+     * Runs inside [OfflineCacheManager.withSyncLock] — the same mutex a sync holds
+     * for its whole read-fetch-merge-save span (see [SyncManager.syncCachedData])
+     * — so this write can never land between a concurrent sync's pre-network
+     * state read and its post-network save; see [ListRepository.stageDeleteList]'s
+     * matching note for why that window is otherwise unsafe.
+     */
+    suspend fun stageDeleteList(listId: String): StagedFloaterListDeletion {
+        val normalizedListId = listId.trim()
+        if (normalizedListId.isBlank()) return StagedFloaterListDeletion()
+
+        var staged = StagedFloaterListDeletion()
+        cacheManager.withSyncLock {
+            cacheManager.updateOfflineState { state ->
+                val deletedFloaterIds = state.floaters
+                    .filter { it.listId == normalizedListId }
+                    .map { it.canonicalId }
+                    .toSet()
+
+                fun matchesMutation(mutation: PendingMutationRecord): Boolean =
+                    mutation.targetId == normalizedListId ||
+                        mutation.listId == normalizedListId ||
+                        deletedFloaterIds.contains(mutation.targetId)
+
+                val stagedMutationId = UUID.randomUUID().toString()
+                staged = StagedFloaterListDeletion(
+                    removedFloaterLists = state.floaterLists.filter { it.id == normalizedListId },
+                    removedFloaters = state.floaters.filter { it.listId == normalizedListId },
+                    removedPendingMutations = state.pendingMutations.filter(::matchesMutation),
+                    stagedMutationId = stagedMutationId,
+                )
+                state.copy(
+                    floaterLists = state.floaterLists.filterNot { it.id == normalizedListId },
+                    floaters = state.floaters.filterNot { it.listId == normalizedListId },
+                    pendingMutations = state.pendingMutations.filterNot(::matchesMutation) +
+                        PendingMutationRecord(
+                            mutationId = stagedMutationId,
+                            kind = MutationKind.DELETE_FLOATER_LIST,
+                            targetId = normalizedListId,
+                            timestampEpochMs = System.currentTimeMillis(),
+                            staged = true,
+                        ),
+                )
+            }
+        }
+        return staged
+    }
+
+    /** Undo step: re-inserts the records captured by [stageDeleteList] and drops its
+     * staged marker mutation. Idempotent. */
+    suspend fun undoStagedListDeletion(staged: StagedFloaterListDeletion) {
+        cacheManager.updateOfflineState { state ->
+            val listIds = state.floaterLists.map { it.id }.toSet()
+            val floaterIds = state.floaters.map { it.id }.toSet()
+            val completedIds = state.completedFloaters.map { it.id }.toSet()
+            val mutationIds = state.pendingMutations.map { it.mutationId }.toSet()
+            state.copy(
+                floaterLists = state.floaterLists +
+                    staged.removedFloaterLists.filterNot { it.id in listIds },
+                floaters = state.floaters +
+                    staged.removedFloaters.filterNot { it.id in floaterIds },
+                completedFloaters = state.completedFloaters +
+                    staged.removedCompletedFloaters.filterNot { it.id in completedIds },
+                pendingMutations = state.pendingMutations.filterNot { it.mutationId == staged.stagedMutationId } +
+                    staged.removedPendingMutations.filterNot { it.mutationId in mutationIds },
+            )
+        }
+    }
+
+    suspend fun deleteList(
+        listId: String,
+        onOptimisticDelete: () -> Unit = {},
+    ) {
+        val normalizedListId = listId.trim()
+        if (normalizedListId.isBlank()) return
+
+        val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
+        val pendingMutation = PendingMutationRecord(
+            mutationId = mutationId,
+            kind = MutationKind.DELETE_FLOATER_LIST,
+            targetId = normalizedListId,
+            timestampEpochMs = timestampMs,
+        )
+        val isLocalOnly = normalizedListId.startsWith(LOCAL_FLOATER_LIST_PREFIX)
+
+        cacheManager.updateOfflineState { state ->
+            val deletedFloaterIds = state.floaters
+                .filter { it.listId == normalizedListId }
+                .map { it.canonicalId }
+                .toSet()
+            val prunedMutations = state.pendingMutations.filterNot { mutation ->
+                mutation.targetId == normalizedListId ||
+                        mutation.listId == normalizedListId ||
+                        deletedFloaterIds.contains(mutation.targetId)
+            }
+
+            // Completed floaters survive list deletion (see
+            // docs/design/completed-floaters-durability.md): only the live/pending
+            // Floaters rows for this list are pruned here, matching the backend's
+            // FloaterListService.deleteMany(), which now detaches CompletedFloaters
+            // rows (nulling their listID) instead of deleting them. The stale
+            // listId/listName left on the local record until the next sync is
+            // harmless — the Completed screen already renders from the
+            // denormalized listName/listColor snapshot, not a live list lookup.
+            state.copy(
+                floaterLists = state.floaterLists.filterNot { it.id == normalizedListId },
+                floaters = state.floaters.filterNot { it.listId == normalizedListId },
+                pendingMutations = if (isLocalOnly) prunedMutations else prunedMutations + pendingMutation,
+            )
+        }
+
+        onOptimisticDelete()
+
+        if (syncManager.isLocalMode()) return
+
+        if (isLocalOnly) {
+            syncManager.syncCachedData(force = true, replayPendingMutations = true)
+            return
+        }
+
+        val immediateError = runCatching {
+            requireApiBody(
+                api.deleteFloaterListByBody(DeleteFloaterListRequest(id = normalizedListId)),
+                "Could not delete floater list",
+            )
+        }.exceptionOrNull()
+
+        if (immediateError != null && isLikelyUnrecoverableMutationError(
+                immediateError,
+                pendingMutation
+            )
+        ) {
+            throw immediateError
+        }
+
+        if (immediateError == null) {
+            cacheManager.updateOfflineState { state ->
+                state.copy(pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId })
+            }
+        } else {
+            Log.w(
+                LOG_TAG,
+                "deleteFloaterList deferred reason=${immediateError.javaClass.simpleName}"
+            )
+        }
+    }
+
+    private fun buildListsForState(state: OfflineSyncState): List<ListSummary> {
+        val todoCountsByList = state.floaters
+            .asSequence()
+            .filterNot { it.completed }
+            .groupingBy { it.listId }
+            .eachCount()
+        return orderFloaterListsLikeWeb(state.floaterLists).map {
+            floaterListFromCache(cache = it, todoCountOverride = todoCountsByList[it.id] ?: 0)
+        }
+    }
+
+    private companion object {
+        const val LOG_TAG = "FloaterListRepository"
+    }
+}
+
+/**
+ * Local cache records removed by [FloaterListRepository.stageDeleteList], retained
+ * so an Undo within the delete-toast window can restore the exact pre-delete state
+ * (the list plus its cascaded floaters). Nothing here has been sent to the server.
+ * [removedCompletedFloaters] is always empty — completed floaters are no longer
+ * pruned on list delete (they outlive the list; see [deleteList]) — but the field
+ * stays so [FloaterListRepository.undoStagedListDeletion] needs no special-casing.
+ * [stagedMutationId] identifies the non-replayable staged DELETE_FLOATER_LIST
+ * marker [FloaterListRepository.stageDeleteList] wrote (see
+ * [PendingMutationRecord.staged]), so [FloaterListRepository.undoStagedListDeletion]
+ * can remove it on Undo instead of leaving it stranded in the pending queue.
+ */
+data class StagedFloaterListDeletion(
+    val removedFloaterLists: List<CachedFloaterListRecord> = emptyList(),
+    val removedFloaters: List<CachedFloaterRecord> = emptyList(),
+    val removedCompletedFloaters: List<CachedCompletedFloaterRecord> = emptyList(),
+    val removedPendingMutations: List<PendingMutationRecord> = emptyList(),
+    val stagedMutationId: String? = null,
+)

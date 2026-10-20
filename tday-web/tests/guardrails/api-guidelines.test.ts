@@ -1,0 +1,156 @@
+import { readdirSync, readFileSync, existsSync } from "fs";
+import path from "path";
+import { describe, it, expect } from "vitest";
+
+const ROOT = path.resolve(__dirname, "..", "..");
+const MONO = path.resolve(ROOT, "..");
+const BACKEND_SRC = path.join(MONO, "tday-backend", "src", "main", "kotlin", "com", "ohmz", "tday");
+const ROUTES_DIR = path.join(BACKEND_SRC, "routes");
+const SHARED_ROUTES_FILE = path.join(
+  MONO,
+  "shared",
+  "src",
+  "commonMain",
+  "kotlin",
+  "com",
+  "ohmz",
+  "tday",
+  "shared",
+  "routes",
+  "ApiRoutes.kt",
+);
+
+function walkFiles(dir: string, ext: string): string[] {
+  const results: string[] = [];
+  if (!existsSync(dir)) return results;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...walkFiles(full, ext));
+    } else if (entry.name.endsWith(ext)) {
+      results.push(full);
+    }
+  }
+  return results;
+}
+
+function readSource(filePath: string): string {
+  return readFileSync(filePath, "utf-8");
+}
+
+function relPath(filePath: string): string {
+  return path.relative(MONO, filePath);
+}
+
+const ALL_ROUTE_FILES = walkFiles(ROUTES_DIR, ".kt");
+const AUTH_ROUTE_DIR = path.join(ROUTES_DIR, "auth");
+const NON_AUTH_ROUTES = ALL_ROUTE_FILES.filter((f) => !f.startsWith(AUTH_ROUTE_DIR));
+
+describe("Ktor API route conventions", () => {
+  describe("route files use Ktor routing DSL", () => {
+    it.each(ALL_ROUTE_FILES.map((f) => [relPath(f), f]))(
+      "%s should use Route extension function pattern",
+      (_label, filePath) => {
+        const content = readSource(filePath);
+        expect(content).toMatch(/fun\s+Route\./);
+      },
+    );
+  });
+
+  describe("authenticated routes check auth context", () => {
+    const dataRoutes = NON_AUTH_ROUTES.filter((f) => {
+      const name = path.basename(f, ".kt");
+      return ![
+        "AppleAppSiteAssociationRoutes",
+        "MobileProbeRoutes",
+        // Public-by-design: one instance-wide answer the admin gives for everyone, read by a
+        // browser before it has a session so it can decide whether to start its SDK. It carries no
+        // personal data and no DSN state — see the route file's own doc comment.
+        "InstanceTelemetryRoutes",
+        "TimezoneRoutes",
+        "AppSettingsRoutes",
+        // Public-by-design: an opaque per-user token in the URL path is the
+        // credential (calendar clients can't send auth headers) — see the
+        // route file's own doc comment.
+        "CalendarFeedRoutes",
+      ].includes(name);
+    });
+
+    it.each(dataRoutes.map((f) => [relPath(f), f]))(
+      "%s should verify authentication",
+      (_label, filePath) => {
+        const content = readSource(filePath);
+        const hasAuth =
+          content.includes("withAuth") ||
+          content.includes("authUser") ||
+          content.includes("requireAdmin");
+        expect(hasAuth).toBe(true);
+      },
+    );
+  });
+
+  describe("auth routes exist for complete auth flow", () => {
+    const expectedRouteFiles = [
+      "CsrfRoutes.kt",
+      "RegisterRoutes.kt",
+      "CredentialsCallbackRoutes.kt",
+      "SessionRoutes.kt",
+      "LogoutRoutes.kt",
+    ];
+
+    it.each(expectedRouteFiles)(
+      "auth route file %s should exist",
+      (filename) => {
+        expect(existsSync(path.join(AUTH_ROUTE_DIR, filename))).toBe(true);
+      },
+    );
+  });
+
+  describe("routing plugin mounts all route groups", () => {
+    it("Routing.kt should mount all major route groups", () => {
+      const routingFile = readSource(path.join(BACKEND_SRC, "plugins", "Routing.kt"));
+      expect(routingFile).toContain("todoRoutes()");
+      expect(routingFile).toContain("listRoutes()");
+      expect(routingFile).toContain("userRoutes()");
+      expect(routingFile).toContain("mobileProbeRoutes(config)");
+      expect(routingFile).toContain("csrfRoutes()");
+      expect(routingFile).toContain("registerRoutes()");
+      expect(routingFile).toContain("credentialsCallbackRoutes()");
+      expect(routingFile).toContain("sessionRoutes()");
+      expect(routingFile).toContain("logoutRoutes()");
+    });
+  });
+
+  describe("shared API route constants cover backend route groups", () => {
+    it("ApiRoutes.kt should expose the route groups used by clients", () => {
+      const content = readSource(SHARED_ROUTES_FILE);
+      const expectedObjects = [
+        "Auth",
+        "Todo",
+        "List",
+        "Floater",
+        "FloaterList",
+        "Completed",
+        "CompletedFloater",
+        "Preferences",
+        "User",
+        "Timezone",
+        "AppSettings",
+        "Admin",
+        "Mobile",
+      ];
+
+      for (const objectName of expectedObjects) {
+        expect(content).toContain(`object ${objectName}`);
+      }
+    });
+  });
+
+  describe("status pages plugin provides structured error handling", () => {
+    it("StatusPages.kt should handle common error types", () => {
+      const statusPages = readSource(path.join(BACKEND_SRC, "plugins", "StatusPages.kt"));
+      expect(statusPages).toContain("StatusPages");
+      expect(statusPages).toContain("exception");
+    });
+  });
+});

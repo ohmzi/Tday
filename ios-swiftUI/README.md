@@ -1,0 +1,293 @@
+# T'Day iOS (SwiftUI)
+
+Native SwiftUI client for T'Day. It should stay behaviorally aligned with the Android Compose app while using SwiftUI, SwiftData, Observation, and iOS-native interactions.
+
+## Product Role
+
+Current feature surface:
+
+- Local Mode for offline-only planning without server setup.
+- Server Mode with JWE cookie auth, optimistic local writes, realtime refresh, and pending mutation replay.
+- Scheduled task home and Floater task home root feeds controlled by `RootFeedDock`.
+- Pull-to-refresh is a Server Mode root-feed affordance on the scheduled task home and floater task home roots only; detail, category, calendar, and completed screens refresh through cache observation, sync, foreground reconnect, or explicit retry actions.
+- Scheduled tasks, floaters, scheduled-task lists, floater lists, completed history, calendar, search, settings, reminders, an opt-in device-calendar mirror, Today/Floater WidgetKit widgets, CarPlay templates, and Siri/App Shortcuts for car task creation.
+- SwiftData-backed local cache mirrored with Android's Room-backed `OfflineSyncState`.
+
+## Structure
+
+```text
+ios-swiftUI/
+├── TdayApp.xcodeproj
+├── Tday/
+│   ├── TdayApp.swift
+│   ├── Info.plist
+│   ├── Core/
+│   │   ├── Data/        # AppContainer, repositories, SwiftData cache, sync
+│   │   ├── Domain/      # Use cases where they clarify app flows
+│   │   ├── Model/       # API/domain/offline sync models
+│   │   ├── Navigation/  # AppRoute
+│   │   ├── Network/     # URLSession API, cookies, realtime
+│   │   ├── Calendar/    # Opt-in device-calendar mirror (EventKit)
+│   │   ├── Notification/# Deep links and reminders
+│   │   ├── Security/    # Probe/decryption helpers
+│   │   ├── Telemetry/   # Opt-in crash reports: consent store, scrubber, lifecycle, slow-operation helper
+│   │   ├── UI/          # Shared app UI helpers
+│   │   └── Widget/      # Today/Floater widget snapshot stores
+│   ├── Feature/
+│   │   ├── App/
+│   │   ├── Auth/
+│   │   ├── ScheduledTaskHome/
+│   │   ├── Todos/
+│   │   ├── Calendar/
+│   │   ├── CarPlay/
+│   │   ├── Completed/
+│   │   ├── Settings/
+│   │   ├── Telemetry/   # The crash-reports consent card (the wizard's step lives in Onboarding/)
+│   │   └── Onboarding/
+│   ├── UI/
+│   │   ├── Component/
+│   │   └── Theme/
+│   └── Resources/
+├── TdayWidget/
+│   ├── TodayTasksWidget.swift
+│   ├── Info.plist
+│   └── TdayWidget.entitlements
+└── Tests/
+```
+
+## Run
+
+- Targets iOS 17+.
+- Open `ios-swiftUI/TdayApp.xcodeproj`.
+- Select the `Tday` scheme.
+- Run on simulator/device.
+
+Useful command-line check:
+
+```bash
+xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.6'
+```
+
+## Releasing to TestFlight
+
+- `.github/workflows/ios-testflight.yml` archives the `Tday` scheme on a macOS runner and uploads
+  it to TestFlight when `release.yml` pushes a `v*` tag whose diff against **the last release that
+  actually reached TestFlight** touched an iOS-relevant file. Anchoring on the previous *tag*
+  instead would silently strand a release whose iOS build failed.
+- Signing is App Store Connect API key plus Xcode automatic signing (`-allowProvisioningUpdates`);
+  there is no `match` repository and no certificate in the repo. The five App IDs and the
+  `group.com.ohmz.tday` App Group must already exist — Xcode mints *profiles* on demand, not those.
+  The API key needs the **Admin** role, not App Manager.
+- Automatic signing always *development*-signs the archive — the App Store re-sign happens at
+  export — so CI also needs one persistent **Apple Development** certificate *with its private
+  key*, held as the `IOS_DEVELOPMENT_CERT_P12_BASE64` / `IOS_DEVELOPMENT_CERT_P12_PASSWORD`
+  secrets and imported into a throwaway keychain for the run. The pipeline refuses to archive
+  without them, in build-only mode too: letting `-allowProvisioningUpdates` mint a fresh
+  certificate every run is what filled the team's certificate quota and broke v0.7.7. See
+  `docs/DEPLOYMENT.md` § CI development certificate.
+- `workflow_dispatch` runs the same pipeline in **build-only** mode on any ref
+  (`gh workflow run ios-testflight.yml --ref develop`): it archives, signs and exports, then
+  stops. That is how a change to the pipeline — or a Swift compile error only a macOS runner
+  reproduces — gets tested without cutting a release. The mode is derived from the event and the
+  ref, so no input can make a manual run upload; only the push of a `v*` tag uploads.
+- The lane never derives a build number — `CURRENT_PROJECT_VERSION` already equals
+  `version.json`'s `ios.buildNumber` at the tag.
+- The upload does not wait for App Store Connect processing (`skip_waiting_for_build_processing`),
+  so a green archive/upload only means ASC *accepted* the binary. A follow-up `confirm-processing`
+  job — Linux, not macOS, since it is only an HTTP poll — checks the result on a bounded window and
+  fails loudly if it comes back `FAILED`/`INVALID`, naming the spent build number and the one the
+  next release needs.
+- `XcodeGen must never be run here.` `project.yml` is a mirror kept for tooling;
+  `TdayApp.xcodeproj/project.pbxproj` is the source of truth, and regenerating would discard it
+  along with the shared `Tday.xcscheme` the pipeline archives.
+- Lane and Ruby toolchain live in `ios-swiftUI/fastlane/` and `ios-swiftUI/Gemfile`. Full setup
+  checklist: `docs/DEPLOYMENT.md` § iOS TestFlight Releases.
+
+## Persistence and Sync
+
+- SwiftData stores todos, floaters, lists, floater lists, completed records, pending mutations, and sync metadata.
+- `OfflineCacheManager` posts `.offlineCacheDidChange`; ViewModels refresh cache-backed task data and
+  Settings sync status when it changes.
+- Repositories write optimistically to SwiftData first.
+- In Server Mode, `SyncManager` replays pending mutations and refreshes snapshots.
+- In Server Mode, Settings shows Server sync status, last sync metadata, pending change count, and a
+  duplicate-safe manual sync action.
+- In Local Mode, pending mutations are cleared/ignored because there is no remote target, and Settings
+  shows the workspace as local-only.
+- Keychain-backed `SecureStore` handles server URL, cookies, credentials, theme, reminders, and mode state.
+
+See [`../docs/DATA_MODEL.md`](../docs/DATA_MODEL.md) for the shared cache model.
+
+## Widgets
+
+`TdayWidget` is a WidgetKit app extension with small, medium, and large Today Tasks and Floater
+Tasks widgets. The app writes snapshots through the App Group suite `group.com.ohmz.tday` using keys
+`tday.widget.todayTasksSnapshot` and `tday.widget.floaterTasksSnapshot`; the Today extension model
+decodes schema version 3 snapshots and keeps a legacy fallback for older payloads.
+
+- Snapshot status is `setup`, `empty`, or `tasks`, with task count, generated time, and capped task rows.
+- Today includes pending scheduled tasks due today; Floater includes active unscheduled floaters
+  across all floater lists. Completed tasks and overdue scheduled tasks are excluded.
+- The Today snapshot records its local day and carries the next six days as well, so the widget
+  turns over at midnight on its own (a timeline entry at the next local midnight) even when nothing
+  syncs or writes — offline, say. Past the last carried day it shows "Open T'Day" instead of a stale
+  day; launching or foregrounding the app retakes the snapshot. `Tday/Core/Widget/TodayWidgetDayWindow.swift`
+  is the one source file the app and the widget extension both compile. See `docs/WIDGET_SYNC.md`.
+- Medium and large layouts show the title, neutral count text, a mode-accented native plus icon add
+  target, and dense scan-first rows; compact layouts stay count-first and prioritize task titles
+  over due-time detail.
+- All widget states keep a subtle oversized watermark in the background, drawn from the shared Lucide
+  set (`docs/ICONS.md`) rather than SF Symbols, since a list's own glyph can only come from there and
+  one widget cannot carry two drawing styles. Whole-feed widgets show their feed's mark — Today
+  follows the app title icon rule, sun from 6 AM to 5:59 PM and moon at night; Floater is always the
+  leaf. A widget scoped to one list shows THAT list's glyph instead. Empty and setup states add
+  centered message text over that persistent motif.
+- Tapping Today widget content opens the app; tapping Floater widget content opens the Floater root.
+- The add actions open `tday://todos/create?target=today` or
+  `tday://todos/create?target=floater`, select the matching root feed, and immediately start the
+  in-app create-task sheet without auto-focusing the title field or opening the keyboard. WidgetKit
+  cannot present the app sheet over the Home Screen widget host, so the interaction uses an in-app
+  handoff.
+- System-family WidgetKit widgets remain snapshot/glanceable because WidgetKit does not support true
+  in-widget scrolling lists. The widget stores up to 50 task rows, renders the best-fit
+  family-specific neutral row set, and keeps `+N more` as the tap-to-open cue when additional tasks
+  exist.
+
+Widget UI should keep using system WidgetKit margins/backgrounds, removable container backgrounds, and
+tinted/accented rendering support while carrying T'Day identity through rounded typography, native
+add icons, persistent calm watermarks, and accent treatment reserved for the plus add button and the
+watermark.
+
+That accent is the LIST's colour on a widget scoped to one list, and the widget kind's otherwise. The
+colour and glyph travel to the extension as the opaque KEYS the list stores ("TEAL", "work") in
+`widget-lists-snapshot.json`, never as a hex or an asset name, and are resolved on the widget side by
+`Tday/UI/Theme/TdayListAccent.swift` — an app file the extension compiles, like
+`TodayWidgetDayWindow.swift`. Both keys are optional: a list with no colour, or a catalog written
+before the fields existed, falls back to the kind's accent, so no already-placed widget changes or
+blanks on upgrade. A locked widget drops the list accent along with the list's name, because a glyph
+the list never chose is inferred from that name.
+
+### Per-list configuration (R7)
+
+Both widget kinds are `AppIntentConfiguration`s: long-press ▸ Edit Widget (or the placement flow) lets
+the user pick any one todo list or floater list via `TdayWidgetListEntity`/`TdayWidgetListEntityQuery`
+(`TdayWidget/TodayTasksWidget.swift`), backed by a lightweight catalog file
+(`widget-lists-snapshot.json`, written by `WidgetConfigurableListsStore`) so the extension never needs
+`AppContainer`/SwiftData. Each catalog row carries the list's id, name, kind and its glyph/colour keys.
+Leaving the picker unset keeps the ORIGINAL global feed — this is also what every widget placed before
+R7 falls back to.
+
+The picked list's TYPE, not the gallery slot it came from, decides the rendered shape: a todo list
+always renders due-date-shaped (due times, overdue tinted red); a floater list always renders
+undated-shaped. So a floater list picked from the "Today's Tasks" gallery entry renders
+floater-shaped, and vice versa — there is no third shape. Content for a configured instance comes
+from the same two snapshot files' new `perList[listId]` map (see `docs/DATA_MODEL.md`); a per-list
+instance's todo window is due-today-OR-overdue (wider than the global "due today" feed), since the
+user explicitly chose that one list rather than the aggregate.
+
+A third widget kind, **List** (`ListTasksWidget`), is for one list and nothing else: iOS 18+ asks for
+the list as it is added (`promptsForUserConfiguration`); unconfigured — skipped, iOS 17, or its list
+deleted — it shows the same setup picture as Android's List widget and "Choose a list". It shows the
+list's every open task (`openByList` for todo lists), and its "+" opens the create sheet on that
+list (`tday://todos/create?target=…&listId=…`), so the list's default priority applies.
+
+This is a sibling to, not a replacement for, iOS Focus Filters (`Feature/CarPlay/CarTaskIntents.swift`
+— `TdayFocusFilterStore`/`TdayListAppEntity`), which narrows the Today feed to a set of lists while a
+Focus is active. Both mechanisms can be in play at once; a per-list widget's content ignores the
+active Focus filter (it already narrowed to one list on purpose).
+
+## CarPlay
+
+The app includes a CarPlay template scene in `Feature/CarPlay/` for the same Today/Floater task
+surface. CarPlay uses `CPListTemplate` and bar buttons rather than custom freeform SwiftUI, so the
+Today/Floater switcher is represented by icon controls and system transitions. App Store
+distribution requires Apple to grant the CarPlay entitlement for the appropriate category; until
+then, the code remains buildable but entitlement-gated for real CarPlay deployment.
+
+Voice creation is exposed through App Intents/App Shortcuts. The CarPlay plus action offers a
+template-compliant iPhone handoff, while Siri can run the same create operation directly by voice.
+
+## Natural-language scheduling
+
+The new-task title field recognizes date/time phrases **on-device** with Foundation's
+`NSDataDetector` (Apple's built-in date detector) — no network and no AI, so it also works in Local
+Mode. Typing e.g. "call mom next monday 9am" auto-sets the Due, highlights the recognized phrase in
+place, and strips it from the saved task title.
+
+- `OnDeviceTitleNlpParser` (in `Core/Data/Todo/TodoRepository.swift`) runs `NSDataDetector` and
+  returns the matched span, the cleaned title, and the due instant. A bare "8pm" is never shifted.
+- `TodoRepository.parseTodoTitleNlp` is the single entry point used by every create-task surface;
+  swapping it to the local parser made them all offline at once.
+- `CreateTaskSheet` keeps the full typed text and overlays the highlight (an `AttributedString` over
+  the `TextField`, so editing/caret behaviour is unchanged), sets the Due, and removes the phrase
+  from the title only on submit.
+- Parsing runs in the device timezone; the due is saved as a UTC instant. `NSDataDetector` resolves
+  relative phrases ("tomorrow") against the current date.
+
+## Mobile Parity
+
+For user-facing iOS changes, compare the Android implementation in `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/` and `core/`. Match behavior, counts, empty states, Local Mode affordances, and navigation rules while keeping SwiftUI idioms.
+
+## Crash reports (opt-in)
+
+Crash and problem reports go to the maintainer's Sentry only if the person turns them on, and then
+only at the moment something fails (a crash, an app hang over 2 s, a watchdog termination, a captured
+error). The `slow_operation` helper exists, but nothing calls it yet. Off by default; `docs/TELEMETRY.md` has the full contract and `docs/adr/009-*` the
+decision.
+
+- The answer is per device and has three states: unanswered (behaves as off), granted, denied. It
+  lives in `UserDefaults.standard` (`telemetry.consent` as a Bool, `telemetry.consentAt` as epoch
+  seconds), not the Keychain, so it resets with an install and is readable in `TdayApp.init`. Signing
+  out, leaving a workspace and deleting local data leave it alone.
+- The wizard asks on **every** sign-in: a device that answered before is asked again, and the answer
+  on record stays in force until the new question replaces it. Mobile keeps its per-device answer;
+  the web and the server are governed by the admin's instance setting instead
+  ([ADR 010](../docs/adr/010-instance-governed-web-crash-reports.md), which amends 009 for those two).
+- A local build gets its reporting endpoint from the gitignored `Local.xcconfig` (`SENTRY_DSN`, and
+  `TDAY_PROBE_ENCRYPTION_KEY` for the version gate), pulled in optionally by the committed
+  `Tday.xcconfig`. Without one, `Info.plist`'s `$(SENTRY_DSN)` is empty and every consent surface
+  stays hidden; the TestFlight lane passes its own `-xcconfig`, so releases never depend on it.
+- `SentryConfiguration.start()` (called from `TdayApp.init`) starts the SDK only when the answer is
+  granted and `SENTRY_DSN` is non-empty. Otherwise it deletes `<Caches>/io.sentry` and
+  `<Caches>/SentryCrash` and returns, so nothing is initialised, buffered or sent. A build without a
+  DSN (a fork, a debug run) shows neither the wizard's last step, nor the card, nor the Settings row.
+- Options come from the pure `SentryConfiguration.makeOptions(dsn:)`: sessions, traces, client
+  reports, swizzling, network tracking and screenshots are all pinned off; app-hang and watchdog
+  tracking stay on. `beforeSend` drops events older than the consent time and passes the rest through
+  `TelemetryScrubber` (no user, request, device name, locale or zone; URLs, hosts, addresses and
+  identifiers redacted; tags `client`, `app_version`, `mode`, `tz_offset`, `locale_lang`). Message text
+  is scanned only up to 2000 characters and then cut to 300. A host written with capitals
+  (`NAS.Example.com`, `Alexs-iPhone.local`, `Alex-Mac.Tail1234.ts.net`) is redacted when it ends in a
+  private or well-known suffix, while Swift type paths such as `Tday.SyncEngine.Replay` are kept.
+  `TdayTelemetry.capture` reports an error as its domain and code only.
+- `TelemetryConsentModel` (owned by `AppContainer`) is the one writer. The question is the sign-in
+  wizard's own last step — a "Privacy" chip beside Mode, Server and Login, which `AppRootView` holds
+  the wizard on screen for once a workspace is available (Server or Local Mode) — and the
+  `TelemetryConsentCard` overlay in `AppRootView` asks the same thing when that step cannot: an
+  install already signed in at launch, a restart mid-step, or a gate that took the wizard's place.
+  The Settings -> Privacy row and all three surfaces write through the model, so answering in any one
+  of them counts as answering. "Read the full FAQ" holds the card back until the next launch and opens
+  the `crash-reports` guide topic. That topic is listed under What's New and in its section;
+  `HelpGuideScreen.cardKey(topicID:isHighlight:)` keys the What's New copy `highlight-<id>`, so a deep
+  link expands and scrolls to the section card only.
+- Turning it off runs `TelemetryLifecycle.revoke`: close the gate, delete the on-disk state, close the
+  SDK, delete again. `SlowOperation.report` is the only way a slow operation becomes an event, with the
+  thresholds and rate limits shared across clients; no call site uses it yet.
+- Run the telemetry tests on macOS with `swift test --filter TelemetryScrubberTests` (and
+  `--filter GuideContentContractTests`) from `ios-swiftUI/`, or `xcodebuild test ... -only-testing:TdayCoreTests/TelemetryScrubberTests`
+  (see `docs/TESTING.md`).
+
+## Environment Notes
+
+- Uses `URLSession`, `SwiftData`, `Observation`, `CryptoKit`, `UserNotifications`, and Sentry Cocoa
+  (pinned to 9.x, started only after opt-in; see Crash reports above).
+- `AppContainer` owns repository/service wiring. Keep dependencies explicit there unless a broader architecture decision says otherwise.
+- The root `Package.swift` is support-only and intentionally non-runnable; it exists for source indexing/package resolution, not for launching the iOS app.
+
+## Version Compatibility
+
+- iOS marketing version, build number, and `TdayUpdateURL` mirror root `../version.json`.
+- Server Mode sends `X-Tday-Client: ios` and `X-Tday-App-Version`.
+- When `compatibility.updateRequired` is true, iOS and the backend use exact version matching. Settings shows installed/server/latest version state, and Server Mode is blocked with app-update or server-update guidance when versions differ.
+- `ios.updateUrl` in `version.json` should be set to the App Store or TestFlight URL before distributing an iOS build with a direct update action.
+- Do not edit Xcode version fields directly. Update `version.json`, then run `node scripts/version.mjs sync` and `node scripts/version.mjs check` from the repo root.

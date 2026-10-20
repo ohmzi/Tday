@@ -1,0 +1,472 @@
+package com.ohmz.tday.compose.feature.calendar
+
+import android.content.Context
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.data.cache.FirstAnswerSignal
+import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.list.ListRepository
+import com.ohmz.tday.compose.core.data.sync.SyncManager
+import com.ohmz.tday.compose.core.data.todo.TodoRepository
+import com.ohmz.tday.compose.core.model.CreateTaskPayload
+import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.TaskRescheduleScope
+import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.core.model.TodoListMode
+import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import com.ohmz.tday.compose.core.model.movedDuePreservingTime
+import com.ohmz.tday.compose.core.model.repositoryTargetForReschedule
+import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
+import com.ohmz.tday.compose.core.observability.TdayTelemetry
+import com.ohmz.tday.compose.core.ui.SnackbarManager
+import com.ohmz.tday.compose.core.ui.UndoableDeleteCoordinator
+import com.ohmz.tday.compose.core.ui.userFacingMessage
+import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import java.time.LocalDate
+import javax.inject.Inject
+
+data class CalendarUiState(
+    val isLoading: Boolean = false,
+    // The first-load/refresh distinction, mirrored from `TodoListUiState`. The
+    // day list's "nothing scheduled" scene was gated on `!isLoading` like every
+    // other empty state in this app, and it is the same gate copy-pasted rather
+    // than a calendar rule. See [feedAnswer].
+    val hasHydratedSnapshot: Boolean = false,
+    val firstAnswerLanded: Boolean = false,
+    val items: List<TodoItem> = emptyList(),
+    val lists: List<ListSummary> = emptyList(),
+    val errorMessage: String? = null,
+)
+
+@HiltViewModel
+class CalendarViewModel @Inject constructor(
+    private val todoRepository: TodoRepository,
+    private val listRepository: ListRepository,
+    private val syncManager: SyncManager,
+    private val cacheManager: OfflineCacheManager,
+    private val firstAnswerSignal: FirstAnswerSignal,
+    private val reminderScheduler: TaskReminderScheduler,
+    private val snackbarManager: SnackbarManager,
+    private val undoableDeleteCoordinator: UndoableDeleteCoordinator,
+    @ApplicationContext private val appContext: Context,
+) : ViewModel() {
+
+    /// Resolves the user-facing message for a failed mutation and surfaces it as
+    /// an error toast (in addition to the inline error state callers still set).
+    /**
+     * Surfaces a failed user action as an error toast only — matching the unified
+     * toast policy (and the iOS app). Returns null so callers clear the inline
+     * error card; the toast is the single surface for action failures.
+     */
+    private fun mutationFailureMessage(
+        error: Throwable,
+        @androidx.annotation.StringRes fallbackRes: Int,
+    ): String? {
+        snackbarManager.showError(error.userFacingMessage(appContext, fallbackRes))
+        return null
+    }
+
+    private val _uiState = MutableStateFlow(
+        runCatching {
+            CalendarUiState(
+                isLoading = false,
+                // This screen's cache read happens here, in the field
+                // initializer, rather than in a `load()`.
+                hasHydratedSnapshot = true,
+                firstAnswerLanded = firstAnswerSignal.hasLanded(),
+                items = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL)
+                    .filter { it.due != null },
+                lists = listRepository.fetchListsSnapshot(),
+                errorMessage = null,
+            )
+        }.getOrElse {
+            // As in `CompletedViewModel`, and for `TodoListViewModel`'s reason: a
+            // cache read that THREW still ended. `CalendarUiState()` alone leaves
+            // `hasHydratedSnapshot` false forever, and the day list's gate would
+            // then draw neither its rows nor its "nothing scheduled" scene -- a
+            // blank card under the month, where this screen used to say what it
+            // knew.
+            CalendarUiState(
+                hasHydratedSnapshot = true,
+                firstAnswerLanded = firstAnswerSignal.hasLanded(),
+            )
+        },
+    )
+    val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
+    private var hasLoadedScreen = false
+
+    init {
+        observeCacheChanges()
+        observeFirstAnswer()
+    }
+
+    /**
+     * The one path by which a first answer can land without any cached row
+     * moving: a fresh install signing in to an account with nothing scheduled in
+     * it. `cacheDataVersion` only advances on `hasUiDataChanges`, so that sync
+     * bumps nothing this screen otherwise watches. See [FirstAnswerSignal.version].
+     */
+    private fun observeFirstAnswer() {
+        viewModelScope.launch {
+            firstAnswerSignal.version.collect {
+                val landed = firstAnswerSignal.hasLanded()
+                _uiState.update { current ->
+                    if (current.firstAnswerLanded == landed) current
+                    else current.copy(firstAnswerLanded = landed)
+                }
+            }
+        }
+    }
+
+    private fun observeCacheChanges() {
+        viewModelScope.launch {
+            cacheManager.cacheDataVersion
+                .collect {
+                    if (!hasLoadedScreen) return@collect
+                    hydrateFromCache()
+                }
+        }
+    }
+
+    fun load() {
+        hasLoadedScreen = true
+        TdayTelemetry.addBreadcrumb("calendar.load", data = calendarTelemetryData())
+        hydrateFromCache()
+    }
+
+    fun refresh(userInitiated: Boolean = false) {
+        hasLoadedScreen = true
+        TdayTelemetry.addBreadcrumb("calendar.refresh", data = calendarTelemetryData())
+        loadInternal(forceSync = true, showLoading = true, userInitiated = userInitiated)
+    }
+
+    suspend fun parseTaskTitleNlp(
+        text: String,
+        referenceDueEpochMs: Long,
+    ): TodoTitleNlpResponse? {
+        return todoRepository.parseTodoTitleNlp(
+            text = text,
+            referenceDueEpochMs = referenceDueEpochMs,
+        )
+    }
+
+    private fun hydrateFromCache() {
+        runCatching {
+            val todos =
+                todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL).filter { it.due != null }
+            val lists = listRepository.fetchListsSnapshot()
+            Pair(todos, lists)
+        }.onSuccess { (todos, lists) ->
+            _uiState.update { current ->
+                current.copy(
+                    isLoading = false,
+                    hasHydratedSnapshot = true,
+                    firstAnswerLanded = firstAnswerSignal.hasLanded(),
+                    items = if (current.items == todos) current.items else todos,
+                    lists = if (current.lists == lists) current.lists else lists,
+                    errorMessage = null,
+                )
+            }
+        }.onFailure {
+            // As in `CompletedViewModel`, and for the same reason: a read that
+            // threw still ended, and the day list may not wait on it twice.
+            _uiState.update { current ->
+                current.copy(
+                    hasHydratedSnapshot = true,
+                    firstAnswerLanded = firstAnswerSignal.hasLanded(),
+                )
+            }
+        }
+    }
+
+    private fun loadInternal(forceSync: Boolean, showLoading: Boolean, userInitiated: Boolean = false) {
+        viewModelScope.launch {
+            if (showLoading) {
+                _uiState.update { current ->
+                    if (current.isLoading && current.errorMessage == null) current
+                    else current.copy(isLoading = true, errorMessage = null)
+                }
+            } else {
+                _uiState.update { current ->
+                    if (current.errorMessage == null) current else current.copy(errorMessage = null)
+                }
+            }
+
+            runCatching {
+                if (forceSync) {
+                    syncManager.syncCachedData(
+                        force = true,
+                        replayPendingMutations = false,
+                        userInitiated = userInitiated,
+                        connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+                    )
+                        .onFailure { /* fall back to cache */ }
+                }
+                val todos =
+                    todoRepository.fetchTodos(mode = TodoListMode.ALL).filter { it.due != null }
+                val lists = listRepository.fetchLists()
+                Pair(todos, lists)
+            }.onSuccess { (todos, lists) ->
+                _uiState.update { current ->
+                    current.copy(
+                        isLoading = false,
+                        items = if (current.items == todos) current.items else todos,
+                        lists = if (current.lists == lists) current.lists else lists,
+                        errorMessage = null,
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update { current ->
+                    current.copy(
+                        isLoading = false,
+                        errorMessage = error.userFacingMessage(appContext, R.string.error_load_calendar_failed),
+                    )
+                }
+            }
+        }
+    }
+
+    fun createTask(payload: CreateTaskPayload) {
+        if (payload.title.isBlank()) return
+        TdayTelemetry.addBreadcrumb(
+            "calendar.task.create",
+            data = calendarTelemetryData(payload),
+        )
+        viewModelScope.launch {
+            runCatching {
+                todoRepository.createTodo(payload)
+            }.onSuccess {
+                rescheduleReminders()
+                loadInternal(forceSync = false, showLoading = false)
+            }.onFailure { error ->
+                _uiState.update { current ->
+                    current.copy(
+                        errorMessage = mutationFailureMessage(
+                            error,
+                            R.string.error_create_task_failed
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    fun complete(todo: TodoItem) {
+        val previousItems = _uiState.value.items
+        TdayTelemetry.addBreadcrumb("calendar.task.complete", data = calendarTelemetryData())
+        _uiState.update { current ->
+            current.copy(
+                items = current.items.filterNot { it.id == todo.id },
+                errorMessage = null,
+            )
+        }
+        // Delayed-commit complete. Staged into the CACHE and not just into
+        // `items`: this screen re-hydrates from the same cache on every
+        // `cacheDataVersion` bump, so a UI-only removal is restored by the next
+        // sync (which still reads the row as pending until the commit lands).
+        viewModelScope.launch {
+            runCatching {
+                val staged = todoRepository.stageTodoCompletions(listOf(todo))
+                undoableDeleteCoordinator.showUndoableComplete(
+                    message = appContext.getString(R.string.task_completed_toast),
+                    onCommit = {
+                        todoRepository.commitStagedTodoCompletions(listOf(todo))
+                        runCatching { reminderScheduler.rescheduleAllOffMain() }
+                    },
+                    onUndo = {
+                        todoRepository.undoStagedTodoCompletion(staged)
+                        // Runs on the coordinator scope: this ViewModel may be
+                        // gone by the time Undo restores a reminder-bearing task.
+                        runCatching { reminderScheduler.rescheduleAllOffMain() }
+                        _uiState.update { it.copy(items = previousItems, errorMessage = null) }
+                    },
+                )
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        items = previousItems,
+                        errorMessage = mutationFailureMessage(
+                            error,
+                            R.string.error_update_task_failed,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    fun updateTask(todo: TodoItem, payload: CreateTaskPayload) {
+        TdayTelemetry.addBreadcrumb(
+            "calendar.task.update",
+            data = calendarTelemetryData(payload),
+        )
+        updateTaskInternal(
+            visibleTodo = todo,
+            repositoryTodo = todo,
+            payload = payload,
+        )
+    }
+
+    fun moveTask(todo: TodoItem, targetDate: LocalDate, scope: TaskRescheduleScope) {
+        val due = todo.due ?: return
+        val movedDue = movedDuePreservingTime(due, targetDate)
+        val previousState = _uiState.value
+        val updatedTodo = todo.copy(due = movedDue)
+        TdayTelemetry.addBreadcrumb(
+            "calendar.task.reschedule",
+            data = calendarTelemetryData() + mapOf("scope" to scope.name.lowercase()),
+        )
+
+        _uiState.update { current ->
+            current.copy(
+                items = current.items.map { item ->
+                    if (item.id == todo.id) updatedTodo else item
+                },
+                errorMessage = null,
+            )
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                todoRepository.moveTodo(
+                    todo = todo.repositoryTargetForReschedule(scope),
+                    due = movedDue,
+                )
+            }.onSuccess {
+                rescheduleReminders()
+                loadInternal(forceSync = false, showLoading = false)
+            }.onFailure { error ->
+                _uiState.value = previousState.copy(
+                    errorMessage = mutationFailureMessage(error, R.string.error_update_task_failed),
+                )
+            }
+        }
+    }
+
+    private fun updateTaskInternal(
+        visibleTodo: TodoItem,
+        repositoryTodo: TodoItem,
+        payload: CreateTaskPayload,
+    ) {
+        val normalizedTitle = payload.title.trim()
+        if (normalizedTitle.isBlank()) return
+
+        val normalizedPriority = canonicalPriorityValue(payload.priority)
+        val normalizedDue = payload.due
+        val normalizedDescription = payload.description?.trim()?.ifBlank { null }
+        val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
+
+        val previousState = _uiState.value
+        val optimisticTodo = visibleTodo.copy(
+            title = normalizedTitle,
+            description = normalizedDescription,
+            priority = normalizedPriority,
+            due = normalizedDue,
+            rrule = payload.rrule,
+            listId = normalizedListId,
+        )
+
+        _uiState.update { current ->
+            current.copy(
+                items = current.items.map { item ->
+                    if (item.id == visibleTodo.id) optimisticTodo else item
+                },
+                errorMessage = null,
+            )
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                todoRepository.updateTodo(
+                    todo = repositoryTodo,
+                    payload = CreateTaskPayload(
+                        title = normalizedTitle,
+                        description = normalizedDescription,
+                        priority = normalizedPriority,
+                        due = normalizedDue,
+                        rrule = payload.rrule,
+                        listId = normalizedListId,
+                    ),
+                )
+            }.onSuccess {
+                rescheduleReminders()
+                loadInternal(forceSync = false, showLoading = false)
+            }.onFailure { error ->
+                _uiState.value = previousState.copy(
+                    errorMessage = mutationFailureMessage(error, R.string.error_update_task_failed),
+                )
+            }
+        }
+    }
+
+    fun delete(todo: TodoItem) {
+        val previousItems = _uiState.value.items
+        TdayTelemetry.addBreadcrumb("calendar.task.delete", data = calendarTelemetryData())
+        _uiState.update { current ->
+            current.copy(
+                items = current.items.filterNot { it.id == todo.id },
+                errorMessage = null,
+            )
+        }
+        viewModelScope.launch {
+            // Delayed-commit delete: stage now (local-only removal), show the
+            // undoable toast, and let the coordinator run the real delete after
+            // the toast window — or restore the staged state on Undo.
+            runCatching {
+                todoRepository.stageDeleteTodo(todo)
+            }.onSuccess { staged ->
+                undoableDeleteCoordinator.showUndoableDelete(
+                    message = appContext.getString(R.string.task_deleted_toast),
+                    onCommit = { todoRepository.deleteTodo(todo) },
+                    onUndo = {
+                        todoRepository.undoStagedTodoDeletion(staged)
+                        // Runs on the coordinator scope: this ViewModel may be gone
+                        // by the time Undo restores a reminder-bearing task.
+                        runCatching { reminderScheduler.rescheduleAllOffMain() }
+                    },
+                )
+                rescheduleReminders()
+                loadInternal(forceSync = false, showLoading = false)
+            }.onFailure { error ->
+                _uiState.update { current ->
+                    current.copy(
+                        items = previousItems,
+                        errorMessage = mutationFailureMessage(
+                            error,
+                            R.string.error_delete_task_failed
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    private fun rescheduleReminders() {
+        viewModelScope.launch(Dispatchers.Default) {
+            runCatching { reminderScheduler.rescheduleAll() }
+        }
+    }
+
+    private fun calendarTelemetryData(payload: CreateTaskPayload? = null): Map<String, Any?> {
+        val data = mutableMapOf<String, Any?>(
+            "surface" to "calendar",
+            "scheduled_items" to _uiState.value.items.size,
+        )
+        if (payload != null) {
+            data["has_due"] = payload.due != null
+            data["has_repeat"] = !payload.rrule.isNullOrBlank()
+            data["has_list"] = !payload.listId.isNullOrBlank()
+            data["has_description"] = !payload.description.isNullOrBlank()
+        }
+        return data
+    }
+}

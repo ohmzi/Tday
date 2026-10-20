@@ -1,0 +1,1136 @@
+import Foundation
+import Observation
+import UIKit
+// `withAnimation` below is what gives a remote cache change an explicit
+// SwiftUI transaction — see `hydrateFromExternalCacheChange()`.
+import SwiftUI
+
+@MainActor
+@Observable
+final class TodoListViewModel {
+    private let container: AppContainer
+    private static let recentSuccessfulSyncSkipWindowMs: Int64 = 8_000
+
+    var isLoading = false
+    /// This scope's local cache read has landed in state. True from the first
+    /// frame on this client. `hydrateFromCache()` runs in `init`, and
+    /// `TodoListScreen` builds this model at the first body pass's first read of
+    /// it, so the hydrate lands before that pass reads any of this state. That
+    /// is the honest statement of the fact rather than a flag pretending to a
+    /// cold open this client does not have.
+    /// Published anyway, and published HERE rather than as view `@State`, for
+    /// the reason `shouldCelebrateEmptyState` was lifted out of the view: a
+    /// computed property on a `View` is reachable from no test, and this is one
+    /// of the two terms `feedAnswer` decides an empty state on.
+    private(set) var hasHydratedFromCache = false
+    /// `isLocalMode || lastSuccessfulSyncEpochMs > 0` — see
+    /// `feedFirstAnswerLanded(in:)` for why the mode half is not optional.
+    ///
+    /// Re-read on every hydrate rather than once in `init`, and that is the
+    /// whole of what keeps a failed first sync from becoming permanent: a pull
+    /// that finally reaches the server ends in `hydrateFromCache()`, so the
+    /// stamp it just wrote is picked up in the same pass the rows are.
+    private(set) var firstAnswerLanded = false
+    var title: String
+    var mode: TodoListMode
+    var listId: String?
+    var lists: [ListSummary] = []
+    var items: [TodoItem] = []
+    // Feeds the Day Done state: completed-today count, read off the local cache
+    // snapshot in `hydrateFromCache` and nowhere else. Not bumped optimistically,
+    // which this comment used to claim — a staged completion is already written
+    // to the cache before `hydrateFromCache()` is called, so the count comes back
+    // raised without anyone adding to it, and an undo of that completion stages
+    // the write back out and lowers it again for free. Worth stating plainly
+    // rather than leaving as a claim: Android's own count IS bumped by hand and
+    // had to be rolled back on undo, and the next reader comparing the two
+    // clients needs to know this one has nothing to roll back.
+    //
+    // One add-on, and it is not a hand bump either: rows `completingIDs` holds
+    // out of the list while their stage sits queued on the lock past
+    // `stageLockWaitGrace`, normally behind a sync or a list create, are
+    // counted in by `hydrateFromCache(snapshot:)`, off that same snapshot.
+    // A row drops out of the add-on in the hydrate where its write lands, and
+    // the snapshot's own count includes it from then on, so there is still
+    // nothing to roll back.
+    var completedTodayCount = 0
+    /// When the user last ticked something off. Feeds the confetti: an empty
+    /// list that emptied under the user's own hand is a payoff, one that was
+    /// already empty when they opened it is not. Set only by this device's own
+    /// `complete`/`bulkComplete` — precise, but local-only. See
+    /// `remoteEmptiedAt` for the sibling that covers everything else.
+    var lastCompletionAt: Date?
+    /// When a cache change this device did not itself just stage last emptied
+    /// the viewed list — set only from `hydrateFromExternalCacheChange()`,
+    /// never from a local mutation's own direct `hydrateFromCache()` call.
+    ///
+    /// This is `lastCompletionAt`'s broader, imprecise sibling: that field
+    /// only ever fires for a completion this device made, because `complete`/
+    /// `bulkComplete` are the only callers. A cache-changed notification
+    /// carries no reason (it is "something changed, re-read the cache", not
+    /// "task N was completed"), so this cannot tell a remote completion from
+    /// a remote delete of the last task the way the local path tells complete
+    /// from delete — it treats any observed non-empty-to-empty transition on
+    /// this path as a payoff. That imprecision is deliberately scoped to just
+    /// this externally-triggered path; every local mutation (including
+    /// `delete`/`bulkDelete`) still never touches this field, so a local
+    /// delete of the last task still gets the plain arrival, exactly as
+    /// today. `TodoListScreen.celebratesEmptyState` also requires the screen
+    /// to be visible before honouring this one, so a transition on a screen
+    /// nobody is looking at does not surface a stale burst when the user
+    /// returns to it later.
+    ///
+    /// Cleared on the same path when a row arrives instead of leaving — see the
+    /// count-rise branch of `hydrateFromExternalCacheChange()`. A collaborator
+    /// emptying the list still celebrates; a collaborator putting something back
+    /// does not, and the arming condition above is untouched by that.
+    var remoteEmptiedAt: Date?
+    /// When a pending row last ARRIVED on this screen — and deliberately not
+    /// "when an undo happened", which is only the commonest way it gets written.
+    ///
+    /// The two stamps above open a celebration; nothing closed one except a
+    /// four-second window and a re-read of "is this scope finished". So nothing
+    /// anywhere observed the opposite transition, a task coming BACK, and the
+    /// reported bug is what that costs: undo restores the row through the
+    /// repository and, when the row is overdue, moves `hasNoPendingItems` not at
+    /// all — that predicate excludes Earlier on purpose, so requirement 4 can let
+    /// a finished today celebrate while overdue tasks wait. The paper then flew
+    /// over a visible row until its own flight clock ran out.
+    ///
+    /// The cure has to be an ARRIVAL and never a re-read of that predicate, for
+    /// the same reason: in the overdue case `items` is non-empty on both sides
+    /// and nothing transitions. It is COUNTED, across every bucket including
+    /// Earlier — written directly by the local paths that put a row back or add
+    /// one (the completion undos, `addTask`) and, as a backstop that catches
+    /// everything else including a collaborator's undo, by the count rise in
+    /// `hydrateFromExternalCacheChange()`.
+    ///
+    /// Compared against the two opening stamps rather than clearing them (see
+    /// `shouldCelebrateEmptyState`): a completion landing after an arrival
+    /// re-opens the window simply by being the newer stamp, with no mutation from
+    /// an effect and no ordering left for the next reader to work out.
+    var celebrationCancelledAt: Date?
+    var errorMessage: String?
+    var aiSummaryEnabled = true
+    var summaryText: String?
+    var summarySource: String?
+    var summaryGeneratedAt: String?
+    var summaryError: String?
+    var summaryConnectivityError = false
+    var isSummarizing = false
+
+    /// `title` after dark, or nil where this screen's title does not follow the
+    /// clock. Today is the only scope that has one; see `TodoListMode.nightTitle`
+    /// for why the two names travel separately instead of `title` resolving itself.
+    ///
+    /// A named list suppresses it outright: a list the user called "Tonight Shift"
+    /// is a name, not a time of day, and `listName != nil` is what `title` itself
+    /// branches on at init.
+    var nightTitle: String? {
+        listName == nil ? mode.nightTitle : nil
+    }
+
+    /// `title` resolved against the clock, for the one caller that cannot sit
+    /// inside a `TimelineView`: the search placeholder, which is assembled into a
+    /// single string ("Search in Tonight") during a body pass. The hero takes
+    /// `nightTitle` raw instead, so it re-resolves on the same minute tick as the
+    /// sun/moon rather than on whenever the screen last re-rendered.
+    func resolvedTitle(at date: Date) -> String {
+        guard let nightTitle, !TdayTimeOfDay.isDaytime(date) else { return title }
+        return nightTitle
+    }
+
+    private let listName: String?
+    @ObservationIgnored nonisolated(unsafe) private var observationTask: Task<Void, Never>?
+    /// Rows a completion took out of `items` because its stage was still queued
+    /// on the lock past `stageLockWaitGrace`, normally behind a sync or a list
+    /// create (see `awaitStage(hidingIfStalled:_:)`). Every hydrate filters them
+    /// out until that stage returns. Until their write lands the cache still
+    /// lists them as pending, and the hydrate the lock holder's own save drives
+    /// would otherwise put the row back (as the blank faded gap for a single tick,
+    /// still `.fading` on the screen, or fully drawn for a batch), only for the
+    /// stage to take it away again. Empty whenever no stage has stalled, and
+    /// then every hydrate is exactly what it was.
+    /// `ScheduledTaskHomeViewModel.completingIDs` and
+    /// `CalendarViewModel.completingIDs` are the same guard. Those two fill it
+    /// at the tap. This one fills it only once the stage has stalled.
+    @ObservationIgnored private var completingIDs: Set<String> = []
+    /// How long a completion's stage may go without writing before its rows
+    /// leave anyway. It is there to tell a holder waiting on the network apart
+    /// from the rest. A sync is one, and so is a list create
+    /// (`ListRepository.createList` / `FloaterListRepository.createList` hold
+    /// the lock for request plus remap). Each waits with the main actor free,
+    /// and that is the wait this is for. The rest (a sibling stage, an undo, a
+    /// commit's unstaging, a list delete's stage) each hold it for one write on
+    /// the main actor, and the check runs on the main actor, so it cannot run
+    /// in the middle of one. A free lock costs the stage a couple of actor hops
+    /// before it writes. It can also trip when one write runs past it with a
+    /// second stage already queued behind, and that stage's rows then leave one
+    /// write early. A tenth of a second
+    /// is far above those hops and short enough that the gap closes with no
+    /// pause worth seeing. not a token — see docs/motion.md: one client, and a
+    /// wait threshold rather than a motion value.
+    private static let stageLockWaitGrace: Duration = .milliseconds(100)
+
+    init(container: AppContainer, mode: TodoListMode, listId: String?, listName: String?) {
+        self.container = container
+        self.mode = mode
+        self.listId = listId
+        self.listName = listName
+        title = listName ?? mode.title
+        TdayTelemetry.addBreadcrumb(
+            "todo_list.load",
+            data: modeTelemetryData(mode: mode, scopedList: listId?.isEmpty == false)
+        )
+        hydrateFromCache()
+        observeCacheChanges()
+    }
+
+    deinit {
+        observationTask?.cancel()
+    }
+
+    func refresh(userInitiated: Bool = false) async {
+        TdayTelemetry.addBreadcrumb("todo_list.refresh", data: modeTelemetryData())
+        isLoading = true
+        defer {
+            isLoading = false
+        }
+
+        let loadCachedState: @MainActor () -> OfflineSyncState = container.cacheManager.loadOfflineState
+        let cachedState = loadCachedState()
+        if shouldUseRecentSuccessfulSync(cachedState) {
+            hydrateFromCache(snapshot: container.todoRepository.makeTodoListCacheSnapshot(
+                from: cachedState,
+                mode: mode,
+                listId: listId
+            ))
+            return
+        }
+
+        let result = await container.syncAndRefresh(
+            force: true,
+            replayPendingMutations: true,
+            userInitiated: userInitiated,
+            connectionProbeTimeoutSeconds: SyncAndRefreshUseCase.userRefreshConnectionTimeoutSeconds
+        )
+        if case let .failure(error) = result, !isLikelyConnectivityIssue(error) {
+            errorMessage = userFacingMessage(for: error, fallback: "Failed to load tasks.")
+        }
+        hydrateFromCache()
+    }
+
+    func summarizeCurrentMode() async {
+        guard aiSummaryEnabled else {
+            summaryError = "Summary is disabled by admin"
+            return
+        }
+        isSummarizing = true
+        summaryText = nil
+        summarySource = nil
+        summaryGeneratedAt = nil
+        summaryError = nil
+        summaryConnectivityError = false
+        do {
+            let response = try await container.todoRepository.summarizeTodos(mode: mode, listId: listId)
+            summaryText = response.summary
+            summarySource = response.source
+            summaryGeneratedAt = response.generatedAt
+        } catch {
+            if isLikelyConnectivityIssue(error) {
+                summaryError = "No summary available while offline."
+            } else {
+                summaryError = userFacingMessage(for: error, fallback: "Could not summarize tasks.")
+            }
+        }
+        isSummarizing = false
+    }
+
+    func addTask(_ payload: CreateTaskPayload) async {
+        TdayTelemetry.addBreadcrumb("task.create", data: taskTelemetryData(mode: mode, payload: payload))
+        do {
+            if mode == .floater {
+                try await container.todoRepository.createFloater(payload: payload)
+            } else {
+                try await container.createTodo(payload)
+            }
+            // A row arriving is a row arriving, whoever caused it. A task typed
+            // while the paper is still up costs the user the rest of that burst,
+            // and that is the right trade rather than a regrettable one: the
+            // scope is genuinely no longer finished, and the burst leaves over a
+            // fade rather than a cut.
+            celebrationCancelledAt = Date()
+            hydrateFromCache()
+        } catch {
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not create task."),
+                kind: .error
+            )
+        }
+    }
+
+    func updateTask(_ todo: TodoItem, payload: CreateTaskPayload) async {
+        TdayTelemetry.addBreadcrumb("task.update", data: taskTelemetryData(mode: mode, payload: payload))
+        do {
+            if mode == .floater {
+                try await container.todoRepository.updateFloater(todo, payload: payload)
+            } else {
+                try await container.todoRepository.updateTodo(todo, payload: payload)
+            }
+            hydrateFromCache()
+        } catch {
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not update task."),
+                kind: .error
+            )
+        }
+    }
+
+    func moveTask(_ todo: TodoItem, toDay targetDay: Date, scope: TaskRescheduleScope) async {
+        let calendar = Calendar.current
+        guard let due = todo.due,
+              !calendar.isDate(due, inSameDayAs: targetDay) else {
+            return
+        }
+
+        guard let movedDue = movedDuePreservingTime(due: due, targetDay: targetDay, calendar: calendar) else {
+            return
+        }
+
+        var telemetryData = taskTelemetryData(mode: mode, scope: scope)
+        telemetryData["source"] = "todo_list"
+        TdayTelemetry.addBreadcrumb("task.reschedule", data: telemetryData)
+        do {
+            try await container.todoRepository.moveTodo(
+                todo.repositoryTargetForReschedule(scope: scope),
+                due: movedDue
+            )
+            hydrateFromCache()
+        } catch {
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not update task."),
+                kind: .error
+            )
+        }
+    }
+
+    // Today screen: set a task's time-of-day (Morning / Afternoon / Tonight)
+    // without changing its date. Sibling of `moveTask(toDay:)`.
+    func moveTask(_ todo: TodoItem, toTimeOfDay hour: Int, scope: TaskRescheduleScope) async {
+        let calendar = Calendar.current
+        guard let due = todo.due,
+              let movedDue = movedDueToTimeOfDay(due: due, hour: hour, calendar: calendar),
+              movedDue != due else {
+            return
+        }
+
+        var telemetryData = taskTelemetryData(mode: mode, scope: scope)
+        telemetryData["source"] = "todo_list"
+        TdayTelemetry.addBreadcrumb("task.reschedule", data: telemetryData)
+        do {
+            try await container.todoRepository.moveTodo(
+                todo.repositoryTargetForReschedule(scope: scope),
+                due: movedDue
+            )
+            hydrateFromCache()
+        } catch {
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not update task."),
+                kind: .error
+            )
+        }
+    }
+
+    /// Quick Defer: one tap moves the task to a locally computed instant.
+    func deferTask(_ todo: TodoItem, due: Date) async {
+        TdayTelemetry.addBreadcrumb("task.defer", data: taskTelemetryData(mode: mode))
+        do {
+            try await container.todoRepository.moveTodo(todo, due: due)
+            hydrateFromCache()
+        } catch {
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not update task."),
+                kind: .error
+            )
+        }
+    }
+
+    /// Schedules a floater into a real Todo at the picked due instant.
+    func promoteFloater(_ floater: TodoItem, due: Date) async {
+        TdayTelemetry.addBreadcrumb("task.promote", data: taskTelemetryData(mode: mode))
+        do {
+            try await container.todoRepository.promoteFloater(floater, due: due, rrule: nil)
+            hydrateFromCache()
+        } catch {
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not schedule task."),
+                kind: .error
+            )
+        }
+    }
+
+    /// Swipe-to-copy: writes the task's title/notes/due/priority as plain text
+    /// to the system pasteboard. Synchronous and can't meaningfully fail (a
+    /// pasteboard write has no throwing API), so this always confirms success —
+    /// mirroring web's success-toast path for the same action.
+    func copyToClipboard(_ todo: TodoItem) {
+        UIPasteboard.general.string = ShareSheet.taskShareText(todo)
+        container.snackbarManager.show(L("Copied to clipboard"), kind: .success)
+    }
+
+    /// "Let it float": demotes an overdue todo into an Anytime floater.
+    func demoteTodo(_ todo: TodoItem) async {
+        TdayTelemetry.addBreadcrumb("task.demote", data: taskTelemetryData(mode: mode))
+        do {
+            try await container.todoRepository.demoteTodo(todo)
+            hydrateFromCache()
+        } catch {
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not float task."),
+                kind: .error
+            )
+        }
+    }
+
+    /// Delayed-commit complete: the completion is written to the local cache
+    /// (and its mutation queued `staged`) immediately, an undoable toast is
+    /// shown, and only the network replay is deferred until the undo window
+    /// expires. Tapping Undo cancels the pending commit and reverses the staged
+    /// write; the commit itself is `commitStagedCompletion(_:)`, which drops the
+    /// staged marker and only then flushes — a bare `syncPendingMutations()` here
+    /// would send the completion to the server while the Undo button is still on
+    /// screen.
+    ///
+    /// This writes durably up front rather than staying in-memory-only until
+    /// commit: a completion the user already saw survives the app dying inside
+    /// the undo window rather than silently reverting with no trace on relaunch.
+    /// See `TodoRepository.stageCompleteTodo(_:)` for the full rationale.
+    ///
+    /// The two `restore:` closures here capture `self` weakly, which `delete`'s
+    /// pair below deliberately does not. That comment's concern is the COMMIT
+    /// surviving this view model being deallocated, and it still holds: `commit:`
+    /// captures `container` alone on both paths. What an undo of a COMPLETION
+    /// additionally has to do is tell the screen a row came back, so the
+    /// celebration that completion opened can end (`celebrationCancelledAt`), and
+    /// a deallocated view model has no screen left to be celebrating on — so the
+    /// weak reference costs the restore nothing and the optional chain below is
+    /// the honest way to say that.
+    ///
+    /// The row leaves `items` after the stage lands, from the hydrate that
+    /// follows it. The stage's write (`updateOfflineState`) is a full cache
+    /// load and save on the main actor. Awaited first, it runs while the
+    /// screen's `.fading` beat holds the row faded and still. Taking the row
+    /// out first would start the list's gap-closing travel, and on the last
+    /// row Day Done's transition and confetti, and then run that write inside
+    /// them, on every completion.
+    ///
+    /// The exception is a stage queued behind a sync or a list create. Either
+    /// holds the lock across network round trips, and the faded row used to
+    /// keep its height for all of them, leaving a blank gap in the list.
+    /// `OfflineCacheManager` does not say whether the lock is held, so
+    /// `awaitStage(hidingIfStalled:_:)` asks the cache instead. If the row is
+    /// still pending there after `stageLockWaitGrace`, it leaves then, and
+    /// `completingIDs` keeps it out until the stage lands. Only that tick can
+    /// pay the stall the order above avoids: its write lands whenever that
+    /// holder lets go, which can be inside the travel. The toast, and with it
+    /// Undo, still waits for the stage, because `restore` needs what the stage
+    /// returns.
+    func complete(_ todo: TodoItem) async {
+        TdayTelemetry.addBreadcrumb("task.complete", data: taskTelemetryData(mode: mode))
+        let container = container
+        let isFloater = mode == .floater
+        lastCompletionAt = Date()
+        if isFloater {
+            let staged = await awaitStage(hidingIfStalled: [todo.id]) {
+                await container.todoRepository.stageCompleteFloater(todo)
+            }
+            hydrateFromCache()
+            container.undoableDeleteScheduler.schedule(
+                message: L("Task completed"),
+                restore: { [weak self] in
+                    self?.celebrationCancelledAt = Date()
+                    await container.todoRepository.undoStagedFloaterCompletion(staged)
+                },
+                commit: {
+                    do {
+                        try await container.todoRepository.commitStagedFloaterCompletion(staged)
+                    } catch {
+                        container.snackbarManager.show(
+                            userFacingMessage(for: error, fallback: "Could not complete task."),
+                            kind: .error
+                        )
+                    }
+                }
+            )
+        } else {
+            let staged = await awaitStage(hidingIfStalled: [todo.id]) {
+                await container.todoRepository.stageCompleteTodo(todo)
+            }
+            hydrateFromCache()
+            container.undoableDeleteScheduler.schedule(
+                message: L("Task completed"),
+                restore: { [weak self] in
+                    self?.celebrationCancelledAt = Date()
+                    await container.todoRepository.undoStagedCompletion(staged)
+                },
+                commit: {
+                    do {
+                        try await container.todoRepository.commitStagedCompletion(staged)
+                    } catch {
+                        container.snackbarManager.show(
+                            userFacingMessage(for: error, fallback: "Could not complete task."),
+                            kind: .error
+                        )
+                    }
+                }
+            )
+        }
+    }
+
+    /// Delayed-commit delete: the task is staged out of the local cache
+    /// immediately, an undoable toast is shown, and the real (server) delete
+    /// only commits once the undo window expires. The closures capture
+    /// `container` rather than `self` so a pending commit survives this
+    /// view model being deallocated.
+    func delete(_ todo: TodoItem) async {
+        TdayTelemetry.addBreadcrumb("task.delete", data: taskTelemetryData(mode: mode))
+        let container = container
+        if mode == .floater {
+            let staged = container.todoRepository.stageDeleteFloater(todo)
+            hydrateFromCache()
+            container.undoableDeleteScheduler.schedule(
+                message: L("Task deleted"),
+                restore: {
+                    container.todoRepository.undoStagedFloater(staged)
+                },
+                commit: {
+                    do {
+                        try await container.todoRepository.deleteFloater(todo)
+                    } catch {
+                        container.snackbarManager.show(
+                            userFacingMessage(for: error, fallback: "Could not delete task."),
+                            kind: .error
+                        )
+                    }
+                }
+            )
+        } else {
+            let staged = container.todoRepository.stageDeleteTodo(todo)
+            hydrateFromCache()
+            container.undoableDeleteScheduler.schedule(
+                message: L("Task deleted"),
+                restore: {
+                    container.todoRepository.undoStagedTodo(staged)
+                },
+                commit: {
+                    do {
+                        try await container.todoRepository.deleteTodo(todo)
+                    } catch {
+                        container.snackbarManager.show(
+                            userFacingMessage(for: error, fallback: "Could not delete task."),
+                            kind: .error
+                        )
+                    }
+                }
+            )
+        }
+    }
+
+    // MARK: - Bulk (multi-select) actions
+
+    /// Delayed-commit bulk complete — the batch shape of `complete(_:)`. The
+    /// whole selection is staged into the local cache (and its mutations
+    /// queued `staged`) in ONE cache write, ONE undoable toast covers the batch,
+    /// and only the network replay is deferred until the undo window closes. N
+    /// toasts would mean N commit timers with only the last one visible, so the
+    /// user could undo exactly one of them.
+    ///
+    /// Staging durably up front (rather than in-memory-only until commit) means
+    /// every completion in the batch survived to disk before the up-to-100-request
+    /// replay even began, so a crash or kill during that replay loses nothing. The
+    /// replay itself is deferred to the commit, which un-stages the batch's own
+    /// mutations and only then flushes — see `commitStagedCompletion(_:)`. See
+    /// `TodoRepository.stageCompleteTodos(_:)`.
+    ///
+    /// Recurring occurrences stay in the batch: complete is the one action with a
+    /// per-occurrence route, and the repository carries each row's `instanceDate`.
+    ///
+    /// The batch leaves `items` after the stage lands, so the stage's write
+    /// runs before the list's gap-closing travel and Day Done start, not
+    /// inside them (see `complete(_:)`). Unlike the single tick, no `.fading`
+    /// beat covers that write. The selected rows stay fully drawn, and the
+    /// write overlaps `exitSelectionMode`'s spring. A stage queued behind a
+    /// sync or a list create is caught the same way as the single tick's. The
+    /// rows leave after `stageLockWaitGrace` instead of staying drawn until
+    /// that holder frees the lock.
+    func bulkComplete(_ todos: [TodoItem]) async {
+        guard !todos.isEmpty else { return }
+        TdayTelemetry.addBreadcrumb("task.bulk_complete", data: bulkTelemetryData(count: todos.count))
+        let container = container
+        let isFloater = mode == .floater
+        let count = todos.count
+        let ids = Set(todos.map(\.id))
+        lastCompletionAt = Date()
+        if isFloater {
+            let staged = await awaitStage(hidingIfStalled: ids) {
+                await container.todoRepository.stageCompleteFloaters(todos)
+            }
+            hydrateFromCache()
+            container.undoableDeleteScheduler.schedule(
+                message: BulkSelectionCopy.completedToast(count),
+                restore: { [weak self] in
+                    self?.celebrationCancelledAt = Date()
+                    await container.todoRepository.undoStagedFloaterCompletion(staged)
+                },
+                commit: {
+                    do {
+                        try await container.todoRepository.commitStagedFloaterCompletion(staged)
+                    } catch {
+                        container.snackbarManager.show(BulkSelectionCopy.updateFailed(count), kind: .error)
+                    }
+                }
+            )
+        } else {
+            let staged = await awaitStage(hidingIfStalled: ids) {
+                await container.todoRepository.stageCompleteTodos(todos)
+            }
+            hydrateFromCache()
+            container.undoableDeleteScheduler.schedule(
+                message: BulkSelectionCopy.completedToast(count),
+                restore: { [weak self] in
+                    self?.celebrationCancelledAt = Date()
+                    await container.todoRepository.undoStagedCompletion(staged)
+                },
+                commit: {
+                    do {
+                        try await container.todoRepository.commitStagedCompletion(staged)
+                    } catch {
+                        container.snackbarManager.show(BulkSelectionCopy.updateFailed(count), kind: .error)
+                    }
+                }
+            )
+        }
+    }
+
+    /// Delayed-commit bulk delete — the batch shape of `delete(_:)`. The screen
+    /// has already taken an explicit confirmation before this runs; this is the
+    /// second guard, not the only one. The whole selection is staged out of the
+    /// local cache in one write, one undoable toast covers the batch, and the
+    /// server is not told anything until the window closes. The closures capture
+    /// `container` rather than `self` so a pending commit survives this view
+    /// model being deallocated.
+    func bulkDelete(_ todos: [TodoItem]) async {
+        guard !todos.isEmpty else { return }
+        TdayTelemetry.addBreadcrumb("task.bulk_delete", data: bulkTelemetryData(count: todos.count))
+        let container = container
+        let count = todos.count
+        if mode == .floater {
+            let staged = container.todoRepository.stageDeleteFloaters(todos)
+            hydrateFromCache()
+            container.undoableDeleteScheduler.schedule(
+                message: BulkSelectionCopy.deletedToast(count),
+                restore: {
+                    container.todoRepository.undoStagedFloater(staged)
+                },
+                commit: {
+                    do {
+                        try await container.todoRepository.deleteFloaters(todos)
+                    } catch {
+                        container.snackbarManager.show(BulkSelectionCopy.deleteFailed(count), kind: .error)
+                    }
+                }
+            )
+        } else {
+            let staged = container.todoRepository.stageDeleteTodos(todos)
+            hydrateFromCache()
+            container.undoableDeleteScheduler.schedule(
+                message: BulkSelectionCopy.deletedToast(count),
+                restore: {
+                    container.todoRepository.undoStagedTodo(staged)
+                },
+                commit: {
+                    do {
+                        try await container.todoRepository.deleteTodos(todos)
+                    } catch {
+                        container.snackbarManager.show(BulkSelectionCopy.deleteFailed(count), kind: .error)
+                    }
+                }
+            )
+        }
+    }
+
+    /// Silent on success, by design: a priority change is an edit, and the
+    /// unified toast policy gives edits no toast. The rows visibly change and
+    /// selection mode closes — that is the feedback.
+    func bulkSetPriority(_ todos: [TodoItem], priority: String) async {
+        guard !todos.isEmpty else { return }
+        TdayTelemetry.addBreadcrumb("task.bulk_priority", data: bulkTelemetryData(count: todos.count))
+        do {
+            if mode == .floater {
+                try await container.todoRepository.setPriorityForFloaters(todos, priority: priority)
+            } else {
+                try await container.todoRepository.setPriorityForTodos(todos, priority: priority)
+            }
+        } catch {
+            container.snackbarManager.show(BulkSelectionCopy.updateFailed(todos.count), kind: .error)
+        }
+        hydrateFromCache()
+    }
+
+    /// `listId == nil` means "No list". Silent on success for the same reason as
+    /// `bulkSetPriority`. Scheduled tasks only ever move between scheduled lists
+    /// and floaters between floater lists — `lists` is already the right silo for
+    /// the current mode, so there is no cross-silo target to offer.
+    func bulkMove(_ todos: [TodoItem], toListId listId: String?) async {
+        guard !todos.isEmpty else { return }
+        TdayTelemetry.addBreadcrumb("task.bulk_move", data: bulkTelemetryData(count: todos.count))
+        do {
+            if mode == .floater {
+                try await container.todoRepository.moveFloatersToList(todos, listId: listId)
+            } else {
+                try await container.todoRepository.moveTodosToList(todos, listId: listId)
+            }
+        } catch {
+            container.snackbarManager.show(BulkSelectionCopy.updateFailed(todos.count), kind: .error)
+        }
+        hydrateFromCache()
+    }
+
+    func updateListSettings(
+        name: String,
+        color: String?,
+        iconKey: String?,
+        reusable: Bool? = nil,
+        defaultPriority: String? = nil,
+        defaultPriorityChanged: Bool = false
+    ) async {
+        guard let listId else { return }
+        TdayTelemetry.addBreadcrumb("list.update", data: listTelemetryData(color: color, iconKey: iconKey))
+        do {
+            if mode == .floater {
+                try await container.floaterListRepository.updateList(
+                    listId: listId,
+                    name: name,
+                    color: color,
+                    iconKey: iconKey,
+                    reusable: reusable,
+                    defaultPriority: defaultPriority,
+                    defaultPriorityChanged: defaultPriorityChanged
+                )
+            } else {
+                try await container.listRepository.updateList(
+                    listId: listId,
+                    name: name,
+                    color: color,
+                    iconKey: iconKey,
+                    defaultPriority: defaultPriority,
+                    defaultPriorityChanged: defaultPriorityChanged
+                )
+            }
+            hydrateFromCache()
+            title = name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? (listName ?? mode.title) : name
+        } catch {
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not update list."),
+                kind: .error
+            )
+        }
+    }
+
+    /// Reset a reusable floater list (un-check everything so it can be run again).
+    /// The twin of web's `resetFloaterList` header button and its `floaterListReset`
+    /// toast in FloaterListContainer; the route returns only a message/count, so the
+    /// screen is re-read from the cache afterwards. Local Mode un-checks locally and
+    /// keeps the mutation queued (see FloaterListRepository.resetFloaterList).
+    func resetFloaterList() async {
+        guard let listId, mode == .floater else { return }
+        do {
+            try await container.floaterListRepository.resetFloaterList(listId: listId)
+            hydrateFromCache()
+            container.snackbarManager.show(L("List reset — everything un-checked"), kind: .info)
+        } catch {
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not reset list."),
+                kind: .error
+            )
+        }
+    }
+
+    func createList(name: String, color: String?, iconKey: String?, reusable: Bool = false, defaultPriority: String? = nil) async {
+        TdayTelemetry.addBreadcrumb("list.create", data: listTelemetryData(color: color, iconKey: iconKey))
+        do {
+            if mode == .floater {
+                try await container.floaterListRepository.createList(name: name, color: color, iconKey: iconKey, reusable: reusable, defaultPriority: defaultPriority)
+            } else {
+                try await container.listRepository.createList(name: name, color: color, iconKey: iconKey, defaultPriority: defaultPriority)
+            }
+            hydrateFromCache()
+        } catch {
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not create list."),
+                kind: .error
+            )
+        }
+    }
+
+    /// Deletes the current list and returns `true` on success so the screen can
+    /// drive navigation deterministically after the await completes, instead of
+    /// from the repository's mid-await optimistic-delete callback (which raced
+    /// with the delete-confirmation overlay dismissal and dropped navigation).
+    ///
+    /// Delayed-commit delete: `true` means *staging* succeeded — the list is
+    /// already pruned from the local cache and the screen navigates away
+    /// immediately, while the real (server) delete only commits once the undo
+    /// window expires. Tapping Undo restores the list (and its tasks) even
+    /// though the user has navigated away, so the closures capture `container`
+    /// rather than `self`.
+    func deleteList() async -> Bool {
+        guard let listId else { return false }
+        TdayTelemetry.addBreadcrumb("list.delete", data: listTelemetryData(color: nil, iconKey: nil))
+        let container = container
+        if mode == .floater {
+            let staged = await container.floaterListRepository.stageDeleteList(listId: listId)
+            container.undoableDeleteScheduler.schedule(
+                message: L("List deleted"),
+                restore: {
+                    container.floaterListRepository.undoStagedList(staged)
+                },
+                commit: {
+                    do {
+                        try await container.floaterListRepository.deleteList(listId: listId)
+                    } catch {
+                        container.snackbarManager.show(
+                            userFacingMessage(for: error, fallback: "Could not delete list."),
+                            kind: .error
+                        )
+                    }
+                }
+            )
+        } else {
+            let staged = await container.listRepository.stageDeleteList(listId: listId)
+            container.undoableDeleteScheduler.schedule(
+                message: L("List deleted"),
+                restore: {
+                    container.listRepository.undoStagedList(staged)
+                },
+                commit: {
+                    do {
+                        try await container.listRepository.deleteList(listId: listId)
+                    } catch {
+                        container.snackbarManager.show(
+                            userFacingMessage(for: error, fallback: "Could not delete list."),
+                            kind: .error
+                        )
+                    }
+                }
+            )
+        }
+        lists.removeAll { $0.id == listId }
+        items.removeAll { $0.listId == listId }
+        errorMessage = nil
+        return true
+    }
+
+    func parseTaskTitleNlp(text: String, referenceDueEpochMs: Int64) async -> TodoTitleNlpResponse? {
+        await container.todoRepository.parseTodoTitleNlp(text: text, referenceDueEpochMs: referenceDueEpochMs)
+    }
+
+    private func hydrateFromCache() {
+        hydrateFromCache(snapshot: container.todoRepository.fetchTodoListCacheSnapshot(mode: mode, listId: listId))
+    }
+
+    private func hydrateFromCache(snapshot: TodoListCacheSnapshot) {
+        lists = snapshot.lists
+        // `completingIDs` is empty on every hydrate except those that land after
+        // a stage has gone `stageLockWaitGrace` without writing (normally because
+        // a sync or a list create holds the lock) and before that stage returns.
+        // See `completingIDs`.
+        let visibleItems = completingIDs.isEmpty
+            ? snapshot.items
+            : snapshot.items.filter { !completingIDs.contains($0.id) }
+        items = visibleItems
+        aiSummaryEnabled = snapshot.aiSummaryEnabled
+        errorMessage = nil
+        if mode == .today {
+            // Off the snapshot, not a second `loadOfflineState()`: every cache
+            // write wakes every live list view model, so a hydrate that reads the
+            // whole cache twice doubles the main-actor cost of every sync.
+            //
+            // Plus the rows held out above. Each is a completion the list already
+            // shows as gone whose stage has not written it yet, and each adds one
+            // completed-today record when it does. Without this, the last row
+            // leaving during a stall would draw the plain empty state first and
+            // switch to Day Done only once the lock holder let go.
+            completedTodayCount = snapshot.completedTodayCount + (snapshot.items.count - visibleItems.count)
+        }
+        // Both of `feedAnswer`'s non-row terms, settled on the same frame the
+        // rows are. They have to move together: a gate that saw a hydrated feed
+        // whose first answer had not been re-read would draw a skeleton for one
+        // frame over rows that were already there. `lastSuccessfulSyncEpochMsSnapshot`
+        // is an in-memory field, not a second cache fetch — see the note above.
+        firstAnswerLanded = feedFirstAnswerLanded(in: container)
+        hasHydratedFromCache = true
+    }
+
+    /// Awaits a completion's stage just as a bare `await` would. If the stage
+    /// has not written by `stageLockWaitGrace`, the stall check takes `ids`
+    /// out of `items` at that point instead of when the lock holder lets go. `ids`
+    /// leave `completingIDs` the moment the stage returns, before the caller's
+    /// own hydrate. The stage never throws and cannot be cancelled (the lock
+    /// cannot be), so no row this hides stays hidden past its stage.
+    private func awaitStage<Staged>(
+        hidingIfStalled ids: Set<String>,
+        _ stage: () async -> Staged
+    ) async -> Staged {
+        let stallCheck = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: Self.stageLockWaitGrace)
+            guard !Task.isCancelled else { return }
+            self?.hideRowsStillAwaitingStage(ids)
+        }
+        let staged = await stage()
+        stallCheck.cancel()
+        completingIDs.subtract(ids)
+        return staged
+    }
+
+    /// The stall check. It holds `ids` out of `items` only if the cache still
+    /// lists one of them as pending, which means their stage has not written
+    /// yet. Otherwise it changes nothing. A stage whose write has landed is
+    /// only its lock release away from returning, and its own hydrate then
+    /// does exactly what it does when the lock was free.
+    private func hideRowsStillAwaitingStage(_ ids: Set<String>) {
+        let snapshot = container.todoRepository.fetchTodoListCacheSnapshot(mode: mode, listId: listId)
+        guard snapshot.items.contains(where: { ids.contains($0.id) }) else { return }
+        completingIDs.formUnion(ids)
+        hydrateFromCache(snapshot: snapshot)
+    }
+
+    private func shouldUseRecentSuccessfulSync(_ state: OfflineSyncState) -> Bool {
+        guard state.pendingMutations.isEmpty, state.lastSuccessfulSyncEpochMs > 0 else {
+            return false
+        }
+        return Date().epochMilliseconds - state.lastSuccessfulSyncEpochMs < Self.recentSuccessfulSyncSkipWindowMs
+    }
+
+    // `[weak self]` here is load-bearing, not style. When `TodoListScreen`
+    // seeded this model with `State(initialValue:)`, this initializer re-ran on
+    // every parent body pass and SwiftUI discarded the surplus instances. The
+    // screen now builds the model on first read (`LazyViewModelBox`), so there
+    // are no surplus instances, but every pop and every root-feed tab swap
+    // still drops one. Capturing `self` strongly would keep this Task (and the
+    // NotificationCenter async sequence it iterates) alive forever, which
+    // keeps `self` alive forever too — `deinit` could never run to cancel it.
+    // Every dropped instance would go on reacting to every future cache
+    // write for the life of the process, and a bulk completion posts four of
+    // those writes, each a full cache reload on the main actor. That
+    // unbounded, immortal observer set — not request concurrency, which this
+    // path never has unbounded — is the confirmed mechanism behind the crash
+    // under a large completion.
+    private func observeCacheChanges() {
+        observationTask = Task { [weak self] in
+            for await _ in NotificationCenter.default.notifications(named: .offlineCacheDidChange) {
+                guard let self else { return }
+                await MainActor.run {
+                    self.hydrateFromExternalCacheChange()
+                }
+            }
+        }
+    }
+
+    /// Reacts to a cache write this instance did not itself just stage — most
+    /// often a remote sync (another device, or a collaborator on a shared
+    /// list) landing through `OfflineCacheManager.saveOfflineState`'s
+    /// notification, but sometimes just the async echo of this device's own
+    /// write (a staged local completion or delete already calls
+    /// `hydrateFromCache()` directly; that same write's notification still
+    /// reaches this loop a beat later).
+    ///
+    /// `saveOfflineState` posts that notification synchronously
+    /// (`OfflineCacheManager.swift`), but `NotificationCenter.notifications`
+    /// delivers it to this `for await` loop asynchronously, outside any
+    /// SwiftUI transaction. Left alone, a remote completion that empties the
+    /// last section of an open todo list changes both the List's section
+    /// count and its row count in that one uncoordinated update — a known
+    /// trigger for SwiftUI's List diffing engine to throw ("invalid number of
+    /// rows/sections") or crash outright once it cannot reconcile a section
+    /// disappearing at the same moment its last row does. `withAnimation`
+    /// gives the mutation an explicit transaction, so List diffs the
+    /// section-and-row change as one coordinated update instead of an
+    /// external one arriving mid-flight — the same guarantee a user-initiated
+    /// action already gets for free from SwiftUI's own gesture handling,
+    /// which this async loop does not.
+    ///
+    /// Also where a remote-driven empty transition gets to celebrate: see
+    /// `remoteEmptiedAt`.
+    private func hydrateFromExternalCacheChange() {
+        let wasNonEmpty = !items.isEmpty
+        // COUNT, not emptiness, and the distinction is the whole of the reported
+        // bug. See `celebrationCancelledAt`: the tempting mirror of the arming
+        // line below — `if !wasNonEmpty, !items.isEmpty` — misses exactly the
+        // case that was reported, because a restored OVERDUE row leaves `items`
+        // non-empty on both sides and nothing transitions. Only the count moves.
+        let previousCount = items.count
+        // The same rung the screen's own `.animation(_:value:)` runs the feed's
+        // travel on (`TdayFeedItemMotion.placement`). A remote change moves rows
+        // exactly as a local one does, so the transaction that coordinates it has
+        // no business being a length only this call site knows — and the rows it
+        // adds or removes still override it from their transition legs.
+        //
+        // This is the third place the travel is opened and the only one outside a
+        // View, so Reduce Motion is read from UIKit rather than the environment.
+        // Refusing it here is not optional: without this the one path the user
+        // never asked for — a cache change arriving on its own — would be the one
+        // path that still animates. `nil` animates nothing while still opening the
+        // explicit transaction the paragraph above depends on, which is the part
+        // that keeps List's diffing engine from seeing a section and its last row
+        // vanish in two uncoordinated updates.
+        let travel: Animation? = UIAccessibility.isReduceMotionEnabled
+            ? nil
+            : TdayFeedItemMotion.placement
+        withAnimation(travel) {
+            hydrateFromCache()
+        }
+        if wasNonEmpty, items.isEmpty {
+            remoteEmptiedAt = Date()
+        } else if items.count > previousCount {
+            // The backstop, and the only thing that catches a COLLABORATOR's
+            // undo. This path cannot tell an undo from an add and does not need
+            // to: both are arrivals, and both make "this scope is finished"
+            // false. It also catches any future arrival path whose author
+            // forgets to stamp for itself — only a same-tick optimistic local
+            // update depends on the direct stamps.
+            //
+            // `remoteEmptiedAt` is cleared in the same breath. The comparison in
+            // `shouldCelebrateEmptyState` already blocks a re-celebration inside
+            // the same four seconds; clearing is the belt to that braces, and it
+            // keeps the two stamps honest for whoever reads them next.
+            //
+            // A stale-then-complete refetch can register a rise that was not
+            // really an arrival. Harmless by construction: a cancel can only end
+            // a burst early and can never start one.
+            celebrationCancelledAt = Date()
+            remoteEmptiedAt = nil
+        }
+    }
+
+    private func modeTelemetryData(mode: TodoListMode? = nil, scopedList: Bool? = nil) -> [String: Any] {
+        [
+            "mode": (mode ?? self.mode).summaryMode,
+            "scoped_list": scopedList ?? !(listId ?? "").isEmpty
+        ]
+    }
+
+    private func taskTelemetryData(
+        mode: TodoListMode,
+        payload: CreateTaskPayload? = nil,
+        scope: TaskRescheduleScope? = nil
+    ) -> [String: Any] {
+        var data = modeTelemetryData(mode: mode)
+        if let payload {
+            data["has_due"] = payload.due != nil
+            data["has_repeat"] = !(payload.rrule ?? "").isEmpty
+            data["has_list"] = !(payload.listId ?? "").isEmpty
+            data["has_description"] = !(payload.description ?? "").isEmpty
+        }
+        if let scope {
+            data["scope"] = scope.rawValue
+        }
+        return data
+    }
+
+    /// Structural only: how many rows the action covered and which screen it ran
+    /// on. Never titles, list names or raw ids.
+    private func bulkTelemetryData(count: Int) -> [String: Any] {
+        var data = modeTelemetryData()
+        data["count"] = count
+        return data
+    }
+
+    private func listTelemetryData(color: String?, iconKey: String?) -> [String: Any] {
+        [
+            "kind": mode == .floater ? "floater" : "scheduled",
+            "scoped_list": !(listId ?? "").isEmpty,
+            "has_color": !(color ?? "").isEmpty,
+            "has_icon": !(iconKey ?? "").isEmpty
+        ]
+    }
+}
+
+/// Copy and limits for the multi-select flow, in one place so `TodoListScreen`
+/// (labels, dialogs, the selection bar) and `TodoListViewModel` (toasts) cannot
+/// drift apart.
+///
+/// The canonical English lives in `docs/design/bulk-selection.md` §9 and is the
+/// same sentence on Android and web — translate it, do not reword it. iOS uses
+/// the English string as its own key, per the `L(...)` convention, so a missing
+/// translation silently falls back to English.
+enum BulkSelectionCopy {
+    /// Mirrors `BulkSelectionPolicy.MAX_SELECTION` in
+    /// `shared/src/commonMain/kotlin/com/ohmz/tday/shared/bulk/BulkSelectionPolicy.kt`.
+    ///
+    /// Every bulk action is a fan-out of N single-item requests, and the
+    /// `api_global` policy allows `API_RATE_LIMIT_MAX` (default 180) per minute
+    /// per user — plus one realtime event and one push poke per mutation, none
+    /// of it coalesced. The cap is what keeps a large selection from becoming a
+    /// *partially applied* destructive action.
+    static let maxSelection = 100
+
+    static func selectedCount(_ count: Int, capped: Bool) -> String {
+        capped
+            ? L("%d selected — the most one action can cover", count)
+            : L("%d selected", count)
+    }
+
+    static var selectAll: String { L("Select all") }
+    static var deselectAll: String { L("Deselect all") }
+
+    /// Shown when the recurring rule (§4.1) narrowed the selection: a repeating
+    /// occurrence can be bulk-completed, but never bulk-deleted, re-prioritized
+    /// or moved, because those three would silently act on the whole series.
+    static func appliesTo(effective: Int, total: Int) -> String {
+        L("Applies to %1$d of %2$d — repeating tasks are skipped.", effective, total)
+    }
+
+    static func completedToast(_ count: Int) -> String {
+        count == 1 ? L("Task completed") : L("%d tasks completed", count)
+    }
+
+    static func deletedToast(_ count: Int) -> String {
+        count == 1 ? L("Task deleted") : L("%d tasks deleted", count)
+    }
+
+    static func deleteTitle(_ count: Int) -> String {
+        count == 1 ? L("Delete this task?") : L("Delete %d tasks?", count)
+    }
+
+    static var deleteBody: String {
+        L("This removes them from every list, along with their completed history. You'll have a few seconds to undo.")
+    }
+
+    static func deleteConfirm(_ count: Int) -> String {
+        count == 1 ? L("Delete task") : L("Delete %d tasks", count)
+    }
+
+    static func moveTitle(_ count: Int) -> String {
+        L("Move %d tasks?", count)
+    }
+
+    static var moveBody: String {
+        L("These tasks come from different lists. Moving them can't be undone in one step — you'd have to put each one back by hand.")
+    }
+
+    static func moveConfirm(_ count: Int) -> String {
+        L("Move %d tasks", count)
+    }
+
+    // Singular branch like every sibling above, so one failed row does not read
+    // "1 tasks couldn't be deleted". Android already says this correctly through
+    // <plurals>; web now does too.
+    static func deleteFailed(_ count: Int) -> String {
+        count == 1 ? L("A task couldn't be deleted") : L("%d tasks couldn't be deleted", count)
+    }
+
+    static func updateFailed(_ count: Int) -> String {
+        count == 1 ? L("A task couldn't be updated") : L("%d tasks couldn't be updated", count)
+    }
+}

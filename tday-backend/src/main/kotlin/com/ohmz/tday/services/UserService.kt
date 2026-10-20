@@ -1,0 +1,216 @@
+package com.ohmz.tday.services
+
+import arrow.core.Either
+import arrow.core.left
+import arrow.core.right
+import com.ohmz.tday.db.enums.ApprovalStatus
+import com.ohmz.tday.db.enums.UserRole
+import com.ohmz.tday.db.tables.UserSecurityQuestions
+import com.ohmz.tday.db.tables.Users
+import com.ohmz.tday.db.util.CuidGenerator
+import com.ohmz.tday.domain.AppError
+import com.ohmz.tday.models.request.SecurityAnswerInput
+import com.ohmz.tday.models.response.UserProfileResponse
+import com.ohmz.tday.models.response.UserResponse
+import com.ohmz.tday.security.PasswordService
+import com.ohmz.tday.security.SecurityQuestions
+import kotlinx.coroutines.Dispatchers
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.core.lowerCase
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.jdbc.update
+import org.jetbrains.exposed.v1.core.eq
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+
+data class RegisterResult(val userId: String, val requiresApproval: Boolean, val isBootstrapAdmin: Boolean)
+
+interface UserService {
+    suspend fun getUser(userId: String): Either<AppError, UserResponse>
+    suspend fun updateEncryption(userId: String, enable: Boolean): Either<AppError, Unit>
+    suspend fun updateSymmetricKey(userId: String, key: String): Either<AppError, Unit>
+    suspend fun getProfile(userId: String): Either<AppError, UserProfileResponse>
+    suspend fun updateProfile(userId: String, name: String?, image: String?): Either<AppError, Unit>
+    suspend fun changePassword(userId: String, currentPassword: String, newPassword: String): Either<AppError, Boolean>
+    suspend fun verifyCurrentPassword(userId: String, password: String): Either<AppError, Boolean>
+    suspend fun register(fname: String, lname: String?, username: String, password: String, securityAnswers: List<SecurityAnswerInput>): Either<AppError, RegisterResult>
+    suspend fun findByUsername(username: String): Map<String, Any?>?
+    suspend fun usernameExists(username: String): Boolean
+    suspend fun updatePasswordHash(userId: String, newHash: String)
+    suspend fun requiresPasswordChange(userId: String): Boolean
+}
+
+class UserServiceImpl(private val passwordService: PasswordService) : UserService {
+    override suspend fun getUser(userId: String): Either<AppError, UserResponse> {
+        val user = newSuspendedTransaction(Dispatchers.IO) {
+            Users.selectAll().where { Users.id eq userId }.firstOrNull()?.let {
+                UserResponse(
+                    maxStorage = it[Users.maxStorage].toDouble(),
+                    usedStoraged = it[Users.usedStoraged].toDouble(),
+                    enableEncryption = it[Users.enableEncryption],
+                    protectedSymmetricKey = it[Users.protectedSymmetricKey],
+                )
+            }
+        }
+        return user?.right() ?: AppError.NotFound("user not found").left()
+    }
+
+    override suspend fun updateEncryption(userId: String, enable: Boolean): Either<AppError, Unit> {
+        newSuspendedTransaction(Dispatchers.IO) {
+            Users.update({ Users.id eq userId }) {
+                it[Users.enableEncryption] = enable
+                it[Users.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
+            }
+        }
+        return Unit.right()
+    }
+
+    override suspend fun updateSymmetricKey(userId: String, key: String): Either<AppError, Unit> {
+        newSuspendedTransaction(Dispatchers.IO) {
+            Users.update({ Users.id eq userId }) {
+                it[Users.protectedSymmetricKey] = key
+                it[Users.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
+            }
+        }
+        return Unit.right()
+    }
+
+    override suspend fun getProfile(userId: String): Either<AppError, UserProfileResponse> {
+        val profile = newSuspendedTransaction(Dispatchers.IO) {
+            Users.selectAll().where { Users.id eq userId }.firstOrNull()?.let {
+                UserProfileResponse(
+                    id = it[Users.id],
+                    name = it[Users.name],
+                    username = it[Users.username],
+                    image = it[Users.image],
+                    role = it[Users.role].name,
+                    approvalStatus = it[Users.approvalStatus].name,
+                    createdAt = it[Users.createdAt].toString(),
+                )
+            }
+        }
+        return profile?.right() ?: AppError.NotFound("user not found").left()
+    }
+
+    override suspend fun updateProfile(userId: String, name: String?, image: String?): Either<AppError, Unit> {
+        newSuspendedTransaction(Dispatchers.IO) {
+            Users.update({ Users.id eq userId }) {
+                name?.let { n -> it[Users.name] = n }
+                image?.let { i -> it[Users.image] = i }
+                it[Users.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
+            }
+        }
+        return Unit.right()
+    }
+
+    override suspend fun changePassword(userId: String, currentPassword: String, newPassword: String): Either<AppError, Boolean> {
+        val result = newSuspendedTransaction(Dispatchers.IO) {
+            val user = Users.selectAll().where { Users.id eq userId }.firstOrNull() ?: return@newSuspendedTransaction false
+            val storedHash = user[Users.password] ?: return@newSuspendedTransaction false
+            val verification = passwordService.verifyPassword(currentPassword, storedHash)
+            if (!verification.valid) return@newSuspendedTransaction false
+
+            val newHash = passwordService.hashPassword(newPassword)
+            Users.update({ Users.id eq userId }) {
+                it[Users.password] = newHash
+                it[Users.requirePasswordChange] = false
+                it[Users.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
+            }
+            true
+        }
+        return result.right()
+    }
+
+    override suspend fun verifyCurrentPassword(userId: String, password: String): Either<AppError, Boolean> {
+        val result = newSuspendedTransaction(Dispatchers.IO) {
+            val user = Users.selectAll().where { Users.id eq userId }.firstOrNull() ?: return@newSuspendedTransaction false
+            val storedHash = user[Users.password] ?: return@newSuspendedTransaction false
+            passwordService.verifyPassword(password, storedHash).valid
+        }
+        return result.right()
+    }
+
+    override suspend fun register(fname: String, lname: String?, username: String, password: String, securityAnswers: List<SecurityAnswerInput>): Either<AppError, RegisterResult> {
+        val hashedPassword = passwordService.hashPassword(password)
+        val fullName = listOf(fname.trim(), lname?.trim() ?: "").filter { it.isNotEmpty() }.joinToString(" ")
+
+        val result = newSuspendedTransaction(Dispatchers.IO) {
+            val userCount = Users.selectAll().count()
+            val isFirst = userCount == 0L
+
+            val id = CuidGenerator.newCuid()
+            val now = LocalDateTime.now(ZoneOffset.UTC)
+
+            Users.insert {
+                it[Users.id] = id
+                it[Users.name] = fullName
+                it[Users.username] = username
+                it[Users.password] = hashedPassword
+                it[Users.role] = if (isFirst) UserRole.ADMIN else UserRole.USER
+                it[Users.approvalStatus] = if (isFirst) ApprovalStatus.APPROVED else ApprovalStatus.PENDING
+                it[Users.approvedAt] = if (isFirst) now else null
+                // Questions are supplied inline at signup, so the user is never prompted later.
+                it[Users.requireSecurityQuestions] = false
+                it[Users.createdAt] = now
+                it[Users.updatedAt] = now
+            }
+
+            for (answer in securityAnswers) {
+                UserSecurityQuestions.insert {
+                    it[UserSecurityQuestions.id] = CuidGenerator.newCuid()
+                    it[UserSecurityQuestions.userID] = id
+                    it[UserSecurityQuestions.questionId] = answer.questionId
+                    it[UserSecurityQuestions.answerHash] =
+                        passwordService.hashPassword(SecurityQuestions.normalizeAnswer(answer.answer))
+                    it[UserSecurityQuestions.createdAt] = now
+                    it[UserSecurityQuestions.updatedAt] = now
+                }
+            }
+
+            RegisterResult(
+                userId = id,
+                requiresApproval = !isFirst,
+                isBootstrapAdmin = isFirst,
+            )
+        }
+        return result.right()
+    }
+
+    override suspend fun findByUsername(username: String): Map<String, Any?>? = newSuspendedTransaction(Dispatchers.IO) {
+        // Callers pass an already-lowercased username; match case-insensitively so a
+        // legacy/seeded row stored with different casing is still reachable (and can't
+        // be shadowed by a freshly-registered lowercase duplicate).
+        Users.selectAll().where { Users.username.lowerCase() eq username }.firstOrNull()?.let {
+            mapOf(
+                "id" to it[Users.id],
+                "username" to it[Users.username],
+                "password" to it[Users.password],
+                "name" to it[Users.name],
+                "role" to it[Users.role].name,
+                "approvalStatus" to it[Users.approvalStatus].name,
+                "tokenVersion" to it[Users.tokenVersion],
+                "timeZone" to it[Users.timeZone],
+            )
+        }
+    }
+
+    override suspend fun usernameExists(username: String): Boolean = newSuspendedTransaction(Dispatchers.IO) {
+        Users.selectAll().where { Users.username.lowerCase() eq username }.count() > 0
+    }
+
+    override suspend fun updatePasswordHash(userId: String, newHash: String) {
+        newSuspendedTransaction(Dispatchers.IO) {
+            Users.update({ Users.id eq userId }) {
+                it[Users.password] = newHash
+                it[Users.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
+            }
+        }
+    }
+
+    override suspend fun requiresPasswordChange(userId: String): Boolean =
+        newSuspendedTransaction(Dispatchers.IO) {
+            Users.selectAll().where { Users.id eq userId }.firstOrNull()
+                ?.get(Users.requirePasswordChange) ?: false
+        }
+}

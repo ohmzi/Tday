@@ -1,0 +1,1303 @@
+{
+  "version": 1,
+  "currentVersion": "0.8.5",
+  "sections": [
+    {
+      "id": "GETTING_STARTED",
+      "titleKey": "guide.sections.gettingStarted",
+      "order": 0
+    },
+    {
+      "id": "CAPTURE_AND_DATES",
+      "titleKey": "guide.sections.captureAndDates",
+      "order": 1
+    },
+    {
+      "id": "GESTURES",
+      "titleKey": "guide.sections.gestures",
+      "order": 2
+    },
+    {
+      "id": "ORGANIZING",
+      "titleKey": "guide.sections.organizing",
+      "order": 3
+    },
+    {
+      "id": "RECURRENCE_AND_REMINDERS",
+      "titleKey": "guide.sections.recurrenceAndReminders",
+      "order": 4
+    },
+    {
+      "id": "WIDGETS_AND_SURFACES",
+      "titleKey": "guide.sections.widgetsAndSurfaces",
+      "order": 5
+    },
+    {
+      "id": "MODES_AND_SYNC",
+      "titleKey": "guide.sections.modesAndSync",
+      "order": 6
+    },
+    {
+      "id": "INTEGRATIONS",
+      "titleKey": "guide.sections.integrations",
+      "order": 7
+    },
+    {
+      "id": "KEYBOARD_SHORTCUTS",
+      "titleKey": "guide.sections.keyboardShortcuts",
+      "order": 8
+    }
+  ],
+  "topics": [
+    {
+      "id": "root-feeds",
+      "section": "GETTING_STARTED",
+      "icon": "layout-dashboard",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.root-feeds.title",
+      "summaryKey": "guide.topics.root-feeds.summary",
+      "keywordsKey": "guide.topics.root-feeds.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.root-feeds.body"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": null
+    },
+    {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.default-home-screen.title",
+      "summaryKey": "guide.topics.default-home-screen.summary",
+      "keywordsKey": "guide.topics.default-home-screen.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.default-home-screen.body"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.7.7"
+    },
+    {
+      "id": "create-task",
+      "section": "GETTING_STARTED",
+      "icon": "plus",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.create-task.title",
+      "summaryKey": "guide.topics.create-task.summary",
+      "keywordsKey": "guide.topics.create-task.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.create-task.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.create-task.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": null
+    },
+    {
+      "id": "nlp-date-syntax",
+      "section": "CAPTURE_AND_DATES",
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.nlp-date-syntax.title",
+      "summaryKey": "guide.topics.nlp-date-syntax.summary",
+      "keywordsKey": "guide.topics.nlp-date-syntax.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.nlp-date-syntax.body"
+          ]
+        },
+        {
+          "type": "EXAMPLE",
+          "keys": [
+            "guide.topics.nlp-date-syntax.example"
+          ]
+        }
+      ],
+      "badge": "HIDDEN_GEM",
+      "deepLink": null,
+      "helpAnchors": [
+        "nlp-title-input"
+      ],
+      "serverOnly": false,
+      "sinceVersion": null
+    },
+    {
+      "id": "brain-dump",
+      "section": "CAPTURE_AND_DATES",
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB"
+      ],
+      "titleKey": "guide.topics.brain-dump.title",
+      "summaryKey": "guide.topics.brain-dump.summary",
+      "keywordsKey": "guide.topics.brain-dump.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.brain-dump.body"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "keys": [
+            "guide.topics.brain-dump.step0",
+            "guide.topics.brain-dump.step1",
+            "guide.topics.brain-dump.step2"
+          ]
+        }
+      ],
+      "badge": "PRO_TIP",
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.7.0"
+    },
+    {
+      "id": "task-steps",
+      "section": "CAPTURE_AND_DATES",
+      "icon": "list-todo",
+      "platforms": [
+        "WEB"
+      ],
+      "titleKey": "guide.topics.task-steps.title",
+      "summaryKey": "guide.topics.task-steps.summary",
+      "keywordsKey": "guide.topics.task-steps.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.task-steps.body"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "keys": [
+            "guide.topics.task-steps.step0",
+            "guide.topics.task-steps.step1",
+            "guide.topics.task-steps.step2"
+          ]
+        }
+      ],
+      "badge": "PRO_TIP",
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.7.0"
+    },
+    {
+      "id": "calendar-views",
+      "section": "CAPTURE_AND_DATES",
+      "icon": "calendar",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.calendar-views.title",
+      "summaryKey": "guide.topics.calendar-views.summary",
+      "keywordsKey": "guide.topics.calendar-views.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.calendar-views.body"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": {
+        "web": "calendar",
+        "android": "calendar",
+        "ios": "calendar"
+      },
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": null
+    },
+    {
+      "id": "priorities",
+      "section": "CAPTURE_AND_DATES",
+      "icon": "flag",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.priorities.title",
+      "summaryKey": "guide.topics.priorities.summary",
+      "keywordsKey": "guide.topics.priorities.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.priorities.body"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": null
+    },
+    {
+      "id": "pin-task",
+      "section": "CAPTURE_AND_DATES",
+      "icon": "pin",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.pin-task.title",
+      "summaryKey": "guide.topics.pin-task.summary",
+      "keywordsKey": "guide.topics.pin-task.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.pin-task.body"
+          ]
+        }
+      ],
+      "badge": "PRO_TIP",
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": null
+    },
+    {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.copy-task-text.title",
+      "summaryKey": "guide.topics.copy-task-text.summary",
+      "keywordsKey": "guide.topics.copy-task-text.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.copy-task-text.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.copy-task-text.tip"
+          ]
+        }
+      ],
+      "badge": "HIDDEN_GEM",
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.7.8"
+    },
+    {
+      "id": "drag-reorder",
+      "section": "GESTURES",
+      "icon": "grip-vertical",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.drag-reorder.title",
+      "summaryKey": "guide.topics.drag-reorder.summary",
+      "keywordsKey": "guide.topics.drag-reorder.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.drag-reorder.body"
+          ]
+        }
+      ],
+      "badge": "PRO_TIP",
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": null
+    },
+    {
+      "id": "sound-and-vibration",
+      "section": "GESTURES",
+      "icon": "waves",
+      "platforms": [
+        "WEB"
+      ],
+      "titleKey": "guide.topics.sound-and-vibration.title",
+      "summaryKey": "guide.topics.sound-and-vibration.summary",
+      "keywordsKey": "guide.topics.sound-and-vibration.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.sound-and-vibration.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.sound-and-vibration.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": {
+        "web": "settings",
+        "android": null,
+        "ios": null
+      },
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "serverOnly": false,
+      "sinceVersion": "0.7.23"
+    },
+    {
+      "id": "floaters-vs-todos",
+      "section": "ORGANIZING",
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.floaters-vs-todos.title",
+      "summaryKey": "guide.topics.floaters-vs-todos.summary",
+      "keywordsKey": "guide.topics.floaters-vs-todos.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.floaters-vs-todos.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.floaters-vs-todos.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": null
+    },
+    {
+      "id": "resting-floaters",
+      "section": "ORGANIZING",
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.resting-floaters.title",
+      "summaryKey": "guide.topics.resting-floaters.summary",
+      "keywordsKey": "guide.topics.resting-floaters.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.resting-floaters.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.resting-floaters.tip"
+          ]
+        }
+      ],
+      "badge": "HIDDEN_GEM",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "serverOnly": false,
+      "sinceVersion": "0.6.0"
+    },
+    {
+      "id": "promote-and-float",
+      "section": "ORGANIZING",
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.promote-and-float.title",
+      "summaryKey": "guide.topics.promote-and-float.summary",
+      "keywordsKey": "guide.topics.promote-and-float.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.promote-and-float.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.promote-and-float.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.3.0"
+    },
+    {
+      "id": "quick-defer",
+      "section": "ORGANIZING",
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.quick-defer.title",
+      "summaryKey": "guide.topics.quick-defer.summary",
+      "keywordsKey": "guide.topics.quick-defer.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.quick-defer.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.quick-defer.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.3.0"
+    },
+    {
+      "id": "day-done",
+      "section": "ORGANIZING",
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.day-done.title",
+      "summaryKey": "guide.topics.day-done.summary",
+      "keywordsKey": "guide.topics.day-done.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.day-done.body"
+          ]
+        }
+      ],
+      "badge": "HIDDEN_GEM",
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.3.0"
+    },
+    {
+      "id": "floater-lists",
+      "section": "ORGANIZING",
+      "icon": "list",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.floater-lists.title",
+      "summaryKey": "guide.topics.floater-lists.summary",
+      "keywordsKey": "guide.topics.floater-lists.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.floater-lists.body"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": null
+    },
+    {
+      "id": "reusable-lists",
+      "section": "ORGANIZING",
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.reusable-lists.title",
+      "summaryKey": "guide.topics.reusable-lists.summary",
+      "keywordsKey": "guide.topics.reusable-lists.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.reusable-lists.body"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "keys": [
+            "guide.topics.reusable-lists.step0",
+            "guide.topics.reusable-lists.step1",
+            "guide.topics.reusable-lists.step2"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.6.0"
+    },
+    {
+      "id": "scheduled-lists",
+      "section": "ORGANIZING",
+      "icon": "list-todo",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.scheduled-lists.title",
+      "summaryKey": "guide.topics.scheduled-lists.summary",
+      "keywordsKey": "guide.topics.scheduled-lists.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.scheduled-lists.body"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": null
+    },
+    {
+      "id": "list-icons",
+      "section": "ORGANIZING",
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.list-icons.title",
+      "summaryKey": "guide.topics.list-icons.summary",
+      "keywordsKey": "guide.topics.list-icons.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.list-icons.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.list-icons.tip"
+          ]
+        }
+      ],
+      "badge": "HIDDEN_GEM",
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.7.28"
+    },
+    {
+      "id": "completed-history",
+      "section": "ORGANIZING",
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.completed-history.title",
+      "summaryKey": "guide.topics.completed-history.summary",
+      "keywordsKey": "guide.topics.completed-history.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.completed-history.body"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": null
+    },
+    {
+      "id": "overdue-view",
+      "section": "ORGANIZING",
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.overdue-view.title",
+      "summaryKey": "guide.topics.overdue-view.summary",
+      "keywordsKey": "guide.topics.overdue-view.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.overdue-view.body"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": {
+        "web": "overdue",
+        "android": "todos/overdue",
+        "ios": "overdueTodos"
+      },
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": null
+    },
+    {
+      "id": "morning-sweep",
+      "section": "ORGANIZING",
+      "icon": "hand",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.morning-sweep.title",
+      "summaryKey": "guide.topics.morning-sweep.summary",
+      "keywordsKey": "guide.topics.morning-sweep.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.morning-sweep.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.morning-sweep.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": {
+        "web": "overdue",
+        "android": "morning-sweep",
+        "ios": "morning-sweep"
+      },
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.3.0"
+    },
+    {
+      "id": "bulk-actions",
+      "section": "ORGANIZING",
+      "icon": "circle-check-big",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.bulk-actions.title",
+      "summaryKey": "guide.topics.bulk-actions.summary",
+      "keywordsKey": "guide.topics.bulk-actions.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.bulk-actions.body"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "keys": [
+            "guide.topics.bulk-actions.step0",
+            "guide.topics.bulk-actions.step1",
+            "guide.topics.bulk-actions.step2"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.bulk-actions.tip"
+          ]
+        }
+      ],
+      "badge": "PRO_TIP",
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.7.4"
+    },
+    {
+      "id": "search-tasks",
+      "section": "ORGANIZING",
+      "icon": "search",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.search-tasks.title",
+      "summaryKey": "guide.topics.search-tasks.summary",
+      "keywordsKey": "guide.topics.search-tasks.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.search-tasks.body"
+          ]
+        }
+      ],
+      "badge": "HIDDEN_GEM",
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": null
+    },
+    {
+      "id": "recurrence-presets",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.recurrence-presets.title",
+      "summaryKey": "guide.topics.recurrence-presets.summary",
+      "keywordsKey": "guide.topics.recurrence-presets.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.recurrence-presets.body"
+          ]
+        },
+        {
+          "type": "EXAMPLE",
+          "keys": [
+            "guide.topics.recurrence-presets.example"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "recurrence-picker"
+      ],
+      "serverOnly": false,
+      "sinceVersion": null
+    },
+    {
+      "id": "repeat-suggestions",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.repeat-suggestions.title",
+      "summaryKey": "guide.topics.repeat-suggestions.summary",
+      "keywordsKey": "guide.topics.repeat-suggestions.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.repeat-suggestions.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.repeat-suggestions.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.6.0"
+    },
+    {
+      "id": "push-notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "icon": "bell-ring",
+      "platforms": [
+        "WEB"
+      ],
+      "titleKey": "guide.topics.push-notifications.title",
+      "summaryKey": "guide.topics.push-notifications.summary",
+      "keywordsKey": "guide.topics.push-notifications.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.push-notifications.body"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "serverOnly": true,
+      "sinceVersion": "0.3.0"
+    },
+    {
+      "id": "share-into-tday",
+      "section": "WIDGETS_AND_SURFACES",
+      "icon": "share-2",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.share-into-tday.title",
+      "summaryKey": "guide.topics.share-into-tday.summary",
+      "keywordsKey": "guide.topics.share-into-tday.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.share-into-tday.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.share-into-tday.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.4.0"
+    },
+    {
+      "id": "local-mode",
+      "section": "MODES_AND_SYNC",
+      "icon": "wifi-off",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.local-mode.title",
+      "summaryKey": "guide.topics.local-mode.summary",
+      "keywordsKey": "guide.topics.local-mode.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.local-mode.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.local-mode.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": null
+    },
+    {
+      "id": "server-mode",
+      "section": "MODES_AND_SYNC",
+      "icon": "cloud",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.server-mode.title",
+      "summaryKey": "guide.topics.server-mode.summary",
+      "keywordsKey": "guide.topics.server-mode.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.server-mode.body"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": null
+    },
+    {
+      "id": "export-your-data",
+      "section": "MODES_AND_SYNC",
+      "icon": "download",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.export-your-data.title",
+      "summaryKey": "guide.topics.export-your-data.summary",
+      "keywordsKey": "guide.topics.export-your-data.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.export-your-data.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.export-your-data.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.5.0"
+    },
+    {
+      "id": "crash-reports",
+      "section": "MODES_AND_SYNC",
+      "icon": "activity",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.crash-reports.title",
+      "summaryKey": "guide.topics.crash-reports.summary",
+      "keywordsKey": "guide.topics.crash-reports.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.crash-reports.body"
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.crash-reports.body2"
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.crash-reports.body3"
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.crash-reports.body4"
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.crash-reports.body5"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "keys": [
+            "guide.topics.crash-reports.step0",
+            "guide.topics.crash-reports.step1",
+            "guide.topics.crash-reports.step2"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.crash-reports.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-privacy"
+      ],
+      "serverOnly": false,
+      "sinceVersion": "0.8.0"
+    },
+    {
+      "id": "ai-summary",
+      "section": "INTEGRATIONS",
+      "icon": "sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.ai-summary.title",
+      "summaryKey": "guide.topics.ai-summary.summary",
+      "keywordsKey": "guide.topics.ai-summary.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.ai-summary.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.ai-summary.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "serverOnly": true,
+      "sinceVersion": null
+    },
+    {
+      "id": "api-key-homarr",
+      "section": "INTEGRATIONS",
+      "icon": "key-round",
+      "platforms": [
+        "WEB"
+      ],
+      "titleKey": "guide.topics.api-key-homarr.title",
+      "summaryKey": "guide.topics.api-key-homarr.summary",
+      "keywordsKey": "guide.topics.api-key-homarr.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.api-key-homarr.body"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "keys": [
+            "guide.topics.api-key-homarr.step0",
+            "guide.topics.api-key-homarr.step1",
+            "guide.topics.api-key-homarr.step2"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": {
+        "web": "settings",
+        "android": null,
+        "ios": null
+      },
+      "helpAnchors": [
+        "settings-api-key"
+      ],
+      "serverOnly": true,
+      "sinceVersion": null
+    },
+    {
+      "id": "week-in-review",
+      "section": "INTEGRATIONS",
+      "icon": "check-check",
+      "platforms": [
+        "WEB"
+      ],
+      "titleKey": "guide.topics.week-in-review.title",
+      "summaryKey": "guide.topics.week-in-review.summary",
+      "keywordsKey": "guide.topics.week-in-review.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.week-in-review.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.week-in-review.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.6.0"
+    },
+    {
+      "id": "keyboard-submit",
+      "section": "KEYBOARD_SHORTCUTS",
+      "icon": "keyboard",
+      "platforms": [
+        "WEB"
+      ],
+      "titleKey": "guide.topics.keyboard-submit.title",
+      "summaryKey": "guide.topics.keyboard-submit.summary",
+      "keywordsKey": "guide.topics.keyboard-submit.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.keyboard-submit.body"
+          ]
+        },
+        {
+          "type": "KBD",
+          "keys": [
+            "guide.topics.keyboard-submit.kbd"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": null
+    },
+    {
+      "id": "keyboard-shortcuts",
+      "section": "KEYBOARD_SHORTCUTS",
+      "icon": "keyboard",
+      "platforms": [
+        "WEB"
+      ],
+      "titleKey": "guide.topics.keyboard-shortcuts.title",
+      "summaryKey": "guide.topics.keyboard-shortcuts.summary",
+      "keywordsKey": "guide.topics.keyboard-shortcuts.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.keyboard-shortcuts.body"
+          ]
+        },
+        {
+          "type": "KBD",
+          "keys": [
+            "guide.topics.keyboard-shortcuts.kbd"
+          ]
+        },
+        {
+          "type": "KBD",
+          "keys": [
+            "guide.topics.keyboard-shortcuts.kbd2"
+          ]
+        },
+        {
+          "type": "KBD",
+          "keys": [
+            "guide.topics.keyboard-shortcuts.kbd3"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.keyboard-shortcuts.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.4.0"
+    }
+  ]
+}

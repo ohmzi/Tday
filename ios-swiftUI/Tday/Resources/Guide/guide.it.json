@@ -1,0 +1,1808 @@
+{
+  "currentVersion": "0.8.5",
+  "ui": {
+    "title": "Guida e consigli",
+    "subtitle": "Tutto ciò che T'Day può fare — le funzioni evidenti e quelle nascoste.",
+    "searchPlaceholder": "Cerca funzioni…",
+    "searchAria": "Cerca nella guida",
+    "whatsNew": "Novità",
+    "tryIt": "Provalo",
+    "clearSearch": "Cancella",
+    "noResults": "Nessun risultato. Prova un'altra parola.",
+    "results": "{{count}} risultati",
+    "badges.hiddenGem": "Gemma nascosta",
+    "badges.proTip": "Consiglio da esperti",
+    "badges.new": "Novità",
+    "badges.server": "Modalità server",
+    "sections.gettingStarted": "Per iniziare",
+    "sections.captureAndDates": "Cattura e date",
+    "sections.gestures": "Gesti",
+    "sections.organizing": "Organizzazione",
+    "sections.recurrenceAndReminders": "Ricorrenze e promemoria",
+    "sections.widgetsAndSurfaces": "Widget e superfici",
+    "sections.modesAndSync": "Modalità e sincronizzazione",
+    "sections.integrations": "Integrazioni",
+    "sections.keyboardShortcuts": "Scorciatoie da tastiera"
+  },
+  "sections": [
+    {
+      "id": "GETTING_STARTED",
+      "title": "Per iniziare",
+      "order": 0
+    },
+    {
+      "id": "CAPTURE_AND_DATES",
+      "title": "Cattura e date",
+      "order": 1
+    },
+    {
+      "id": "GESTURES",
+      "title": "Gesti",
+      "order": 2
+    },
+    {
+      "id": "ORGANIZING",
+      "title": "Organizzazione",
+      "order": 3
+    },
+    {
+      "id": "RECURRENCE_AND_REMINDERS",
+      "title": "Ricorrenze e promemoria",
+      "order": 4
+    },
+    {
+      "id": "WIDGETS_AND_SURFACES",
+      "title": "Widget e superfici",
+      "order": 5
+    },
+    {
+      "id": "MODES_AND_SYNC",
+      "title": "Modalità e sincronizzazione",
+      "order": 6
+    },
+    {
+      "id": "INTEGRATIONS",
+      "title": "Integrazioni",
+      "order": 7
+    },
+    {
+      "id": "KEYBOARD_SHORTCUTS",
+      "title": "Scorciatoie da tastiera",
+      "order": 8
+    }
+  ],
+  "topics": [
+    {
+      "id": "root-feeds",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "layout-dashboard",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Pianificato e In qualsiasi momento",
+      "summary": "Due feed principali e tranquilli tra cui passare dalla dock.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day ha due feed affiancati. Il feed Pianificato raccoglie le tue attività con data per oggi e oltre. In qualsiasi momento raccoglie i Floater — attività senza data. Passa dall'uno all'altro dalla dock in basso e crea un'attività da entrambi."
+          ]
+        }
+      ],
+      "searchTitle": "pianificato e in qualsiasi momento",
+      "searchKeywords": "pianificato, in qualsiasi momento, feed, dock, principale, naviga, schede",
+      "searchBody": "due feed principali e tranquilli tra cui passare dalla dock. t'day ha due feed affiancati. il feed pianificato raccoglie le tue attivita con data per oggi e oltre. in qualsiasi momento raccoglie i floater — attivita senza data. passa dall'uno all'altro dalla dock in basso e crea un'attivita da entrambi."
+    },
+    {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Schermata iniziale predefinita",
+      "summary": "Scegli se T'Day si apre su Pianificato o In qualsiasi momento.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Le impostazioni hanno una sezione Comportamento in cui scegli quale feed si apre per primo: Pianificato o In qualsiasi momento. Determina solo cosa vedi all'avvio; la dock continua a permetterti di passare da uno all'altro in qualsiasi momento."
+          ]
+        }
+      ],
+      "searchTitle": "schermata iniziale predefinita",
+      "searchKeywords": "predefinita, schermata iniziale, avvio, lancio, pianificato, in qualsiasi momento, comportamento, impostazioni",
+      "searchBody": "scegli se t'day si apre su pianificato o in qualsiasi momento. le impostazioni hanno una sezione comportamento in cui scegli quale feed si apre per primo: pianificato o in qualsiasi momento. determina solo cosa vedi all'avvio; la dock continua a permetterti di passare da uno all'altro in qualsiasi momento."
+    },
+    {
+      "id": "create-task",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "plus",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Crea un'attività",
+      "summary": "Aggiungi un'attività pianificata o un Floater senza data in un paio di tocchi.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tocca il pulsante di creazione per aggiungere un'attività. Assegnale un titolo e, se ha una data, un orario di scadenza. Lascia la data vuota e diventerà un Floater nel tuo feed In qualsiasi momento."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Inizia a digitare una data direttamente nel titolo — T'Day la legge per te. Vedi “Digita la data”."
+          ]
+        }
+      ],
+      "searchTitle": "crea un'attivita",
+      "searchKeywords": "crea, aggiungi, nuovo, attivita, piu, fab, componi",
+      "searchBody": "aggiungi un'attivita pianificata o un floater senza data in un paio di tocchi. tocca il pulsante di creazione per aggiungere un'attivita. assegnale un titolo e, se ha una data, un orario di scadenza. lascia la data vuota e diventera un floater nel tuo feed in qualsiasi momento. inizia a digitare una data direttamente nel titolo — t'day la legge per te. vedi “digita la data”."
+    },
+    {
+      "id": "nlp-date-syntax",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "nlp-title-input"
+      ],
+      "title": "Digita la data",
+      "summary": "Scrivi la data nel titolo e T'Day la pianifica per te.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Niente selettori. Scrivi una data (\"domani 15\"), una ripetizione (\"every day\", \"weekly\", \"every weekday\") o una priorità (\"!\", \"!!\" o \"high\"/\"low\" finale) direttamente nel titolo. T'Day la analizza sul dispositivo — senza account né rete —, evidenzia la data compresa e compila orario, ricorrenza e priorità."
+          ]
+        },
+        {
+          "type": "EXAMPLE",
+          "texts": [
+            "dentista martedì 15 every weekday !!"
+          ]
+        }
+      ],
+      "searchTitle": "digita la data",
+      "searchKeywords": "linguaggio naturale, data, domani, prossima settimana, analizza, veloce, intelligente, nlp, sul dispositivo",
+      "searchBody": "scrivi la data nel titolo e t'day la pianifica per te. niente selettori. scrivi una data (\"domani 15\"), una ripetizione (\"every day\", \"weekly\", \"every weekday\") o una priorita (\"!\", \"!!\" o \"high\"/\"low\" finale) direttamente nel titolo. t'day la analizza sul dispositivo — senza account ne rete —, evidenzia la data compresa e compila orario, ricorrenza e priorita. dentista martedi 15 every weekday !!"
+    },
+    {
+      "id": "calendar-views",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "calendar",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": "calendar",
+        "android": "calendar",
+        "ios": "calendar"
+      },
+      "helpAnchors": [],
+      "title": "Viste calendario",
+      "summary": "Vedi le tue attività pianificate per mese, settimana o giorno.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Apri il calendario per vedere le attività pianificate disposte per mese, settimana o giorno. Scorri o usa le frecce per spostarti tra i periodi; il pulsante in alto a destra ti riporta a oggi senza cambiare vista."
+          ]
+        }
+      ],
+      "searchTitle": "viste calendario",
+      "searchKeywords": "calendario, mese, settimana, giorno, agenda, vista, date",
+      "searchBody": "vedi le tue attivita pianificate per mese, settimana o giorno. apri il calendario per vedere le attivita pianificate disposte per mese, settimana o giorno. scorri o usa le frecce per spostarti tra i periodi; il pulsante in alto a destra ti riporta a oggi senza cambiare vista."
+    },
+    {
+      "id": "priorities",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "flag",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Priorità",
+      "summary": "Segnala ciò che conta con Bassa, Media o Alta.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Assegna una priorità a un'attività per indicare quanto è importante. La priorità appare come un piccolo punto colorato sull'attività e aiuta a ordinare ciò che merita attenzione per primo."
+          ]
+        }
+      ],
+      "searchTitle": "priorita",
+      "searchKeywords": "priorita, alta, media, bassa, importante, urgente, contrassegna",
+      "searchBody": "segnala cio che conta con bassa, media o alta. assegna una priorita a un'attivita per indicare quanto e importante. la priorita appare come un piccolo punto colorato sull'attivita e aiuta a ordinare cio che merita attenzione per primo."
+    },
+    {
+      "id": "pin-task",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "pin",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Fissa un'attività",
+      "summary": "Mantieni un'attività importante in cima al suo elenco.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Fissa un'attività per tenerla in cima al suo feed, sopra l'ordine normale. Rimuovi il fissaggio per lasciarla tornare al suo posto."
+          ]
+        }
+      ],
+      "searchTitle": "fissa un'attivita",
+      "searchKeywords": "fissa, fissato, blocca, in cima, importante, mantieni",
+      "searchBody": "mantieni un'attivita importante in cima al suo elenco. fissa un'attivita per tenerla in cima al suo feed, sopra l'ordine normale. rimuovi il fissaggio per lasciarla tornare al suo posto."
+    },
+    {
+      "id": "swipe-actions",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "pointer",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": null,
+        "android": "todos/today",
+        "ios": "today"
+      },
+      "helpAnchors": [],
+      "title": "Azioni con scorrimento",
+      "summary": "Scorri la riga di un'attività per azioni rapide senza aprirla.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Scorri la riga di un'attività per rivelare azioni rapide — completala o rimuovila — senza aprire affatto l'attività."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Un'attività completata mostra un avviso di annullamento per qualche secondo, così uno scorrimento sbagliato non è mai definitivo."
+          ]
+        }
+      ],
+      "searchTitle": "azioni con scorrimento",
+      "searchKeywords": "scorri, gesto, trascina, completa, elimina, rapido, riga",
+      "searchBody": "scorri la riga di un'attivita per azioni rapide senza aprirla. scorri la riga di un'attivita per rivelare azioni rapide — completala o rimuovila — senza aprire affatto l'attivita. un'attivita completata mostra un avviso di annullamento per qualche secondo, cosi uno scorrimento sbagliato non e mai definitivo."
+    },
+    {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.8",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Copia i dettagli dell'attività",
+      "summary": "Copia il titolo, le note, la scadenza e la priorità di un'attività come testo.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Scorri un'attività e tocca Copia — oppure usa il pulsante Copia su desktop — per copiarne titolo, note, scadenza e priorità come testo semplice, pronto da incollare ovunque."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Utile per incollare un'attività in un messaggio, un'email o un'altra app senza doverla riscrivere."
+          ]
+        }
+      ],
+      "searchTitle": "copia i dettagli dell'attivita",
+      "searchKeywords": "copia, appunti, condividi, testo, scorri",
+      "searchBody": "copia il titolo, le note, la scadenza e la priorita di un'attivita come testo. scorri un'attivita e tocca copia — oppure usa il pulsante copia su desktop — per copiarne titolo, note, scadenza e priorita come testo semplice, pronto da incollare ovunque. utile per incollare un'attivita in un messaggio, un'email o un'altra app senza doverla riscrivere."
+    },
+    {
+      "id": "long-press-actions",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "hand",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Tocco prolungato su un'attività",
+      "summary": "Tieni premuto per altre opzioni e per iniziare a riordinare.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tieni premuto su un'attività per aprire le sue opzioni, oppure per prenderla e trascinarla in una nuova posizione nell'elenco."
+          ]
+        }
+      ],
+      "searchTitle": "tocco prolungato su un'attivita",
+      "searchKeywords": "tocco prolungato, tieni premuto, menu contestuale, opzioni, riordina, trascina",
+      "searchBody": "tieni premuto per altre opzioni e per iniziare a riordinare. tieni premuto su un'attivita per aprire le sue opzioni, oppure per prenderla e trascinarla in una nuova posizione nell'elenco."
+    },
+    {
+      "id": "drag-reorder",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Riordina trascinando",
+      "summary": "Trascina le attività nell'ordine che preferisci.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "I tuoi elenchi mantengono l'ordine che imposti. Trascina un'attività in alto o in basso per organizzare la giornata nel modo in cui la pensi."
+          ]
+        }
+      ],
+      "searchTitle": "riordina trascinando",
+      "searchKeywords": "trascina, riordina, sposta, ordina, ordine, disponi",
+      "searchBody": "trascina le attivita nell'ordine che preferisci. i tuoi elenchi mantengono l'ordine che imposti. trascina un'attivita in alto o in basso per organizzare la giornata nel modo in cui la pensi."
+    },
+    {
+      "id": "swipe-sheet-away",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.23",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Trascina giù una scheda per chiuderla",
+      "summary": "Tira verso il basso la scheda della nuova attività per chiuderla.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "La piccola barra in cima alla scheda della nuova attività significa che puoi tirarla verso il basso. Trascinala e segue il tuo dito; lasciala dopo circa un quarto del percorso e si chiude, esattamente come se avessi toccato l'area scurita dietro di essa. Vale anche un colpetto rapido: conta dove stavi andando, non dove hai lasciato. E se ci ripensi a metà strada, torna al suo posto."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Se il contenuto di una scheda scorre, trascinala dall'alto: il centro appartiene all'elenco."
+          ]
+        }
+      ],
+      "searchTitle": "trascina giu una scheda per chiuderla",
+      "searchKeywords": "scorrere, trascinare, tirare, chiudere, annullare, scheda, maniglia, gesto, verso il basso",
+      "searchBody": "tira verso il basso la scheda della nuova attivita per chiuderla. la piccola barra in cima alla scheda della nuova attivita significa che puoi tirarla verso il basso. trascinala e segue il tuo dito; lasciala dopo circa un quarto del percorso e si chiude, esattamente come se avessi toccato l'area scurita dietro di essa. vale anche un colpetto rapido: conta dove stavi andando, non dove hai lasciato. e se ci ripensi a meta strada, torna al suo posto. se il contenuto di una scheda scorre, trascinala dall'alto: il centro appartiene all'elenco."
+    },
+    {
+      "id": "floaters-vs-todos",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Floater e attività con data",
+      "summary": "Le attività senza data vivono in In qualsiasi momento; quelle con data nel feed Pianificato.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Un'attività con una data di scadenza appare nel feed Pianificato e nel calendario. Un Floater non ha data — attende in silenzio nel tuo feed In qualsiasi momento finché non sei pronto. Usa i Floater per il lavoro “un giorno” che non deve ingombrare l'oggi."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "I Floater non appaiono mai nel calendario — quello spazio è riservato al lavoro con data."
+          ]
+        }
+      ],
+      "searchTitle": "floater e attivita con data",
+      "searchKeywords": "floater, in qualsiasi momento, non pianificato, senza data, attivita, pianificato, differenza",
+      "searchBody": "le attivita senza data vivono in in qualsiasi momento; quelle con data nel feed pianificato. un'attivita con una data di scadenza appare nel feed pianificato e nel calendario. un floater non ha data — attende in silenzio nel tuo feed in qualsiasi momento finche non sei pronto. usa i floater per il lavoro “un giorno” che non deve ingombrare l'oggi. i floater non appaiono mai nel calendario — quello spazio e riservato al lavoro con data."
+    },
+    {
+      "id": "resting-floaters",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Floater a riposo",
+      "summary": "Le attività Anytime intatte sbiadiscono e riposano, così la lista resta calma.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Le attività Anytime che non tocchi da un mese sbiadiscono dolcemente e dopo tre mesi si raccolgono in un tranquillo gruppo \"A riposo\" in fondo. Nulla viene eliminato: smettono solo di chiedere attenzione."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "È solo un segnale visivo; un tocco risveglia subito un floater."
+          ]
+        }
+      ],
+      "searchTitle": "floater a riposo",
+      "searchKeywords": "riposo, floater, anytime, sbiadire, invecchiare, inattivo, vecchio, calma",
+      "searchBody": "le attivita anytime intatte sbiadiscono e riposano, cosi la lista resta calma. le attivita anytime che non tocchi da un mese sbiadiscono dolcemente e dopo tre mesi si raccolgono in un tranquillo gruppo \"a riposo\" in fondo. nulla viene eliminato: smettono solo di chiedere attenzione. e solo un segnale visivo; un tocco risveglia subito un floater."
+    },
+    {
+      "id": "promote-and-float",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Promuovi e lascia fluttuare",
+      "summary": "Pianifica un fluttuante come attività reale, o lascia fluttuare un'attività ferma.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quando un fluttuante è pronto a diventare lavoro vero, usa la sua azione Pianifica: scegli un orario e passerà nel feed Pianificato come attività con data. Vale anche il contrario: un'attività in ritardo che continui a rimandare può fluttuare in silenzio; retrocedila e tornerà in Qualsiasi momento senza data, conservando titolo, note e priorità."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Le attività ricorrenti non possono fluttuare: termina prima la serie se la vuoi senza data."
+          ]
+        }
+      ],
+      "searchTitle": "promuovi e lascia fluttuare",
+      "searchKeywords": "promuovere, pianificare fluttuante, retrocedere, lascia fluttuare, convertire, in qualsiasi momento, spostare, in ritardo",
+      "searchBody": "pianifica un fluttuante come attivita reale, o lascia fluttuare un'attivita ferma. quando un fluttuante e pronto a diventare lavoro vero, usa la sua azione pianifica: scegli un orario e passera nel feed pianificato come attivita con data. vale anche il contrario: un'attivita in ritardo che continui a rimandare puo fluttuare in silenzio; retrocedila e tornera in qualsiasi momento senza data, conservando titolo, note e priorita. le attivita ricorrenti non possono fluttuare: termina prima la serie se la vuoi senza data."
+    },
+    {
+      "id": "quick-defer",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Rinvio rapido",
+      "summary": "Un tocco sposta un'attività a più tardi oggi, stasera, domani o alla prossima settimana.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quando un'attività deve spostarsi, ma non lontano, salta il selettore di data: l'azione Rimanda offre Più tardi oggi (+3 ore), Stasera (19:00), Domani mattina (09:00) e La prossima settimana (lunedì 09:00) con un solo tocco. È la stessa modifica della scheda di modifica — solo più veloce."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Le attività ricorrenti si rimandano per occorrenza dalla scheda di modifica, così il menu rapido non si mette in mezzo."
+          ]
+        }
+      ],
+      "searchTitle": "rinvio rapido",
+      "searchKeywords": "rimandare, posticipare, piu tardi, stasera, domani, prossima settimana, ripianificare",
+      "searchBody": "un tocco sposta un'attivita a piu tardi oggi, stasera, domani o alla prossima settimana. quando un'attivita deve spostarsi, ma non lontano, salta il selettore di data: l'azione rimanda offre piu tardi oggi (+3 ore), stasera (19:00), domani mattina (09:00) e la prossima settimana (lunedi 09:00) con un solo tocco. e la stessa modifica della scheda di modifica — solo piu veloce. le attivita ricorrenti si rimandano per occorrenza dalla scheda di modifica, cosi il menu rapido non si mette in mezzo."
+    },
+    {
+      "id": "day-done",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Giornata conclusa",
+      "summary": "Completa tutto per oggi e la schermata Oggi festeggia in silenzio.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quando ogni attività prevista per oggi è completata — e non semplicemente assente — la schermata Oggi sostituisce il messaggio \"Nessuna attività\" con uno stato sereno: una doppia spunta delicata, le parole \"Tutto fatto per oggi\" e la data. Niente serie, niente punteggi; solo la piccola ricompensa di una giornata davvero finita."
+          ]
+        }
+      ],
+      "searchTitle": "giornata conclusa",
+      "searchKeywords": "giornata conclusa, tutto fatto, finito, tutto completato, oggi vuoto",
+      "searchBody": "completa tutto per oggi e la schermata oggi festeggia in silenzio. quando ogni attivita prevista per oggi e completata — e non semplicemente assente — la schermata oggi sostituisce il messaggio \"nessuna attivita\" con uno stato sereno: una doppia spunta delicata, le parole \"tutto fatto per oggi\" e la data. niente serie, niente punteggi; solo la piccola ricompensa di una giornata davvero finita."
+    },
+    {
+      "id": "floater-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "list",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Elenchi di Floater",
+      "summary": "Raggruppa le tue attività In qualsiasi momento in elenchi propri.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Organizza i Floater in elenchi separati — spesa, valigia, idee — ognuno con il proprio nome e colore, e la propria cronologia dei completamenti."
+          ]
+        }
+      ],
+      "searchTitle": "elenchi di floater",
+      "searchKeywords": "elenco floater, in qualsiasi momento, raggruppa, elenco, categoria, spesa, valigia",
+      "searchBody": "raggruppa le tue attivita in qualsiasi momento in elenchi propri. organizza i floater in elenchi separati — spesa, valigia, idee — ognuno con il proprio nome e colore, e la propria cronologia dei completamenti."
+    },
+    {
+      "id": "reusable-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Liste riutilizzabili",
+      "summary": "Reimposta una lista per rifarla: valigia, faccende, spesa.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Segna una lista Anytime come riutilizzabile e appare Reimposta. Un tocco deseleziona tutto per rifare la stessa lista, senza ricrearla."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Apri una lista floater e attiva \"Riutilizzabile\" nelle sue impostazioni.",
+            "Procedi spuntando gli elementi come al solito.",
+            "Quando ti serve di nuovo, tocca Reimposta per deselezionare tutto."
+          ]
+        }
+      ],
+      "searchTitle": "liste riutilizzabili",
+      "searchKeywords": "riutilizzabile, reimposta, lista, floater, ripeti, modello",
+      "searchBody": "reimposta una lista per rifarla: valigia, faccende, spesa. segna una lista anytime come riutilizzabile e appare reimposta. un tocco deseleziona tutto per rifare la stessa lista, senza ricrearla. apri una lista floater e attiva \"riutilizzabile\" nelle sue impostazioni. procedi spuntando gli elementi come al solito. quando ti serve di nuovo, tocca reimposta per deselezionare tutto."
+    },
+    {
+      "id": "scheduled-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "list-todo",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Elenchi per attività pianificate",
+      "summary": "Ordina le attività con data in elenchi con nome e colore.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Assegna un elenco alle attività pianificate così il lavoro correlato resta insieme. Gli elenchi hanno un nome e un colore e possono essere filtrati."
+          ]
+        }
+      ],
+      "searchTitle": "elenchi per attivita pianificate",
+      "searchKeywords": "elenco, progetto, raggruppa, colore, pianificato, categoria",
+      "searchBody": "ordina le attivita con data in elenchi con nome e colore. assegna un elenco alle attivita pianificate cosi il lavoro correlato resta insieme. gli elenchi hanno un nome e un colore e possono essere filtrati."
+    },
+    {
+      "id": "list-icons",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.28",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Icone elenco automatiche",
+      "summary": "Un elenco senza un'icona scelta prende un'icona che corrisponde al suo nome.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Chiama un elenco Groceries e avrà un carrello; Gym riceve un manubrio, Work una valigetta. T'Day indovina solo quando non hai scelto tu un'icona, e lascia l'icona predefinita ogni volta che il nome non è abbastanza chiaro. Per ora i nomi vengono riconosciuti in inglese."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Scegli un'icona nelle impostazioni dell'elenco quando vuoi: una volta scelta viene mantenuta e mai sostituita da un'ipotesi."
+          ]
+        }
+      ],
+      "searchTitle": "icone elenco automatiche",
+      "searchKeywords": "icona elenco, automatica, suggerita, glifo, nome, spesa, palestra, lavoro",
+      "searchBody": "un elenco senza un'icona scelta prende un'icona che corrisponde al suo nome. chiama un elenco groceries e avra un carrello; gym riceve un manubrio, work una valigetta. t'day indovina solo quando non hai scelto tu un'icona, e lascia l'icona predefinita ogni volta che il nome non e abbastanza chiaro. per ora i nomi vengono riconosciuti in inglese. scegli un'icona nelle impostazioni dell'elenco quando vuoi: una volta scelta viene mantenuta e mai sostituita da un'ipotesi."
+    },
+    {
+      "id": "completed-history",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Cronologia completati",
+      "summary": "Tutto ciò che hai portato a termine, conservato per te.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Le attività terminate non vengono scartate — passano alla tua cronologia dei completamenti, raggruppate per giorno, così puoi vedere cosa hai davvero fatto."
+          ]
+        }
+      ],
+      "searchTitle": "cronologia completati",
+      "searchKeywords": "completato, fatto, cronologia, terminato, archivio, passato",
+      "searchBody": "tutto cio che hai portato a termine, conservato per te. le attivita terminate non vengono scartate — passano alla tua cronologia dei completamenti, raggruppate per giorno, cosi puoi vedere cosa hai davvero fatto."
+    },
+    {
+      "id": "overdue-view",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": "overdue",
+        "android": "todos/overdue",
+        "ios": "overdueTodos"
+      },
+      "helpAnchors": [],
+      "title": "In ritardo",
+      "summary": "Uno spazio dedicato alle attività il cui momento è passato.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Le attività la cui scadenza è passata si raccolgono nella vista In ritardo così nulla scivola via in silenzio. Riprogrammale quando sei pronto."
+          ]
+        }
+      ],
+      "searchTitle": "in ritardo",
+      "searchKeywords": "in ritardo, scaduto, scadenza passata, mancato, riportato, arretrato",
+      "searchBody": "uno spazio dedicato alle attivita il cui momento e passato. le attivita la cui scadenza e passata si raccolgono nella vista in ritardo cosi nulla scivola via in silenzio. riprogrammale quando sei pronto."
+    },
+    {
+      "id": "morning-sweep",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "hand",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": {
+        "web": "overdue",
+        "android": "morning-sweep",
+        "ios": "morning-sweep"
+      },
+      "helpAnchors": [],
+      "title": "Riordino mattutino",
+      "summary": "Smista le attività arretrate una scheda alla volta.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Essere indietro smette di pesare: il pulsante Riordina nella schermata In ritardo scorre le attività arretrate una scheda alla volta — Oggi, Domani, Scegli una data, Rendi fluttuante o Lascia andare. Di fretta? Sposta tutto a oggi muove tutto in una volta, con un solo annulla."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Le attività ricorrenti restano fuori dal riordino; le loro occorrenze si ripianificano dalla scheda di modifica così la serie resta intatta."
+          ]
+        }
+      ],
+      "searchTitle": "riordino mattutino",
+      "searchKeywords": "riordino, in ritardo, smistare, arretrate, recuperare, arretrato, mattina",
+      "searchBody": "smista le attivita arretrate una scheda alla volta. essere indietro smette di pesare: il pulsante riordina nella schermata in ritardo scorre le attivita arretrate una scheda alla volta — oggi, domani, scegli una data, rendi fluttuante o lascia andare. di fretta? sposta tutto a oggi muove tutto in una volta, con un solo annulla. le attivita ricorrenti restano fuori dal riordino; le loro occorrenze si ripianificano dalla scheda di modifica cosi la serie resta intatta."
+    },
+    {
+      "id": "bulk-actions",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "circle-check-big",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.4",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Azioni in blocco",
+      "summary": "Seleziona più attività insieme e agisci su tutte in una volta.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tocca Seleziona nell'intestazione di un elenco di attività per entrare in modalità selezione. Scegli le attività una alla volta oppure tocca Seleziona tutto, poi applica una sola azione all'intero gruppo: segnarle come fatte, cambiarne la priorità, spostarle in un altro elenco o eliminarle."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Apri un elenco di attività e tocca Seleziona nell'intestazione.",
+            "Tocca le attività per sceglierle oppure usa Seleziona tutto per quelle a schermo.",
+            "Scegli Completa, Priorità, Sposta o Elimina dalla barra in basso."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "L'eliminazione ti chiede prima di confermare il numero esatto e lascia comunque un avviso per annullare. Le attività ricorrenti restano del tutto fuori dalle azioni in blocco, così un'intera serie non cambia mai per sbaglio: aprine una singola per completarla, spostarla o eliminarla."
+          ]
+        }
+      ],
+      "searchTitle": "azioni in blocco",
+      "searchKeywords": "blocco, selezione multipla, seleziona tutto, gruppo, piu attivita, completare, eliminare, priorita, spostare, selezione",
+      "searchBody": "seleziona piu attivita insieme e agisci su tutte in una volta. tocca seleziona nell'intestazione di un elenco di attivita per entrare in modalita selezione. scegli le attivita una alla volta oppure tocca seleziona tutto, poi applica una sola azione all'intero gruppo: segnarle come fatte, cambiarne la priorita, spostarle in un altro elenco o eliminarle. apri un elenco di attivita e tocca seleziona nell'intestazione. tocca le attivita per sceglierle oppure usa seleziona tutto per quelle a schermo. scegli completa, priorita, sposta o elimina dalla barra in basso. l'eliminazione ti chiede prima di confermare il numero esatto e lascia comunque un avviso per annullare. le attivita ricorrenti restano del tutto fuori dalle azioni in blocco, cosi un'intera serie non cambia mai per sbaglio: aprine una singola per completarla, spostarla o eliminarla."
+    },
+    {
+      "id": "search-tasks",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "search",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Cerca le tue attività",
+      "summary": "Trova qualsiasi attività per titolo, nota o nome dell'elenco.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Usa il campo di ricerca per filtrare le tue attività all'istante per titolo, descrizione o nome dell'elenco — senza dover scorrere."
+          ]
+        }
+      ],
+      "searchTitle": "cerca le tue attivita",
+      "searchKeywords": "cerca, trova, filtra, ricerca, query",
+      "searchBody": "trova qualsiasi attivita per titolo, nota o nome dell'elenco. usa il campo di ricerca per filtrare le tue attivita all'istante per titolo, descrizione o nome dell'elenco — senza dover scorrere."
+    },
+    {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Notifiche",
+      "summary": "Un solo interruttore decide se T'Day può interromperti.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Nelle Impostazioni c'è un unico interruttore Notifiche, e tutto ciò che ti raggiunge passa da lì: i promemoria delle attività e il riepilogo del giorno dopo. Spegnerlo svuota la coda invece di silenziarla, così quando lo riaccendi non arriva nulla in ritardo. Serve anche il permesso di sistema: finché le notifiche sono bloccate per T'Day sul tuo dispositivo l'interruttore resta spento e propone di aprire le impostazioni di sistema."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Devono essere attive entrambe le metà. Se manca il permesso di sistema l'interruttore risulta spento, comunque tu l'abbia lasciato qui."
+          ]
+        }
+      ],
+      "searchTitle": "notifiche",
+      "searchKeywords": "notifiche, permesso, interruttore, consentire, silenziare, promemoria, riepilogo, impostazioni di sistema",
+      "searchBody": "un solo interruttore decide se t'day puo interromperti. nelle impostazioni c'e un unico interruttore notifiche, e tutto cio che ti raggiunge passa da li: i promemoria delle attivita e il riepilogo del giorno dopo. spegnerlo svuota la coda invece di silenziarla, cosi quando lo riaccendi non arriva nulla in ritardo. serve anche il permesso di sistema: finche le notifiche sono bloccate per t'day sul tuo dispositivo l'interruttore resta spento e propone di aprire le impostazioni di sistema. devono essere attive entrambe le meta. se manca il permesso di sistema l'interruttore risulta spento, comunque tu l'abbia lasciato qui."
+    },
+    {
+      "id": "recurrence-presets",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "recurrence-picker"
+      ],
+      "title": "Attività ricorrenti",
+      "summary": "Fai ripetere un'attività ogni giorno, ogni settimana e altro.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Imposta un'attività perché si ripeta e tornerà secondo la sua pianificazione. Scegli tra i preset — ogni giorno, giorno feriale, settimana o mese — e completare un'occorrenza lascia intatto il resto della serie."
+          ]
+        },
+        {
+          "type": "EXAMPLE",
+          "texts": [
+            "Annaffiare le piante · ogni settimana"
+          ]
+        }
+      ],
+      "searchTitle": "attivita ricorrenti",
+      "searchKeywords": "ripeti, ricorrente, ricorrenza, ogni giorno, settimanale, mensile, rrule, pianificazione",
+      "searchBody": "fai ripetere un'attivita ogni giorno, ogni settimana e altro. imposta un'attivita perche si ripeta e tornera secondo la sua pianificazione. scegli tra i preset — ogni giorno, giorno feriale, settimana o mese — e completare un'occorrenza lascia intatto il resto della serie. annaffiare le piante · ogni settimana"
+    },
+    {
+      "id": "repeat-suggestions",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Suggerimenti di ripetizione",
+      "summary": "T'Day individua attività finite con un ritmo e propone di ripeterle.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quando completi la stessa attività con un ritmo costante — annaffiare le piante ogni settimana, pagare l'affitto ogni mese — T'Day lo nota e propone un chip con un tocco per ripeterla. Legge solo la cronologia completata sul dispositivo; nulla lo lascia."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Non ti interessa? Tocca la ✕ e quel titolo non chiederà più."
+          ]
+        }
+      ],
+      "searchTitle": "suggerimenti di ripetizione",
+      "searchKeywords": "ripeti, suggerimento, ricorrente, ritmo, abitudine, schema, automatico",
+      "searchBody": "t'day individua attivita finite con un ritmo e propone di ripeterle. quando completi la stessa attivita con un ritmo costante — annaffiare le piante ogni settimana, pagare l'affitto ogni mese — t'day lo nota e propone un chip con un tocco per ripeterla. legge solo la cronologia completata sul dispositivo; nulla lo lascia. non ti interessa? tocca la ✕ e quel titolo non chiedera piu."
+    },
+    {
+      "id": "reminders",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Promemoria",
+      "summary": "Ricevi una notifica prima della scadenza di un'attività.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Aggiungi un promemoria a un'attività pianificata e il tuo dispositivo ti avvisa al momento giusto. I promemoria sono pianificati sul tuo dispositivo, quindi funzionano anche in Modalità locale."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Le opzioni di anticipo del promemoria variano leggermente in base all'attività — scegli quella che ti dà abbastanza preavviso."
+          ]
+        }
+      ],
+      "searchTitle": "promemoria",
+      "searchKeywords": "promemoria, notifica, avviso, sveglia, avvisa, prima",
+      "searchBody": "ricevi una notifica prima della scadenza di un'attivita. aggiungi un promemoria a un'attivita pianificata e il tuo dispositivo ti avvisa al momento giusto. i promemoria sono pianificati sul tuo dispositivo, quindi funzionano anche in modalita locale. le opzioni di anticipo del promemoria variano leggermente in base all'attivita — scegli quella che ti da abbastanza preavviso."
+    },
+    {
+      "id": "reminder-snooze",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Posticipare un promemoria",
+      "summary": "Le notifiche dei promemoria offrono Posticipa 1 h e Stasera.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quando un promemoria arriva nel momento sbagliato, non serve aprire l'app: Posticipa 1 h riconsegna lo stesso promemoria un'ora dopo, e Stasera sposta l'attività alle 19:00 di oggi. Stasera vale per le attività singole — le occorrenze ricorrenti si ripianificano dall'app per mantenere intatta la serie."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Posticipare ritarda solo la notifica; l'attività mantiene la sua ora originale finché non la sposti."
+          ]
+        }
+      ],
+      "searchTitle": "posticipare un promemoria",
+      "searchKeywords": "posticipare, promemoria, notifica, piu tardi, stasera, rinviare avviso",
+      "searchBody": "le notifiche dei promemoria offrono posticipa 1 h e stasera. quando un promemoria arriva nel momento sbagliato, non serve aprire l'app: posticipa 1 h riconsegna lo stesso promemoria un'ora dopo, e stasera sposta l'attivita alle 19:00 di oggi. stasera vale per le attivita singole — le occorrenze ricorrenti si ripianificano dall'app per mantenere intatta la serie. posticipare ritarda solo la notifica; l'attivita mantiene la sua ora originale finche non la sposti."
+    },
+    {
+      "id": "quiet-hours",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-notifications"
+      ],
+      "title": "Ore di silenzio",
+      "summary": "Trattieni i promemoria di notte così nulla suona mentre dormi.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Imposta una fascia — ad es. 22:00–07:00 — e ogni promemoria che suonerebbe dentro viene trattenuto fino alla fine. Solo sul dispositivo; i promemoria locali aspettano il mattino."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "La fascia può superare la mezzanotte (22:00 → 07:00); il calcolo lo gestisce."
+          ]
+        }
+      ],
+      "searchTitle": "ore di silenzio",
+      "searchKeywords": "silenzio, ore, non disturbare, notte, sonno, promemoria, orario",
+      "searchBody": "trattieni i promemoria di notte cosi nulla suona mentre dormi. imposta una fascia — ad es. 22:00–07:00 — e ogni promemoria che suonerebbe dentro viene trattenuto fino alla fine. solo sul dispositivo; i promemoria locali aspettano il mattino. la fascia puo superare la mezzanotte (22:00 → 07:00); il calcolo lo gestisce."
+    },
+    {
+      "id": "day-ahead",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell-ring",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Anteprima della giornata",
+      "summary": "Una discreta notifica mattutina con i numeri di oggi.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Attivala nelle Impostazioni e scegli un'ora: ogni mattina una notifica ti dice come si presenta la giornata — «4 attività oggi, 2 arretrate» — e apre Oggi, o salta dritto al Riordino mattutino quando c'è qualcosa di arretrato. Tutto sul dispositivo: nulla lascia il tuo telefono."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Nei giorni senza attività l'anteprima resta in silenzio — nessuna notizia, buona notizia."
+          ]
+        }
+      ],
+      "searchTitle": "anteprima della giornata",
+      "searchKeywords": "anteprima, giornata, mattina, notifica giornaliera, panoramica",
+      "searchBody": "una discreta notifica mattutina con i numeri di oggi. attivala nelle impostazioni e scegli un'ora: ogni mattina una notifica ti dice come si presenta la giornata — «4 attivita oggi, 2 arretrate» — e apre oggi, o salta dritto al riordino mattutino quando c'e qualcosa di arretrato. tutto sul dispositivo: nulla lascia il tuo telefono. nei giorni senza attivita l'anteprima resta in silenzio — nessuna notizia, buona notizia."
+    },
+    {
+      "id": "home-widget",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Widget nella schermata Home",
+      "summary": "Vedi le attività di oggi senza aprire l'app.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Aggiungi il widget T'Day alla schermata Home per dare un'occhiata alle attività di oggi. Toccando il widget si apre l'app nel punto giusto."
+          ]
+        }
+      ],
+      "searchTitle": "widget nella schermata home",
+      "searchKeywords": "widget, schermata home, colpo d'occhio, oggi, schermata di blocco",
+      "searchBody": "vedi le attivita di oggi senza aprire l'app. aggiungi il widget t'day alla schermata home per dare un'occhiata alle attivita di oggi. toccando il widget si apre l'app nel punto giusto."
+    },
+    {
+      "id": "widget-list-selection",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "list-todo",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Scegli una lista per il tuo widget",
+      "summary": "Fai puntare un widget su una lista specifica invece che sull'intero flusso.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tieni premuto un widget T'Day e scegli Modifica widget per decidere esattamente quale lista mostra — una qualsiasi delle tue liste programmate o liste flottanti. Una lista programmata mostra gli orari di scadenza e segnala ciò che è in ritardo; una lista flottante mostra un elenco aperto senza orari di scadenza. Se non scegli nulla, il widget continua a mostrare l'intero flusso Oggi o Flottanti."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Aggiungi più widget, ognuno puntato su una lista diversa, per vederli tutti insieme sulla tua schermata Home."
+          ]
+        }
+      ],
+      "searchTitle": "scegli una lista per il tuo widget",
+      "searchKeywords": "widget, lista, configura, modifica widget, per lista, schermata home, ios",
+      "searchBody": "fai puntare un widget su una lista specifica invece che sull'intero flusso. tieni premuto un widget t'day e scegli modifica widget per decidere esattamente quale lista mostra — una qualsiasi delle tue liste programmate o liste flottanti. una lista programmata mostra gli orari di scadenza e segnala cio che e in ritardo; una lista flottante mostra un elenco aperto senza orari di scadenza. se non scegli nulla, il widget continua a mostrare l'intero flusso oggi o flottanti. aggiungi piu widget, ognuno puntato su una lista diversa, per vederli tutti insieme sulla tua schermata home."
+    },
+    {
+      "id": "list-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.45",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Widget lista",
+      "summary": "Un terzo widget, per una vista integrata o la lista che preferisci.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Accanto a Oggi e Libere c'è un widget lista. Posizionalo e ti chiede cosa mostrare — le viste integrate Programmate e In ritardo, o qualsiasi lista pianificata o di attività libere. Da quel momento mostra solo quella scelta, e il suo + aggiunge un'attività: nella lista quando ne hai scelta una. Posizionane un altro per un'altra vista o lista; ognuno mantiene la propria."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Per passare un widget lista a un'altra lista, tienilo premuto e scegli Modifica (Modifica widget su iPhone)."
+          ]
+        }
+      ],
+      "searchTitle": "widget lista",
+      "searchKeywords": "widget, schermata home, lista, configura, selettore, libera, pianificata, aggiungi",
+      "searchBody": "un terzo widget, per una vista integrata o la lista che preferisci. accanto a oggi e libere c'e un widget lista. posizionalo e ti chiede cosa mostrare — le viste integrate programmate e in ritardo, o qualsiasi lista pianificata o di attivita libere. da quel momento mostra solo quella scelta, e il suo + aggiunge un'attivita: nella lista quando ne hai scelta una. posizionane un altro per un'altra vista o lista; ognuno mantiene la propria. per passare un widget lista a un'altra lista, tienilo premuto e scegli modifica (modifica widget su iphone)."
+    },
+    {
+      "id": "widget-quick-add",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "square-plus",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Aggiunta rapida dal widget",
+      "summary": "Avvia una nuova attività direttamente dal widget.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Il widget ha un pulsante di creazione, così puoi catturare un'attività dalla schermata Home senza prima aprire l'app — e funziona anche in Modalità locale."
+          ]
+        }
+      ],
+      "searchTitle": "aggiunta rapida dal widget",
+      "searchKeywords": "widget, aggiunta rapida, crea, scorciatoia, schermata home",
+      "searchBody": "avvia una nuova attivita direttamente dal widget. il widget ha un pulsante di creazione, cosi puoi catturare un'attivita dalla schermata home senza prima aprire l'app — e funziona anche in modalita locale."
+    },
+    {
+      "id": "interactive-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "check-check",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Completa dal widget",
+      "summary": "Spunta le attività direttamente dal widget nella schermata Home.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "I widget Oggi e Floater ora rispondono al tocco: tocca l'anello all'inizio di una riga per completare quell'attività senza aprire l'app. La riga scompare subito e il completamento si sincronizza come qualsiasi altro — i tocchi fatti offline vengono messi in coda e applicati appena torni online."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tocco sbagliato? Apri la cronologia completati nell'app e ripristina l'attività da lì."
+          ]
+        }
+      ],
+      "searchTitle": "completa dal widget",
+      "searchKeywords": "widget, completare, spuntare, schermata home, interattivo, tocco",
+      "searchBody": "spunta le attivita direttamente dal widget nella schermata home. i widget oggi e floater ora rispondono al tocco: tocca l'anello all'inizio di una riga per completare quell'attivita senza aprire l'app. la riga scompare subito e il completamento si sincronizza come qualsiasi altro — i tocchi fatti offline vengono messi in coda e applicati appena torni online. tocco sbagliato? apri la cronologia completati nell'app e ripristina l'attivita da li."
+    },
+    {
+      "id": "today-widget-progress",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "circle-check-big",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.44",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Il widget Oggi a colpo d'occhio",
+      "summary": "Guarda a che punto sei della giornata, cosa è in ritardo e cosa viene dopo.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Il widget Oggi si apre con la data e un anello di avanzamento: quante delle attività di oggi sono fatte, sul totale. Ciò che è in ritardo ha una sezione a parte sotto le attività di oggi, con il giorno di scadenza. Quando oggi non c'è nulla in scadenza, il widget mostra cosa arriva il prossimo giorno con attività. Un'attività spuntata resta spuntata e barrata per un attimo prima di sparire."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "L'anello conta solo le attività di oggi. Completare qualcosa di un altro giorno non lo riempie."
+          ]
+        }
+      ],
+      "searchTitle": "il widget oggi a colpo d'occhio",
+      "searchKeywords": "widget, oggi, progresso, anello, fatto, in ritardo, domani, data, schermata home",
+      "searchBody": "guarda a che punto sei della giornata, cosa e in ritardo e cosa viene dopo. il widget oggi si apre con la data e un anello di avanzamento: quante delle attivita di oggi sono fatte, sul totale. cio che e in ritardo ha una sezione a parte sotto le attivita di oggi, con il giorno di scadenza. quando oggi non c'e nulla in scadenza, il widget mostra cosa arriva il prossimo giorno con attivita. un'attivita spuntata resta spuntata e barrata per un attimo prima di sparire. l'anello conta solo le attivita di oggi. completare qualcosa di un altro giorno non lo riempie."
+    },
+    {
+      "id": "share-into-tday",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "share-2",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Condividi su T'Day",
+      "summary": "Invia testo da qualsiasi app direttamente in una nuova attività.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Hai trovato qualcosa in un'altra app? Apri il foglio di condivisione di sistema e scegli T'Day. Il testo condiviso arriva in un modulo di nuova attività — condividendo una pagina, il titolo diventa il nome dell'attività e il link finisce nelle note. Su Android e nell'app web il modulo si apre subito; su iOS la cattura viene salvata all'istante e il modulo precompilato ti accoglie alla prossima apertura dell'app."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Condividi un testo con una data all'interno: il parser imposta la scadenza per te."
+          ]
+        }
+      ],
+      "searchTitle": "condividi su t'day",
+      "searchKeywords": "condividere, foglio di condivisione, invia a, catturare, importare, da un'altra app",
+      "searchBody": "invia testo da qualsiasi app direttamente in una nuova attivita. hai trovato qualcosa in un'altra app? apri il foglio di condivisione di sistema e scegli t'day. il testo condiviso arriva in un modulo di nuova attivita — condividendo una pagina, il titolo diventa il nome dell'attivita e il link finisce nelle note. su android e nell'app web il modulo si apre subito; su ios la cattura viene salvata all'istante e il modulo precompilato ti accoglie alla prossima apertura dell'app. condividi un testo con una data all'interno: il parser imposta la scadenza per te."
+    },
+    {
+      "id": "carplay",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "car",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "T'Day su CarPlay",
+      "summary": "Consulta e cattura attività in sicurezza mentre guidi.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Su CarPlay, T'Day mostra un elenco essenziale e a colpo d'occhio pensato per l'auto, così puoi controllare cosa viene dopo o aggiungere un'attività a voce senza afferrare il telefono."
+          ]
+        }
+      ],
+      "searchTitle": "t'day su carplay",
+      "searchKeywords": "carplay, auto, guida, voce, apple, mani libere",
+      "searchBody": "consulta e cattura attivita in sicurezza mentre guidi. su carplay, t'day mostra un elenco essenziale e a colpo d'occhio pensato per l'auto, cosi puoi controllare cosa viene dopo o aggiungere un'attivita a voce senza afferrare il telefono."
+    },
+    {
+      "id": "focus-filters",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Filtri Full Immersion",
+      "summary": "Lascia che una Full Immersion di iOS decida quali liste appaiono nel tuo feed Oggi.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day si integra con Full Immersion di iOS. Scegli una Full Immersion come Lavoro o Personale, indica quali liste deve mostrare e, mentre quella Full Immersion è attiva, il tuo feed Oggi e il widget della schermata Home nascondono discretamente tutto il resto. Disattiva la Full Immersion e ogni attività ritorna: non viene eliminato nulla."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Apri Impostazioni ▸ Full Immersion su iPhone e scegli una Full Immersion.",
+            "Aggiungi un filtro Full Immersion, scegli T'Day e poi seleziona le tue liste.",
+            "Attiva la Full Immersion — Oggi e il widget ora mostrano solo quelle liste."
+          ]
+        }
+      ],
+      "searchTitle": "filtri full immersion",
+      "searchKeywords": "full immersion, filtro, ios, lavoro, personale, non disturbare, liste, nascondi, concentrazione, focus",
+      "searchBody": "lascia che una full immersion di ios decida quali liste appaiono nel tuo feed oggi. t'day si integra con full immersion di ios. scegli una full immersion come lavoro o personale, indica quali liste deve mostrare e, mentre quella full immersion e attiva, il tuo feed oggi e il widget della schermata home nascondono discretamente tutto il resto. disattiva la full immersion e ogni attivita ritorna: non viene eliminato nulla. apri impostazioni ▸ full immersion su iphone e scegli una full immersion. aggiungi un filtro full immersion, scegli t'day e poi seleziona le tue liste. attiva la full immersion — oggi e il widget ora mostrano solo quelle liste."
+    },
+    {
+      "id": "apple-watch",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "alarm-clock",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Apple Watch",
+      "summary": "Le tue attività di Oggi al polso, rispecchiate in tempo reale dal tuo iPhone.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Installa T'Day su Apple Watch e le attività di oggi ti seguono al polso. Il Watch rispecchia la stessa lista Oggi creata dal tuo iPhone — senza un accesso separato — e una complicazione sul quadrante mostra quante attività restano, così puoi dare un'occhiata senza aprire l'app. Si aggiorna ogni volta che il tuo iPhone si sincronizza."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Apri l'app Watch su iPhone e installa T'Day.",
+            "Aggiungi la complicazione T'Day al tuo quadrante.",
+            "Dai un'occhiata al conteggio, o apri l'app per la lista completa."
+          ]
+        }
+      ],
+      "searchTitle": "apple watch",
+      "searchKeywords": "apple watch, orologio, polso, complicazione, watchos, oggi, occhiata, specchio",
+      "searchBody": "le tue attivita di oggi al polso, rispecchiate in tempo reale dal tuo iphone. installa t'day su apple watch e le attivita di oggi ti seguono al polso. il watch rispecchia la stessa lista oggi creata dal tuo iphone — senza un accesso separato — e una complicazione sul quadrante mostra quante attivita restano, cosi puoi dare un'occhiata senza aprire l'app. si aggiorna ogni volta che il tuo iphone si sincronizza. apri l'app watch su iphone e installa t'day. aggiungi la complicazione t'day al tuo quadrante. dai un'occhiata al conteggio, o apri l'app per la lista completa."
+    },
+    {
+      "id": "local-mode",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "wifi-off",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Modalità locale",
+      "summary": "Usa T'Day completamente offline, senza server né account.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "La Modalità locale tiene tutto sul tuo dispositivo — nessun accesso, nessun server, nessun caricamento. È un modo di prim'ordine per usare T'Day in privato, e i tuoi dati locali non vengono mai inviati da nessuna parte per conto proprio. In un browser risiede nella memoria di quel browser, quindi cancellare cookie e dati dei siti cancella anche lo spazio di lavoro: esportalo prima se vuoi conservarlo. Se scegli di attivare le segnalazioni di crash, viene inviata solo una breve segnalazione tecnica quando qualcosa non funziona, mai le tue attività o i tuoi elenchi."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Le funzioni solo per server sono mostrate qui con un badge “Modalità server” così sai cosa cambia se accedi."
+          ]
+        }
+      ],
+      "searchTitle": "modalita locale",
+      "searchKeywords": "modalita locale, offline, privato, senza account, senza server, sul dispositivo",
+      "searchBody": "usa t'day completamente offline, senza server ne account. la modalita locale tiene tutto sul tuo dispositivo — nessun accesso, nessun server, nessun caricamento. e un modo di prim'ordine per usare t'day in privato, e i tuoi dati locali non vengono mai inviati da nessuna parte per conto proprio. in un browser risiede nella memoria di quel browser, quindi cancellare cookie e dati dei siti cancella anche lo spazio di lavoro: esportalo prima se vuoi conservarlo. se scegli di attivare le segnalazioni di crash, viene inviata solo una breve segnalazione tecnica quando qualcosa non funziona, mai le tue attivita o i tuoi elenchi. le funzioni solo per server sono mostrate qui con un badge “modalita server” cosi sai cosa cambia se accedi."
+    },
+    {
+      "id": "server-mode",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "cloud",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Modalità server",
+      "summary": "Sincronizza tra i dispositivi tramite il tuo server privato.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Accedi al tuo server self-hosted per sincronizzare le attività tra i dispositivi in tempo reale. Le scritture avvengono all'istante sul tuo dispositivo e si ripropagano al server, così l'app resta veloce anche con una connessione instabile."
+          ]
+        }
+      ],
+      "searchTitle": "modalita server",
+      "searchKeywords": "modalita server, sincronizzazione, self hosted, account, accesso, dispositivi, tempo reale",
+      "searchBody": "sincronizza tra i dispositivi tramite il tuo server privato. accedi al tuo server self-hosted per sincronizzare le attivita tra i dispositivi in tempo reale. le scritture avvengono all'istante sul tuo dispositivo e si ripropagano al server, cosi l'app resta veloce anche con una connessione instabile."
+    },
+    {
+      "id": "offline-sync",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "refresh-cw",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Sincronizzazione offline",
+      "summary": "Continua a lavorare offline; le modifiche si ripropagano alla riconnessione.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "In Modalità server le tue modifiche vengono salvate prima in locale e messe in coda quando sei offline. Non appena ti riconnetti, T'Day le ripropaga al server in ordine."
+          ]
+        }
+      ],
+      "searchTitle": "sincronizzazione offline",
+      "searchKeywords": "offline, sincronizzazione, in sospeso, coda, ripropaga, connessione, conflitto",
+      "searchBody": "continua a lavorare offline; le modifiche si ripropagano alla riconnessione. in modalita server le tue modifiche vengono salvate prima in locale e messe in coda quando sei offline. non appena ti riconnetti, t'day le ripropaga al server in ordine."
+    },
+    {
+      "id": "export-your-data",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "download",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Esporta i tuoi dati",
+      "summary": "Scarica tutto in un unico file portabile — e riportalo quando vuoi.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Dalle Impostazioni puoi scaricare l'intero account — attività, liste, cronologia completati e preferenze — come un unico file JSON. Importalo in un altro T'Day (un server o un dispositivo in Modalità locale) e tutto entra come nuovi elementi: l'importazione aggiunge sempre e non sovrascrive mai, quindi non perdi nulla di ciò che hai già. Su un server le descrizioni vengono decifrate nel file, così resta leggibile anche se passi a un server con una chiave diversa."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Il file è JSON semplice e leggibile — tienine una copia come backup personale."
+          ]
+        }
+      ],
+      "searchTitle": "esporta i tuoi dati",
+      "searchKeywords": "esportare, importare, scaricare, backup, i miei dati, portabile, ripristinare, migrare",
+      "searchBody": "scarica tutto in un unico file portabile — e riportalo quando vuoi. dalle impostazioni puoi scaricare l'intero account — attivita, liste, cronologia completati e preferenze — come un unico file json. importalo in un altro t'day (un server o un dispositivo in modalita locale) e tutto entra come nuovi elementi: l'importazione aggiunge sempre e non sovrascrive mai, quindi non perdi nulla di cio che hai gia. su un server le descrizioni vengono decifrate nel file, cosi resta leggibile anche se passi a un server con una chiave diversa. il file e json semplice e leggibile — tienine una copia come backup personale."
+    },
+    {
+      "id": "local-to-server-migration",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "cloud",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Passa da questo dispositivo a un server",
+      "summary": "Porta con te le attività del dispositivo quando passi alla Modalità server.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Hai iniziato in Modalità locale e poi hai configurato un server? Non viene mai caricato nulla da solo. Per spostare i tuoi dati: esportali prima dalle Impostazioni, accedi al tuo server e importa lì il file. Attività, liste e cronologia si spostano in un passaggio voluto — scegli tu il momento, e i dati sul dispositivo restano intatti fino ad allora."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Dopo l'importazione conserva il file esportato finché non confermi che è arrivato tutto — così fa anche da backup."
+          ]
+        }
+      ],
+      "searchTitle": "passa da questo dispositivo a un server",
+      "searchKeywords": "migrazione, locale a server, spostare dati, cambiare modalita, caricare, accedere, trasferire",
+      "searchBody": "porta con te le attivita del dispositivo quando passi alla modalita server. hai iniziato in modalita locale e poi hai configurato un server? non viene mai caricato nulla da solo. per spostare i tuoi dati: esportali prima dalle impostazioni, accedi al tuo server e importa li il file. attivita, liste e cronologia si spostano in un passaggio voluto — scegli tu il momento, e i dati sul dispositivo restano intatti fino ad allora. dopo l'importazione conserva il file esportato finche non confermi che e arrivato tutto — cosi fa anche da backup."
+    },
+    {
+      "id": "crash-reports",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "activity",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.8.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-privacy"
+      ],
+      "title": "Segnalazioni di crash e problemi",
+      "summary": "Disattivate per impostazione predefinita. Chi decide dipende dalla piattaforma.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Le segnalazioni di crash e problemi sono facoltative e disattivate per impostazione predefinita. Chi decide cambia da piattaforma a piattaforma: nell'app web una sola risposta di un amministratore vale per tutto il server — il sito, gli errori del server stesso e chiunque lo usi — e nessun singolo utente viene interpellato. Su Android e iOS ogni persona viene interpellata nel flusso di accesso, quindi la risposta è per dispositivo e la domanda torna a ogni accesso. Funziona come Crashlytics: serve a correggere i bug, non a misurare come usi l'app. Mentre tutto funziona normalmente non c'è alcuna analisi d'uso, nessun tracciamento delle sessioni e nessun monitoraggio delle prestazioni sul tuo dispositivo."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Una segnalazione contiene la versione dell'app, il modello del tuo dispositivo e la versione del sistema operativo (o il browser e la sua versione), l'errore e il punto del codice in cui si è verificato, alcuni passaggi etichettati che lo precedono, i nomi delle schermate o dei percorsi API senza alcun ID, i codici di stato e, su dispositivo mobile, le condizioni approssimative del dispositivo, come memoria libera, livello della batteria e se eri online. Include anche la differenza del tuo fuso orario (ad esempio UTC+2) e la lingua, perché le date sono centrali in un'app di pianificazione delle attività."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Il report non contiene mai: il tuo nome, nome utente, email o qualsiasi dato dell'account; il tuo indirizzo IP o la tua posizione; l'indirizzo del tuo server; titoli e contenuti di attività, elenchi o note; il contenuto del tuo database; password, cookie o token; schermate o registrazioni. I messaggi di errore vengono ripuliti da indirizzi, identificativi e testo tra virgolette sul tuo dispositivo prima di essere inviati, nel miglior modo possibile. Le segnalazioni non contengono alcun ID utente, quindi non possono essere ricondotte a te né eliminate per singola persona."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Le segnalazioni vengono inviate solo quando qualcosa non funziona, e solo se sono attive per quella piattaforma: nell'app web, dopo che un amministratore le attiva per il server; sul dispositivo, dopo che hai accettato tu. Se qualcosa non funziona mentre sono disattivate, nulla viene salvato né messo in coda, e attivarle in seguito non invia gli errori precedenti. Cosa conta come errore dipende dalla piattaforma: Android segnala crash, blocchi e crash per memoria esaurita; iOS segnala crash, blocchi e il sistema che chiude l'app perché usa troppa memoria; l'app web segnala solo errori imprevisti. T'Day non rileva le perdite di memoria."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Le segnalazioni arrivano al manutentore di T'Day tramite Sentry, un servizio di segnalazione dei crash. Vengono conservate per 30 giorni e usate solo per correggere i bug, mai vendute né condivise a fini pubblicitari. Vengono inviate direttamente a Sentry, non tramite il tuo server. Sentry vede l'indirizzo di rete di qualsiasi connessione, come ogni servizio online, ma è impostato per non memorizzarlo, e l'app web comunica inoltre a Sentry da quale sito web proviene la segnalazione. Se gestisci un tuo server, la stessa risposta dell'amministratore copre anche le sue segnalazioni di errore, più i tempi di un piccolo campione di richieste; le tue attività non sono mai incluse. Le build senza un endpoint di segnalazione, come quelle che compili tu stesso, non mostrano questa impostazione."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Apri Impostazioni.",
+            "Nell'app web un amministratore disattiva «Segnalazioni di errore del server» in Privacy; sul dispositivo disattivi tu «Segnalazioni di crash e problemi».",
+            "Le segnalazioni si interrompono subito e tutto ciò che era in attesa di essere inviato viene eliminato."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Dire di no non costa nulla. La risposta si può cambiare in qualsiasi momento in Impostazioni → Privacy — dal web un amministratore, sul dispositivo tu. Dettagli tecnici: docs/TELEMETRY.md nel repository di T'Day."
+          ]
+        }
+      ],
+      "searchTitle": "segnalazioni di crash e problemi",
+      "searchKeywords": "crash, arresto anomalo, errore, errori, segnalazione, segnalazioni, report, problemi, bug, privacy, diagnostica, telemetria, blocco, memoria, statistiche, analisi, sentry, anr, error, diagnostics, telemetry, hang, memory, analytics",
+      "searchBody": "disattivate per impostazione predefinita. chi decide dipende dalla piattaforma. le segnalazioni di crash e problemi sono facoltative e disattivate per impostazione predefinita. chi decide cambia da piattaforma a piattaforma: nell'app web una sola risposta di un amministratore vale per tutto il server — il sito, gli errori del server stesso e chiunque lo usi — e nessun singolo utente viene interpellato. su android e ios ogni persona viene interpellata nel flusso di accesso, quindi la risposta e per dispositivo e la domanda torna a ogni accesso. funziona come crashlytics: serve a correggere i bug, non a misurare come usi l'app. mentre tutto funziona normalmente non c'e alcuna analisi d'uso, nessun tracciamento delle sessioni e nessun monitoraggio delle prestazioni sul tuo dispositivo. una segnalazione contiene la versione dell'app, il modello del tuo dispositivo e la versione del sistema operativo (o il browser e la sua versione), l'errore e il punto del codice in cui si e verificato, alcuni passaggi etichettati che lo precedono, i nomi delle schermate o dei percorsi api senza alcun id, i codici di stato e, su dispositivo mobile, le condizioni approssimative del dispositivo, come memoria libera, livello della batteria e se eri online. include anche la differenza del tuo fuso orario (ad esempio utc+2) e la lingua, perche le date sono centrali in un'app di pianificazione delle attivita. il report non contiene mai: il tuo nome, nome utente, email o qualsiasi dato dell'account; il tuo indirizzo ip o la tua posizione; l'indirizzo del tuo server; titoli e contenuti di attivita, elenchi o note; il contenuto del tuo database; password, cookie o token; schermate o registrazioni. i messaggi di errore vengono ripuliti da indirizzi, identificativi e testo tra virgolette sul tuo dispositivo prima di essere inviati, nel miglior modo possibile. le segnalazioni non contengono alcun id utente, quindi non possono essere ricondotte a te ne eliminate per singola persona. le segnalazioni vengono inviate solo quando qualcosa non funziona, e solo se sono attive per quella piattaforma: nell'app web, dopo che un amministratore le attiva per il server; sul dispositivo, dopo che hai accettato tu. se qualcosa non funziona mentre sono disattivate, nulla viene salvato ne messo in coda, e attivarle in seguito non invia gli errori precedenti. cosa conta come errore dipende dalla piattaforma: android segnala crash, blocchi e crash per memoria esaurita; ios segnala crash, blocchi e il sistema che chiude l'app perche usa troppa memoria; l'app web segnala solo errori imprevisti. t'day non rileva le perdite di memoria. le segnalazioni arrivano al manutentore di t'day tramite sentry, un servizio di segnalazione dei crash. vengono conservate per 30 giorni e usate solo per correggere i bug, mai vendute ne condivise a fini pubblicitari. vengono inviate direttamente a sentry, non tramite il tuo server. sentry vede l'indirizzo di rete di qualsiasi connessione, come ogni servizio online, ma e impostato per non memorizzarlo, e l'app web comunica inoltre a sentry da quale sito web proviene la segnalazione. se gestisci un tuo server, la stessa risposta dell'amministratore copre anche le sue segnalazioni di errore, piu i tempi di un piccolo campione di richieste; le tue attivita non sono mai incluse. le build senza un endpoint di segnalazione, come quelle che compili tu stesso, non mostrano questa impostazione. apri impostazioni. nell'app web un amministratore disattiva «segnalazioni di errore del server» in privacy; sul dispositivo disattivi tu «segnalazioni di crash e problemi». le segnalazioni si interrompono subito e tutto cio che era in attesa di essere inviato viene eliminato. dire di no non costa nulla. la risposta si puo cambiare in qualsiasi momento in impostazioni → privacy — dal web un amministratore, sul dispositivo tu. dettagli tecnici: docs/telemetry.md nel repository di t'day."
+    },
+    {
+      "id": "ai-summary",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": true,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Riepiloghi delle attività",
+      "summary": "Una lettura breve e serena della tua giornata — con IA locale opzionale.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day può riepilogare la tua giornata in una frase o due. Con un modello Ollama locale la lettura è naturale; senza, ripiega su un riepilogo caloroso e deterministico — in entrambi i casi nulla lascia il tuo server."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Il riepilogo non dipende mai da un servizio di IA nel cloud — è locale o niente."
+          ]
+        }
+      ],
+      "searchTitle": "riepiloghi delle attivita",
+      "searchKeywords": "riepilogo, ia, ollama, panoramica, sintesi, locale, privato",
+      "searchBody": "una lettura breve e serena della tua giornata — con ia locale opzionale. t'day puo riepilogare la tua giornata in una frase o due. con un modello ollama locale la lettura e naturale; senza, ripiega su un riepilogo caloroso e deterministico — in entrambi i casi nulla lascia il tuo server. il riepilogo non dipende mai da un servizio di ia nel cloud — e locale o niente."
+    },
+    {
+      "id": "device-calendar-sync",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "calendar",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Attività nel calendario del dispositivo",
+      "summary": "Copia le tue attività con data in un calendario T'Day sul telefono.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Attivandolo, ogni attività con una data viene copiata in un calendario chiamato T'Day sul tuo telefono, accanto agli altri calendari. Le attività Anytime restano fuori, perché non hanno una data su cui collocarsi. È a senso unico: T'Day scrive in quel calendario, quindi le modifiche fatte lì vengono sostituite al successivo cambiamento delle attività."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "In Impostazioni, attiva «Aggiungi le attività pianificate al mio calendario».",
+            "Consenti l'accesso al calendario quando il telefono lo chiede.",
+            "Apri l'app calendario: le attività con data sono nel calendario T'Day."
+          ]
+        }
+      ],
+      "searchTitle": "attivita nel calendario del dispositivo",
+      "searchKeywords": "calendario, calendario del dispositivo, sincronizzazione, google calendar, apple calendar, eventkit, calendario del telefono, copia",
+      "searchBody": "copia le tue attivita con data in un calendario t'day sul telefono. attivandolo, ogni attivita con una data viene copiata in un calendario chiamato t'day sul tuo telefono, accanto agli altri calendari. le attivita anytime restano fuori, perche non hanno una data su cui collocarsi. e a senso unico: t'day scrive in quel calendario, quindi le modifiche fatte li vengono sostituite al successivo cambiamento delle attivita. in impostazioni, attiva «aggiungi le attivita pianificate al mio calendario». consenti l'accesso al calendario quando il telefono lo chiede. apri l'app calendario: le attivita con data sono nel calendario t'day."
+    }
+  ]
+}

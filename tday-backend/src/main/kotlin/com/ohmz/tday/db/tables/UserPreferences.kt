@@ -1,0 +1,16 @@
+package com.ohmz.tday.db.tables
+
+import com.ohmz.tday.db.enums.*
+import org.jetbrains.exposed.v1.core.Table
+
+object UserPreferences : Table("UserPreferences") {
+    val id = varchar("id", 30)
+    val userID = varchar("userID", 30).uniqueIndex().references(Users.id)
+    val sortBy = pgEnum<SortBy>("sortBy", "\"SortBy\"").nullable()
+    val groupBy = pgEnum<GroupBy>("groupBy", "\"GroupBy\"").nullable()
+    val direction = pgEnum<Direction>("direction", "\"Direction\"").nullable()
+    val aiSummaryEnabled = bool("aiSummaryEnabled").nullable()
+    val defaultHomeScreen = pgEnum<DefaultHomeScreen>("defaultHomeScreen", "\"DefaultHomeScreen\"").nullable()
+
+    override val primaryKey = PrimaryKey(id)
+}

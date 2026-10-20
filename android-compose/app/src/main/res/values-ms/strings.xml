@@ -1,0 +1,740 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">T\'Day</string>
+
+    <!-- Shared / reusable -->
+    <string name="action_back">Kembali</string>
+    <string name="action_close">Tutup</string>
+    <string name="action_search">Cari</string>
+    <string name="action_close_search">Tutup carian</string>
+    <string name="action_clear_search">Kosongkan carian</string>
+    <string name="action_search_in">Cari dalam %1$s</string>
+    <string name="search_no_results_body">Cuba perkataan lain, atau kosongkan carian.</string>
+    <string name="search_no_results_settings">Tiada tetapan yang sepadan</string>
+    <string name="action_create_task">Cipta tugasan</string>
+    <string name="action_create_list">Cipta senarai</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_edit_task">Edit tugasan</string>
+    <string name="action_copy">Salin</string>
+    <string name="action_copy_task">Salin tugasan</string>
+    <string name="action_delete_task">Padam tugasan</string>
+    <string name="action_delete_list">Padam senarai</string>
+    <string name="action_delete">Padam</string>
+    <string name="action_schedule">Jadualkan</string>
+    <string name="action_schedule_task">Jadualkan tugasan</string>
+    <string name="action_float">Terapung</string>
+    <string name="action_float_task">Biar terapung</string>
+    <string name="action_defer">Tangguh</string>
+    <string name="action_defer_task">Tangguhkan tugasan</string>
+    <string name="quick_defer_later_today">Kemudian hari ini</string>
+    <string name="quick_defer_tonight">Malam ini</string>
+    <string name="quick_defer_tomorrow">Esok pagi</string>
+    <string name="quick_defer_next_week">Minggu depan</string>
+    <string name="reminder_action_snooze_hour">Tunda 1 jam</string>
+    <string name="sweep_title">Sapuan pagi</string>
+    <string name="sweep_done">Semua terkini</string>
+    <string name="sweep_today">Hari ini</string>
+    <string name="sweep_tomorrow">Esok</string>
+    <string name="sweep_pick_date">Pilih tarikh</string>
+    <string name="sweep_float">Jadikan terapung</string>
+    <string name="sweep_let_go">Lepaskan</string>
+    <string name="sweep_skip">Langkau</string>
+    <string name="sweep_all_to_today">Sapu semua ke hari ini</string>
+    <string name="sweep_swept_toast">%1$d tugasan disapu</string>
+    <string name="day_ahead_setting">Ringkasan hari</string>
+    <string name="day_ahead_off">Mati</string>
+    <string name="day_ahead_h7">7:00</string>
+    <string name="day_ahead_h8">8:00</string>
+    <string name="day_ahead_h9">9:00</string>
+    <string name="day_ahead_title">Hari anda</string>
+    <string name="day_ahead_text">%1$d tugasan hari ini</string>
+    <string name="day_ahead_text_with_overdue">%1$d tugasan hari ini, %2$d terbawa</string>
+    <string name="task_promote_failed">Tidak dapat menjadualkan tugasan</string>
+    <string name="task_float_failed">Tidak dapat mengapungkan tugasan</string>
+    <string name="action_complete">Selesai</string>
+    <string name="action_more_options">Lagi pilihan</string>
+    <string name="action_save">Simpan</string>
+    <string name="action_save_task">Simpan tugasan</string>
+    <string name="action_cancel">Batal</string>
+    <string name="action_done">Selesai</string>
+    <string name="action_ok">OK</string>
+    <string name="action_sign_out">Log keluar</string>
+    <string name="action_expand_section">Kembangkan bahagian</string>
+    <string name="action_collapse_section">Runtuhkan bahagian</string>
+    <string name="label_completed">Selesai</string>
+    <string name="label_mark_complete">Tanda selesai</string>
+    <string name="label_undo_complete">Buat asal selesai</string>
+    <string name="label_task_list">Senarai tugasan</string>
+    <string name="label_priority_task">Tugasan keutamaan</string>
+    <string name="label_loading">Memuatkan…</string>
+    <string name="label_version_name">v%1$s</string>
+    <string name="label_server">Pelayan</string>
+
+    <!-- Scheduled task home screen -->
+    <string name="scheduled_task_home_title">T\'Day</string>
+    <string name="scheduled_task_home_category_overdue">Tertunggak</string>
+    <string name="scheduled_task_home_category_scheduled">Dijadualkan</string>
+    <string name="scheduled_task_home_category_all">Semua</string>
+    <string name="scheduled_task_home_category_priority">Keutamaan</string>
+    <string name="scheduled_task_home_category_completed">Selesai</string>
+    <string name="scheduled_task_home_category_calendar">Kalendar</string>
+    <string name="root_feed_tab_scheduled_task_home">Dijadualkan</string>
+    <string name="root_feed_tab_floater">Apungan</string>
+    <string name="scheduled_task_home_search_no_results">Tiada tugasan yang sepadan</string>
+    <string name="scheduled_task_home_my_lists">Senarai Saya</string>
+    <string name="scheduled_task_home_new_list">Senarai baharu</string>
+    <string name="scheduled_task_home_list_name_placeholder">Nama senarai</string>
+    <string name="scheduled_task_home_section_list">Senarai</string>
+    <string name="scheduled_task_home_section_color">Warna</string>
+    <string name="scheduled_task_home_section_icon">Ikon</string>
+    <string name="scheduled_task_home_list_icon_option">Pilih ikon senarai %1$s</string>
+    <string name="scheduled_task_home_locked_list_name">Log masuk untuk memuatkan senarai anda</string>
+
+    <string-array name="splash_taglines">
+        <item>Pelayan anda mengingat, jadi anda tak perlu</item>
+        <item>Dihos oleh anda, dihantui tarikh akhir</item>
+        <item>Sebab ‘nanti saya ingat’ sentiasa tipu</item>
+        <item>Kewarasan terhos sendiri, satu tugasan pada satu masa</item>
+        <item>Mengomel pada anda dari perkakasan anda sendiri</item>
+        <item>Data anda, pelayan anda, zon tanpa alasan anda</item>
+        <item>Membuatkan penangguhan sedikit lebih sukar sejak v0.1</item>
+        <item>Berjalan di pelayan anda, mengurus hidup anda</item>
+        <item>Sebab nota lekat tiada pemberitahuan tolak</item>
+        <item>Menukar ‘saya lupa’ kepada ‘saya boleh’</item>
+        <item>Mesin tolak peribadi anda</item>
+        <item>Terhos sendiri, teratur sendiri… hampir sampai</item>
+        <item>Di mana tugasan yang terlupa dijumpai semula</item>
+        <item>Menjadi dewasa, tetapi terhos sendiri</item>
+        <item>Menjinakkan kekecohan dari pelayan berhampiran anda</item>
+        <item>Anda masa depan mengucapkan terima kasih lebih awal</item>
+        <item>Awan hanyalah pelayan orang lain. Yang ini milik anda.</item>
+        <item>Mengatur hidup anda, tanpa tuan rumah</item>
+        <item>Tanpa kepercayaan… kecuali pelayan anda sendiri</item>
+        <item>Menyegerakkan tugasan anda, menilai keutamaan anda</item>
+        <item>Hari ini menelefon. Ia mahukan satu rancangan.</item>
+        <item>Membuatkan ‘nanti’ mengemukakan permohonan rasmi</item>
+        <item>Menukar kekecohan kepada kotak semak</item>
+        <item>Tugasan anda sedang beratur dengan kemas</item>
+        <item>Pelayan peribadi dengan pendapat tentang keutamaan anda</item>
+        <item>Untuk ketika otak anda membuka terlalu banyak tab</item>
+        <item>Menjadualkan kekecohan sebelum ia menjadualkan anda</item>
+        <item>Senarai anda telah memasuki era produktif mereka</item>
+        <item>Meja operasi kecil untuk anda masa depan</item>
+        <item>Sebab perasaan bukanlah strategi tugasan</item>
+        <item>Tugasan peribadi. Pagi yang lebih baik.</item>
+        <item>Membuatkan tunggakan anda dilihat, kemudian disusun</item>
+        <item>Di mana fikiran berselerak diberikan tempat duduk</item>
+        <item>Keutamaan anda kini mempunyai alamat rumah</item>
+        <item>Segerak dahulu, panik kemudian</item>
+        <item>Drama kalendar, kini dengan pembendungan</item>
+        <item>Tarikh akhir benci helah terhos sendiri ini</item>
+        <item>Membantu hari anda berhenti bekerja bebas</item>
+        <item>Peringatan anda datang dengan persediaan</item>
+        <item>Menukar saya patut kepada dijadualkan</item>
+        <item>Senarai tugasan anda, tetapi ia muncul</item>
+        <item>Mengatasi \'esok saya buat\'</item>
+        <item>Senarai tugasan dengan ingatan</item>
+        <item>Pelaksana anda, terhos sendiri</item>
+        <item>Mimpi ngeri terburuk penangguhan</item>
+        <item>Di mana \'suatu hari\' mendapat tarikh</item>
+        <item>Produktiviti, dihos atas terma anda</item>
+        <item>Satu pelayan. Sifar alasan.</item>
+        <item>Menepati janji anda untuk anda</item>
+        <item>Lajur \'nanti\', dijinakkan</item>
+        <item>Otak kedua anda, tetapi boleh dipercayai</item>
+        <item>Menaikkan \'mungkin\' kepada \'dijadualkan\'</item>
+        <item>Pengurusan kekecohan, edisi peribadi</item>
+        <item>Pengurus projek hari anda</item>
+        <item>Sebab \'dalam fikiran saya\' bukan satu sistem</item>
+        <item>Pengembalaan tugasan dijadikan rasmi</item>
+        <item>Menukar beban mental kepada tanda semak</item>
+        <item>Menghidangkan tugasan seperti pelayan yang baik sepatutnya</item>
+        <item>Pelayan akauntabiliti peribadi anda</item>
+        <item>Mengutamakan supaya anda tak perlu</item>
+        <item>Alasan anda tiada dalam jadual</item>
+        <item>Dibina untuk versi anda yang benar-benar muncul</item>
+        <item>Anda yang esok sedang memerhati</item>
+        <item>Tempat niat baik mendapat cap masa</item>
+        <item>Tiada awan, tiada bersepah, tiada lupa</item>
+        <item>Hari anda, tolak teka-teki</item>
+        <item>Menguruskan bahagian membosankan hidup anda secara senyap</item>
+        <item>Otak anda berehat, pelayan anda bekerja</item>
+        <item>Cita-cita, kini dengan tarikh akhir</item>
+        <item>Tugasan kecil, tenaga pelayan besar</item>
+        <item>Setiap senarai berhak dapat rumah milik anda sendiri</item>
+        <item>Masa operasi untuk niat anda</item>
+        <item>Omelan yang anda sendiri minta</item>
+        <item>Sebab ‘satu masa minggu ini’ bukan waktu</item>
+        <item>Rancangan anda, disandarkan dan kembali ke landasan</item>
+        <item>Mengingatkan anda dari kotak yang boleh anda cabut</item>
+        <item>Kurang tab, lebih siap</item>
+        <item>Menukar timbunan dalam kepala jadi rancangan</item>
+        <item>Localhost, tetapi untuk hidup anda</item>
+        <item>Peti masuk niat anda, sudah disusun</item>
+        <item>Tarikh akhir dihormati, privasi disertakan</item>
+        <item>Akses root kepada rutin anda sendiri</item>
+        <item>Menjadikan ‘sibuk’ bermakna semula</item>
+        <item>Diri anda pada masa depan telah menghantar permintaan</item>
+        <item>Bahagian senyap dalam menyiapkan kerja</item>
+        <item>Tiada langganan, tiada kejutan, tiada lupa</item>
+        <item>Keteraturan, segar dari rak anda sendiri</item>
+        <item>Tempat ‘segera’ akhirnya bertemu ‘dirancang’</item>
+        <item>Hari anda kini terkompil tanpa ralat</item>
+        <item>Keluar dari awan, masuk ke padang</item>
+    </string-array>
+
+    <!-- Settings screen -->
+    <string name="settings_title">Tetapan</string>
+    <string name="settings_unknown_user">Pengguna tidak diketahui</string>
+    <string name="settings_role_label">Peranan: %1$s</string>
+    <string name="settings_role_default">PENGGUNA</string>
+    <!-- Account settings (profile name + password change) -->
+    <string name="settings_account_name_label">Nama</string>
+    <string name="settings_account_username_label">Nama pengguna</string>
+    <string name="settings_account_password_label">Kata laluan</string>
+    <string name="settings_account_change_password">Tukar</string>
+    <string name="settings_account_current_password">Kata laluan semasa</string>
+    <string name="settings_account_confirm_new_password">Sahkan kata laluan baharu</string>
+    <string name="settings_account_forgot_password">Lupa kata laluan?</string>
+    <string name="settings_account_password_requirement">Kata laluan mesti sekurang-kurangnya 8 aksara, dengan satu huruf besar dan satu aksara khas.</string>
+    <string name="settings_account_show_password">Tunjukkan kata laluan</string>
+    <string name="settings_account_hide_password">Sembunyikan kata laluan</string>
+    <string name="settings_account_not_signed_in">Anda belum log masuk.</string>
+    <string name="settings_account_name_required">Nama tidak boleh kosong.</string>
+    <string name="error_update_name_failed">Gagal mengemas kini nama anda. Sila cuba lagi.</string>
+    <string name="error_change_password_failed">Gagal menukar kata laluan anda. Sila cuba lagi.</string>
+    <string name="settings_appearance">Penampilan</string>
+    <string name="settings_motion">Gerakan</string>
+    <string name="settings_reduce_motion">Kurangkan gerakan</string>
+    <string name="settings_reduce_motion_system">Animasi sudah dimatikan dalam tetapan Android.</string>
+    <string name="settings_behavior">Tingkah laku</string>
+    <string name="settings_default_home_screen">Skrin utama lalai</string>
+    <string name="settings_reminders">Peringatan</string>
+    <string name="settings_feature_toggle">Togol ciri</string>
+    <string name="settings_notifications">Pemberitahuan</string>
+    <string name="settings_notifications_blocked">Pemberitahuan dimatikan untuk T\'Day dalam tetapan Android.</string>
+    <string name="settings_notifications_declined">Pemberitahuan tidak dibenarkan, jadi T\'Day tidak boleh menghantar peringatan.</string>
+    <string name="settings_ai_task_summary">Ringkasan</string>
+    <string name="settings_default_reminder">Peringatan lalai</string>
+    <string name="settings_update_available_version">v%1$s tersedia</string>
+    <string name="settings_server_compatible">Serasi</string>
+    <string name="settings_server_incompatible">Tidak serasi</string>
+
+    <!-- Onboarding / wizard -->
+    <string name="onboarding_step_mode">Mod</string>
+    <string name="onboarding_step_server">Pelayan</string>
+    <string name="onboarding_step_login">Log masuk</string>
+    <string name="onboarding_step_privacy">Privasi</string>
+    <string name="onboarding_mode_title">Pilih persediaan anda</string>
+    <string name="onboarding_mode_subtitle">Pilih di mana T\'Day menyimpan tugasan anda.</string>
+    <string name="onboarding_mode_server_title">Pelayan terhos sendiri</string>
+    <string name="onboarding_mode_server_short_title">Terhos sendiri</string>
+    <string name="onboarding_mode_server_short_subtitle">Akaun dan segerak</string>
+    <string name="onboarding_mode_local_short_title">Peranti ini</string>
+    <string name="onboarding_mode_local_short_subtitle">Tiada log masuk</string>
+    <string name="onboarding_server_hero_subtitle">Sambungkan titik akhir T\'Day anda.</string>
+    <string name="onboarding_server_url_label">URL pelayan</string>
+    <string name="onboarding_server_url_placeholder">https://app.example.com</string>
+    <string name="onboarding_reset_trust">Tetapkan semula pelayan dipercayai</string>
+    <string name="onboarding_resetting_trust">Menetapkan semula kepercayaan…</string>
+    <string name="onboarding_connect">Sambung</string>
+    <string name="onboarding_connecting_title">Menyambung ke pelayan…</string>
+    <string name="onboarding_connecting_subtitle">Memeriksa titik akhir, TLS, dan tetapan ruang kerja</string>
+    <string name="onboarding_username_label">Nama pengguna</string>
+    <string name="onboarding_password_label">Kata laluan</string>
+    <string name="onboarding_sign_in">Log masuk</string>
+    <string name="onboarding_create_account">Cipta akaun</string>
+    <string name="onboarding_change_setup">Tukar persediaan</string>
+    <string name="onboarding_first_name_label">Nama pertama</string>
+    <string name="onboarding_confirm_password_label">Sahkan kata laluan</string>
+    <string name="onboarding_creating_account">Mencipta akaun…</string>
+    <string name="onboarding_back_to_sign_in">Kembali ke log masuk</string>
+    <string name="onboarding_authenticating_title">Mengesahkan…</string>
+    <string name="onboarding_authenticating_register_subtitle">Menghantar pendaftaran dan menunggu status kelulusan</string>
+    <string name="onboarding_authenticating_login_subtitle">Menyulitkan sesi dan memuatkan ruang kerja anda</string>
+    <string name="onboarding_error_connect_fallback">Tidak dapat menyambung ke pelayan</string>
+    <string name="onboarding_error_reset_trust_fallback">Tidak dapat menetapkan semula pelayan dipercayai</string>
+    <string name="onboarding_validation_first_name_min">Nama pertama mestilah sekurang-kurangnya 2 aksara</string>
+    <string name="onboarding_validation_username_required">Nama pengguna diperlukan</string>
+    <string name="onboarding_validation_username_invalid">Sila masukkan nama pengguna yang sah</string>
+    <string name="onboarding_validation_password_required">Kata laluan dan pengesahan diperlukan</string>
+    <string name="onboarding_validation_password_min">Kata laluan mestilah sekurang-kurangnya 8 aksara</string>
+    <string name="onboarding_validation_password_uppercase">Kata laluan mesti mengandungi sekurang-kurangnya satu huruf besar</string>
+    <string name="onboarding_validation_password_special">Kata laluan mesti mengandungi sekurang-kurangnya satu aksara khas</string>
+    <string name="onboarding_validation_password_mismatch">Kata laluan tidak sepadan</string>
+
+    <!-- Authentication / credential messages -->
+    <string name="auth_pending_admin_approval">Akaun menunggu kelulusan admin.</string>
+    <string name="auth_password_manager_save_server_url_failed">Pengurus Kata Laluan Android tidak dapat menyimpan URL pelayan ini. Pastikan pengurus kata laluan didayakan.</string>
+    <string name="auth_password_manager_save_login_failed">Pengurus Kata Laluan Android tidak dapat menyimpan log masuk ini. Pastikan pengurus kata laluan didayakan.</string>
+    <string name="auth_error_incorrect_credentials">Nama pengguna atau kata laluan salah</string>
+
+    <!-- Todo list screen -->
+    <string name="todos_summarize">Ringkaskan tugasan</string>
+    <string name="todos_title_tasks">Tugasan</string>
+    <string name="todos_title_today">Hari ini</string>
+    <string name="todos_title_tonight">Malam ini</string>
+    <string name="todos_title_overdue">Tertunggak</string>
+    <string name="todos_title_scheduled">Dijadualkan</string>
+    <string name="todos_title_all_tasks">Semua Tugasan</string>
+    <string name="todos_title_priority">Keutamaan</string>
+    <string name="todos_title_floater">Apungan</string>
+    <string name="todos_title_list">Senarai</string>
+    <string name="todos_empty_today">Tiada tugasan untuk hari ini</string>
+    <string name="todos_empty_tonight">Tiada tugasan untuk malam ini</string>
+    <string name="todos_all_done_today">Semua selesai untuk hari ini</string>
+    <string name="todos_all_done_tonight">Semua selesai untuk malam ini</string>
+    <string name="todos_empty_overdue">Tiada tugasan tertunggak</string>
+    <string name="todos_empty_priority">Tiada tugasan keutamaan</string>
+    <string name="todos_empty_scheduled">Tiada tugasan dijadualkan</string>
+    <string name="todos_empty_all">Belum ada tugasan</string>
+    <string name="todos_empty_list">Tiada tugasan dalam senarai ini</string>
+    <string name="todos_empty_today_body">Tambah sesuatu untuk hari ini dan ia akan muncul di sini.</string>
+    <string name="todos_empty_overdue_body">Tiada apa-apa yang melepasi tarikh akhirnya.</string>
+    <string name="todos_empty_priority_body">Tandakan tugasan sebagai keutamaan dan ia akan naik ke sini.</string>
+    <string name="todos_empty_scheduled_body">Beri tugasan satu tarikh dan ia akan beratur di sini.</string>
+    <string name="todos_empty_all_body">Semua yang anda tambah muncul di sini, apa pun tarikhnya.</string>
+    <string name="todos_empty_list_body">Tambah tugasan pertama anda dan ia akan muncul di sini.</string>
+    <string name="car_surface_title_today">T\'Day</string>
+    <string name="car_surface_title_floater">Apungan</string>
+    <string name="car_surface_loading">Memuatkan tugasan</string>
+    <string name="car_surface_load_error">Tidak dapat memuatkan tugasan</string>
+    <string name="car_voice_prompt_today">Sebut tugasan untuk ditambah ke T\'Day</string>
+    <string name="car_voice_prompt_floater">Sebut apungan untuk ditambah</string>
+    <string name="car_voice_empty_result">Tiada tugasan didengari</string>
+    <string name="car_complete_dialog_title">Selesaikan tugasan ini?</string>
+    <string name="car_complete_dialog_confirm">Selesai</string>
+    <string name="todos_section_morning">Pagi</string>
+    <string name="todos_section_afternoon">Tengah hari</string>
+    <string name="todos_section_tonight">Malam ini</string>
+    <string name="todos_section_earlier">Tertunggak</string>
+    <string name="todos_section_today">Hari ini</string>
+    <string name="todos_section_tomorrow">Esok</string>
+    <string name="todos_section_rest_of">Selebihnya %1$s</string>
+    <string name="todos_reschedule_recurring_title">Alih tugasan berulang?</string>
+    <string name="todos_reschedule_recurring_message">Pilih sama ada untuk mengalih hanya kejadian tugasan ini atau keseluruhan siri berulang.</string>
+    <string name="todos_reschedule_this_occurrence">Kejadian ini</string>
+    <string name="todos_reschedule_entire_series">Keseluruhan siri</string>
+    <string name="todos_summary_title">Ringkasan</string>
+    <string name="todos_summary_close">Tutup ringkasan</string>
+    <string name="todos_summary_loading">Mencipta ringkasan tugasan anda…</string>
+    <string name="todos_summary_admin_disabled">Ringkasan dilumpuhkan oleh admin</string>
+    <string name="todos_summary_offline_unavailable">Tiada ringkasan tersedia semasa luar talian.</string>
+    <string name="todos_list_settings">Tetapan senarai</string>
+    <string name="reusable_list">Senarai boleh guna semula</string>
+    <string name="reusable_list_hint">Tunjuk Set Semula untuk nyahtanda semua dan guna lagi</string>
+    <string name="reset_floater_list">Set semula senarai</string>
+    <string name="floater_list_reset">Senarai diset semula — semua dinyahtanda</string>
+    <string name="error_reset_list_failed">Tidak dapat menetapkan semula senarai.</string>
+    <string name="share_list_action">Kongsi senarai</string>
+    <string name="share_section_title">Perkongsian</string>
+    <string name="action_share">Kongsi</string>
+    <string name="members_title">Ahli</string>
+    <string name="members_add_section">Tambah ahli</string>
+    <string name="members_add_action">Tambah</string>
+    <string name="members_search_placeholder">Cari mengikut nama atau nama pengguna</string>
+    <string name="members_no_results">Tiada pengguna ditemui</string>
+    <string name="members_already_member">Sudah menjadi ahli</string>
+    <string name="members_remove">Buang ahli</string>
+    <string name="members_leave_list">Tinggalkan senarai</string>
+    <string name="members_shared_by">Dikongsi oleh %1$s</string>
+    <string name="share_role_owner">Pemilik</string>
+    <string name="share_role_editor">Penyunting</string>
+    <string name="share_role_viewer">Pelihat</string>
+    <string name="share_due_label">Tarikh akhir: %1$s</string>
+    <string name="share_priority_label">Keutamaan: %1$s</string>
+    <plurals name="share_task_count">
+        <item quantity="other">%d tugasan</item>
+    </plurals>
+    <string name="todos_save_list_settings">Simpan tetapan senarai</string>
+    <string name="todos_delete_list_title">Padam senarai?</string>
+    <string name="todos_delete_list_message">Ini akan memadam senarai ini, setiap tugasan di dalamnya, dan sejarah selesai bagi tugasan tersebut.</string>
+    <string name="todos_due_overdue_text">Tertunggak, %1$s</string>
+    <string name="todos_due_text">Tarikh akhir %1$s</string>
+
+    <!-- Create/edit task sheet -->
+    <string name="create_task_title_new">Tugasan baharu</string>
+    <string name="create_task_title_edit">Edit tugasan</string>
+    <string name="create_task_section_schedule">Jadual</string>
+    <string name="create_task_due">Tarikh akhir</string>
+    <string name="create_task_section_details">Butiran</string>
+    <string name="create_task_list">Senarai</string>
+    <string name="create_task_no_list">Tiada senarai</string>
+    <string name="create_task_priority">Keutamaan</string>
+    <string name="create_task_priority_low">Rendah</string>
+    <string name="create_task_priority_normal">Biasa</string>
+    <string name="create_task_priority_important">Penting</string>
+    <string name="create_task_priority_urgent">Segera</string>
+    <string name="create_task_repeat">Ulang</string>
+    <string name="create_task_repeat_none">Tiada ulangan</string>
+    <string name="create_task_repeat_daily">Harian</string>
+    <string name="create_task_repeat_weekly">Mingguan</string>
+    <string name="create_task_repeat_weekdays">Hari bekerja</string>
+    <string name="create_task_repeat_monthly">Bulanan</string>
+    <string name="create_task_repeat_yearly">Tahunan</string>
+    <string name="create_task_title_placeholder">Tajuk</string>
+    <string name="create_task_notes_placeholder">Nota</string>
+    <string name="create_task_clear_formatting">Kosongkan pemformatan</string>
+    <string name="create_task_format_bold">Tebal</string>
+    <string name="create_task_format_italic">Condong</string>
+    <string name="create_task_format_underline">Garis bawah</string>
+    <string name="create_task_format_strikethrough">Coret</string>
+    <string name="create_task_format_bulleted_list">Senarai bulet</string>
+    <string name="create_task_format_numbered_list">Senarai bernombor</string>
+    <string name="create_task_schedule_enabled">Tugasan mempunyai tarikh akhir</string>
+    <string name="create_task_schedule_disabled">Tugasan apungan</string>
+    <string name="create_task_select_date">Pilih tarikh</string>
+    <string name="create_task_select_time">Pilih masa</string>
+
+    <!-- Completed screen -->
+    <string name="completed_title">Selesai</string>
+    <string name="completed_empty">Belum ada tugasan selesai</string>
+    <string name="completed_empty_body">Tandakan sesuatu sebagai selesai dan ia akan muncul di sini.</string>
+    <string name="completed_floater_empty">Belum ada floater yang selesai</string>
+    <string name="completed_floater_empty_body">Tandakan sesuatu selesai dalam Floater dan ia akan muncul di sini.</string>
+
+    <!-- Calendar screen -->
+    <string name="calendar_title">Kalendar</string>
+    <string name="calendar_jump_to_today">Lompat ke hari ini</string>
+    <string name="calendar_today">Hari ini</string>
+    <string name="calendar_tasks_due">Tugasan perlu disiapkan %1$s</string>
+    <string name="calendar_no_pending">Tiada tugasan tertangguh untuk hari ini</string>
+    <string name="calendar_no_pending_body">Pilih tarikh lain pada kalendar.</string>
+    <string name="calendar_prev_month">Bulan sebelumnya</string>
+    <string name="calendar_next_month">Bulan seterusnya</string>
+    <string name="calendar_prev_week">Minggu sebelumnya</string>
+    <string name="calendar_next_week">Minggu seterusnya</string>
+    <string name="calendar_prev_day">Hari sebelumnya</string>
+    <string name="calendar_next_day">Hari seterusnya</string>
+    <string name="calendar_task_count_one">1 tugasan perlu disiapkan</string>
+    <string name="calendar_task_count_many">%1$d tugasan perlu disiapkan</string>
+    <string name="calendar_task_count_cap">9+</string>
+
+    <!-- Error handling / retry / offline -->
+    <string name="action_retry">Cuba lagi</string>
+    <string name="action_undo">Buat asal</string>
+    <string name="settings_about">Perihal</string>
+    <string name="settings_workspace_local_title">Ruang kerja tempatan</string>
+    <string name="settings_workspace_local_detail">Pada peranti ini sahaja</string>
+    <string name="settings_workspace_leave">Keluar dari ruang kerja setempat</string>
+    <string name="settings_workspace_delete">Padam data setempat</string>
+    <string name="settings_workspace_delete_title">Padam data setempat?</string>
+    <string name="settings_workspace_delete_body">Ini membuang secara kekal semua tugasan, senarai dan rekod selesai yang disimpan pada peranti ini. Tiada salinan pada mana-mana pelayan — muat turun data anda dahulu jika mahu menyimpannya.</string>
+    <string name="settings_workspace_delete_done">Data setempat dipadam.</string>
+    <string name="settings_workspace_server_title">Segerak pelayan</string>
+    <string name="settings_sync_last_synced_label">Segerak terakhir</string>
+    <string name="settings_sync_last_synced_never">Belum lagi</string>
+    <string name="settings_sync_now">Segerak sekarang</string>
+    <string name="settings_sync_up_to_date">Terkini</string>
+    <string name="settings_sync_offline_short">Luar talian</string>
+    <string name="settings_sync_offline_message">Perubahan akan disegerakkan apabila sambungan kembali.</string>
+    <string name="settings_syncing_now">Menyegerakkan...</string>
+    <string name="error_auth_expired">Sesi tamat tempoh. Sila log masuk semula.</string>
+    <string name="error_app_outdated">Versi apl ini sudah lapuk. Sila kemas kini untuk meneruskan.</string>
+    <string name="error_server_outdated">Pelayan perlu dikemas kini sebelum apl ini boleh diteruskan.</string>
+    <string name="error_server">Ralat pelayan. Sila cuba lagi kemudian.</string>
+    <string name="error_permission_denied">Anda tidak mempunyai kebenaran untuk berbuat demikian.</string>
+    <string name="error_not_found">Item yang diminta tidak dijumpai.</string>
+    <string name="error_connection">Ralat sambungan. Periksa internet anda dan cuba lagi.</string>
+    <string name="error_connectivity_title">Tiada Sambungan Internet</string>
+    <string name="error_connectivity">Tidak dapat menyambung. Sila periksa sambungan rangkaian anda dan cuba lagi.</string>
+    <string name="error_generic">Sesuatu tidak kena. Sila cuba lagi.</string>
+    <string name="error_load_failed">Gagal memuatkan.</string>
+    <string name="error_load_dashboard_failed">Gagal memuatkan papan pemuka.</string>
+    <string name="error_load_calendar_failed">Gagal memuatkan kalendar.</string>
+    <string name="error_load_tasks_failed">Gagal memuatkan tugasan.</string>
+    <string name="error_create_task_failed">Tidak dapat mencipta tugasan.</string>
+    <string name="error_update_task_failed">Tidak dapat mengemas kini tugasan.</string>
+    <string name="error_delete_task_failed">Tidak dapat memadam tugasan.</string>
+    <string name="error_restore_task_failed">Tidak dapat memulihkan tugasan.</string>
+    <string name="error_create_list_failed">Tidak dapat mencipta senarai.</string>
+    <string name="error_update_list_failed">Tidak dapat mengemas kini senarai.</string>
+    <string name="error_delete_list_failed">Tidak dapat memadam senarai.</string>
+    <string name="error_summarize_tasks_failed">Tidak dapat meringkaskan tugasan.</string>
+    <string name="error_reset_trusted_server_failed">Tidak dapat menetapkan semula pelayan dipercayai.</string>
+    <string name="error_connect_server_failed">Tidak dapat menyambung ke pelayan.</string>
+    <string name="server_setup_error_probe_timeout">Penyiasatan pelayan tamat masa. Periksa URL dan rangkaian, kemudian cuba lagi.</string>
+    <string name="server_setup_error_invalid_url">URL pelayan tidak sah.</string>
+    <string name="server_setup_error_insecure_transport">Guna HTTPS untuk URL pelayan jauh.</string>
+    <string name="server_setup_error_not_tday_server">Pelayan boleh dicapai tetapi nampaknya bukan pelayan T\'Day.</string>
+
+    <string name="notification_channel_task_reminders_name">Peringatan Tugasan</string>
+    <string name="notification_channel_task_reminders_description">Peringatan untuk tarikh akhir tugasan yang akan datang</string>
+    <string name="notification_channel_app_updates_name">Kemas Kini Apl</string>
+    <string name="notification_channel_app_updates_description">Gesaan untuk membuka semula T\'Day selepas kemas kini selesai dipasang</string>
+    <string name="update_notification_title">Kemas kini dipasang</string>
+    <string name="update_notification_message">Ketik untuk membuka semula T\'Day.</string>
+
+    <string name="app_update_required_title">Kemas Kini Diperlukan</string>
+    <string name="app_update_required_message">Kemas kini ke v%1$s diperlukan untuk meneruskan.</string>
+    <string name="app_update_download_not_ready">v%1$s belum tersedia untuk dimuat turun. Sila minta pentadbir memuat naik kemas kini.</string>
+    <string name="server_update_required_title">Kemas Kini Pelayan Diperlukan</string>
+    <string name="server_update_required_message">Apl anda memerlukan versi pelayan yang lebih baharu. Pelayan berada pada v%1$s. Sila hubungi pentadbir anda untuk mengemas kini pelayan.</string>
+    <string name="install_permission_return_to_app">Berikan kebenaran pasang, kemudian kembali ke apl.</string>
+    <string name="install_permission_return_here">Berikan kebenaran pasang, kemudian kembali ke sini.</string>
+    <string name="overlay_install_awaiting_permission">Menunggu Kebenaran...</string>
+    <string name="overlay_install_downloading_progress">Memuat turun... %1$d%%</string>
+    <string name="overlay_install_downloading">Memuat turun...</string>
+    <string name="overlay_install_installing">Memasang...</string>
+    <string name="overlay_install_download_and_install">Muat Turun &amp; Pasang</string>
+
+    <string name="widget_today_tasks_description">Menunjukkan tugasan hari ini sepintas lalu</string>
+    <string name="widget_today_tasks_title">Tugasan Hari Ini</string>
+    <string name="widget_today_tasks_title_small">Tugasan Hari Ini - Kecil</string>
+    <string name="widget_today_tasks_title_medium">Tugasan Hari Ini - Sederhana</string>
+    <string name="widget_today_tasks_title_large">Tugasan Hari Ini - Besar</string>
+    <string name="widget_today_tasks_empty">Tiada tugasan untuk hari ini</string>
+    <string name="widget_tonight_tasks_title">Tugasan malam ini</string>
+    <string name="widget_tonight_tasks_empty">Tiada tugasan untuk malam ini</string>
+    <string name="widget_tonight_all_done">Semua selesai untuk malam ini</string>
+    <string name="widget_today_tasks_add">Tambah satu untuk hari ini</string>
+    <string name="widget_today_tasks_add_tonight">Tambah satu untuk malam ini</string>
+    <string name="widget_today_tasks_count">%1$d perlu disiapkan</string>
+    <string name="widget_today_progress">%1$d daripada %2$d selesai</string>
+    <string name="widget_today_tasks_setup_title">Buka T\'Day</string>
+    <string name="widget_today_tasks_setup_message">Sediakan ruang kerja anda</string>
+    <string name="widget_floater_tasks_description">Menunjukkan tugasan apungan sepintas lalu</string>
+    <string name="widget_floater_tasks_title">Tugasan Apungan</string>
+    <string name="widget_floater_tasks_title_small">Tugasan Apungan - Kecil</string>
+    <string name="widget_floater_tasks_title_medium">Tugasan Apungan - Sederhana</string>
+    <string name="widget_floater_tasks_title_large">Tugasan Apungan - Besar</string>
+    <string name="widget_floater_tasks_empty">Tiada tugasan apungan</string>
+    <string name="widget_floater_tasks_add">Tambah apungan</string>
+    <string name="widget_floater_tasks_count">%1$d terbuka</string>
+    <string name="widget_loading">Memuatkan tugasan…</string>
+    <string name="widget_list_tasks_description">Memaparkan satu senarai pilihan anda sepintas lalu</string>
+    <string name="widget_list_tasks_title">Senarai</string>
+    <string name="widget_list_tasks_title_small">Senarai - Kecil</string>
+    <string name="widget_list_tasks_title_medium">Senarai - Sederhana</string>
+    <string name="widget_list_tasks_title_large">Senarai - Besar</string>
+    <string name="widget_list_tasks_setup_title">Pilih senarai</string>
+    <string name="widget_list_tasks_setup_message">Ketik untuk memilih senarai yang dipaparkan widget ini</string>
+    <string name="widget_list_tasks_missing_message">Senarai itu telah dipadam. Ketik untuk memilih yang lain.</string>
+    <string name="widget_list_tasks_empty">Tiada apa-apa lagi dalam senarai ini</string>
+    <string name="widget_list_picker_title">Pilih senarai</string>
+    <string name="widget_list_picker_subtitle">Widget ini hanya akan memaparkan senarai ini, dan butang + menambah tugasan terus ke dalamnya.</string>
+    <string name="widget_list_picker_empty_title">Belum ada senarai</string>
+    <string name="widget_list_picker_empty">Cipta senarai dalam T\'Day, kemudian ketik widget ini sekali lagi.</string>
+    <string name="widget_list_picker_section_views">Paparan</string>
+    <string name="widget_list_picker_section_todo">Senarai berjadual</string>
+    <string name="widget_list_picker_section_floater">Senarai apungan</string>
+    <string name="widget_list_picker_selected">Dipilih</string>
+
+    <!-- Latest release screen -->
+    <string name="release_title">Versi Apl</string>
+    <string name="release_error">Tidak dapat mengambil maklumat keluaran. Sila periksa sambungan anda dan cuba lagi.</string>
+    <string name="release_installed_version">Versi Dipasang</string>
+    <string name="release_installed_label">Dipasang</string>
+    <string name="release_server_not_connected">Tidak disambung</string>
+    <string name="release_server_version_unavailable">Tidak tersedia</string>
+    <string name="release_latest_label">Terkini</string>
+    <string name="release_update_available">Kemas Kini Tersedia</string>
+    <string name="release_version_mismatch">Versi Tidak Sepadan</string>
+    <string name="release_app_update_required_summary">Pelayan memerlukan v%1$s. Kemas kini apl untuk meneruskan.</string>
+    <string name="release_server_update_required_summary">Apl ini memerlukan pelayan berada pada v%1$s, tetapi pelayan berada pada v%2$s.</string>
+    <string name="release_update_ready_version">Versi %1$s sedia untuk dipasang.</string>
+    <string name="release_update_ready_generic">Versi yang lebih baharu sedia untuk dipasang.</string>
+    <string name="release_up_to_date">Terkini</string>
+    <string name="release_up_to_date_message">Anda menggunakan versi terkini</string>
+    <string name="release_published">Diterbitkan %1$s</string>
+    <string name="release_whats_new_in_version">Apa yang baharu dalam %1$s</string>
+    <string name="release_no_notes_for_version">Tiada nota keluaran tersedia untuk versi ini</string>
+    <string name="release_download_and_install">Muat turun dan pasang kemas kini</string>
+    <string name="release_allow_install_permission">Benarkan kebenaran pasang</string>
+    <string name="release_downloading_apk">Memuat turun kemas kini…</string>
+    <string name="release_downloading_apk_progress">Memuat turun kemas kini… %1$d%%</string>
+    <string name="release_preparing_update">Menyediakan kemas kini…</string>
+    <string name="release_opening_installer">Membuka pemasang Android…</string>
+    <string name="release_install_permission_return_hint">Benarkan T\'Day memasang kemas kini, kemudian kembali ke sini untuk meneruskan secara automatik.</string>
+    <string name="release_download_failed">Tidak dapat memuat turun kemas kini. Sila cuba lagi.</string>
+    <string name="release_install_failed">Tidak dapat memasang kemas kini.</string>
+    <string name="release_install_cancelled">Pemasangan dibatalkan. Ketik Muat Turun &amp; Pasang untuk cuba lagi.</string>
+    <string name="release_install_blocked">Pemasangan disekat oleh peranti anda. Periksa tetapan peranti anda dan cuba lagi.</string>
+    <string name="release_install_storage">Ruang storan tidak mencukupi. Kosongkan sedikit ruang dan cuba lagi.</string>
+    <string name="release_install_incompatible">Kemas kini ini tidak serasi dengan peranti anda.</string>
+    <string name="release_signature_conflict">Versi yang dipasang ditandatangani dengan kunci berbeza dan tidak boleh dikemas kini secara langsung.</string>
+    <string name="release_signature_conflict_hint">Nyahpasang versi semasa dahulu, kemudian kembali ke sini untuk memasang kemas kini. Data apl akan hilang.</string>
+    <string name="release_uninstall">Nyahpasang versi semasa</string>
+    <string name="release_install_success">Kemas kini dipasang.</string>
+    <string name="release_no_apk">Tiada APK dilampirkan pada keluaran ini.</string>
+    <string name="release_launch_update_toast">Kemas kini %1$s tersedia.</string>
+    <string name="task_deleted_toast">Tugasan dipadam</string>
+    <string name="task_copied_toast">Disalin ke papan keratan</string>
+    <string name="task_copy_failed_toast">Tidak dapat menyalin ke papan keratan</string>
+    <string name="list_deleted_toast">Senarai dipadam</string>
+    <string name="release_view_on_github">Lihat di GitHub</string>
+
+    <!-- Language picker -->
+    <string name="settings_language">Bahasa</string>
+    <string name="settings_language_system_default">Lalai sistem</string>
+    <string name="settings_language_dialog_title">Bahasa</string>
+
+    <!-- Empty state -->
+    <string name="todos_empty_floater">Tiada tugasan terapung</string>
+    <string name="todos_empty_floater_body">Floater tiada tarikh akhir — catat satu dan ia akan menunggu sehingga anda bersedia.</string>
+    <string name="todos_empty_floater_list">Tiada tugas terapung dalam senarai ini</string>
+    <string name="todos_empty_floater_list_body">Tambah floater dan ia akan menunggu di sini.</string>
+
+    <!-- Theme mode -->
+    <string name="settings_theme_system">Sistem</string>
+    <string name="settings_theme_light">Cerah</string>
+    <string name="settings_theme_dark">Gelap</string>
+
+    <!-- Reminder options -->
+    <string name="reminder_option_none">Tiada</string>
+    <string name="reminder_option_at_time">Pada masa tugas</string>
+    <string name="reminder_option_minutes_5">5 minit sebelum</string>
+    <string name="reminder_option_minutes_10">10 minit sebelum</string>
+    <string name="reminder_option_minutes_15">15 minit sebelum</string>
+    <string name="reminder_option_minutes_30">30 minit sebelum</string>
+    <string name="reminder_option_hours_1">1 jam sebelum</string>
+    <string name="reminder_option_hours_2">2 jam sebelum</string>
+    <string name="reminder_option_days_1">1 hari sebelum</string>
+    <string name="reminder_option_days_2">2 hari sebelum</string>
+
+    <!-- Reminder notification -->
+    <string name="reminder_notification_default_title">Peringatan tugasan</string>
+    <string name="reminder_due_unknown">Tugasan tamat tempoh</string>
+    <string name="reminder_due_now">Tamat tempoh sekarang</string>
+    <string name="reminder_due_less_than_minute">Tamat tempoh dalam kurang seminit</string>
+    <string name="reminder_due_in_minutes_one">Tamat tempoh dalam %1$d minit</string>
+    <string name="reminder_due_in_minutes_other">Tamat tempoh dalam %1$d minit</string>
+    <string name="reminder_due_in_hours_one">Tamat tempoh dalam %1$d jam</string>
+    <string name="reminder_due_in_hours_other">Tamat tempoh dalam %1$d jam</string>
+    <string name="reminder_due_in_days_one">Tamat tempoh dalam %1$d hari</string>
+    <string name="reminder_due_in_days_other">Tamat tempoh dalam %1$d hari</string>
+
+    <!-- Auth, offline toasts, security questions (lint MissingTranslation backfill) -->
+    <string name="error_cannot_reach">Tidak dapat menghubungi pelayan. Semak sambungan internet anda dan pastikan alamat pelayan betul.</string>
+    <string name="error_server_unavailable">Pelayan tidak bertindak balas sekarang — mungkin ia mati atau sedang dimulakan semula. Jika ini berterusan, hubungi pentadbir anda.</string>
+    <string name="error_update_security_questions_failed">Tidak dapat mengemas kini soalan keselamatan anda. Sila cuba lagi.</string>
+    <string name="forgot_password_admin_request_failed">Tidak dapat menghantar permintaan. Sila cuba lagi.</string>
+    <string name="forgot_password_back_to_sign_in">Kembali ke log masuk</string>
+    <string name="forgot_password_continue">Teruskan</string>
+    <string name="forgot_password_entry">Lupa kata laluan?</string>
+    <string name="forgot_password_new_password">Kata laluan baharu</string>
+    <string name="forgot_password_ok">OK</string>
+    <string name="forgot_password_questions_unavailable">Tidak dapat memuatkan soalan keselamatan.</string>
+    <string name="forgot_password_reenter_answers">Sila masukkan semula jawapan keselamatan anda.</string>
+    <string name="forgot_password_request_admin">Minta tetapan semula daripada pentadbir</string>
+    <string name="forgot_password_reset">Tetapkan semula kata laluan</string>
+    <string name="forgot_password_reset_failed">Jawapan itu tidak sepadan. Sila cuba lagi.</string>
+    <string name="forgot_password_reset_failed_contact_admin">%1$s Sila hubungi pentadbir untuk menetapkan semula kata laluan anda.</string>
+    <string name="forgot_password_reset_success">Kata laluan ditetapkan semula. Log masuk dengan kata laluan baharu anda.</string>
+    <string name="forgot_password_subtitle_locked">Terlalu banyak percubaan salah. Anda boleh meminta tetapan semula kata laluan daripada pentadbir.</string>
+    <string name="forgot_password_subtitle_requested">Permintaan anda telah dihantar. Pentadbir akan menetapkan semula kata laluan anda dan berkongsi kata laluan sementara.</string>
+    <string name="forgot_password_success_title">Kata laluan ditukar</string>
+    <string name="forgot_password_title">Tetapkan semula kata laluan anda</string>
+    <string name="forgot_password_username_required">Sila masukkan nama pengguna anda</string>
+    <string name="forgot_password_verify">Sahkan jawapan</string>
+    <string name="offline_toast">Anda di luar talian — perubahan akan disegerakkan apabila sambungan kembali.</string>
+    <string name="offline_toast_pending_many">Anda di luar talian — %1$d perubahan menunggu penyegerakan.</string>
+    <string name="offline_toast_pending_one">Anda di luar talian — 1 perubahan menunggu penyegerakan.</string>
+    <string name="online_toast">Kembali dalam talian — menyegerakkan perubahan terkini anda…</string>
+    <string name="backend_down_toast">Ralat pelayan — bahagian belakang atau pangkalan data mungkin tidak tersedia. Cuba lagi sebentar lagi.</string>
+    <string name="password_changed_toast">Kata laluan berjaya ditukar</string>
+    <string name="pending_approval_check">Semak status kelulusan</string>
+    <string name="pending_approval_message">Akaun anda (%1$s) sedang menunggu kelulusan pentadbir. Kami akan benarkan anda masuk sebaik sahaja diluluskan.</string>
+    <string name="pending_approval_message_generic">Akaun anda sedang menunggu kelulusan pentadbir. Kami akan benarkan anda masuk sebaik sahaja diluluskan.</string>
+    <string name="pending_approval_title">Menunggu kelulusan</string>
+    <string name="pending_approval_use_different_account">Guna akaun lain</string>
+    <string name="profile_name_updated_toast">Nama berjaya dikemas kini</string>
+    <string name="security_questions_answer_label">Jawapan</string>
+    <string name="security_questions_answers_required">Sila jawab ketiga-tiga soalan</string>
+    <string name="security_questions_back">Kembali</string>
+    <string name="security_questions_distinct_required">Pilih tiga soalan berbeza</string>
+    <string name="security_questions_gate_subtitle">Pilih tiga soalan keselamatan. Kami akan menggunakannya untuk mengesahkan identiti anda jika anda perlu menetapkan semula kata laluan.</string>
+    <string name="security_questions_gate_title">Sediakan soalan keselamatan</string>
+    <string name="security_questions_question_1">Soalan 1</string>
+    <string name="security_questions_question_2">Soalan 2</string>
+    <string name="security_questions_question_3">Soalan 3</string>
+    <string name="security_questions_save">Simpan soalan keselamatan</string>
+    <string name="security_questions_save_failed">Gagal menyimpan soalan keselamatan</string>
+    <string name="security_questions_title">Soalan keselamatan</string>
+    <string name="settings_account_change_security_questions">Tukar</string>
+    <string name="settings_account_current_password_required">Masukkan kata laluan semasa anda</string>
+    <string name="settings_account_security_questions_configured">Dikonfigurasi</string>
+    <string name="settings_account_security_questions_label">Soalan keselamatan</string>
+    <string name="settings_account_security_questions_not_configured">Belum dikonfigurasi</string>
+    <string name="settings_account_security_questions_updated">Soalan keselamatan dikemas kini</string>
+    <string name="summary_source_local">Model setempat</string>
+    <string name="summary_source_server">Model pelayan</string>
+    <string name="settings_help_guide">Panduan &amp; Petua</string>
+    <string name="settings_data_title">Data anda</string>
+    <string name="settings_data_summary">%1$d tugasan · %2$d senarai · %3$d selesai</string>
+    <string name="settings_data_download">Muat turun data saya</string>
+    <string name="settings_data_import">Import</string>
+    <string name="settings_data_export_done">Fail data anda telah disimpan.</string>
+    <string name="settings_data_import_done">Import selesai — %1$d item ditambah.</string>
+    <string name="settings_data_import_failed">Tidak dapat mengimport fail itu.</string>
+    <string name="settings_data_confirm_title">Import data?</string>
+    <string name="settings_data_confirm_body">Ini menambah %1$d item ke akaun anda. Apa yang sedia ada tidak diubah atau dibuang.</string>
+    <string name="settings_data_confirm_import">Import</string>
+    <string name="settings_data_confirm_cancel">Batal</string>
+    <string name="settings_push_distributor_title">Apl penghantar push</string>
+    <string name="settings_push_distributor_subtitle">Lebih daripada satu apl push dipasang. Pilih yang mana menghantar pemberitahuan T\'Day.</string>
+    <string name="settings_push_distributor_choose">Pilih</string>
+    <string name="create_task_repeat_suggestion">Ulang %1$s?</string>
+    <string name="create_task_repeat_suggestion_dismiss">Tolak</string>
+    <string name="settings_quiet_hours">Waktu senyap</string>
+    <string name="settings_quiet_hours_start">Mula</string>
+    <string name="settings_quiet_hours_end">Tamat</string>
+    <string name="settings_resting_floaters">Floater berehat</string>
+    <string name="settings_calendar_sync">Tambah tugasan berjadual ke kalendar saya</string>
+    <string name="settings_privacy">Privasi</string>
+    <string name="settings_crash_reports">Laporan ranap &amp; masalah</string>
+    <string name="settings_crash_reports_toggle">Hantar laporan ranap &amp; masalah apabila sesuatu gagal</string>
+    <string name="settings_crash_reports_help">Perihal laporan ranap &amp; masalah</string>
+
+    <!-- Crash reports: the sign-in wizard's consent step and its card -->
+    <string name="telemetry_card_title">Hantar laporan ralat?</string>
+    <string name="telemetry_card_intro">Jika sesuatu rosak, T\'Day boleh menghantar laporan teknikal ringkas untuk membantu membaikinya. Anda boleh menukarnya bila-bila masa dalam Tetapan.</string>
+    <string name="telemetry_card_never_sent_label">Tidak pernah dihantar</string>
+    <string name="telemetry_card_never_sent">nama, akaun, atau kandungan tugasan dan senarai.</string>
+    <string name="telemetry_card_footnote">Dimatikan secara lalai. Anda boleh menukarnya dalam Tetapan.</string>
+    <string name="telemetry_card_share">Hantar laporan</string>
+    <string name="telemetry_card_not_now">Jangan hantar</string>
+    <string name="telemetry_card_read_faq">Baca FAQ penuh</string>
+    <string name="root_feed_search_scheduled">Cari tugasan berjadual</string>
+    <string name="root_feed_search_floater">Cari tugasan terapung</string>
+
+    <!-- Bulk selection: multi-select actions in a task list -->
+    <string name="bulk_select">Pilih</string>
+    <string name="bulk_select_all">Pilih semua</string>
+    <string name="bulk_deselect_all">Nyahpilih semua</string>
+    <string name="bulk_selected">%1$d dipilih</string>
+    <string name="bulk_selected_capped">%1$d dipilih — paling banyak yang boleh dilakukan satu tindakan</string>
+    <string name="bulk_applies_to">Terpakai pada %1$d daripada %2$d — tugasan berulang dilangkau.</string>
+    <string name="bulk_select_task">Pilih tugasan</string>
+    <string name="bulk_deselect_task">Nyahpilih tugasan</string>
+    <string name="bulk_action_complete">Selesai</string>
+    <string name="bulk_action_priority">Keutamaan</string>
+    <string name="bulk_action_move">Alih</string>
+    <string name="bulk_action_delete">Padam</string>
+    <string name="bulk_delete_body">Ini mengeluarkannya daripada setiap senarai, berserta sejarah selesainya. Anda ada beberapa saat untuk membatalkan.</string>
+    <string name="bulk_move_body">Tugasan ini datang daripada senarai yang berbeza. Pengalihan tidak boleh dibatalkan dalam satu langkah — anda perlu mengembalikan setiap satu secara manual.</string>
+    <plurals name="bulk_tasks_completed">
+        <item quantity="other">%d tugasan selesai</item>
+    </plurals>
+    <plurals name="bulk_tasks_deleted">
+        <item quantity="other">%d tugasan dipadam</item>
+    </plurals>
+    <plurals name="bulk_delete_title">
+        <item quantity="other">Padam %d tugasan?</item>
+    </plurals>
+    <plurals name="bulk_delete_confirm">
+        <item quantity="other">Padam %d tugasan</item>
+    </plurals>
+    <plurals name="bulk_move_title">
+        <item quantity="other">Alih %d tugasan?</item>
+    </plurals>
+    <plurals name="bulk_move_confirm">
+        <item quantity="other">Alih %d tugasan</item>
+    </plurals>
+    <plurals name="bulk_delete_failed">
+        <item quantity="other">%d tugasan tidak dapat dipadam</item>
+    </plurals>
+    <plurals name="bulk_update_failed">
+        <item quantity="other">%d tugasan tidak dapat dikemas kini</item>
+    </plurals>
+</resources>

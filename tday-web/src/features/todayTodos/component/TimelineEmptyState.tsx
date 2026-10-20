@@ -1,0 +1,105 @@
+import type { ElementType } from "react";
+import { CheckCheck } from "lucide-react";
+import EmptyState from "@/components/app/EmptyState";
+import EmptyStateSlot from "@/components/app/EmptyStateSlot";
+import { emptySceneIsLeaving } from "../lib/todayEarlierIllustration";
+import type { EarlierHandoff } from "../lib/useEarlierExpandHandoff";
+
+/**
+ * The native-style centered empty message `AllTasksTimelineContainer` shows
+ * once a scope has zero tasks (Day Done: "finished everything" earns a calm
+ * payoff state instead of the generic no-tasks message).
+ *
+ * The wrapper is the scene's SLOT and not just a box around it: a departure
+ * closes its track as well as fading its ink, so the 42vh this claims is given
+ * back over that beat rather than in the frame that ends it.
+ * `EmptyStateSlot` owns that markup rather than this file, because the two
+ * Anytime feeds draw `EmptyState` with no Earlier bucket around it and needed
+ * the same track for the cancel alone. Outside a departure neither class is on,
+ * the track is open, and there is nothing for the transition to run on.
+ */
+export default function TimelineEmptyState({
+  icon,
+  accentColor,
+  isDayDone,
+  celebrate,
+  celebrationStartDelayMs = 0,
+  leavingOnCancel = false,
+  earlierHandoff,
+  locale,
+  emptyTitle,
+  emptyBody,
+  dayDoneTitle = "allDoneToday",
+  appDict,
+}: {
+  icon: ElementType;
+  accentColor: string;
+  /** Scope is Today and the day's pending tasks were just finished. */
+  isDayDone: boolean;
+  /** A completion (this tab's or a remote one) just emptied the scope. */
+  celebrate: boolean;
+  /**
+   * How long the celebration waits for the page to settle before any of it plays
+   * (see `EmptyState`'s own doc). Both callers pass the travel their own children
+   * take to reach their new slots, because this scene claims its 42vh out of a page
+   * those children sit in — the list screen included, where Earlier's block goes on
+   * rendering underneath it for as long as the list holds overdue tasks. The zero
+   * default is `EmptyState`'s own, kept here so the two contracts stay the same
+   * shape; every caller that comes through this component spends the lead.
+   */
+  celebrationStartDelayMs?: number;
+  /**
+   * The scope refilled under this scene — an undo put the completed row back, or
+   * a task arrived — and the container is holding the node in the tree for the
+   * length of the burst's own cancel fade rather than taking it away in the
+   * frame that ends the celebration. The ink and the track leave together on
+   * `Quick` (`.tday-empty-cancel-exit` in globals.css), which is the same rung
+   * the paper above it is fading on, so scene and confetti go as one thing.
+   *
+   * A wholly separate departure from `earlierHandoff`'s below, and they can
+   * never both be on: that one plays while the scope is still EMPTY and hands
+   * the slot to Earlier's rows, this one plays because the scope stopped being
+   * empty at all.
+   */
+  leavingOnCancel?: boolean;
+  /** Which half of the swap is mid-exit, if either (see `useEarlierExpandHandoff`). */
+  earlierHandoff: EarlierHandoff;
+  locale: string;
+  emptyTitle: string;
+  emptyBody: string;
+  /**
+   * The `app` key for the Day Done headline. A prop and not a constant because
+   * the Today scope renames itself after 18:00 — "All done for tonight" — on the
+   * same boundary that flips the root feed header's sun/moon mark, and the caller
+   * is where that clock lives. Defaulted for the callers that pass
+   * `isDayDone={false}` and so never reach it.
+   */
+  dayDoneTitle?: string;
+  appDict: (key: string) => string;
+}) {
+  return (
+    <EmptyStateSlot
+      handingOffToEarlier={emptySceneIsLeaving({ earlierHandoff })}
+      leavingOnCancel={leavingOnCancel}
+    >
+      <EmptyState
+        // Day Done keeps its own glyph and its date line: it is a payoff,
+        // not an absence, and the scope's own icon would undersell it.
+        icon={isDayDone ? CheckCheck : icon}
+        accentColor={accentColor}
+        title={isDayDone ? appDict(dayDoneTitle) : appDict(emptyTitle)}
+        description={
+          isDayDone
+            ? new Intl.DateTimeFormat(locale, {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+              }).format(new Date())
+            : appDict(emptyBody)
+        }
+        celebrate={celebrate}
+        celebrationStartDelayMs={celebrationStartDelayMs}
+      />
+    </EmptyStateSlot>
+  );
+}

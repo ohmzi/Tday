@@ -1,0 +1,170 @@
+import { useCallback, useEffect, useState } from "react";
+import { api } from "@/lib/api-client";
+import { isLocalMode } from "@/lib/local/appMode";
+import { isPushSupported, urlBase64ToUint8Array } from "@/lib/push/vapid";
+
+const PUSH_ENABLED_KEY = "tday.push-enabled";
+
+/** True when running as an installed PWA on iOS (navigator.standalone). */
+const isIosPwa =
+  typeof navigator !== "undefined" &&
+  (navigator as unknown as { standalone?: boolean }).standalone === true;
+
+type PushState = {
+  isSupported: boolean;
+  permission: NotificationPermission | "default";
+  isSubscribed: boolean;
+  isLoading: boolean;
+  /** True on iOS installed PWA — special prompt flow. */
+  isIosPwa: boolean;
+};
+
+async function fetchVapidKey(): Promise<string | null> {
+  try {
+    const data = await api.GET({ url: "/api/notifications/vapid-public-key" });
+    return (data as { publicKey?: string })?.publicKey ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function getExistingSubscription(): Promise<PushSubscription | null> {
+  try {
+    const reg = await navigator.serviceWorker.getRegistration("/");
+    return (await reg?.pushManager.getSubscription()) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function usePushNotifications() {
+  const [state, setState] = useState<PushState>({
+    // Web push is delivered by the backend from a stored subscription, so it is
+    // a Server Mode feature — Local Mode reports it as unsupported and the
+    // Settings toggle disappears. Android draws the same Local Mode line without
+    // a toggle at all: it registers with a UnifiedPush distributor by itself.
+    isSupported: isPushSupported() && !isLocalMode(),
+    permission: typeof Notification !== "undefined" ? Notification.permission : "default",
+    isSubscribed: false,
+    isLoading: true,
+    isIosPwa,
+  });
+
+  // Reconcile state on mount
+  useEffect(() => {
+    if (!state.isSupported) {
+      setState((s) => ({ ...s, isLoading: false }));
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      const sub = await getExistingSubscription();
+      const localFlag = localStorage.getItem(PUSH_ENABLED_KEY) === "1";
+      const subscribed = sub !== null && localFlag;
+
+      // If localStorage says enabled but subscription is gone, clean up
+      if (localFlag && !sub) {
+        localStorage.removeItem(PUSH_ENABLED_KEY);
+      }
+
+      if (!cancelled) {
+        setState((s) => ({
+          ...s,
+          isSubscribed: subscribed,
+          permission: Notification.permission,
+          isLoading: false,
+        }));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [state.isSupported]);
+
+  const subscribe = useCallback(async () => {
+    setState((s) => ({ ...s, isLoading: true }));
+    try {
+      const vapidKey = await fetchVapidKey();
+      if (!vapidKey) throw new Error("VAPID key not available");
+
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        setState((s) => ({ ...s, permission, isLoading: false }));
+        return;
+      }
+
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+      });
+
+      const json = sub.toJSON();
+      await api.POST({
+        url: "/api/notifications/subscribe",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          endpoint: json.endpoint,
+          p256dh: json.keys?.p256dh ?? "",
+          auth: json.keys?.auth ?? "",
+        }),
+      });
+
+      localStorage.setItem(PUSH_ENABLED_KEY, "1");
+      setState((s) => ({
+        ...s,
+        isSubscribed: true,
+        permission: "granted",
+        isLoading: false,
+      }));
+    } catch (err) {
+      setState((s) => ({ ...s, isLoading: false }));
+      throw err;
+    }
+  }, []);
+
+  const unsubscribe = useCallback(async () => {
+    setState((s) => ({ ...s, isLoading: true }));
+    try {
+      const sub = await getExistingSubscription();
+      if (sub) {
+        await api.DELETE({
+          url: "/api/notifications/unsubscribe",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        });
+        await sub.unsubscribe();
+      }
+      localStorage.removeItem(PUSH_ENABLED_KEY);
+      setState((s) => ({ ...s, isSubscribed: false, isLoading: false }));
+    } catch (err) {
+      setState((s) => ({ ...s, isLoading: false }));
+      throw err;
+    }
+  }, []);
+
+  /** Update the PWA app badge count. Clears badge when count is 0 or omitted. */
+  const updateBadge = useCallback(async (count?: number) => {
+    if (!("setAppBadge" in navigator)) return;
+    try {
+      if (count && count > 0) {
+        await navigator.setAppBadge(count);
+      } else {
+        await navigator.clearAppBadge();
+      }
+    } catch {
+      // Badge API not available in this context — ignore.
+    }
+  }, []);
+
+  // Clear badge when the app gains focus
+  useEffect(() => {
+    const onFocus = () => updateBadge(0);
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [updateBadge]);
+
+  return { ...state, subscribe, unsubscribe, updateBadge };
+}

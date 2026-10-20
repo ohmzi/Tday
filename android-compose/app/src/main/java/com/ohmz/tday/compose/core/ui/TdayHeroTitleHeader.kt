@@ -1,0 +1,1112 @@
+package com.ohmz.tday.compose.core.ui
+
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.lerp as lerpColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.ui.theme.TdayDimens
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.first
+import kotlin.math.abs
+
+/**
+ * Geometry for the screen header used by every titled page that is not a root
+ * feed: the page's own glyph in a tinted circle with the title beneath it,
+ * scrolling up behind a pinned toolbar as the page moves.
+ *
+ * The block does NOT collapse its own height. It used to, which is why the body
+ * content rode up the instant you scrolled and the mark appeared to shrink away
+ * rather than travel. It is ordinary scrolling content now — [tdayHeroTitleItem]
+ * for a `LazyColumn`, [TdayHeroTitleBlock] for a `verticalScroll` column — and
+ * only [TdayHeroToolbar] is pinned, exactly as iOS lays it out.
+ *
+ * The numbers are iOS's (`TodoTimelineMetrics` in
+ * `Feature/Todos/TodoListScreen.swift`); keep the three platforms in step.
+ */
+object TdayHeroTitleMetrics {
+    val HorizontalPadding = 18.dp
+
+    /**
+     * Held above the bar's button row, so a back button does not sit flush
+     * against the status bar. The same 8 the root feeds' header keeps
+     * ([RootFeedHeroHeaderMetrics.TopInset]) — the two bars are placed with the
+     * same Scaffold padding, so they have to carry the same inset or a home
+     * toolbar and a back button sit at different heights.
+     */
+    val TopInset = 8.dp
+
+    /**
+     * The pinned bar, top to bottom: the inset above [TdayDimens.FabSize] of
+     * button row. Derived, because everything measured off the bar's bottom edge
+     * follows it — the fade band below it, and the block's own top spacer, which
+     * is what keeps the block starting where the bar ends.
+     *
+     * Not part of [HeroHeight]: the bar is pinned and the block is not, so the
+     * bar's height is not travel and taking it into the collapse's denominator
+     * would move the handoff.
+     */
+    val ToolbarHeight = TopInset + TdayDimens.FabSize
+
+    val MarkBox = 96.dp
+    val MarkGlyph = 44.dp
+    /** Gap between the toolbar and the circle. */
+    val MarkTopGap = 8.dp
+    /** Gap between the circle and the title beneath it. */
+    val TitleTopGap = 18.dp
+    val TitleSize = 32.sp
+    /**
+     * The title's line box, pinned rather than left to the font: [HeroHeight]
+     * counts exactly one of these and is the collapse's denominator, so a taller
+     * box would make the block outlast the travel it is measured against.
+     */
+    val TitleLineHeight = 40.dp
+    val HeroBottomGap = 0.dp
+
+    /** Height of the block that scrolls away, and so the distance it travels. */
+    val HeroHeight = MarkTopGap + MarkBox + TitleTopGap + TitleLineHeight + HeroBottomGap
+
+    /**
+     * The mark goes first and is gone well before the title reaches the toolbar,
+     * so the two never occupy the same space on the way past each other.
+     */
+    const val MarkFadeEnd = 0.45f
+    const val MarkScaleFrom = 0.85f
+
+    /**
+     * The handoff. The block's title holds its ground for most of the travel,
+     * fades out as it reaches the bar while lifting, and the bar's copy — the
+     * same size, so the name never changes shape — fades in from just below,
+     * rising and scaling the last 1.5% up. One is at zero exactly where the
+     * other starts, so there is never a moment with two titles nor one with
+     * none.
+     */
+    const val HeroTitleFadeStart = 0.60f
+    const val HeroTitleFadeEnd = 0.82f
+    val HeroTitleLift = 14.dp
+    const val DockedTitleRevealStart = 0.82f
+    val DockedTitleRise = 10.dp
+    const val DockedTitleScaleFrom = 0.985f
+
+    /** Clear air between the docked title and whatever sits beside it. */
+    val DockedTitleSideGap = 8.dp
+
+    /**
+     * Least width worth docking a title into. Measured, not guessed: at 32sp
+     * ExtraBold the ellipsis alone is most of a narrow glyph, so below this a
+     * docked title is one character and a "…" — which reads as a bug rather
+     * than as a truncation. The web bar's twin constant carries the same
+     * number and the same reasoning.
+     *
+     * It gates whether a title is shown AT ALL. It deliberately does not gate
+     * whether one fits — see [tdayBarTitleReserve], where confusing the two is
+     * the bug this constant was once blamed for.
+     */
+    val DockedTitleMinWidth = 56.dp
+
+    /**
+     * How far the docked title may shrink to stay whole, before it gives up and
+     * ellipsizes instead.
+     *
+     * iOS's number, from the same bar: `.minimumScaleFactor(0.72)` on
+     * `CalendarElasticTopBar` (`Feature/Calendar/CalendarScreen.swift`), under a
+     * comment saying the two trailing buttons leave the docked title narrower
+     * than "Calendario" or "Calendrier" and that it should be scaled rather than
+     * clipped. Android had no equivalent and hard-ellipsized; this is that
+     * mitigation carried across rather than a second one invented beside it.
+     *
+     * A floor rather than no floor, because the handoff this title belongs to is
+     * built on the two copies being the same size — see [DockedTitleRevealStart]
+     * and the note above it. Every step down from 1 is a step away from that, so
+     * the shrink buys a whole word only while the difference stays a difference
+     * in size; past roughly a quarter the docked copy reads as a different piece
+     * of text arriving, and an honest ellipsis is better than that.
+     *
+     * What it costs the screens this change was reported from is small. The
+     * English titles there need almost nothing: "Calendar" on a 360dp phone
+     * wants about 0.97, deep inside the floor. Where it is spent in full is
+     * TodoListScreen, whose three- and four-action scopes leave 68dp and 4dp at
+     * 360 — there the floor is reached and the ellipsis takes over, which is the
+     * floor doing its job rather than failing at it: a name at 0.4 of the size it
+     * is handing off from is not the same title arriving, it is a different one.
+     * The long localized names iOS named ("Calendario", "Calendrier") sit between
+     * the two.
+     */
+    const val DockedTitleMinScale = 0.72f
+
+    /** Band below the toolbar that dissolves content as it passes under it. */
+    val ContentFadeHeight = 24.dp
+
+    /**
+     * Clear space kept under the block, so that when the title has finished
+     * docking the first row comes to rest BELOW the fade band rather than with
+     * its top edge dissolved into it. Deliberately not part of [HeroHeight]: it
+     * moves the content down without changing when the title arrives.
+     */
+    val SettledContentGap = ContentFadeHeight
+
+    /**
+     * How quickly the fade band comes in. Off at rest, because there is nothing
+     * passing under the toolbar for it to dissolve and it would only veil the
+     * top of the mark.
+     */
+    const val ContentFadeGain = 8f
+}
+
+/** Septic smootherstep over an arbitrary window, for the legs that do not start at 0. */
+private fun staggerRange(progress: Float, start: Float, end: Float): Float =
+    if (end <= start) {
+        if (progress >= end) 1f else 0f
+    } else {
+        RootFeedHeroHeaderMetrics.stagger((progress - start).coerceAtLeast(0f), end - start)
+    }
+
+/**
+ * How far through the collapse a screen is, read from where it has actually been
+ * scrolled rather than from scroll this header has eaten.
+ *
+ * `progress` is a lambda so a scroll frame invalidates only the nodes that read
+ * it, never the screen that owns it — the same reason [RootFeedHeroHeader] takes
+ * one.
+ */
+class TdayHeroTitleCollapse internal constructor(
+    val progress: () -> Float,
+)
+
+/**
+ * The settle spec.
+ *
+ * A spring, not an ease. `FastOutSlowInEasing` starts slow, so the block stood
+ * still for a beat after the finger left and then drifted into place — the
+ * opposite of elastic. iOS snaps with a UIView spring at 0.92 damping
+ * (`VerticalScrollSnapObserver` in `UI/Component/PullToRefresh.swift`); this is
+ * the same shape. The visibility threshold is in pixels so it stops when it has
+ * visibly stopped rather than chasing hundredths of one.
+ */
+// not a token — see docs/motion.md. This is pinned to the iOS spring named
+// above, not to the vocabulary's Settle, and moving it onto that token would
+// undo the match the doc comment argues for.
+private val SettleSpring = spring<Float>(
+    dampingRatio = 0.9f,
+    stiffness = Spring.StiffnessMediumLow,
+    visibilityThreshold = 0.5f,
+)
+
+/**
+ * Frames the container must hold still before the settle is allowed to run.
+ *
+ * A fling is a SECOND scroll session: `scrollable` closes the drag's session the
+ * moment the finger lifts and only then launches the fling's, so
+ * `isScrollInProgress` dips false in between. iOS has the same gap and polls
+ * until the scroll view is neither dragging nor decelerating; this is that poll.
+ */
+private const val SettleQuietFrames = 3
+
+/** Below this the container has not moved enough to have a direction. */
+private const val SettleDirectionEpsilonPx = 0.2f
+
+/** Only the sign is read; this clears [snapTitleCollapsePx]'s own deadband. */
+private const val SettleDirectionVelocity = 2f
+
+/**
+ * Watches one scroll container and settles the collapse every time it comes to
+ * rest part-way, so the block is never left half collapsed.
+ *
+ * @param offsetPx how far the container has been scrolled, in pixels.
+ * @param canCollapseFully false when the screen is too short to finish, so the
+ *   block goes back rather than stranding.
+ * @param settleBy scrolls the container by a delta, returning when it arrives.
+ */
+private suspend fun runHeroTitleSettle(
+    isScrolling: () -> Boolean,
+    offsetPx: () -> Float,
+    collapsePx: Float,
+    canCollapseFully: () -> Boolean,
+    settleBy: suspend (delta: Float) -> Unit,
+) {
+    while (true) {
+        snapshotFlow(isScrolling).first { it }
+
+        val startedAt = offsetPx()
+        var previous = startedAt
+        var lastStep = 0f
+        var quietFrames = 0
+        while (quietFrames < SettleQuietFrames) {
+            withFrameNanos { }
+            val now = offsetPx()
+            if (now != previous) {
+                lastStep = now - previous
+                previous = now
+            }
+            quietFrames = if (isScrolling()) 0 else quietFrames + 1
+        }
+
+        val from = offsetPx()
+        if (from <= 0f || from >= collapsePx) continue
+
+        // Direction beats the midpoint, which is what carries a short flick
+        // upwards all the way into the bar instead of dropping the title back
+        // where it started. The last step the content actually took decides;
+        // the whole gesture's travel breaks the tie when it ended dead still.
+        // `snapTitleCollapsePx` reads a downward-positive velocity while the
+        // scroll offset grows as content rises, hence the flipped sign.
+        val travelled = if (abs(lastStep) > SettleDirectionEpsilonPx) lastStep else from - startedAt
+        val direction = when {
+            travelled > SettleDirectionEpsilonPx -> -SettleDirectionVelocity
+            travelled < -SettleDirectionEpsilonPx -> SettleDirectionVelocity
+            else -> 0f
+        }
+        val target = if (canCollapseFully()) {
+            snapTitleCollapsePx(from, collapsePx, velocityY = direction)
+        } else {
+            0f
+        }
+
+        try {
+            settleBy(target - from)
+            // `canCollapseFully` only asks whether there is ANY scroll left, not
+            // whether there is a whole collapse's worth. A screen with less than
+            // that stops short, so the landing is checked rather than assumed:
+            // anything still part-way goes back down instead of stranding.
+            val landed = offsetPx()
+            if (landed > 0f && landed < collapsePx) {
+                settleBy(-landed)
+            }
+        } catch (interrupted: CancellationException) {
+            // Someone outbid us for the scroll mutex — the user grabbing the
+            // list again, or the list's own fling. Compose reports that by
+            // cancelling the scope the scroll ran in, and letting that through
+            // used to unwind this loop for good: one flick and the screen never
+            // settled again. Our own cancellation still has to win, so the
+            // context is re-checked rather than the exception swallowed whole.
+            currentCoroutineContext().ensureActive()
+        }
+    }
+}
+
+/**
+ * Settle on release: the block goes all the way up or all the way back down,
+ * never resting half-collapsed. It is the list that moves, so it is the list
+ * this scrolls — which is also what makes it feel elastic.
+ *
+ * Public because the two root feeds hold their own header and their own
+ * collapse fraction, but must settle exactly the way every other screen does.
+ * They each used to carry a copy of this: a `LaunchedEffect` keyed on
+ * `isScrollInProgress`, a nearest-half target with no velocity, and a
+ * `tween(260, FastOutSlowInEasing)`. All three of those are the faults
+ * [runHeroTitleSettle] exists to avoid — the key made the effect restart in the
+ * gap between the drag's scroll session and the fling's, the missing velocity
+ * dropped a short upward flick back where it started, and an ease-IN-out holds
+ * still before it moves, which is the opposite of springing.
+ *
+ * @param collapsePx the scroll distance over which that screen's header folds.
+ *   The root feeds' is their own, not [TdayHeroTitleMetrics.HeroHeight].
+ */
+@Composable
+fun LazyListHeroTitleSettle(
+    listState: LazyListState,
+    collapsePx: Float,
+    enabled: Boolean = true,
+) {
+    LaunchedEffect(listState, collapsePx, enabled) {
+        if (!enabled) return@LaunchedEffect
+        runHeroTitleSettle(
+            isScrolling = { listState.isScrollInProgress },
+            // Past the hero item there is no block left to collapse, so it
+            // reads as finished rather than as the next item's own offset.
+            offsetPx = {
+                if (listState.firstVisibleItemIndex > 0) {
+                    collapsePx
+                } else {
+                    listState.firstVisibleItemScrollOffset.toFloat()
+                }
+            },
+            collapsePx = collapsePx,
+            canCollapseFully = { listState.canScrollForward },
+            settleBy = { delta -> listState.animateScrollBy(delta, SettleSpring) },
+        )
+    }
+}
+
+@Composable
+fun rememberLazyListHeroTitleCollapse(
+    listState: LazyListState,
+    enabled: Boolean = true,
+): TdayHeroTitleCollapse {
+    val collapsePx = with(LocalDensity.current) { TdayHeroTitleMetrics.HeroHeight.toPx() }
+
+    LazyListHeroTitleSettle(listState, collapsePx, enabled)
+
+    return remember(listState, collapsePx, enabled) {
+        TdayHeroTitleCollapse(
+            progress = {
+                when {
+                    !enabled -> 0f
+                    // `firstVisibleItemScrollOffset` is relative to whichever item
+                    // is first, so it resets to 0 the moment the hero recycles.
+                    // Without this the header would spring open mid-list.
+                    listState.firstVisibleItemIndex > 0 -> 1f
+                    else -> (listState.firstVisibleItemScrollOffset / collapsePx).coerceIn(0f, 1f)
+                }
+            },
+        )
+    }
+}
+
+@Composable
+fun rememberScrollHeroTitleCollapse(
+    scrollState: androidx.compose.foundation.ScrollState,
+    enabled: Boolean = true,
+): TdayHeroTitleCollapse {
+    val collapsePx = with(LocalDensity.current) { TdayHeroTitleMetrics.HeroHeight.toPx() }
+
+    LaunchedEffect(scrollState, collapsePx, enabled) {
+        if (!enabled) return@LaunchedEffect
+        runHeroTitleSettle(
+            isScrolling = { scrollState.isScrollInProgress },
+            offsetPx = { scrollState.value.toFloat() },
+            collapsePx = collapsePx,
+            canCollapseFully = { scrollState.maxValue >= collapsePx },
+            settleBy = { delta -> scrollState.animateScrollBy(delta, SettleSpring) },
+        )
+    }
+
+    return remember(scrollState, collapsePx, enabled) {
+        TdayHeroTitleCollapse(
+            progress = {
+                if (!enabled) 0f else (scrollState.value / collapsePx).coerceIn(0f, 1f)
+            },
+        )
+    }
+}
+
+/**
+ * The pinned toolbar. Drawn as an overlay over the scroll container rather than
+ * in the Scaffold's `topBar` slot, so the content passes behind it instead of
+ * starting below it.
+ *
+ * @param collapseProgress raw 0..1 scroll progress. Pass the unanimated value —
+ *   the easing lives here, matching the root feeds' header.
+ */
+@Composable
+fun TdayHeroToolbar(
+    title: String,
+    collapseProgress: () -> Float,
+    modifier: Modifier = Modifier,
+    titleColor: Color? = null,
+    onBack: (() -> Unit)? = null,
+    backContentDescription: String? = null,
+    /**
+     * Set by a bar that has given its row to something else — a list's search
+     * field. The reserve arithmetic below would drop the title anyway once the
+     * field fills the row, but only as a side effect of measuring a full-width
+     * cluster: silent, and it would come back the moment that layout changed.
+     * iOS and the web bar both say it outright, so this one does too.
+     */
+    titleSuppressed: Boolean = false,
+    /**
+     * Gap between action circles. Left at the normal 8dp for every bar; the
+     * floater-list detail screen's toolbar is the one caller that tightens
+     * this, because it is the one screen that can carry five actions in this
+     * row at once instead of the usual four — see the comment on
+     * `HeaderButtonCompactSize` in TodoListScreen.kt.
+     */
+    actionsSpacing: Dp = 8.dp,
+    actions: @Composable RowScope.() -> Unit = {},
+) {
+    val m = TdayHeroTitleMetrics
+    val colorScheme = MaterialTheme.colorScheme
+    val resolvedTitleColor = titleColor ?: colorScheme.onBackground
+    val density = LocalDensity.current
+    // What the two clusters actually take, so the title can be kept clear of
+    // them. The back button is a known size; the actions are whatever the
+    // caller passed, so they are measured.
+    var actionsWidth by remember { mutableStateOf(0.dp) }
+    var barWidth by remember { mutableStateOf(0.dp) }
+
+    // The docked title's style, in one place because it is used twice and the
+    // two uses have to agree exactly: it is what the title is DRAWN with below,
+    // and it is what the title is MEASURED with here. Written as two expressions
+    // they would drift, and a measurement taken against a style the text is not
+    // drawn in is worse than no measurement — it would hand the reserve a
+    // confident wrong number.
+    //
+    // The line box is trimmed to the glyphs and centred inside it, so what gets
+    // centred against the back button is the text you can see rather than the
+    // font's ascent and descent — a 32sp face carries enough of both to sit
+    // visibly high otherwise.
+    //
+    // No `fontFamily` here, which is not an omission this change is free to
+    // correct on its own — see the face note on [tdayBarTitleReserve]. It is why
+    // the width below is MEASURED rather than looked up: the face this resolves
+    // to is the device's, so the repo does not know it and must not assume it.
+    val dockedTitleStyle = LocalTextStyle.current.merge(
+        TextStyle(
+            fontSize = m.TitleSize,
+            lineHeight = m.TitleSize,
+            fontWeight = FontWeight.ExtraBold,
+            lineHeightStyle = LineHeightStyle(
+                alignment = LineHeightStyle.Alignment.Center,
+                trim = LineHeightStyle.Trim.Both,
+            ),
+            platformStyle = PlatformTextStyle(includeFontPadding = false),
+        ),
+    )
+    val textMeasurer = rememberTextMeasurer()
+    // What the name WANTS, at the full docked size and with no width imposed on
+    // it, so the reserve can choose a branch by asking whether the title fits
+    // rather than by guessing from a constant. `softWrap = false` is what makes
+    // it the natural width rather than a wrapped one.
+    //
+    // Measured here and not in the reserve because only a composition can reach
+    // the font resolver and the density — and keeping the reserve a pure
+    // function of Dp is what makes it testable. `fontScale` is a key because the
+    // system font size changes this number without changing the style object.
+    val titleWidth = remember(title, dockedTitleStyle, density.density, density.fontScale) {
+        with(density) {
+            textMeasurer.measure(
+                text = title,
+                style = dockedTitleStyle,
+                maxLines = 1,
+                softWrap = false,
+            ).size.width.toDp()
+        }
+    }
+
+    Box(modifier = modifier.fillMaxWidth()) {
+        // Drawn FIRST, and offset below the bar rather than stacked after it:
+        // as a Column sibling it painted over the back button's shadow and cut
+        // it off in a straight line at the bar's edge. Dissolves content as it
+        // passes under the bar, instead of it being clipped there.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(m.ContentFadeHeight)
+                .offset(y = m.ToolbarHeight)
+                .graphicsLayer {
+                    alpha = (collapseProgress() * m.ContentFadeGain).coerceIn(0f, 1f)
+                }
+                .background(
+                    Brush.verticalGradient(
+                        listOf(colorScheme.background, colorScheme.background.copy(alpha = 0f)),
+                    ),
+                ),
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                // Opaque, so the block genuinely disappears behind it rather
+                // than showing through.
+                .background(colorScheme.background)
+                .height(m.ToolbarHeight)
+                // The inset is padding INSIDE the height, not extra height: the
+                // opaque strip has to cover the whole bar, while everything
+                // centred in here — the back button, the docked title, the
+                // actions — centres in the button row below the inset rather
+                // than in the bar as a whole. Centring in the whole bar would
+                // put back the half-inset the padding exists to remove.
+                .padding(
+                    start = m.HorizontalPadding,
+                    top = m.TopInset,
+                    end = m.HorizontalPadding,
+                )
+                .onSizeChanged { size ->
+                    barWidth = with(density) { size.width.toDp() }
+                },
+        ) {
+            val titleReserve = tdayBarTitleReserve(
+                barWidth = barWidth,
+                leading = if (onBack != null) TdayDimens.FabSize else 0.dp,
+                trailing = actionsWidth,
+                titleWidth = titleWidth,
+            )
+
+            // Last resort, after the reserve has already given up centring to
+            // buy width: shrink the name rather than cut letters off it.
+            //
+            // This is the one place the docked copy is allowed to stop being the
+            // same size as the block's copy, and it is deliberate that it is
+            // conditional. A docked title with its OWN smaller size — a toolbar
+            // title in the ordinary sense — was the obvious alternative and it
+            // is the wrong fix here, for a reason that is visible in the
+            // measurements: the two screens with the LONGEST titles ("Morning
+            // Sweep" at 237.4dp, "How-To & Tips" at 226.9dp) fit this bar at
+            // 412dp, and the one that broke is among the SHORTEST. Size was
+            // never the variable — the trailing cluster is. Calendar was the
+            // only one of the six single-purpose screens paying for two
+            // controls, so it was the only one the mirrored reserve overcharged
+            // into a truncation. Shrinking every title on every screen to buy
+            // width that six of the seven did not need would have spent the
+            // handoff — the crossfade works because the name does not change
+            // shape — to work around arithmetic, and left the overcharge in
+            // place to break the next screen that grows a second action.
+            //
+            // So the size stays 32 wherever the name fits: all six of those
+            // screens at 360 and up, and Calendar's bar at 412. It yields only
+            // where the bar is genuinely too narrow — which at that point is a
+            // choice between a shrunken word and a cut one.
+            //
+            // The seventh caller is the exception, and it is named here rather
+            // than left to be rediscovered. TodoListScreen puts up to four
+            // circles in this row — search, sweep, summarize, select, 248dp with
+            // the gaps — and three on every ordinary scope while the AI summary
+            // setting is on, which is its default. Those bars are past
+            // what any reserve can buy back: mirrored is negative there, so they
+            // were already on the per-side branch before this change and nothing
+            // here made them worse, but per-side leaves 120dp at 412 and 68dp at
+            // 360, and the shrink is the whole of what they get. Below 412 the
+            // longer scope names ("Scheduled", "All Tasks") reach the floor and
+            // ellipsize; the four-action bars ellipsize at 412 and carry no title
+            // at all at 393 and 360. The lever there is the cluster — an overflow
+            // menu — which is a product decision, not this arithmetic.
+            //
+            // Ellipsis is still the backstop below [DockedTitleMinScale], and
+            // still the backstop if this arithmetic is off: the Text keeps its
+            // `maxLines = 1` and `TextOverflow.Ellipsis`. Nothing here can push
+            // glyphs outside the reserve, because the reserve is padding and the
+            // text is clipped to it either way.
+            val titleRoom = barWidth - titleReserve.start - titleReserve.end
+            val titleScale = tdayBarTitleScale(titleWidth = titleWidth, titleRoom = titleRoom)
+            val dockedTitleStyleFitted = if (titleScale == 1f) {
+                dockedTitleStyle
+            } else {
+                dockedTitleStyle.copy(
+                    fontSize = dockedTitleStyle.fontSize * titleScale,
+                    lineHeight = dockedTitleStyle.lineHeight * titleScale,
+                )
+            }
+            if (onBack != null) {
+                Box(modifier = Modifier.align(Alignment.CenterStart)) {
+                    TdayHeroBackButton(
+                        contentDescription = backContentDescription.orEmpty(),
+                        onClick = onBack,
+                    )
+                }
+            }
+
+            // The bar's copy of the title. Only ever visible once the block's
+            // own copy has gone, so the two never read as two titles at once.
+            // Size, weight and line box all come from [dockedTitleStyle] above —
+            // the same object the measurement was taken against.
+            Text(
+                text = title,
+                style = dockedTitleStyleFitted,
+                color = resolvedTitleColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(start = titleReserve.start, end = titleReserve.end)
+                    .graphicsLayer {
+                        val reveal = staggerRange(
+                            collapseProgress().coerceIn(0f, 1f),
+                            m.DockedTitleRevealStart,
+                            1f,
+                        )
+                        // A bar with no room left carries no title at all,
+                        // rather than one painted across its own buttons.
+                        alpha = if (titleReserve.hasRoom && !titleSuppressed) reveal else 0f
+                        translationY = with(density) { m.DockedTitleRise.toPx() } * (1f - reveal)
+                        val s = m.DockedTitleScaleFrom + (1f - m.DockedTitleScaleFrom) * reveal
+                        scaleX = s
+                        scaleY = s
+                    },
+            )
+
+            Row(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .onSizeChanged { size ->
+                        actionsWidth = with(density) { size.width.toDp() }
+                    },
+                horizontalArrangement = Arrangement.spacedBy(actionsSpacing),
+                verticalAlignment = Alignment.CenterVertically,
+                content = actions,
+            )
+        }
+    }
+}
+
+/**
+ * The block that scrolls away: the page's glyph in a tinted circle, the title
+ * beneath it, and the toolbar's own height reserved above so the block starts
+ * below the bar rather than behind it.
+ */
+@Composable
+fun TdayHeroTitleBlock(
+    title: String,
+    icon: ImageVector,
+    accentColor: Color,
+    collapseProgress: () -> Float,
+    modifier: Modifier = Modifier,
+    titleColor: Color? = null,
+    frontMark: (@Composable () -> Unit)? = null,
+    echoColor: Color? = null,
+) {
+    val m = TdayHeroTitleMetrics
+    val colorScheme = MaterialTheme.colorScheme
+    val resolvedTitleColor = titleColor ?: colorScheme.onBackground
+    val density = LocalDensity.current
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        // The bar's own height, so the block begins where the bar ends. It is
+        // inside the scrolling content, which is what lets the block travel
+        // behind the bar. No status-bar inset — the caller's Scaffold padding
+        // already carries it, and counting it twice starts the block low.
+        Spacer(modifier = Modifier.height(m.ToolbarHeight))
+
+        Spacer(modifier = Modifier.height(m.MarkTopGap))
+        // A flat glyph on a flat disc read as a utility icon rather than as a
+        // page mark. The wash is a gradient, with an oversized echo of the same
+        // glyph bleeding out of the bottom-right — the motif the category tiles
+        // already use for their watermarks.
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .size(m.MarkBox)
+                .graphicsLayer {
+                    val fade = 1f - RootFeedHeroHeaderMetrics.stagger(
+                        collapseProgress().coerceIn(0f, 1f),
+                        m.MarkFadeEnd,
+                    )
+                    alpha = fade
+                    val s = m.MarkScaleFrom + ((1f - m.MarkScaleFrom) * fade)
+                    scaleX = s
+                    scaleY = s
+                }
+                .clip(CircleShape)
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            accentColor.copy(alpha = 0.24f),
+                            accentColor.copy(alpha = 0.07f),
+                        ),
+                    ),
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            // The echo is always `icon`, never `frontMark`: the circle clips it,
+            // and the clip runs through the middle of the glyph — a rectilinear
+            // calendar under that arc is cut into bars rather than arcs, while a
+            // check's round-capped tail merely bleeds. A screen whose mark is a
+            // composite therefore hands its check here and keeps the composite
+            // inside the disc.
+            //
+            // Its colour defaults to `accentColor`, which is right wherever the
+            // mark and the disc's chrome are one colour. A screen whose mark is a
+            // different colour from its chrome has to say so through `echoColor`:
+            // the echo is a second drawing of the mark, so leaving it on the
+            // chrome's colour puts one glyph on the disc in two colours.
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = (echoColor ?: accentColor).copy(alpha = 0.17f),
+                modifier = Modifier.size(108.dp).offset(x = 22.dp, y = 26.dp),
+            )
+            if (frontMark != null) {
+                // `accentColor` is the disc's wash and the title's colour, which
+                // is not the colour a composite mark draws its own layers in —
+                // the check takes the accent the screen is *about*, not the one
+                // its chrome happens to wear.
+                frontMark()
+            } else {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(m.MarkGlyph),
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(m.TitleTopGap))
+        // One line, as iOS (`lineLimit(1)`) and web (`truncate`) keep it, in a
+        // line box held to [TdayHeroTitleMetrics.TitleLineHeight] whatever the
+        // font's own metrics are. A long name used to wrap to two, which made
+        // the block taller than the HeroHeight the collapse divides by — so the
+        // progress saturated, settle included, while the block still had height
+        // left on screen.
+        //
+        // The size is sp and the line box is dp, so the box does NOT follow the
+        // system font scale: at 200% the glyphs grow and the box does not. That
+        // is the trade this constant is for — HeroHeight is the collapse's
+        // denominator and has to be a fixed number of pixels, or the whole
+        // handoff moves with an accessibility setting.
+        Text(
+            text = title,
+            fontSize = m.TitleSize,
+            lineHeight = with(density) { m.TitleLineHeight.toSp() },
+            style = LocalTextStyle.current.merge(
+                TextStyle(
+                    lineHeightStyle = LineHeightStyle(
+                        alignment = LineHeightStyle.Alignment.Center,
+                        trim = LineHeightStyle.Trim.None,
+                    ),
+                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                ),
+            ),
+            fontWeight = FontWeight.ExtraBold,
+            color = resolvedTitleColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    val gone = staggerRange(
+                        collapseProgress().coerceIn(0f, 1f),
+                        m.HeroTitleFadeStart,
+                        m.HeroTitleFadeEnd,
+                    )
+                    alpha = 1f - gone
+                    // Leaves a little faster than the finger, so the handoff
+                    // reads as one title moving rather than two cross-fading.
+                    translationY = -with(density) { m.HeroTitleLift.toPx() } * gone
+                },
+        )
+        Spacer(modifier = Modifier.height(m.SettledContentGap))
+    }
+}
+
+/** [TdayHeroTitleBlock] as a `LazyColumn`'s first item. */
+fun LazyListScope.tdayHeroTitleItem(
+    title: String,
+    icon: ImageVector,
+    accentColor: Color,
+    collapseProgress: () -> Float,
+    titleColor: Color? = null,
+    frontMark: (@Composable () -> Unit)? = null,
+    echoColor: Color? = null,
+) {
+    item(key = "tday-hero-title", contentType = "tday-hero-title") {
+        TdayHeroTitleBlock(
+            title = title,
+            icon = icon,
+            accentColor = accentColor,
+            collapseProgress = collapseProgress,
+            titleColor = titleColor,
+            frontMark = frontMark,
+            echoColor = echoColor,
+        )
+    }
+}
+
+/**
+ * The fill every circle and capsule that sits in a pinned bar shares — the back
+ * button here, and the root feeds' buttons and search capsule.
+ *
+ * Deliberately not `colorScheme.surface`. Under Material You a dynamic light
+ * scheme gives `surface` and `background` the same value, so a bar button
+ * painted with the token dissolved into the page and only its hairline border
+ * showed. Being a different value from the token also keeps Material's tonal
+ * elevation tint off a card carrying [TdayDimens.BarButtonElevation], which was
+ * washing the same buttons a shade of the primary on top of that.
+ */
+@Composable
+internal fun tdayBarButtonContainerColor(): Color {
+    val colorScheme = MaterialTheme.colorScheme
+    val background = colorScheme.background
+    return if (background.luminance() < 0.5f) {
+        // NOT `surface`, for the very reason given above: under Material You it
+        // IS `background`, so painting the button with it — even at 0.94 alpha —
+        // composites back to the bar and the button disappears. Lifting the bar's
+        // own colour toward `onBackground` keeps the circle a step above whatever
+        // dark the scheme happens to be, dynamic or not.
+        lerpColor(background, colorScheme.onBackground, 0.12f)
+    } else {
+        Color.White.copy(alpha = 0.96f)
+    }
+}
+
+/**
+ * How much of the bar the docked title has to leave for the controls beside it,
+ * and whether what is left is worth showing a title in at all.
+ *
+ * The title is `Alignment.Center` in a full-width Box, so with no reserve a long
+ * name simply ellipsized at the bar's own edges and painted straight under the
+ * back button and the actions. The rule degrades in three steps: reserve the
+ * WIDER side twice while that still fits the title — which keeps the title
+ * centred on the BAR rather than on the leftovers — then fall back to reserving
+ * each side for what actually sits there, and give up the title entirely when
+ * even that leaves less than [DockedTitleMinWidth]. The block's own copy above
+ * is the screen's real heading in every case.
+ *
+ * ## What the middle step used to ask, and why it was wrong
+ *
+ * It used to choose the mirrored reserve while it left [DockedTitleMinWidth] —
+ * asking whether a STUMP would fit, not whether the TITLE would. Those are
+ * different questions and 56dp is only an answer to the first one. The result
+ * was the Calendar bar reported from a device: on a 412dp phone it is 376dp
+ * wide, the back button is 56, the two trailing controls are 120, so the
+ * mirrored reserve is 128 a side and the title gets 120dp — while "Calendar" at
+ * 32sp ExtraBold wants 136.7dp. It rendered "Cale…". The per-side reserve on the
+ * very same bar would have given it 184dp and it would have fitted with room to
+ * spare; the old gate never released it, because 120 clears 56 comfortably.
+ *
+ * ## What those numbers are, and what they are not
+ *
+ * They are arithmetic, not guesses: `res/font/nunito_wght.ttf` instantiated at
+ * wght 800 — what `FontWeight.ExtraBold` maps to in `ui/theme/Type.kt` — summing
+ * `hmtx` advances plus the GPOS pair kerning at 32/1000. That is where 136.74
+ * for "Calendar" comes from, and every other width quoted in this file and in
+ * `TdayBarTitleReserveTest`. No `letterSpacing` is set anywhere on this path, so
+ * there is no tracking to add.
+ *
+ * They are not, however, what this `Text` will draw. Nothing on this path names
+ * a `fontFamily`: the style is `LocalTextStyle.current` merged with a size, a
+ * weight and a line box; `MaterialTheme` provides `LocalTypography`, not
+ * `LocalTextStyle`; and material3's default for that local is `TextStyle.Default`
+ * with a null family. Nunito reaches text in this app only through
+ * `MaterialTheme.typography.*` or an explicit `fontFamily =`, and this call site
+ * uses neither — so the docked title, the block's copy above it and
+ * `RootFeedHeroHeader`'s title all resolve `FontFamily.Default`, which is
+ * whatever the handset ships as its system face.
+ *
+ * So read the figures as a worked example of the GEOMETRY. They are why 120dp
+ * was never going to hold this word at this size, and the ratios they
+ * demonstrate hold in any face of comparable width — but they are not a
+ * prediction of what a given device measures, and no number committed to this
+ * repo could be. Which is the argument for the shape of the fix rather than
+ * against it: the reserve branches on a [titleWidth] taken at runtime by a
+ * `TextMeasurer` against the very style object the `Text` is drawn with, so the
+ * arithmetic stays right whatever the device resolves and however the face
+ * changes underneath it.
+ *
+ * ## The face itself is a separate, real divergence
+ *
+ * iOS draws this same title in `Nunito-ExtraBold` (`.tdayRounded(size: 32,
+ * weight: .heavy)` → `TdayFont.postScriptName(for:)`) and web in Nunito 900,
+ * and the XML theme here asks for `@font/nunito_app` — which Compose does not
+ * read. Android's hero titles are therefore the one place in the product where
+ * the name is not in the product's typeface. That is owed, and it is written
+ * down here so it is found rather than rediscovered; it is deliberately not paid
+ * in this change. It belongs to all three hero-title sites at once, it is a
+ * visible restyle rather than a layout fix, and folding a restyle into a
+ * truncation repair makes one commit that cannot be reverted in halves.
+ *
+ * ## Why the mirrored reserve stays the first choice
+ *
+ * Because when it fits, it is right. This title crossfades with the block's own
+ * copy, which is centred on the BAR, so an asymmetric reserve slides the name
+ * sideways while both are on screen — iOS measured that at 32pt of travel and
+ * wrote it down (`CalendarElasticTopBar`, `Feature/Calendar/CalendarScreen.swift`).
+ * Centring is not decoration here, it is what makes the handoff read as one
+ * title moving. So it is given up only where keeping it is what breaks the word,
+ * which is the trade the whole change turns on: a title the reader can read
+ * beats a title that is perfectly centred. Where neither reserve fits, the wider
+ * one still wins — the centre line is already lost at that point, and all that
+ * is left to choose is how much of the name survives.
+ *
+ * ## The three clients
+ *
+ * Web's bar is the twin of this one and now runs the SAME rule: mirrored branch
+ * still first, gate widened to `max(titleWidth, minWidth)`, in
+ * `tday-web/src/components/app/nativePageBarTitleReserve.ts` — its own pure
+ * module, for the reason `TdayBarTitleReserveTest` exists over here. This
+ * paragraph used to say web still ran the old rule and owed the change, which
+ * stopped being true and is corrected rather than left, because a premise about
+ * another client is the thing a reader trusts instead of going to look.
+ *
+ * It had the defect worse than this bar did, which is why it was worth the same
+ * fix: its Calendar "Today" control is a text pill rather than a collapsing
+ * circle, so at a 412px viewport the old gate left the title 64px for a word
+ * wanting 146.6px at 2.1rem/900, where the per-side fallback would have given it
+ * 158px. The two differences to know before reading the two functions against
+ * each other, both deliberate:
+ *
+ *  * it measures off a hidden, `aria-hidden` span sized by the docked type
+ *    classes and read with `getBoundingClientRect`, resettled on
+ *    `document.fonts.ready` — NOT the canvas `measureText` this paragraph once
+ *    guessed at, which `nativePageBarTitleReserve` argues against by name: it
+ *    would mean rebuilding the CSS font shorthand from computed style and
+ *    trusting it to match what the browser shapes. The span costs one extra
+ *    node per page and one layout read per frame callback; what an unmeasured
+ *    frame costs is nothing, because zero fits everything and the mirrored
+ *    branch is what the bar took before;
+ *  * it did not port [tdayBarTitleScale]. The bounded shrink would have to
+ *    multiply into the `scale()` web's reveal already writes every frame, which
+ *    is a restyle inside a layout repair — the same split this file makes for
+ *    the typeface below.
+ *
+ * iOS is split and must not be "reconciled" by someone who only reads one half.
+ * `CalendarElasticTopBar` mirrors, for the crossfade reason quoted above.
+ * `TimelineTopBar` (`Feature/Todos/TodoListScreen.swift`) reserves per side
+ * UNCONDITIONALLY and argues against mirroring, because with three actions a
+ * mirrored reserve there exceeds the screen width. Both are right about their
+ * own bar, and the rule below is what the two of them are separately reaching
+ * for: mirror while it fits, per-side when it does not.
+ *
+ * Both iOS comments were corrected alongside this change rather than left to
+ * contradict it: `CalendarElasticTopBar` used to state as fact that Android
+ * mirrors unconditionally, which stopped being true here. It survives its own
+ * generous reserve because of `.minimumScaleFactor(0.72)`, which is where
+ * [TdayHeroTitleMetrics.DockedTitleMinScale] came from. `TimelineTopBar` has no
+ * such modifier, so the bar with the MOST actions on iOS is the one with no
+ * shrink at all — the mirror image of what was wrong here, and noted there as
+ * owed.
+ *
+ * `internal` rather than private, and taking [titleWidth] rather than reading it
+ * from a composition, so the arithmetic above can be pinned by
+ * `TdayBarTitleReserveTest`. There is no emulator and no Compose UI test in this
+ * module, so a JVM test over a pure function is the only way a layout claim here
+ * gets proven rather than asserted.
+ *
+ * @param titleWidth what the title wants at the full docked size. Zero when it
+ *   has not been measured yet — and zero fits everything, so the first frame
+ *   takes the mirrored branch exactly as it always did, then settles onto the
+ *   real answer when the measurement lands.
+ */
+internal data class TdayBarTitleReserve(val start: Dp, val end: Dp, val hasRoom: Boolean)
+
+internal fun tdayBarTitleReserve(
+    barWidth: Dp,
+    leading: Dp,
+    trailing: Dp,
+    titleWidth: Dp = 0.dp,
+): TdayBarTitleReserve {
+    val m = TdayHeroTitleMetrics
+    // Before the first measure, reserve what is actually there: never centred,
+    // but never overlapping either, and it is replaced on the very next frame.
+    if (barWidth <= 0.dp) return TdayBarTitleReserve(leading, trailing, true)
+
+    val symmetric = maxOf(leading, trailing) + m.DockedTitleSideGap
+    // Both terms are load-bearing and neither subsumes the other. The title term
+    // is the fix. The [DockedTitleMinWidth] term is the OLD gate, kept: without
+    // it a title narrower than the floor — or one not yet measured — would hold
+    // the mirrored branch on a bar that has no room for any title at all, and
+    // the give-up below would then fire against a reserve chosen for the wrong
+    // reason. Keeping it means this step can only ever widen what the title
+    // gets, never narrow it, which is what makes the change safe for the six
+    // screens that were already fitting.
+    val centred = barWidth - symmetric * 2 >= maxOf(titleWidth, m.DockedTitleMinWidth)
+    val start = if (centred) symmetric else leading + m.DockedTitleSideGap
+    val end = if (centred) symmetric else trailing + m.DockedTitleSideGap
+    return TdayBarTitleReserve(start, end, barWidth - start - end >= m.DockedTitleMinWidth)
+}
+
+/**
+ * How much the docked title has to give up to stay whole, once
+ * [tdayBarTitleReserve] has already spent the bar's centring buying it width.
+ *
+ * 1 wherever the name fits, which after the reserve fix is all six of the
+ * single-purpose screens that share this bar and Calendar's on a 412dp phone.
+ * Below 1 only where the bar is genuinely out of room — TodoListScreen's three-
+ * and four-action scopes, which the reserve cannot rescue because mirrored is
+ * already negative there — and bounded by
+ * [TdayHeroTitleMetrics.DockedTitleMinScale], past which an ellipsis is the more
+ * honest answer than a title that no longer looks like the one it is handing off
+ * from.
+ *
+ * Linear in the ratio because glyph advances are linear in font size: there is
+ * no hinting on this path and no `letterSpacing` to stay fixed while the glyphs
+ * shrink, so `room / wanted` is the exact factor rather than an approximation of
+ * one. It errs narrow in any case — [titleWidth] comes from a `TextMeasurer`,
+ * which rounds a layout's width UP to whole pixels, so the scale computed
+ * against it is a hair small and the text fits rather than grazing the edge.
+ *
+ * `internal` for the same reason as the reserve: this is the boundary the change
+ * introduces, and there is no emulator here to prove it on.
+ */
+internal fun tdayBarTitleScale(titleWidth: Dp, titleRoom: Dp): Float {
+    // `titleRoom` can go to zero or below on a bar whose actions have eaten it
+    // whole. Nothing is drawn there — `hasRoom` is already false — but this must
+    // not hand back 0 or a negative scale on the way to finding that out.
+    if (titleRoom <= 0.dp || titleWidth <= titleRoom) return 1f
+    return (titleRoom / titleWidth).coerceAtLeast(TdayHeroTitleMetrics.DockedTitleMinScale)
+}
+
+/** The back affordance these headers lead with. */
+@Composable
+private fun TdayHeroBackButton(
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val interactionSource = remember { MutableInteractionSource() }
+
+    Card(
+        modifier = Modifier
+            .size(TdayDimens.FabSize)
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar),
+        onClick = onClick,
+        shape = CircleShape,
+        interactionSource = interactionSource,
+        colors = CardDefaults.cardColors(containerColor = tdayBarButtonContainerColor()),
+        // The shared bar-button lift, soft enough that it lands on the bar's
+        // own opaque strip rather than smearing across the content sliding
+        // behind it — which is what a floating-action-button shadow did here.
+        elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.BarButtonElevation),
+    ) {
+        Box(modifier = Modifier.size(TdayDimens.FabSize), contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_left),
+                contentDescription = contentDescription,
+                tint = colorScheme.onSurface,
+                // The same 22 the action glyphs beside it carry (TodoListScreen's
+                // `iconSize`), and the same iOS draws every pinned-bar glyph at
+                // (`topBarButtonIconSize`). At 36 a 24-viewport lucide path drew
+                // its 2-unit stroke at 3dp against their 1.83dp — half again as
+                // thick, which read as a different weight of icon rather than as
+                // a bigger one. Web sits at 24-in-56 and is left alone: it is
+                // internally consistent and nobody has compared the two side by
+                // side at this size.
+                modifier = Modifier.size(22.dp),
+            )
+        }
+    }
+}

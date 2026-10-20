@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="tday_white">#FFFFFFFF</color>
+    <color name="ic_launcher_background">#FFFFFFFF</color>
+    <color name="ic_launcher_surface">#FFFFFFFF</color>
+    <color name="ic_launcher_outline">#FF387D7E</color>
+    <color name="ic_launcher_header">#FF9FDCDB</color>
+    <color name="ic_launcher_task">#FFEF7382</color>
+    <color name="ic_launcher_detail">#FFCFCFCF</color>
+    <color name="splash_background">#FFFFFFFF</color>
+    <color name="tday_widget_surface">#FFFFFFFF</color>
+    <color name="tday_widget_accent_wash">#FFEAF5FF</color>
+    <color name="tday_widget_today_accent">#FF6EA8E1</color>
+    <color name="tday_widget_today_night_accent">#FFA8B8E8</color>
+    <color name="tday_widget_floater_accent">#FF4D8F83</color>
+    <color name="tday_widget_floater_accent_wash">#FFEAF6F1</color>
+    <color name="tday_widget_due_chip_background">#FFF1F4F9</color>
+    <color name="tday_widget_overdue_chip_background">#FFFFECEA</color>
+    <color name="tday_widget_progress_track">#FFDCE9F7</color>
+    <color name="tday_widget_setup_art_back_card">#FFF6D9E7</color>
+    <color name="tday_widget_setup_art_card">#FFFFFFFF</color>
+    <color name="tday_widget_setup_art_card_edge">#FFE3E8F2</color>
+    <color name="tday_widget_setup_art_accent">#FF6EA8E1</color>
+    <color name="tday_widget_setup_art_green">#FF4D8F83</color>
+    <color name="tday_widget_setup_art_orange">#FFF3A64B</color>
+    <color name="tday_widget_setup_art_pink">#FFE0529C</color>
+    <color name="tday_widget_setup_art_line">#FFDDE3EE</color>
+    <color name="tday_widget_setup_art_sparkle">#FFF7C948</color>
+    <color name="tday_widget_setup_art_sparkle_soft">#FFB9D6F2</color>
+    <color name="tday_widget_on_surface">#FF1C2333</color>
+    <color name="tday_widget_on_surface_variant">#FF5D677E</color>
+    <color name="tday_widget_priority_high">#FFFF3B30</color>
+    <color name="tday_widget_priority_medium">#FFFF9500</color>
+    <color name="tday_widget_priority_low">#FF007AFF</color>
+    <!-- Matches iOS's tdayPriorityLowest exactly (TodayTasksWidget.swift). -->
+    <color name="tday_widget_priority_lowest">#FF8E8E93</color>
+</resources>

@@ -1,0 +1,190 @@
+import Foundation
+
+/// `origin` on the four cases below is `HomeTileOrigin?` — see `ZoomNavigation.swift`,
+/// which declares the type and is the only place that reads it. A non-nil origin means the
+/// push came from the tile that has a rectangle to grow out of; every construction site that
+/// is not that tile passes `nil`, and the deep links in `from(url:)` are all `nil` because a
+/// link has no rectangle either.
+enum AppRoute: Hashable {
+    case scheduledTaskHome
+    case todayTodos(origin: HomeTileOrigin?)
+    case createTodayTodo
+    case createFloaterTodo
+    case overdueTodos
+    case scheduledTodos
+    case allTodos(highlightTodoId: String?)
+    case priorityTodos
+    case floaterTaskHome
+    case floaterListTodos(listId: String, listName: String, origin: HomeTileOrigin?)
+    case listTodos(listId: String, listName: String, origin: HomeTileOrigin?)
+    case completed(origin: HomeTileOrigin?)
+    case calendar
+    case settings
+    case latestRelease
+    case helpGuide(topic: String?)
+    case morningSweep
+    case forgotPassword
+
+    var deepLinkPath: String {
+        switch self {
+        case .scheduledTaskHome:
+            return "home"
+        case .todayTodos:
+            return "todos/today"
+        case .createTodayTodo:
+            return "todos/create?target=today"
+        case .createFloaterTodo:
+            return "todos/create?target=floater"
+        case .overdueTodos:
+            return "todos/overdue"
+        case .scheduledTodos:
+            return "todos/scheduled"
+        case let .allTodos(highlightTodoId):
+            if let highlightTodoId, !highlightTodoId.isEmpty {
+                return "todos/all?highlightTodoId=\(highlightTodoId)"
+            }
+            return "todos/all"
+        case .priorityTodos:
+            return "todos/priority"
+        case .floaterTaskHome:
+            return "floater"
+        case let .floaterListTodos(listId, listName, _):
+            return "floater/list/\(listId)/\(listName)"
+        case let .listTodos(listId, listName, _):
+            return "todos/list/\(listId)/\(listName)"
+        case .completed:
+            return "completed"
+        case .calendar:
+            return "calendar"
+        case .settings:
+            return "settings"
+        case .latestRelease:
+            return "latest-release"
+        case let .helpGuide(topic):
+            if let topic, !topic.isEmpty {
+                return "help-guide?topic=\(topic)"
+            }
+            return "help-guide"
+        case .morningSweep:
+            return "morning-sweep"
+        case .forgotPassword:
+            return "forgot-password"
+        }
+    }
+
+    /// The list a create link files its task into — `tday://todos/create?target=…&listId=…`,
+    /// which is the List widget's "+". Read beside `from(url:)` rather than carried on
+    /// `.createTodayTodo`/`.createFloaterTodo`, which are compared by value as path markers;
+    /// nil for any other link, or a create link without one.
+    static func createTaskListId(from url: URL) -> String? {
+        switch from(url: url) {
+        case .createTodayTodo?, .createFloaterTodo?:
+            let listId = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?
+                .first(where: { $0.name == "listId" })?
+                .value
+            return listId?.isEmpty == false ? listId : nil
+        default:
+            return nil
+        }
+    }
+
+    /// The List widget's tap while it has no list — `tday://widget/list-setup` — which opens the
+    /// sheet showing how to pick one. Not a route: it presents over wherever the app is.
+    static func isListWidgetSetupLink(_ url: URL) -> Bool {
+        url.scheme?.lowercased() == "tday" &&
+            url.host?.lowercased() == "widget" &&
+            url.pathComponents.filter { $0 != "/" } == ["list-setup"]
+    }
+
+    static func from(url: URL) -> AppRoute? {
+        guard url.scheme?.lowercased() == "tday" else {
+            return nil
+        }
+
+        let host = url.host?.lowercased()
+        let pathComponents = url.pathComponents.filter { $0 != "/" }
+        let components = ([host].compactMap { $0 } + pathComponents)
+
+        guard let first = components.first else {
+            return .scheduledTaskHome
+        }
+
+        switch first {
+        case "home":
+            return .scheduledTaskHome
+        case "completed":
+            return .completed(origin: nil)
+        case "calendar":
+            return .calendar
+        case "settings":
+            return .settings
+        case "latest-release":
+            return .latestRelease
+        case "help-guide":
+            let topic = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?
+                .first(where: { $0.name == "topic" })?
+                .value
+            return .helpGuide(topic: topic)
+        case "morning-sweep":
+            return .morningSweep
+        case "forgot-password":
+            return .forgotPassword
+        case "todos":
+            let second = components.dropFirst().first ?? ""
+            switch second {
+            case "today":
+                return .todayTodos(origin: nil)
+            case "create":
+                let target = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                    .queryItems?
+                    .first(where: { $0.name == "target" })?
+                    .value
+                switch target {
+                case "today":
+                    return .createTodayTodo
+                case "floater":
+                    return .createFloaterTodo
+                default:
+                    return nil
+                }
+            case "overdue":
+                return .overdueTodos
+            case "scheduled":
+                return .scheduledTodos
+            case "all":
+                let highlightTodoId = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                    .queryItems?
+                    .first(where: { $0.name == "highlightTodoId" })?
+                    .value
+                return .allTodos(highlightTodoId: highlightTodoId)
+            case "priority":
+                return .priorityTodos
+            case "floater":
+                let remaining = Array(components.dropFirst(2))
+                if remaining.first == "list", remaining.count >= 3 {
+                    return .floaterListTodos(listId: remaining[1], listName: remaining[2], origin: nil)
+                }
+                return .floaterTaskHome
+            case "list":
+                let remaining = Array(components.dropFirst(2))
+                guard remaining.count >= 2 else {
+                    return nil
+                }
+                return .listTodos(listId: remaining[0], listName: remaining[1], origin: nil)
+            default:
+                return nil
+            }
+        default:
+            if first == "floater" {
+                let remaining = Array(components.dropFirst())
+                if remaining.first == "list", remaining.count >= 3 {
+                    return .floaterListTodos(listId: remaining[1], listName: remaining[2], origin: nil)
+                }
+                return .floaterTaskHome
+            }
+            return nil
+        }
+    }
+}

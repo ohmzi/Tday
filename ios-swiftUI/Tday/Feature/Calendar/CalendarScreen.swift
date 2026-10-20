@@ -1,0 +1,3898 @@
+import Observation
+import SwiftUI
+import UIKit
+import UniformTypeIdentifiers
+
+private let calendarTaskDragContentTypes = [UTType.plainText.identifier, UTType.text.identifier]
+
+private final class CalendarTaskDragSession {
+    static let shared = CalendarTaskDragSession()
+    var todo: TodoItem?
+    var handledDropSignature: String?
+
+    private init() {}
+}
+
+private struct CalendarInAppDrag: Equatable {
+    let todo: TodoItem
+    var location: CGPoint
+}
+
+private enum CalendarTaskCompletionPhase {
+    case active
+    case checked
+    case struck
+    case fading
+}
+
+private struct CalendarDateDropTargetFrame: Equatable {
+    let date: Date
+    let frame: CGRect
+}
+
+/// Collects day-cell frames for in-app drag resolution.
+///
+/// The day cells live inside `CalendarPagingScrollView`'s `UIHostingController` pages, so
+/// SwiftUI preference values set there never reach the screen's own hierarchy. Cells report
+/// their window-space frames into this shared registry instead, keyed by pager page identity
+/// plus day so that pre-mounted off-screen pages can never overwrite the visible page's
+/// frames for the same date.
+@MainActor
+private final class CalendarDropTargetRegistry {
+    private var targetsByKey: [String: CalendarDateDropTargetFrame] = [:]
+
+    nonisolated init() {}
+
+    var targets: [CalendarDateDropTargetFrame] {
+        Array(targetsByKey.values)
+    }
+
+    func register(_ target: CalendarDateDropTargetFrame, forKey key: String) {
+        targetsByKey[key] = target
+    }
+
+    func unregister(forKey key: String) {
+        targetsByKey[key] = nil
+    }
+
+    func removeAll() {
+        targetsByKey.removeAll()
+    }
+}
+
+private func calendarTaskAlreadyDueOnDate(_ todo: TodoItem, _ date: Date) -> Bool {
+    guard let due = todo.due else {
+        return false
+    }
+    return Calendar.current.isDate(due, inSameDayAs: date)
+}
+
+private enum CalendarTitleHandoff {
+    static let collapseDistance: CGFloat = 180
+    static let expandedTitleHeight: CGFloat = 56
+    static let expandedTitleSpacerHeight: CGFloat = 14
+    static let expandedFadeStart: CGFloat = 0.62
+    static let expandedFadeEnd: CGFloat = 0.86
+    static let collapsedFadeStart: CGFloat = 0.72
+    static let collapsedFadeEnd: CGFloat = 0.96
+    static let collapsedTitleRevealDistance: CGFloat = 10
+    static let expandedTitleLiftDistance: CGFloat = 18
+    /// Measured from the top of the tabs, which come to rest a
+    /// `settledContentGap` below the bar, so the snap back still covers the
+    /// whole control rather than only what is left of it once the gap has
+    /// scrolled away.
+    static let sliderPartialSnapDistance: CGFloat = TodoTimelineMetrics.settledContentGap + 58
+    /// The mark leads and is gone before the title reaches the bar, matching
+    /// every other titled screen.
+    static let markFadeEnd: CGFloat = 0.45
+    /// The Today pill's fold — the last leg on this bar to become a ramp rather
+    /// than a threshold, and the one the reported defect was.
+    ///
+    /// It ends at 0.50, which is exactly where the `showLabel = progress < 0.5`
+    /// it replaced flipped, so the pill is still a circle at `collapsedFadeStart`
+    /// with the same 0.22 of margin it always had — the margin
+    /// `trailingActionReservedWidth` reserves two round buttons on. It starts at
+    /// 0.25 — forty-five points of scroll in, with the next forty-five to fold
+    /// across — so the word stays whole while the bar is at rest and through the
+    /// first stretch of travel, and then the cap has room to close rather than
+    /// resizing in one frame.
+    static let todayLabelFoldStart: CGFloat = 0.25
+    static let todayLabelFoldEnd: CGFloat = 0.50
+}
+
+/// The elastic title's collapse, boxed so a pan frame redraws only the bar that draws it.
+///
+/// The same shape as `RootFeedHeaderScrollState` and `TimelineTitleScrollState`, for the
+/// same reason. The offset is written on every `.changed` event of the list's pan for the
+/// first `collapseDistance` points of a drag — the stretch where the bar takes the drag and
+/// the list is held still — so at touch rate, up to 120 Hz. Held as `@State` and read in
+/// `CalendarScreen.body` through the top inset, each of those writes rebuilt the whole
+/// screen: the day grouping, every task row, and the calendar card, whose pager re-hosts all
+/// three pages and forces a layout, so 126 day cells re-diffed per finger movement while the
+/// mark, the title and the Today pill were meant to be tracking that finger. Held here, only
+/// `CalendarElasticTopBar` reads it, so a pan frame invalidates the bar and nothing behind
+/// it. Nothing in `CalendarScreen.body` may read `offset` or `progress`.
+///
+/// Written only by `CalendarTitleCollapseScrollObserver`, whose coordinator reads it back for
+/// its own guards rather than keeping a copy — one number, one writer.
+@Observable
+private final class CalendarTitleCollapseState {
+    /// How far the bar has taken the drag, `0...CalendarTitleHandoff.collapseDistance`.
+    var offset: CGFloat = 0
+
+    /// How far the title has handed off into the bar, 0 to 1.
+    var progress: CGFloat {
+        let distance = CalendarTitleHandoff.collapseDistance
+        guard distance > 0 else { return 0 }
+        return min(max(offset / distance, 0), 1)
+    }
+}
+
+private enum CalendarPeriodCardMetrics {
+    static let contentSpacing: CGFloat = 14
+    static let horizontalPadding: CGFloat = 16
+    static let headerHeight: CGFloat = 36
+    static let headerHorizontalPadding: CGFloat = 6
+    static let pageHeight: CGFloat = 78
+    static let weekDayCellHeight: CGFloat = 72
+    static let pageHorizontalGutter: CGFloat = 2
+    static let topPadding: CGFloat = 16
+    static let bottomPadding: CGFloat = 18
+}
+
+/// The Today pill's own geometry, named once because three pieces of it have to
+/// agree: the cap's width is the sum of them, the word's fade is fitted to where
+/// the cap's tail meets the word's, and the pill's whole job is to read as one
+/// object narrowing rather than a label and a circle swapping places.
+private enum CalendarTodayActionMetrics {
+    /// The cap's leading inset. Fourteen rather than the sixteen the labelled pill
+    /// used to carry, and it is the only number in here whose change anyone can see:
+    /// the glyph has to sit at the centre of the 56pt circle the pill ends as, and
+    /// with a `glyphSlot` of 28 this is what puts it there — 14 + (28 / 2) = 28. The
+    /// cost is two points off the labelled pill's leading end at rest, where the
+    /// glyph used to be inset by sixteen and the word by however wide the symbol
+    /// happened to be; the pill it ends as, a 56pt circle with the glyph centred in
+    /// it, is byte for byte what this control has always drawn.
+    static let leadingPadding: CGFloat = 14
+    /// The glyph's own box, so the word starts at the same x whatever the symbol's
+    /// intrinsic width turns out to be, and so the glyph is centred in the collapsed
+    /// circle by arithmetic rather than by whatever `Image(systemName:)` measures.
+    static let glyphSlot: CGFloat = 28
+    static let labelSpacing: CGFloat = 7
+    /// The air after the word while it is fully out. Also the whole reason the
+    /// pill has to know the word's width at all: the word is drawn at its natural
+    /// size, so the cap has to be told how much room to leave for it.
+    static let trailingPadding: CGFloat = 14
+    /// What the word is drawn in. Held here because the bar's probe measures
+    /// against it and the pill draws it, and two copies that spelled the size
+    /// separately could drift — the reason `dockedTitleFont` is named once.
+    static let labelFont: Font = .tdayRounded(size: 16, weight: .bold)
+
+    /// The cap's width with the word fully out.
+    static func expandedWidth(wordWidth: CGFloat) -> CGFloat {
+        leadingPadding + glyphSlot + labelSpacing + max(0, wordWidth) + trailingPadding
+    }
+
+    /// The width at which the cap's trailing end first reaches the word's tail.
+    /// A width rather than a fraction of the collapse, so it is the same point in
+    /// the fold for every locale's word rather than for English's.
+    static func wordTailWidth(wordWidth: CGFloat) -> CGFloat {
+        leadingPadding + glyphSlot + labelSpacing + max(0, wordWidth)
+    }
+}
+
+private enum CalendarMonthGridMetrics {
+    static let spacing: CGFloat = 8
+    static let height: CGFloat = 292
+    static let weekdayHeight: CGFloat = 18
+    static let cardBottomPadding: CGFloat = 20
+    static let dayCellHeight: CGFloat = 42
+    static let dayHighlightWidth: CGFloat = 42
+    static let dayHighlightHeight: CGFloat = 40
+    static let dayNumberWidth: CGFloat = 34
+    static let dayNumberHeight: CGFloat = 24
+    static let taskCountHeight: CGFloat = 13
+    static let taskDotSize: CGFloat = 4.6
+    static let cellCornerRadius: CGFloat = 16
+}
+
+private enum CalendarTaskListMetrics {
+    static let rowSpacing = TodoTimelineMetrics.sameDateTaskSpacing
+    static let rowVerticalPadding = TodoTimelineMetrics.minimalRowVerticalPadding
+}
+
+private enum CalendarModeCardMetrics {
+    static let shadowBleed: CGFloat = 12
+    static let monthHeight = CalendarPeriodCardMetrics.topPadding
+        + CalendarPeriodCardMetrics.headerHeight
+        + CalendarPeriodCardMetrics.contentSpacing
+        + CalendarMonthGridMetrics.weekdayHeight
+        + CalendarMonthGridMetrics.spacing
+        + CalendarMonthGridMetrics.height
+        + CalendarMonthGridMetrics.cardBottomPadding
+    static let periodHeight = CalendarPeriodCardMetrics.topPadding
+        + CalendarPeriodCardMetrics.headerHeight
+        + CalendarPeriodCardMetrics.contentSpacing
+        + CalendarPeriodCardMetrics.pageHeight
+        + CalendarPeriodCardMetrics.bottomPadding
+}
+
+private let calendarTodayTintColor = Color(red: 80.0 / 255.0, green: 154.0 / 255.0, blue: 230.0 / 255.0)
+/// Gesture's response (0.34) but not its damping (0.82): the card is resizing to a
+/// committed mode, not coasting after a finger, and 0.92 is what stops the grid
+/// wobbling under the anchored header. Left off the token for the damping alone.
+private let calendarModeResizeAnimation = Animation.spring(response: 0.34, dampingFraction: 0.92, blendDuration: 0.02)
+/// Between Quick (0.15) and Enter (0.20), on neither. The crossfade has to be over
+/// well before the resize spring above has settled, or the paging reads as a card
+/// replacement rather than a pager — which is a length fitted to that spring, not
+/// a rung off the ladder.
+private let calendarModeContentTransitionAnimation = Animation.easeInOut(duration: 0.18)
+private let calendarModeTransitionCleanupDelay: DispatchTimeInterval = .milliseconds(260)
+
+private struct CalendarCardChromeModifier: ViewModifier {
+    @Environment(\.tdayColors) private var colors
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
+
+        content
+            .background(colors.surface, in: shape)
+            .overlay {
+                shape.stroke(cardStrokeColor, lineWidth: 1)
+            }
+            .shadow(color: ambientShadowColor, radius: 18, x: 0, y: 9)
+            .shadow(color: keyShadowColor, radius: 4, x: 0, y: 2)
+    }
+
+    private var cardStrokeColor: Color {
+        colors.isDark ? Color.white.opacity(0.08) : Color.black.opacity(0.035)
+    }
+
+    private var ambientShadowColor: Color {
+        Color.black.opacity(colors.isDark ? 0.24 : 0.045)
+    }
+
+    private var keyShadowColor: Color {
+        Color.black.opacity(colors.isDark ? 0.18 : 0.04)
+    }
+}
+
+private struct CalendarTodayJumpRequest: Equatable {
+    let id: Int
+    let targetDate: Date
+}
+
+private struct CalendarTaskRescheduleDrop: Equatable {
+    let todo: TodoItem
+    let targetDate: Date
+}
+
+/// Where this screen's view model lives: built on first read, then kept. The calendar is
+/// a `navigationDestination`, and those re-run for presented routes whenever
+/// `AppRootView`'s body does. `CalendarViewModel.init` reads every dated task, the whole
+/// completed history and the lists, and records a `calendar.load` breadcrumb, so under
+/// `State(initialValue:)` each re-run paid for a model SwiftUI then threw away.
+/// `TodoListScreen`'s copy of this box has the full reasoning. This copy is file-private
+/// and identical.
+private final class LazyViewModelBox<M: AnyObject> {
+    var model: M?
+}
+
+struct CalendarScreen: View {
+    private let pullRefreshEnabled: Bool
+    /// The view model's box and the one input it is built from. See `LazyViewModelBox`.
+    @State private var viewModelBox = LazyViewModelBox<CalendarViewModel>()
+    private let viewModelContainer: AppContainer
+    @Environment(\.tdayColors) private var colors
+    @Environment(\.dismiss) private var dismiss
+    /// Gates the day list's own motion — see `pendingDayAnimationKey`'s
+    /// `.animation(_:value:)`, `calendarDayListTransition()` and
+    /// `TdayFeedItemMotion.row(reduceMotion:)`.
+    @Environment(\.tdayAnimation) private var tdayAnimation
+    private let calendarAccentColor = Color.tdayCalendarPurple
+
+    @State private var selectedDate = Date()
+    @State private var visibleMonth = calendarMonthStart(for: Date())
+    @State private var displayMode: CalendarDisplayMode = .month
+    @State private var renderedDisplayMode: CalendarDisplayMode = .month
+    @State private var outgoingDisplayMode: CalendarDisplayMode?
+    @State private var calendarCardHeight: CGFloat = CalendarModeCardMetrics.monthHeight
+    @State private var calendarModeTransitionID = 0
+    @State private var calendarModeContentTransitionProgress: CGFloat = 1
+    @State private var showingCreateTask = false
+    @State private var editingTodo: TodoItem?
+    /// The title's collapse, boxed — see `CalendarTitleCollapseState`. This body hands the
+    /// box to the observer and the bar and never reads through it.
+    @State private var titleCollapse = CalendarTitleCollapseState()
+    @State private var todayJumpRequestID = 0
+    @State private var todayJumpRequest: CalendarTodayJumpRequest?
+    @State private var draggedTodo: TodoItem?
+    @State private var inAppDrag: CalendarInAppDrag?
+    @State private var activeDropDate: Date?
+    @State private var dropTargetRegistry = CalendarDropTargetRegistry()
+    @State private var pendingRescheduleDrop: CalendarTaskRescheduleDrop?
+    /// The screen's single swipe slot — see `TodoListScreen` for the shape and its one rule:
+    /// every dismissal is a WRITE to this and nothing else. No host `body` may read it, or a
+    /// cheap write becomes a full re-evaluation of the screen.
+    @State private var openSwipeTaskID: String?
+    @FocusState private var searchFieldFocused: Bool
+    @State private var searchExpanded = false
+    @State private var searchQuery = ""
+
+    init(container: AppContainer, pullRefreshEnabled: Bool = false) {
+        self.pullRefreshEnabled = pullRefreshEnabled
+        self.viewModelContainer = container
+    }
+
+    /// Built on first read, which is the first body pass, then served from the box. The
+    /// model still hydrates synchronously before the first frame. Never read this from
+    /// `init`: the box `init` sees is the throwaway.
+    private var viewModel: CalendarViewModel {
+        if let model = viewModelBox.model {
+            return model
+        }
+        let model = CalendarViewModel(container: viewModelContainer)
+        viewModelBox.model = model
+        return model
+    }
+
+    private var normalizedSearchQuery: String {
+        searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(with: .current)
+    }
+
+    private var isSearching: Bool {
+        searchExpanded && !normalizedSearchQuery.isEmpty
+    }
+
+    /// The dated tasks this screen is showing, and nothing else — the calendar
+    /// searches its own contents the way every other screen does.
+    ///
+    /// Everything downstream reads from here rather than from `viewModel.items`,
+    /// so a search narrows the grid's day counts too: the dots are then exactly
+    /// the days holding a match, which is what makes searching a calendar worth
+    /// anything.
+    private var searchedItems: [TodoItem] {
+        guard isSearching else {
+            return viewModel.items
+        }
+        return viewModel.items.filter { todo in
+            todo.title.lowercased(with: .current).contains(normalizedSearchQuery) ||
+                flattenNotesToPlainText(todo.description)
+                    .lowercased(with: .current)
+                    .contains(normalizedSearchQuery)
+        }
+    }
+
+    private var pendingItems: [TodoItem] {
+        searchedItems
+            .filter { todo in todo.due.map(isSelectedDay) ?? false }
+            .sorted(by: { ($0.due ?? .distantFuture) < ($1.due ?? .distantFuture) })
+    }
+
+    /// The day the list below is showing, normalised.
+    ///
+    /// `selectedDate` carries a time of day, and `isSelectedDay` already throws it
+    /// away when it filters. The list's identity has to throw it away too, or a
+    /// reselection of the same date at a different hour would replace a day with
+    /// itself and play the swap over rows that never changed.
+    private var selectedDayStart: Date {
+        Calendar.current.startOfDay(for: selectedDate)
+    }
+
+    /// What opens the day list's transaction: the day it is showing, and the rows
+    /// in it.
+    ///
+    /// The day is in the key because `.id(selectedDayStart)` is what actually
+    /// changes on a swap, and a transaction has to be keyed to the thing it is
+    /// carrying. The row ids alone would cover every swap that exists today — a
+    /// task has one due date, so two days never hold the same row — but that is a
+    /// property of the data rather than of this line, and it is not the property
+    /// the `.id()` depends on.
+    private var pendingDayAnimationKey: String {
+        let rowIDs = pendingItems.map(\.id).joined(separator: "|")
+        return "\(selectedDayStart.timeIntervalSinceReferenceDate)::\(rowIDs)"
+    }
+
+    private var pendingItemsByDay: [Date: [TodoItem]] {
+        Dictionary(grouping: searchedItems.filter { $0.due != nil }) { todo in
+            Calendar.current.startOfDay(for: todo.due ?? selectedDate)
+        }
+    }
+
+    private var calendarTaskRescheduleEnabled: Bool {
+        displayMode != .day
+    }
+
+    private var selectedDateHeaderText: String {
+        let formatter = DateFormatter()
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("EEE MMM d")
+        return formatter.string(from: selectedDate)
+    }
+
+    private func calendarModeCardHeight(for mode: CalendarDisplayMode) -> CGFloat {
+        switch mode {
+        case .month:
+            return CalendarModeCardMetrics.monthHeight
+        case .week, .day:
+            return CalendarModeCardMetrics.periodHeight
+        }
+    }
+
+    private var minimumNavigableMonth: Date {
+        calendarMonthStart(for: Date())
+    }
+
+    private var canGoPreviousMonth: Bool {
+        visibleMonth > minimumNavigableMonth
+    }
+
+    private var canGoPreviousWeek: Bool {
+        guard let previousWeek = Calendar.current.date(byAdding: .day, value: -7, to: selectedDate) else {
+            return false
+        }
+        return canNavigate(to: previousWeek)
+    }
+
+    private var canGoPreviousDay: Bool {
+        guard let previousDay = Calendar.current.date(byAdding: .day, value: -1, to: selectedDate) else {
+            return false
+        }
+        return canNavigate(to: previousDay)
+    }
+
+    var body: some View {
+        List {
+            Section {
+                CalendarViewModeTabs(
+                    selectedMode: displayMode,
+                    accentColor: calendarAccentColor,
+                    onSelect: { mode in
+                        selectCalendarMode(mode)
+                    }
+                )
+                .background {
+                    CalendarTitleCollapseScrollObserver(
+                        state: titleCollapse,
+                        collapseDistance: CalendarTitleHandoff.collapseDistance,
+                        sliderPartialSnapDistance: CalendarTitleHandoff.sliderPartialSnapDistance
+                    )
+                    .frame(width: 0, height: 0)
+                }
+                // The bar consumes the drag before the list is allowed to move,
+                // so the docked title's resting state has the list still at its
+                // top and the tabs sitting wherever this inset leaves them. The
+                // gap is what the timeline screens hang off their collapsing
+                // block: without it the tabs settle inside the fade band and
+                // their top half dissolves into the bar.
+                .listRowInsets(
+                    EdgeInsets(
+                        top: TodoTimelineMetrics.settledContentGap,
+                        leading: TodoTimelineMetrics.horizontalPadding,
+                        bottom: 14,
+                        trailing: TodoTimelineMetrics.horizontalPadding
+                    )
+                )
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+
+                calendarModeAndTaskSection
+                    .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                    .listRowBackground(colors.background)
+                    .listRowSeparator(.hidden)
+                    .listSectionSeparator(.hidden)
+            }
+        }
+        .listRowBackground(colors.background)
+        .listRowSeparator(.hidden)
+        .listSectionSeparator(.hidden)
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .scrollDisabled(inAppDrag != nil)
+        .contentMargins(.top, 0, for: .scrollContent)
+        .listRowSpacing(0)
+        .listSectionSpacing(0)
+        .environment(\.defaultMinListRowHeight, 1)
+        .disableVerticalScrollBounce()
+        .background(colors.background)
+        .tdayPullToRefresh(isRefreshing: viewModel.isLoading, isEnabled: pullRefreshEnabled) {
+            await viewModel.refresh(userInitiated: true)
+        }
+        .overlay {
+            EmptyTaskWatermark(
+                systemName: "calendar",
+                accentColor: calendarAccentColor,
+                assetName: "TileCalendar"
+            )
+        }
+        .onChange(of: displayMode) { _, mode in
+            if mode == .day {
+                cancelInAppDrag()
+            }
+        }
+        .onChange(of: viewModel.items.map(\.id)) { _, ids in
+            guard let openSwipeTaskID, !ids.contains(openSwipeTaskID) else { return }
+            self.openSwipeTaskID = nil
+        }
+        .onDisappear {
+            // Returning to a screen must never show an armed Delete pill — see
+            // `TodoListScreen`'s `.onDisappear` for why this is also iOS's answer to back.
+            openSwipeTaskID = nil
+        }
+        // The field only joins the hierarchy once the bar has swapped its row
+        // over, so focusing it in the same turn is dropped on the floor.
+        .onChange(of: searchExpanded) { _, expanded in
+            guard expanded else {
+                searchFieldFocused = false
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                if searchExpanded {
+                    searchFieldFocused = true
+                }
+            }
+        }
+        .overlay(alignment: .topLeading) {
+            GeometryReader { proxy in
+                if let inAppDrag {
+                    let rootFrame = proxy.frame(in: .global)
+                    let previewLocation = CGPoint(
+                        x: inAppDrag.location.x - rootFrame.minX,
+                        y: inAppDrag.location.y - rootFrame.minY
+                    )
+                    CalendarTaskDragPreview(todo: inAppDrag.todo)
+                        .position(x: previewLocation.x, y: previewLocation.y)
+                        .zIndex(20)
+                        .allowsHitTesting(false)
+                }
+            }
+            .allowsHitTesting(false)
+        }
+        // Tapping the content puts the field away, as it does on the root feeds.
+        // Sits above the bar's own safe-area inset, so the gesture only ever
+        // sees taps below the bar and never one on it.
+        .tdayClosesSearchOnOutsideTap(isSearchOpen: searchExpanded) {
+            closeSearch()
+        }
+        .navigationBackButtonBehavior()
+        .navigationTitleTypography(
+            largeTitleColor: calendarAccentColor,
+            inlineTitleColor: colors.onSurface,
+            backgroundColor: colors.background
+        )
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            calendarTopInset
+        }
+        .safeAreaInset(edge: .bottom) {
+            TaskFloatingActionButtonDock(
+                fillColor: calendarAccentColor,
+                pressedShadowOpacity: 0.09,
+                normalShadowOpacity: 0.16
+            ) {
+                showingCreateTask = true
+            }
+        }
+        .createTaskSheet(isPresented: $showingCreateTask) {
+            CreateTaskSheet(
+                lists: viewModel.lists,
+                titleText: L("New task"),
+                submitText: L("Create"),
+                initialPayload: CreateTaskPayload(title: "", description: nil, priority: TaskPriorityDisplay.normalValue, due: selectedDate, rrule: nil, listId: nil),
+                onParseTaskTitleNlp: { title, dueRef in
+                    await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
+                },
+                onDismiss: { showingCreateTask = false },
+                onSubmit: { payload in
+                    await viewModel.createTask(payload)
+                }
+            )
+        }
+        .createTaskSheet(item: $editingTodo) { todo in
+            CreateTaskSheet(
+                lists: viewModel.lists,
+                titleText: L("Edit task"),
+                submitText: L("Save"),
+                initialPayload: CreateTaskPayload(title: todo.title, description: todo.description, priority: todo.priority, due: todo.due, rrule: todo.rrule, listId: todo.listId),
+                isEditingExistingTask: true,
+                onParseTaskTitleNlp: { title, dueRef in
+                    await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
+                },
+                onDismiss: { editingTodo = nil },
+                onSubmit: { payload in
+                    await viewModel.updateTask(todo, payload: payload)
+                }
+            )
+        }
+        .confirmationDialog(
+            "Move repeating task?",
+            isPresented: Binding(
+                get: { pendingRescheduleDrop != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        pendingRescheduleDrop = nil
+                    }
+                }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("This occurrence") {
+                commitPendingReschedule(scope: .occurrence)
+            }
+            Button("Entire series") {
+                commitPendingReschedule(scope: .series)
+            }
+            Button("Cancel", role: .cancel) {
+                pendingRescheduleDrop = nil
+            }
+        } message: {
+            Text("Choose whether to move only this task occurrence or the entire repeating series.")
+        }
+        // Same bargain as the task timeline: the only field on this screen is the
+        // search box in the top safe-area inset, which the keyboard cannot reach,
+        // so keyboard avoidance had nothing to protect and only shortened the
+        // month's region — carrying the centred empty scene up with it.
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+    }
+
+    private var calendarTopInset: some View {
+        CalendarElasticTopBar(
+            title: "Calendar",
+            accentColor: calendarAccentColor,
+            collapse: titleCollapse,
+            onBack: { dismiss() },
+            actionLabel: L("Today"),
+            action: TimelineTopBarAction(
+                systemName: "calendar",
+                tint: calendarAccentColor,
+                usesCircularChrome: true,
+                action: jumpToToday
+            ),
+            onSearchOpen: openSearch,
+            searchActive: searchExpanded,
+            searchText: $searchQuery,
+            searchPlaceholder: L("Search in %@", L("Calendar")),
+            searchFieldFocused: $searchFieldFocused,
+            onSearchClose: closeSearch
+        )
+    }
+
+    private func openSearch() {
+        HapticManager.buttonPress()
+        withAnimation(TdayMotion.snappy) {
+            searchExpanded = true
+        }
+    }
+
+    /// Leaving the search drops the query with it, so the calendar is whole
+    /// again the next time the bar is opened — the same bargain web's close
+    /// makes.
+    private func closeSearch() {
+        HapticManager.buttonPress()
+        searchFieldFocused = false
+        withAnimation(TdayMotion.snappy) {
+            searchExpanded = false
+        }
+        searchQuery = ""
+    }
+
+    private var calendarModeAndTaskSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            animatedCalendarModeCard
+                .padding(.bottom, CalendarModeCardMetrics.shadowBleed)
+
+            if let errorMessage = viewModel.errorMessage {
+                ErrorRetryView(message: errorMessage) {
+                    Task { await viewModel.refresh() }
+                }
+                .padding(.bottom, 12)
+            }
+
+            Text("Tasks due \(selectedDateHeaderText)")
+                .font(.tdayRounded(size: 22, weight: .heavy))
+                .foregroundStyle(colors.onSurface)
+                .textCase(nil)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+
+            pendingTaskRows
+        }
+    }
+
+    private var pendingTaskRows: some View {
+        // The transaction, hung on the `Group` and NOT inside the `if`. A modifier
+        // written inside the branch is part of that branch, so the update that
+        // empties the day takes it out of the tree in the same pass it takes the
+        // rows out — nothing is open at the moment the removal is decided, and the
+        // list, the `.id()` swap below and the rows' own `.transition` legs are all
+        // inert. Out here it outlives both states of the branch, which is the only
+        // position from which it can animate either.
+        Group {
+            if !pendingItems.isEmpty {
+                VStack(spacing: CalendarTaskListMetrics.rowSpacing) {
+                    ForEach(pendingItems) { todo in
+                        CalendarPendingTaskRow(
+                            todo: todo,
+                            list: todo.listId.flatMap { listId in
+                                viewModel.lists.first(where: { $0.id == listId })
+                            },
+                            onComplete: {
+                                // Any completion clears the slot, not only this row's: the
+                                // toggle is a `Button` inside the row's content, so it eats the
+                                // touch and the reveal's own `.onTapGesture` never runs. See
+                                // `TodoListScreen.completeTodoWithoutReflow` for the argument.
+                                openSwipeTaskID = nil
+                                Task { await viewModel.complete(todo) }
+                            }
+                        )
+                        .opacity(draggedTodo?.id == todo.id ? 0.7 : 1)
+                        .background(colors.background)
+                        .modifier(
+                            CalendarInAppDragModifier(
+                                enabled: calendarTaskRescheduleEnabled,
+                                todo: todo,
+                                onStart: beginInAppDrag,
+                                onMove: updateInAppDrag,
+                                onEnd: finishInAppDrag,
+                                onCancel: cancelInAppDrag
+                            )
+                        )
+                        .todoTrailingSwipeActions(
+                            rowID: todo.id,
+                            openRowID: $openSwipeTaskID,
+                            onEdit: {
+                                editingTodo = todo
+                            },
+                            onCopy: {
+                                viewModel.copyToClipboard(todo)
+                            },
+                            onDelete: {
+                                Task { await viewModel.delete(todo) }
+                            }
+                        )
+                        // Edits to the day being shown: one row added, one
+                        // completed away, the rest travelling. These are feed
+                        // items, and the `ForEach`'s `id` keeps them addressable
+                        // across such an edit.
+                        .transition(TdayFeedItemMotion.row(reduceMotion: !tdayAnimation.isEnabled))
+                    }
+                }
+                // Identity, and the half the rungs alone could not fix. Without
+                // it a day swap is not one event: the `ForEach` sees the outgoing
+                // day's ids leave and the incoming day's ids arrive as one diff,
+                // so every row of both days transitions at once over the same
+                // pixels and the result is illegible. With it there are exactly
+                // two views to sequence — the day that is going and the day that
+                // is coming — which is what `calendarDayListTransition()` needs
+                // in order to sequence anything at all.
+                .id(selectedDayStart)
+                .transition(calendarDayListTransition())
+            } else {
+                // Deliberately not gated on `viewModel.isLoading`. Nothing on this
+                // screen loads on appear: `CalendarViewModel.init` hydrates from the
+                // cache synchronously, so `items` is the truth from the first frame
+                // and the flag is raised by exactly one thing — `refresh()`, a
+                // user-initiated force sync over a cache that is already populated.
+                // A sync in flight therefore never makes the day's emptiness less
+                // true, and the gate was not withholding a premature answer but
+                // hiding a correct one: the scene blanked for the whole round trip
+                // and left the card sitting over nothing but the watermark.
+                //
+                // The web twin never had the gate: `CalendarClient.tsx` picks the
+                // day's empty panel on `selectedDayTasks.length` alone and puts the
+                // fetch on a small spinner badge in the corner instead, so the panel
+                // stays put across a refetch. This now matches it.
+                // The same swap, ordered the same way: a day with nothing on it is
+                // still a day arriving, and it has no more business being drawn
+                // over the day it replaced than a populated one does.
+                calendarDayEmptyState
+                    .padding(.vertical, 16)
+                    .transition(calendarDayListTransition())
+            }
+        }
+        .animation(
+            tdayAnimation(TdayFeedItemMotion.placement),
+            value: pendingDayAnimationKey
+        )
+    }
+
+    /// The transition a whole day's list is swapped on — ordering, which is the
+    /// other half of what the `.id()` above buys.
+    ///
+    /// Deliberately not `TdayFeedItemMotion.row`. A row's arrival and departure are
+    /// concurrent on purpose: they happen to different rows, in different places,
+    /// while the feed stays the same feed. A day swap is the opposite — one list
+    /// replaces another in the same slot, so the two occupy the same pixels for
+    /// the whole of it, and played together they read as one stack of rows nobody
+    /// can parse rather than as two days. So they are sequenced: the day that is
+    /// going leaves on the feed's departure rung, and the day that is arriving
+    /// waits exactly that long before it starts. At no frame is there more than
+    /// one day on screen. The delay is `Durations.departure` itself rather than a
+    /// number of its own, because what it has to match is that leg and nothing
+    /// else — write 0.15 here and the two drift apart the first time the rung moves.
+    ///
+    /// And no `.move(edge:)`: the rows are not travelling anywhere, the day
+    /// underneath them changed. Sliding both days down from the top through each
+    /// other was the other half of the mush.
+    ///
+    /// Reduced motion collapses it to `.identity` — the finished state drawn
+    /// directly, which at a day swap is the new day, already there. The travel is
+    /// refused separately, on the `.animation(_:value:)` above; see
+    /// `TdayFeedItemMotion.row(reduceMotion:)` for why a transition cannot turn off
+    /// a transaction it did not open.
+    private func calendarDayListTransition() -> AnyTransition {
+        guard tdayAnimation.isEnabled else {
+            return .identity
+        }
+        return .asymmetric(
+            insertion: AnyTransition.opacity.animation(
+                TdayFeedItemMotion.arrival.delay(TdayFeedItemMotion.Durations.departure)
+            ),
+            removal: AnyTransition.opacity.animation(TdayFeedItemMotion.departure)
+        )
+    }
+
+    /// The day's list has nothing in it. Under a search that means nothing on
+    /// *this* day matched — the grid above is still pointing at the days that
+    /// did, so the way out is another date or another word.
+    @ViewBuilder
+    private var calendarDayEmptyState: some View {
+        if isSearching {
+            TdayEmptyState(
+                assetName: "NavSearch",
+                accentColor: calendarAccentColor,
+                title: L("No matching tasks"),
+                description: L("Try a different word, or clear the search."),
+                action: AnyView(
+                    Button {
+                        HapticManager.buttonPress()
+                        searchQuery = ""
+                        searchFieldFocused = true
+                    } label: {
+                        Text(L("Clear search"))
+                            .font(.tdayRounded(size: 15, weight: .bold))
+                            .foregroundStyle(colors.primary)
+                    }
+                    .buttonStyle(.plain)
+                )
+            )
+        } else {
+            TdayEmptyState(
+                assetName: "LucideCalendar",
+                accentColor: calendarAccentColor,
+                title: L("No tasks due this day"),
+                description: L("Select another date on the calendar.")
+            )
+        }
+    }
+
+    private var animatedCalendarModeCard: some View {
+        ZStack(alignment: .top) {
+            if let outgoingDisplayMode {
+                calendarModeLayer(for: outgoingDisplayMode)
+                    .id("calendar-mode-outgoing-\(outgoingDisplayMode.rawValue)-\(calendarModeTransitionID)")
+                    .opacity(Double(1 - calendarModeContentTransitionProgress))
+                    .allowsHitTesting(false)
+            }
+
+            calendarModeLayer(for: renderedDisplayMode)
+                .id("calendar-mode-incoming-\(renderedDisplayMode.rawValue)-\(calendarModeTransitionID)")
+                .opacity(Double(calendarModeContentTransitionProgress))
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: calendarCardHeight, alignment: .top)
+        .clipped()
+        .modifier(CalendarCardChromeModifier())
+    }
+
+    private func calendarModeLayer(for mode: CalendarDisplayMode) -> some View {
+        calendarModeContent(for: mode)
+            .transaction { transaction in
+                transaction.animation = nil
+                transaction.disablesAnimations = true
+            }
+            .frame(maxWidth: .infinity)
+    }
+
+    private func selectCalendarMode(_ mode: CalendarDisplayMode) {
+        guard mode != displayMode else { return }
+        TdayTelemetry.addBreadcrumb(
+            "calendar.mode",
+            data: ["mode": mode.rawValue]
+        )
+
+        let targetHeight = calendarModeCardHeight(for: mode)
+        let previousRenderedMode = renderedDisplayMode
+        let shouldCrossfadeContent = previousRenderedMode != mode
+        calendarModeTransitionID += 1
+        let transitionID = calendarModeTransitionID
+        var contentTransaction = Transaction()
+        contentTransaction.disablesAnimations = true
+        withTransaction(contentTransaction) {
+            displayMode = mode
+            if mode != .month {
+                visibleMonth = calendarMonthStart(for: selectedDate)
+            }
+            if shouldCrossfadeContent {
+                outgoingDisplayMode = previousRenderedMode
+                renderedDisplayMode = mode
+                calendarModeContentTransitionProgress = 0
+            } else {
+                outgoingDisplayMode = nil
+                renderedDisplayMode = mode
+                calendarModeContentTransitionProgress = 1
+            }
+        }
+
+        if abs(calendarCardHeight - targetHeight) > 0.5 {
+            withAnimation(calendarModeResizeAnimation) {
+                calendarCardHeight = targetHeight
+            }
+        }
+
+        guard shouldCrossfadeContent else {
+            return
+        }
+
+        withAnimation(calendarModeContentTransitionAnimation) {
+            calendarModeContentTransitionProgress = 1
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + calendarModeTransitionCleanupDelay) {
+            guard calendarModeTransitionID == transitionID else {
+                return
+            }
+            var contentTransaction = Transaction()
+            contentTransaction.disablesAnimations = true
+            withTransaction(contentTransaction) {
+                outgoingDisplayMode = nil
+                calendarModeContentTransitionProgress = 1
+            }
+        }
+    }
+
+    private func isSelectedDay(_ date: Date) -> Bool {
+        Calendar.current.isDate(date, inSameDayAs: selectedDate)
+    }
+
+    @ViewBuilder
+    private func calendarModeContent(for mode: CalendarDisplayMode) -> some View {
+        switch mode {
+        case .month:
+            CalendarMonthGrid(
+                visibleMonth: visibleMonth,
+                selectedDate: selectedDate,
+                tasksByDay: pendingItemsByDay,
+                accentColor: calendarAccentColor,
+                draggedTodo: draggedTodo,
+                activeDropDate: activeDropDate,
+                canGoPreviousMonth: canGoPreviousMonth,
+                minimumNavigableMonth: minimumNavigableMonth,
+                todayJumpRequest: todayJumpRequest,
+                onPreviousMonth: { navigateMonth(by: -1) },
+                onNextMonth: { navigateMonth(by: 1) },
+                onSelectDate: { selectDate($0) },
+                onDropDateChange: { activeDropDate = $0 },
+                onMoveTaskToDate: { todo, date in requestReschedule(todo, to: date) },
+                resolveTodo: resolveTodoForDrop,
+                dropTargetRegistry: dropTargetRegistry
+            )
+        case .week:
+            CalendarWeekCard(
+                selectedDate: selectedDate,
+                today: Date(),
+                tasksByDay: pendingItemsByDay,
+                accentColor: calendarAccentColor,
+                draggedTodo: draggedTodo,
+                activeDropDate: activeDropDate,
+                canGoPreviousWeek: canGoPreviousWeek,
+                canSelectDate: { canNavigate(to: $0) },
+                todayJumpRequest: todayJumpRequest,
+                onPreviousWeek: { navigateDay(by: -7) },
+                onNextWeek: { navigateDay(by: 7) },
+                onSelectDate: { selectDate($0) },
+                onDropDateChange: { activeDropDate = $0 },
+                onMoveTaskToDate: { todo, date in requestReschedule(todo, to: date) },
+                resolveTodo: resolveTodoForDrop,
+                dropTargetRegistry: dropTargetRegistry
+            )
+        case .day:
+            CalendarDayCard(
+                selectedDate: selectedDate,
+                today: Date(),
+                tasksByDay: pendingItemsByDay,
+                accentColor: calendarAccentColor,
+                canGoPreviousDay: canGoPreviousDay,
+                canSelectDate: { canNavigate(to: $0) },
+                todayJumpRequest: todayJumpRequest,
+                onPreviousDay: { navigateDay(by: -1) },
+                onNextDay: { navigateDay(by: 1) },
+                onSelectDate: { selectDate($0) }
+            )
+        }
+    }
+
+    private func canNavigate(to date: Date) -> Bool {
+        calendarMonthStart(for: date) >= minimumNavigableMonth
+    }
+
+    private func selectDate(_ date: Date) {
+        guard canNavigate(to: date) else { return }
+        selectedDate = date
+        visibleMonth = calendarMonthStart(for: date)
+    }
+
+    private func navigateMonth(by value: Int) {
+        guard value >= 0 || canGoPreviousMonth else { return }
+        guard let targetMonth = Calendar.current.date(byAdding: .month, value: value, to: visibleMonth) else {
+            return
+        }
+        visibleMonth = calendarMonthStart(for: targetMonth)
+    }
+
+    private func navigateDay(by value: Int) {
+        guard let targetDate = Calendar.current.date(byAdding: .day, value: value, to: selectedDate) else {
+            return
+        }
+        selectDate(targetDate)
+    }
+
+    private func jumpToToday() {
+        todayJumpRequestID += 1
+        TdayTelemetry.addBreadcrumb(
+            "calendar.today",
+            data: ["mode": displayMode.rawValue]
+        )
+        todayJumpRequest = CalendarTodayJumpRequest(id: todayJumpRequestID, targetDate: Date())
+    }
+
+    private func requestReschedule(_ todo: TodoItem, to targetDate: Date) {
+        draggedTodo = nil
+        inAppDrag = nil
+        activeDropDate = nil
+        CalendarTaskDragSession.shared.todo = nil
+        let targetDay = Calendar.current.startOfDay(for: targetDate)
+        let dropSignature = "\(todo.id)|\(targetDay.timeIntervalSince1970)"
+        guard CalendarTaskDragSession.shared.handledDropSignature != dropSignature else {
+            return
+        }
+        CalendarTaskDragSession.shared.handledDropSignature = dropSignature
+        guard !calendarTaskAlreadyDueOnDate(todo, targetDay) else {
+            return
+        }
+
+        TdayTelemetry.addBreadcrumb(
+            "calendar.drag_reschedule",
+            data: [
+                "mode": displayMode.rawValue,
+                "recurring": todo.isRecurring
+            ]
+        )
+        HapticManager.dragDrop()
+        if todo.isRecurring {
+            pendingRescheduleDrop = CalendarTaskRescheduleDrop(todo: todo, targetDate: targetDay)
+        } else {
+            Task {
+                // Keep the user on the date they're viewing; don't jump to the drop target.
+                await viewModel.moveTask(todo, toDay: targetDay, scope: .occurrence)
+            }
+        }
+    }
+
+    private func resolveTodoForDrop(id: String) -> TodoItem? {
+        viewModel.items.first { $0.id == id || $0.canonicalId == id }
+    }
+
+    private func beginInAppDrag(_ todo: TodoItem, at location: CGPoint) {
+        openSwipeTaskID = nil
+        dropTargetRegistry.removeAll()
+        if draggedTodo?.id != todo.id {
+            HapticManager.dragPickUp()
+        }
+        draggedTodo = todo
+        CalendarTaskDragSession.shared.todo = todo
+        CalendarTaskDragSession.shared.handledDropSignature = nil
+        inAppDrag = CalendarInAppDrag(todo: todo, location: location)
+        updateInAppDrag(todo, to: location)
+    }
+
+    private func updateInAppDrag(_ todo: TodoItem, to location: CGPoint) {
+        inAppDrag = CalendarInAppDrag(todo: todo, location: location)
+        activeDropDate = dropDate(at: location, for: todo)
+    }
+
+    private func finishInAppDrag(_ todo: TodoItem, at location: CGPoint?) {
+        let fallbackDate = activeDropDate.flatMap { date in
+            calendarTaskAlreadyDueOnDate(todo, date) ? nil : date
+        }
+        let targetDate = location.flatMap { dropDate(at: $0, for: todo) } ?? fallbackDate
+        dropTargetRegistry.removeAll()
+        activeDropDate = nil
+        draggedTodo = nil
+        inAppDrag = nil
+        if let targetDate {
+            requestReschedule(todo, to: targetDate)
+        } else {
+            CalendarTaskDragSession.shared.todo = nil
+        }
+    }
+
+    private func cancelInAppDrag() {
+        dropTargetRegistry.removeAll()
+        activeDropDate = nil
+        draggedTodo = nil
+        inAppDrag = nil
+        CalendarTaskDragSession.shared.todo = nil
+    }
+
+    private func dropDate(at location: CGPoint, for todo: TodoItem?) -> Date? {
+        dropTargetRegistry.targets
+            .filter { $0.frame.contains(location) }
+            .filter { target in
+                guard let todo else { return true }
+                return !calendarTaskAlreadyDueOnDate(todo, target.date)
+            }
+            .min { lhs, rhs in
+                (lhs.frame.width * lhs.frame.height) < (rhs.frame.width * rhs.frame.height)
+            }
+            .map { Calendar.current.startOfDay(for: $0.date) }
+    }
+
+    private func commitPendingReschedule(scope: TaskRescheduleScope) {
+        guard let drop = pendingRescheduleDrop else {
+            return
+        }
+        pendingRescheduleDrop = nil
+        Task {
+            // Keep the user on the date they're viewing; don't jump to the drop target.
+            await viewModel.moveTask(drop.todo, toDay: drop.targetDate, scope: scope)
+        }
+    }
+}
+
+private struct CalendarViewModeTabs: View {
+    let selectedMode: CalendarDisplayMode
+    let accentColor: Color
+    let onSelect: (CalendarDisplayMode) -> Void
+
+    var body: some View {
+        let modes = CalendarDisplayMode.allCases
+
+        TdayNativeSegmentedControl(
+            labels: modes.map { $0.rawValue.capitalized },
+            selectedIndex: modes.firstIndex(of: selectedMode) ?? 0,
+            accentColor: accentColor,
+            onSelect: { index in
+                guard modes.indices.contains(index) else {
+                    return
+                }
+                onSelect(modes[index])
+            }
+        )
+        .frame(maxWidth: .infinity)
+        .frame(height: TdayNativeSegmentedControlMetrics.height)
+    }
+}
+
+private struct CalendarMonthGrid: View {
+    let visibleMonth: Date
+    let selectedDate: Date
+    let tasksByDay: [Date: [TodoItem]]
+    let accentColor: Color
+    let draggedTodo: TodoItem?
+    let activeDropDate: Date?
+    let canGoPreviousMonth: Bool
+    let minimumNavigableMonth: Date
+    let todayJumpRequest: CalendarTodayJumpRequest?
+    let onPreviousMonth: () -> Void
+    let onNextMonth: () -> Void
+    let onSelectDate: (Date) -> Void
+    let onDropDateChange: (Date?) -> Void
+    let onMoveTaskToDate: (TodoItem, Date) -> Void
+    let resolveTodo: (String) -> TodoItem?
+    let dropTargetRegistry: CalendarDropTargetRegistry
+
+    @Environment(\.tdayColors) private var colors
+    @State private var pageSelection = calendarNativePagerCenterIndex
+    @State private var pendingTodayJump: CalendarTodayJumpRequest?
+
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
+
+    private func monthTitle(for month: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("MMMM yyyy")
+        return formatter.string(from: month)
+    }
+
+    private var weekdaySymbols: [String] {
+        var calendar = Calendar.current
+        calendar.locale = AppLocale.current
+        return calendar.veryShortStandaloneWeekdaySymbols.map { $0.uppercased() }
+    }
+
+    var body: some View {
+        let displayMonth = calendarMonthStart(for: visibleMonth)
+        monthContent(for: displayMonth)
+            .onChange(of: todayJumpRequest) { _, request in handleTodayJump(request, from: displayMonth) }
+            .onChange(of: displayMonth) { _, _ in resetPageSelection() }
+    }
+
+    private func monthContent(for displayMonth: Date) -> some View {
+        let canGoPrevious = calendarMonthStart(for: displayMonth) > minimumNavigableMonth
+        let previousMonth = canGoPrevious ? calendarMonth(byAdding: -1, to: displayMonth) : nil
+        let nextMonth = calendarMonth(byAdding: 1, to: displayMonth)
+        let jumpDirection = todayJumpDirection(from: displayMonth)
+        let previousPageMonth = jumpDirection == .previous ? pendingTodayJump.map { calendarMonthStart(for: $0.targetDate) } : previousMonth
+        let nextPageMonth = jumpDirection == .next ? pendingTodayJump.map { calendarMonthStart(for: $0.targetDate) } : nextMonth
+        let isPagingAtRest = pageSelection == calendarNativePagerCenterIndex
+        let isPreviousEnabled = canGoPrevious && isPagingAtRest
+        let isNextEnabled = isPagingAtRest
+        return VStack(spacing: CalendarPeriodCardMetrics.contentSpacing) {
+            HStack {
+                CalendarNavButton(
+                    systemName: "chevron.left",
+                    isEnabled: isPreviousEnabled,
+                    color: colors.onSurfaceVariant,
+                    action: goToPreviousPage
+                )
+
+                Spacer(minLength: 0)
+
+                Text(monthTitle(for: displayMonth))
+                    .font(.tdayRounded(size: 21, weight: .heavy))
+                    .foregroundStyle(colors.onSurface)
+
+                Spacer(minLength: 0)
+
+                CalendarNavButton(
+                    systemName: "chevron.right",
+                    isEnabled: isNextEnabled,
+                    color: colors.onSurfaceVariant,
+                    action: goToNextPage
+                )
+            }
+            .frame(height: CalendarPeriodCardMetrics.headerHeight)
+            .padding(.horizontal, CalendarPeriodCardMetrics.headerHorizontalPadding)
+
+            VStack(spacing: CalendarMonthGridMetrics.spacing) {
+                HStack(spacing: 0) {
+                    ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
+                        Text(symbol)
+                            .font(.tdayRounded(size: 12, weight: .heavy))
+                            .foregroundStyle(colors.onSurfaceVariant.opacity(0.48))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: CalendarMonthGridMetrics.weekdayHeight)
+                    }
+                }
+
+                CalendarPagingScrollView(
+                    pages: monthPages(
+                        previousMonth: previousPageMonth,
+                        displayMonth: displayMonth,
+                        nextMonth: nextPageMonth
+                    ),
+                    selection: $pageSelection,
+                    onSettledSelection: settlePageSelection
+                )
+                .frame(height: CalendarMonthGridMetrics.height)
+            }
+        }
+        .padding(.horizontal, CalendarPeriodCardMetrics.horizontalPadding)
+        .padding(.top, CalendarPeriodCardMetrics.topPadding)
+        .padding(.bottom, CalendarMonthGridMetrics.cardBottomPadding)
+        .frame(maxWidth: .infinity)
+    }
+
+    private func monthGrid(for displayMonth: Date) -> some View {
+        // Scope drop-target keys to the pager page: leading/trailing dates also appear on the
+        // pre-mounted adjacent page, which must not overwrite this page's frames.
+        let pageKey = "month-\(calendarMonthStart(for: displayMonth).timeIntervalSince1970)"
+        return LazyVGrid(columns: columns, spacing: CalendarMonthGridMetrics.spacing) {
+            ForEach(Self.makeDays(for: displayMonth)) { day in
+                let dayTasks = tasksByDay[Calendar.current.startOfDay(for: day.date)].orEmpty
+                let dropEligibleDraggedTodo = draggedTodo.flatMap { todo in
+                    calendarTaskAlreadyDueOnDate(todo, day.date) ? nil : todo
+                }
+                CalendarMonthDayCell(
+                    day: day,
+                    isSelected: Calendar.current.isDate(day.date, inSameDayAs: selectedDate),
+                    isToday: Calendar.current.isDateInToday(day.date),
+                    isEnabled: canSelectDate(day.date),
+                    isDropTarget: (activeDropDate.map { Calendar.current.isDate($0, inSameDayAs: day.date) } ?? false) &&
+                        (draggedTodo == nil || dropEligibleDraggedTodo != nil),
+                    taskCount: dayTasks.count,
+                    accentColor: accentColor,
+                    draggedTodo: dropEligibleDraggedTodo,
+                    onSelectDate: onSelectDate,
+                    onDropDateChange: onDropDateChange,
+                    onMoveTaskToDate: onMoveTaskToDate,
+                    resolveTodo: resolveTodo,
+                    dropTargetRegistry: dropTargetRegistry,
+                    dropTargetPageKey: pageKey
+                )
+            }
+        }
+    }
+
+    private func canSelectDate(_ date: Date) -> Bool {
+        calendarMonthStart(for: date) >= minimumNavigableMonth
+    }
+
+    private func monthPages(previousMonth: Date?, displayMonth: Date, nextMonth: Date?) -> [CalendarPagerPage] {
+        var pages: [CalendarPagerPage] = []
+
+        if let previousMonth {
+            pages.append(CalendarPagerPage(id: 0, content: AnyView(monthGrid(for: previousMonth))))
+        }
+
+        pages.append(CalendarPagerPage(id: calendarNativePagerCenterIndex, content: AnyView(monthGrid(for: displayMonth))))
+
+        if let nextMonth {
+            pages.append(CalendarPagerPage(id: 2, content: AnyView(monthGrid(for: nextMonth))))
+        }
+
+        return pages
+    }
+
+    private func resetPageSelection() {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            pageSelection = calendarNativePagerCenterIndex
+        }
+    }
+
+    private func goToPreviousPage() {
+        guard pageSelection == calendarNativePagerCenterIndex else { return }
+        pageSelection = 0
+    }
+
+    private func goToNextPage() {
+        guard pageSelection == calendarNativePagerCenterIndex else { return }
+        pageSelection = 2
+    }
+
+    private func settlePageSelection(_ selection: Int) {
+        guard selection != calendarNativePagerCenterIndex else { return }
+        if let pendingTodayJump {
+            self.pendingTodayJump = nil
+            onSelectDate(pendingTodayJump.targetDate)
+            resetPageSelection()
+            return
+        }
+
+        if selection < calendarNativePagerCenterIndex {
+            TdayTelemetry.addBreadcrumb(
+                "calendar.page",
+                data: ["mode": "month", "direction": "previous"]
+            )
+            onPreviousMonth()
+        } else {
+            TdayTelemetry.addBreadcrumb(
+                "calendar.page",
+                data: ["mode": "month", "direction": "next"]
+            )
+            onNextMonth()
+        }
+        resetPageSelection()
+    }
+
+    private func handleTodayJump(_ request: CalendarTodayJumpRequest?, from displayMonth: Date) {
+        guard let request else { return }
+        guard pageSelection == calendarNativePagerCenterIndex else { return }
+
+        let targetMonth = calendarMonthStart(for: request.targetDate)
+        guard targetMonth != displayMonth else {
+            onSelectDate(request.targetDate)
+            resetPageSelection()
+            return
+        }
+
+        pendingTodayJump = request
+        pageSelection = targetMonth < displayMonth ? CalendarPagerDirection.previous.pageIndex : CalendarPagerDirection.next.pageIndex
+    }
+
+    private func todayJumpDirection(from displayMonth: Date) -> CalendarPagerDirection? {
+        guard let pendingTodayJump else { return nil }
+        let targetMonth = calendarMonthStart(for: pendingTodayJump.targetDate)
+        if targetMonth < displayMonth {
+            return .previous
+        }
+        if targetMonth > displayMonth {
+            return .next
+        }
+        return nil
+    }
+
+    private static func makeDays(for month: Date) -> [CalendarMonthDay] {
+        let calendar = Calendar.current
+        let monthStartComponents = calendar.dateComponents([.year, .month], from: month)
+        let monthStart = calendar.date(from: monthStartComponents) ?? month
+        let firstWeekday = calendar.component(.weekday, from: monthStart)
+        let leadingDays = firstWeekday - 1
+        let gridStart = calendar.date(byAdding: .day, value: -leadingDays, to: monthStart) ?? monthStart
+
+        return (0..<42).compactMap { offset in
+            guard let date = calendar.date(byAdding: .day, value: offset, to: gridStart) else {
+                return nil
+            }
+            return CalendarMonthDay(
+                date: date,
+                isCurrentMonth: calendar.isDate(date, equalTo: monthStart, toGranularity: .month)
+            )
+        }
+    }
+}
+
+private struct CalendarWeekCard: View {
+    let selectedDate: Date
+    let today: Date
+    let tasksByDay: [Date: [TodoItem]]
+    let accentColor: Color
+    let draggedTodo: TodoItem?
+    let activeDropDate: Date?
+    let canGoPreviousWeek: Bool
+    let canSelectDate: (Date) -> Bool
+    let todayJumpRequest: CalendarTodayJumpRequest?
+    let onPreviousWeek: () -> Void
+    let onNextWeek: () -> Void
+    let onSelectDate: (Date) -> Void
+    let onDropDateChange: (Date?) -> Void
+    let onMoveTaskToDate: (TodoItem, Date) -> Void
+    let resolveTodo: (String) -> TodoItem?
+    let dropTargetRegistry: CalendarDropTargetRegistry
+
+    @Environment(\.tdayColors) private var colors
+    @State private var pageSelection = calendarNativePagerCenterIndex
+    @State private var pendingTodayJump: CalendarTodayJumpRequest?
+
+    var body: some View {
+        let displaySelectedDate = Calendar.current.startOfDay(for: selectedDate)
+        weekContent(for: displaySelectedDate)
+            .onChange(of: todayJumpRequest) { _, request in handleTodayJump(request, from: displaySelectedDate) }
+            .onChange(of: displaySelectedDate) { _, _ in resetPageSelection() }
+    }
+
+    private func weekContent(for displaySelectedDate: Date) -> some View {
+        let weekStart = calendarStartOfWeek(for: displaySelectedDate)
+        let previousWeekDate = calendarDate(byAddingDays: -7, to: displaySelectedDate)
+        let nextWeekDate = calendarDate(byAddingDays: 7, to: displaySelectedDate)
+        let canGoPrevious = previousWeekDate.map(canSelectDate) ?? false
+        let jumpDirection = todayJumpDirection(from: displaySelectedDate)
+        let previousPageWeekDate = jumpDirection == .previous ? pendingTodayJump?.targetDate : previousWeekDate
+        let nextPageWeekDate = jumpDirection == .next ? pendingTodayJump?.targetDate : nextWeekDate
+        let isPagingAtRest = pageSelection == calendarNativePagerCenterIndex
+        return VStack(spacing: CalendarPeriodCardMetrics.contentSpacing) {
+            HStack {
+                CalendarNavButton(
+                    systemName: "chevron.left",
+                    isEnabled: canGoPrevious && isPagingAtRest,
+                    color: colors.onSurfaceVariant,
+                    action: goToPreviousPage
+                )
+
+                Spacer(minLength: 0)
+
+                Text(calendarWeekRangeText(from: weekStart))
+                    .font(.tdayRounded(size: 21, weight: .heavy))
+                    .foregroundStyle(colors.onSurface)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+
+                Spacer(minLength: 0)
+
+                CalendarNavButton(
+                    systemName: "chevron.right",
+                    isEnabled: isPagingAtRest,
+                    color: colors.onSurfaceVariant,
+                    action: goToNextPage
+                )
+            }
+            .frame(height: CalendarPeriodCardMetrics.headerHeight)
+            .padding(.horizontal, CalendarPeriodCardMetrics.headerHorizontalPadding)
+
+            CalendarPagingScrollView(
+                pages: weekPages(
+                    previousWeekDate: jumpDirection == .previous ? previousPageWeekDate : (canGoPrevious ? previousPageWeekDate : nil),
+                    displaySelectedDate: displaySelectedDate,
+                    nextWeekDate: nextPageWeekDate
+                ),
+                selection: $pageSelection,
+                onSettledSelection: settlePageSelection
+            )
+            .frame(height: CalendarPeriodCardMetrics.pageHeight)
+        }
+        .padding(.horizontal, CalendarPeriodCardMetrics.horizontalPadding)
+        .padding(.top, CalendarPeriodCardMetrics.topPadding)
+        .padding(.bottom, CalendarPeriodCardMetrics.bottomPadding)
+        .frame(maxWidth: .infinity)
+    }
+
+    private func weekDaysRow(for displaySelectedDate: Date) -> some View {
+        let weekStart = calendarStartOfWeek(for: displaySelectedDate)
+        let weekDays = (0..<7).compactMap { Calendar.current.date(byAdding: .day, value: $0, to: weekStart) }
+        // Scope drop-target keys to the pager page so pre-mounted adjacent pages can never
+        // overwrite the visible page's frames.
+        let pageKey = "week-\(weekStart.timeIntervalSince1970)"
+
+        return HStack(spacing: 6) {
+            ForEach(weekDays, id: \.self) { date in
+                let normalizedDate = Calendar.current.startOfDay(for: date)
+                let taskCount = tasksByDay[normalizedDate].orEmpty.count
+                let isEnabled = canSelectDate(date)
+                let dropEligibleDraggedTodo = draggedTodo.flatMap { todo in
+                    calendarTaskAlreadyDueOnDate(todo, date) ? nil : todo
+                }
+                CalendarWeekDayCell(
+                    date: date,
+                    taskCount: taskCount,
+                    isSelected: Calendar.current.isDate(date, inSameDayAs: displaySelectedDate),
+                    isToday: Calendar.current.isDate(date, inSameDayAs: today),
+                    isEnabled: isEnabled,
+                    accentColor: accentColor,
+                    isDropTarget: (activeDropDate.map { Calendar.current.isDate($0, inSameDayAs: date) } ?? false) &&
+                        (draggedTodo == nil || dropEligibleDraggedTodo != nil),
+                    draggedTodo: dropEligibleDraggedTodo,
+                    onSelect: { onSelectDate(date) },
+                    onDropDateChange: onDropDateChange,
+                    onMoveTaskToDate: onMoveTaskToDate,
+                    resolveTodo: resolveTodo,
+                    dropTargetRegistry: dropTargetRegistry,
+                    dropTargetPageKey: pageKey
+                )
+            }
+        }
+        .padding(.horizontal, CalendarPeriodCardMetrics.pageHorizontalGutter)
+    }
+
+    private func weekPages(previousWeekDate: Date?, displaySelectedDate: Date, nextWeekDate: Date?) -> [CalendarPagerPage] {
+        var pages: [CalendarPagerPage] = []
+
+        if let previousWeekDate {
+            pages.append(CalendarPagerPage(id: 0, content: AnyView(weekDaysRow(for: previousWeekDate))))
+        }
+
+        pages.append(CalendarPagerPage(id: calendarNativePagerCenterIndex, content: AnyView(weekDaysRow(for: displaySelectedDate))))
+
+        if let nextWeekDate {
+            pages.append(CalendarPagerPage(id: 2, content: AnyView(weekDaysRow(for: nextWeekDate))))
+        }
+
+        return pages
+    }
+
+    private func resetPageSelection() {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            pageSelection = calendarNativePagerCenterIndex
+        }
+    }
+
+    private func goToPreviousPage() {
+        guard pageSelection == calendarNativePagerCenterIndex else { return }
+        pageSelection = 0
+    }
+
+    private func goToNextPage() {
+        guard pageSelection == calendarNativePagerCenterIndex else { return }
+        pageSelection = 2
+    }
+
+    private func settlePageSelection(_ selection: Int) {
+        guard selection != calendarNativePagerCenterIndex else { return }
+        if let pendingTodayJump {
+            self.pendingTodayJump = nil
+            onSelectDate(pendingTodayJump.targetDate)
+            resetPageSelection()
+            return
+        }
+
+        if selection < calendarNativePagerCenterIndex {
+            TdayTelemetry.addBreadcrumb(
+                "calendar.page",
+                data: ["mode": "week", "direction": "previous"]
+            )
+            onPreviousWeek()
+        } else {
+            TdayTelemetry.addBreadcrumb(
+                "calendar.page",
+                data: ["mode": "week", "direction": "next"]
+            )
+            onNextWeek()
+        }
+        resetPageSelection()
+    }
+
+    private func handleTodayJump(_ request: CalendarTodayJumpRequest?, from displaySelectedDate: Date) {
+        guard let request else { return }
+        guard pageSelection == calendarNativePagerCenterIndex else { return }
+
+        let currentWeek = calendarStartOfWeek(for: displaySelectedDate)
+        let targetWeek = calendarStartOfWeek(for: request.targetDate)
+        guard targetWeek != currentWeek else {
+            onSelectDate(request.targetDate)
+            resetPageSelection()
+            return
+        }
+
+        pendingTodayJump = request
+        pageSelection = targetWeek < currentWeek ? CalendarPagerDirection.previous.pageIndex : CalendarPagerDirection.next.pageIndex
+    }
+
+    private func todayJumpDirection(from displaySelectedDate: Date) -> CalendarPagerDirection? {
+        guard let pendingTodayJump else { return nil }
+        let currentWeek = calendarStartOfWeek(for: displaySelectedDate)
+        let targetWeek = calendarStartOfWeek(for: pendingTodayJump.targetDate)
+        if targetWeek < currentWeek {
+            return .previous
+        }
+        if targetWeek > currentWeek {
+            return .next
+        }
+        return nil
+    }
+}
+
+private struct CalendarWeekDayCell: View {
+    let date: Date
+    let taskCount: Int
+    let isSelected: Bool
+    let isToday: Bool
+    let isEnabled: Bool
+    let accentColor: Color
+    let isDropTarget: Bool
+    let draggedTodo: TodoItem?
+    let onSelect: () -> Void
+    let onDropDateChange: (Date?) -> Void
+    let onMoveTaskToDate: (TodoItem, Date) -> Void
+    let resolveTodo: (String) -> TodoItem?
+    let dropTargetRegistry: CalendarDropTargetRegistry
+    let dropTargetPageKey: String
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button(action: onSelect) {
+            VStack(spacing: 4) {
+                Text(weekdayText)
+                    .font(.tdayRounded(size: 13, weight: .heavy))
+                    .foregroundStyle(colors.onSurfaceVariant.opacity(isEnabled ? 0.88 : 0.38))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.76)
+
+                Text(dayText)
+                    .font(.tdayRounded(size: 20, weight: .heavy))
+                    .foregroundStyle(dayTextColor)
+
+                Text(calendarTaskCountText(taskCount))
+                    .font(.tdayRounded(size: 12, weight: .heavy))
+                    .foregroundStyle(taskCount > 0 ? stateTint : colors.onSurfaceVariant.opacity(0.42))
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: CalendarPeriodCardMetrics.weekDayCellHeight)
+            .background(cellBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(cellBorderColor, lineWidth: cellBorderWidth)
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .frame(maxWidth: .infinity)
+            .frame(height: CalendarPeriodCardMetrics.pageHeight)
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .calendarTaskDropTarget(
+            date: date,
+            canDrop: isEnabled,
+            draggedTodo: draggedTodo,
+            resolveTodo: resolveTodo,
+            onMove: onMoveTaskToDate,
+            onDateChange: onDropDateChange
+        )
+        .calendarInAppDateDropTargetFrame(
+            registry: dropTargetRegistry,
+            pageKey: dropTargetPageKey,
+            date: date,
+            enabled: isEnabled && draggedTodo != nil
+        )
+        .opacity(isEnabled ? 1 : 0.48)
+    }
+
+    private var weekdayText: String {
+        let formatter = DateFormatter()
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("EEE")
+        return formatter.string(from: date)
+    }
+
+    private var dayText: String {
+        String(Calendar.current.component(.day, from: date))
+    }
+
+    private var cellBackground: Color {
+        if isDropTarget {
+            return colors.error.opacity(0.20)
+        }
+        if isSelected {
+            return accentColor.opacity(0.24)
+        }
+        if isToday {
+            return calendarTodayTintColor.opacity(0.16)
+        }
+        return colors.background
+    }
+
+    private var cellBorderColor: Color {
+        if isDropTarget {
+            return colors.error
+        }
+        if isSelected {
+            return accentColor.opacity(0.95)
+        }
+        if isToday {
+            return calendarTodayTintColor.opacity(0.74)
+        }
+        return .clear
+    }
+
+    private var cellBorderWidth: CGFloat {
+        if isDropTarget {
+            return 2
+        }
+        if isSelected {
+            return 1.6
+        }
+        if isToday {
+            return 1.4
+        }
+        return 0
+    }
+
+    private var dayTextColor: Color {
+        if isDropTarget {
+            return colors.error
+        }
+        if isSelected {
+            return accentColor
+        }
+        if isToday {
+            return calendarTodayTintColor
+        }
+        return colors.onSurface
+    }
+
+    private var stateTint: Color {
+        if isDropTarget {
+            return colors.error
+        }
+        if isSelected {
+            return accentColor
+        }
+        if isToday {
+            return calendarTodayTintColor
+        }
+        return accentColor
+    }
+}
+
+private struct CalendarDateDropDelegate: DropDelegate {
+    let date: Date
+    let canDrop: Bool
+    let draggedTodo: TodoItem?
+    let resolveTodo: (String) -> TodoItem?
+    let onMove: (TodoItem, Date) -> Void
+    let onDateChange: (Date?) -> Void
+
+    func validateDrop(info: DropInfo) -> Bool {
+        guard canDrop,
+              info.hasItemsConforming(to: calendarTaskDragContentTypes) else {
+            return false
+        }
+        if let todo = draggedTodo ?? CalendarTaskDragSession.shared.todo {
+            return canMove(todo)
+        }
+        return true
+    }
+
+    func dropEntered(info: DropInfo) {
+        if validateDrop(info: info) {
+            onDateChange(Calendar.current.startOfDay(for: date))
+        }
+    }
+
+    func dropExited(info: DropInfo) {
+        onDateChange(nil)
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        defer {
+            onDateChange(nil)
+        }
+        guard let draggedTodo = draggedTodo ?? CalendarTaskDragSession.shared.todo else {
+            return performProviderDrop(info: info)
+        }
+        guard canMove(draggedTodo) else {
+            return false
+        }
+        onMove(draggedTodo, Calendar.current.startOfDay(for: date))
+        return true
+    }
+
+    private func performProviderDrop(info: DropInfo) -> Bool {
+        guard canDrop,
+              let provider = info.itemProviders(for: calendarTaskDragContentTypes).first else {
+            return false
+        }
+        let targetDate = Calendar.current.startOfDay(for: date)
+        provider.loadObject(ofClass: NSString.self) { object, _ in
+            guard let rawId = object as? NSString else {
+                return
+            }
+            let todoId = rawId as String
+            DispatchQueue.main.async {
+                if let todo = resolveTodo(todoId), canMove(todo) {
+                    onMove(todo, targetDate)
+                }
+            }
+        }
+        return true
+    }
+
+    private func canMove(_ todo: TodoItem) -> Bool {
+        !calendarTaskAlreadyDueOnDate(todo, date)
+    }
+}
+
+private struct CalendarInAppDateDropTargetFrameModifier: ViewModifier {
+    let registry: CalendarDropTargetRegistry
+    let pageKey: String
+    let date: Date
+    let enabled: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        content.background {
+            if enabled {
+                let day = Calendar.current.startOfDay(for: date)
+                CalendarDropTargetFrameReporter(
+                    registry: registry,
+                    registryKey: "\(pageKey)-\(day.timeIntervalSince1970)",
+                    date: day
+                )
+                .allowsHitTesting(false)
+            }
+        }
+    }
+}
+
+private struct CalendarDropTargetFrameReporter: UIViewRepresentable {
+    let registry: CalendarDropTargetRegistry
+    let registryKey: String
+    let date: Date
+
+    func makeUIView(context: Context) -> CalendarDropTargetFrameReportingView {
+        CalendarDropTargetFrameReportingView()
+    }
+
+    func updateUIView(_ uiView: CalendarDropTargetFrameReportingView, context: Context) {
+        uiView.configure(registry: registry, key: registryKey, date: date)
+    }
+
+    static func dismantleUIView(_ uiView: CalendarDropTargetFrameReportingView, coordinator: ()) {
+        uiView.unregister()
+    }
+}
+
+private final class CalendarDropTargetFrameReportingView: UIView {
+    private weak var registry: CalendarDropTargetRegistry?
+    private var registryKey: String?
+    private var date: Date?
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = .clear
+        isUserInteractionEnabled = false
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func configure(registry: CalendarDropTargetRegistry, key: String, date: Date) {
+        if registryKey != key {
+            unregister()
+        }
+        self.registry = registry
+        registryKey = key
+        self.date = date
+        reportFrameIfPossible()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        reportFrameIfPossible()
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window == nil {
+            unregister()
+        } else {
+            reportFrameIfPossible()
+        }
+    }
+
+    func unregister() {
+        guard let registryKey else { return }
+        registry?.unregister(forKey: registryKey)
+    }
+
+    private func reportFrameIfPossible() {
+        guard window != nil,
+              bounds.width > 0,
+              bounds.height > 0,
+              let registry,
+              let registryKey,
+              let date else {
+            return
+        }
+        // Window coordinates: the same space the in-app drag recognizer reports locations in.
+        registry.register(
+            CalendarDateDropTargetFrame(date: date, frame: convert(bounds, to: nil)),
+            forKey: registryKey
+        )
+    }
+}
+
+private extension View {
+    func calendarInAppDateDropTargetFrame(
+        registry: CalendarDropTargetRegistry,
+        pageKey: String,
+        date: Date,
+        enabled: Bool
+    ) -> some View {
+        modifier(
+            CalendarInAppDateDropTargetFrameModifier(
+                registry: registry,
+                pageKey: pageKey,
+                date: date,
+                enabled: enabled
+            )
+        )
+    }
+
+    func calendarTaskDropTarget(
+        date: Date,
+        canDrop: Bool,
+        draggedTodo: TodoItem?,
+        resolveTodo: @escaping (String) -> TodoItem?,
+        onMove: @escaping (TodoItem, Date) -> Void,
+        onDateChange: @escaping (Date?) -> Void
+    ) -> some View {
+        self
+            .onDrop(
+                of: calendarTaskDragContentTypes,
+                delegate: CalendarDateDropDelegate(
+                    date: date,
+                    canDrop: canDrop,
+                    draggedTodo: draggedTodo,
+                    resolveTodo: resolveTodo,
+                    onMove: onMove,
+                    onDateChange: onDateChange
+                )
+            )
+            .dropDestination(for: String.self) { ids, _ in
+                guard canDrop else {
+                    onDateChange(nil)
+                    return false
+                }
+                let targetDate = Calendar.current.startOfDay(for: date)
+                let todo = draggedTodo
+                    ?? CalendarTaskDragSession.shared.todo
+                    ?? ids.compactMap(resolveTodo).first
+                guard let todo else {
+                    onDateChange(nil)
+                    return false
+                }
+                guard !calendarTaskAlreadyDueOnDate(todo, targetDate) else {
+                    onDateChange(nil)
+                    return false
+                }
+                onDateChange(nil)
+                onMove(todo, targetDate)
+                return true
+            } isTargeted: { active in
+                guard canDrop else {
+                    if !active {
+                        onDateChange(nil)
+                    }
+                    return
+                }
+                if active,
+                   let todo = draggedTodo ?? CalendarTaskDragSession.shared.todo,
+                   calendarTaskAlreadyDueOnDate(todo, date) {
+                    onDateChange(nil)
+                    return
+                }
+                onDateChange(active ? Calendar.current.startOfDay(for: date) : nil)
+            }
+    }
+}
+
+private struct CalendarDayCard: View {
+    let selectedDate: Date
+    let today: Date
+    let tasksByDay: [Date: [TodoItem]]
+    let accentColor: Color
+    let canGoPreviousDay: Bool
+    let canSelectDate: (Date) -> Bool
+    let todayJumpRequest: CalendarTodayJumpRequest?
+    let onPreviousDay: () -> Void
+    let onNextDay: () -> Void
+    let onSelectDate: (Date) -> Void
+
+    @Environment(\.tdayColors) private var colors
+    @State private var pageSelection = calendarNativePagerCenterIndex
+    @State private var pendingTodayJump: CalendarTodayJumpRequest?
+
+    var body: some View {
+        let displayDate = Calendar.current.startOfDay(for: selectedDate)
+        dayContent(for: displayDate)
+            .onChange(of: todayJumpRequest) { _, request in handleTodayJump(request, from: displayDate) }
+            .onChange(of: displayDate) { _, _ in resetPageSelection() }
+    }
+
+    private func dayContent(for displayDate: Date) -> some View {
+        let previousDay = calendarDate(byAddingDays: -1, to: displayDate)
+        let nextDay = calendarDate(byAddingDays: 1, to: displayDate)
+        let canGoPrevious = previousDay.map(canSelectDate) ?? false
+        let jumpDirection = todayJumpDirection(from: displayDate)
+        let previousPageDay = jumpDirection == .previous ? pendingTodayJump.map { Calendar.current.startOfDay(for: $0.targetDate) } : previousDay
+        let nextPageDay = jumpDirection == .next ? pendingTodayJump.map { Calendar.current.startOfDay(for: $0.targetDate) } : nextDay
+        let isPagingAtRest = pageSelection == calendarNativePagerCenterIndex
+
+        return VStack(alignment: .leading, spacing: CalendarPeriodCardMetrics.contentSpacing) {
+            HStack {
+                CalendarNavButton(
+                    systemName: "chevron.left",
+                    isEnabled: canGoPrevious && isPagingAtRest,
+                    color: colors.onSurfaceVariant,
+                    action: goToPreviousPage
+                )
+
+                Spacer(minLength: 0)
+
+                Text(weekdayTitle(for: displayDate))
+                    .font(.tdayRounded(size: 21, weight: .heavy))
+                    .foregroundStyle(colors.onSurface)
+
+                Spacer(minLength: 0)
+
+                CalendarNavButton(
+                    systemName: "chevron.right",
+                    isEnabled: isPagingAtRest,
+                    color: colors.onSurfaceVariant,
+                    action: goToNextPage
+                )
+            }
+            .frame(height: CalendarPeriodCardMetrics.headerHeight)
+            .padding(.horizontal, CalendarPeriodCardMetrics.headerHorizontalPadding)
+
+            CalendarPagingScrollView(
+                pages: dayPages(
+                    previousDay: jumpDirection == .previous ? previousPageDay : (canGoPrevious ? previousPageDay : nil),
+                    displayDate: displayDate,
+                    nextDay: nextPageDay
+                ),
+                selection: $pageSelection,
+                onSettledSelection: settlePageSelection
+            )
+            .frame(height: CalendarPeriodCardMetrics.pageHeight)
+        }
+        .padding(.horizontal, CalendarPeriodCardMetrics.horizontalPadding)
+        .padding(.top, CalendarPeriodCardMetrics.topPadding)
+        .padding(.bottom, CalendarPeriodCardMetrics.bottomPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func dayPages(previousDay: Date?, displayDate: Date, nextDay: Date?) -> [CalendarPagerPage] {
+        var pages: [CalendarPagerPage] = []
+
+        if let previousDay {
+            pages.append(CalendarPagerPage(id: 0, content: AnyView(daySummary(for: previousDay))))
+        }
+
+        pages.append(CalendarPagerPage(id: calendarNativePagerCenterIndex, content: AnyView(daySummary(for: displayDate))))
+
+        if let nextDay {
+            pages.append(CalendarPagerPage(id: 2, content: AnyView(daySummary(for: nextDay))))
+        }
+
+        return pages
+    }
+
+    private func daySummary(for date: Date) -> some View {
+        return VStack(alignment: .leading, spacing: 14) {
+            Text(dateTitle(for: date))
+                .font(.tdayRounded(size: 25, weight: .heavy))
+                .foregroundStyle(
+                    Calendar.current.isDate(date, inSameDayAs: today) ? accentColor : colors.onSurface
+                )
+
+            Text(taskCountText(for: date))
+                .font(.tdayRounded(size: 18, weight: .heavy))
+                .foregroundStyle(colors.onSurfaceVariant)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func resetPageSelection() {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            pageSelection = calendarNativePagerCenterIndex
+        }
+    }
+
+    private func goToPreviousPage() {
+        guard pageSelection == calendarNativePagerCenterIndex else { return }
+        pageSelection = 0
+    }
+
+    private func goToNextPage() {
+        guard pageSelection == calendarNativePagerCenterIndex else { return }
+        pageSelection = 2
+    }
+
+    private func settlePageSelection(_ selection: Int) {
+        guard selection != calendarNativePagerCenterIndex else { return }
+        if let pendingTodayJump {
+            self.pendingTodayJump = nil
+            onSelectDate(pendingTodayJump.targetDate)
+            resetPageSelection()
+            return
+        }
+
+        if selection < calendarNativePagerCenterIndex {
+            TdayTelemetry.addBreadcrumb(
+                "calendar.page",
+                data: ["mode": "day", "direction": "previous"]
+            )
+            onPreviousDay()
+        } else {
+            TdayTelemetry.addBreadcrumb(
+                "calendar.page",
+                data: ["mode": "day", "direction": "next"]
+            )
+            onNextDay()
+        }
+        resetPageSelection()
+    }
+
+    private func handleTodayJump(_ request: CalendarTodayJumpRequest?, from displayDate: Date) {
+        guard let request else { return }
+        guard pageSelection == calendarNativePagerCenterIndex else { return }
+
+        let targetDate = Calendar.current.startOfDay(for: request.targetDate)
+        guard targetDate != displayDate else {
+            onSelectDate(request.targetDate)
+            resetPageSelection()
+            return
+        }
+
+        pendingTodayJump = request
+        pageSelection = targetDate < displayDate ? CalendarPagerDirection.previous.pageIndex : CalendarPagerDirection.next.pageIndex
+    }
+
+    private func todayJumpDirection(from displayDate: Date) -> CalendarPagerDirection? {
+        guard let pendingTodayJump else { return nil }
+        let targetDate = Calendar.current.startOfDay(for: pendingTodayJump.targetDate)
+        if targetDate < displayDate {
+            return .previous
+        }
+        if targetDate > displayDate {
+            return .next
+        }
+        return nil
+    }
+
+    private func weekdayTitle(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("EEEE")
+        return formatter.string(from: date)
+    }
+
+    private func dateTitle(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("MMMM d yyyy")
+        return formatter.string(from: date)
+    }
+
+    private func taskCountText(for date: Date) -> String {
+        let taskCount = tasksByDay[Calendar.current.startOfDay(for: date)].orEmpty.count
+        return taskCount == 1 ? L("1 task due") : L("%lld tasks due", Int64(taskCount))
+    }
+}
+
+private struct CalendarNavButton: View {
+    let systemName: String
+    let isEnabled: Bool
+    let color: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.tdayRounded(size: 19, weight: .heavy))
+                .foregroundStyle(isEnabled ? color : color.opacity(0.34))
+                .frame(width: 40, height: 36)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+    }
+}
+
+private struct CalendarMonthDayCell: View {
+    let day: CalendarMonthDay
+    let isSelected: Bool
+    let isToday: Bool
+    let isEnabled: Bool
+    let isDropTarget: Bool
+    let taskCount: Int
+    let accentColor: Color
+    let draggedTodo: TodoItem?
+    let onSelectDate: (Date) -> Void
+    let onDropDateChange: (Date?) -> Void
+    let onMoveTaskToDate: (TodoItem, Date) -> Void
+    let resolveTodo: (String) -> TodoItem?
+    let dropTargetRegistry: CalendarDropTargetRegistry
+    let dropTargetPageKey: String
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button {
+            onSelectDate(day.date)
+        } label: {
+            VStack(spacing: 1) {
+                Text(dayNumberText)
+                    .font(.tdayRounded(size: 19, weight: .bold))
+                    .foregroundStyle(dayTextColor)
+                    .frame(
+                        width: CalendarMonthGridMetrics.dayNumberWidth,
+                        height: CalendarMonthGridMetrics.dayNumberHeight
+                    )
+
+                HStack(spacing: 2) {
+                    if taskCount > 0 {
+                        Circle()
+                            .fill(stateTint)
+                            .frame(
+                                width: CalendarMonthGridMetrics.taskDotSize,
+                                height: CalendarMonthGridMetrics.taskDotSize
+                            )
+
+                        Text(calendarTaskCountText(taskCount))
+                            .font(.tdayRounded(size: 11, weight: .heavy))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.82)
+                            .foregroundStyle(stateTint)
+                    }
+                }
+                .frame(height: CalendarMonthGridMetrics.taskCountHeight)
+            }
+            .frame(
+                width: CalendarMonthGridMetrics.dayHighlightWidth,
+                height: CalendarMonthGridMetrics.dayHighlightHeight
+            )
+            .background(
+                cellBackground,
+                in: RoundedRectangle(cornerRadius: CalendarMonthGridMetrics.cellCornerRadius, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: CalendarMonthGridMetrics.cellCornerRadius, style: .continuous)
+                    .stroke(cellBorderColor, lineWidth: cellBorderWidth)
+            }
+            .contentShape(RoundedRectangle(cornerRadius: CalendarMonthGridMetrics.cellCornerRadius, style: .continuous))
+            .frame(maxWidth: .infinity)
+            .frame(height: CalendarMonthGridMetrics.dayCellHeight)
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .calendarTaskDropTarget(
+            date: day.date,
+            canDrop: isEnabled,
+            draggedTodo: draggedTodo,
+            resolveTodo: resolveTodo,
+            onMove: onMoveTaskToDate,
+            onDateChange: onDropDateChange
+        )
+        .calendarInAppDateDropTargetFrame(
+            registry: dropTargetRegistry,
+            pageKey: dropTargetPageKey,
+            date: day.date,
+            enabled: isEnabled && draggedTodo != nil
+        )
+        .opacity(day.isCurrentMonth ? 1 : 0.45)
+    }
+
+    private var dayNumberText: String {
+        String(Calendar.current.component(.day, from: day.date))
+    }
+
+    private var dayTextColor: Color {
+        if isDropTarget {
+            return colors.error
+        }
+        if !day.isCurrentMonth {
+            return colors.onSurfaceVariant.opacity(0.48)
+        }
+        if isSelected || isToday {
+            return stateTint
+        }
+        return colors.onSurface
+    }
+
+    private var cellBackground: Color {
+        if isDropTarget {
+            return colors.error.opacity(0.20)
+        }
+        if isSelected {
+            return accentColor.opacity(0.24)
+        }
+        if isToday {
+            return calendarTodayTintColor.opacity(0.16)
+        }
+        return .clear
+    }
+
+    private var cellBorderColor: Color {
+        if isDropTarget {
+            return colors.error
+        }
+        if isSelected {
+            return accentColor.opacity(0.95)
+        }
+        if isToday {
+            return calendarTodayTintColor.opacity(0.74)
+        }
+        return .clear
+    }
+
+    private var cellBorderWidth: CGFloat {
+        if isDropTarget {
+            return 2
+        }
+        if isSelected {
+            return 1.6
+        }
+        if isToday {
+            return 1.4
+        }
+        return 0
+    }
+
+    private var stateTint: Color {
+        if isDropTarget {
+            return colors.error
+        }
+        if isSelected {
+            return accentColor
+        }
+        if isToday {
+            return calendarTodayTintColor
+        }
+        return accentColor
+    }
+}
+
+private struct CalendarMonthDay: Identifiable {
+    let date: Date
+    let isCurrentMonth: Bool
+
+    var id: Date { date }
+}
+
+private func calendarMonthStart(for date: Date) -> Date {
+    let calendar = Calendar.current
+    let components = calendar.dateComponents([.year, .month], from: date)
+    return calendar.date(from: components) ?? calendar.startOfDay(for: date)
+}
+
+private func calendarMonth(byAdding value: Int, to month: Date) -> Date? {
+    Calendar.current
+        .date(byAdding: .month, value: value, to: calendarMonthStart(for: month))
+        .map { calendarMonthStart(for: $0) }
+}
+
+private func calendarDate(byAddingDays value: Int, to date: Date) -> Date? {
+    Calendar.current.date(byAdding: .day, value: value, to: Calendar.current.startOfDay(for: date))
+}
+
+private func calendarStartOfWeek(for date: Date) -> Date {
+    let calendar = Calendar.current
+    let dayStart = calendar.startOfDay(for: date)
+    let sundayOffset = calendar.component(.weekday, from: dayStart) - 1
+    return calendar.date(byAdding: .day, value: -sundayOffset, to: dayStart) ?? dayStart
+}
+
+private func calendarWeekRangeText(from weekStart: Date) -> String {
+    let calendar = Calendar.current
+    let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
+    let sameMonth = calendar.isDate(weekStart, equalTo: weekEnd, toGranularity: .month)
+    let sameYear = calendar.isDate(weekStart, equalTo: weekEnd, toGranularity: .year)
+
+    let monthDayFormatter = DateFormatter()
+    monthDayFormatter.locale = AppLocale.current
+    monthDayFormatter.setLocalizedDateFormatFromTemplate("MMM d")
+
+    if sameMonth, sameYear {
+        let monthFormatter = DateFormatter()
+        monthFormatter.locale = AppLocale.current
+        monthFormatter.setLocalizedDateFormatFromTemplate("MMM")
+        let yearFormatter = DateFormatter()
+        yearFormatter.locale = AppLocale.current
+        yearFormatter.setLocalizedDateFormatFromTemplate("yyyy")
+        let month = monthFormatter.string(from: weekStart)
+        let startDay = calendar.component(.day, from: weekStart)
+        let endDay = calendar.component(.day, from: weekEnd)
+        return "\(month) \(startDay)-\(endDay), \(yearFormatter.string(from: weekEnd))"
+    }
+
+    if sameYear {
+        let yearFormatter = DateFormatter()
+        yearFormatter.locale = AppLocale.current
+        yearFormatter.setLocalizedDateFormatFromTemplate("yyyy")
+        return "\(monthDayFormatter.string(from: weekStart)) - \(monthDayFormatter.string(from: weekEnd)), \(yearFormatter.string(from: weekEnd))"
+    }
+
+    let fullFormatter = DateFormatter()
+    fullFormatter.locale = AppLocale.current
+    fullFormatter.setLocalizedDateFormatFromTemplate("MMM d yyyy")
+    return "\(fullFormatter.string(from: weekStart)) - \(fullFormatter.string(from: weekEnd))"
+}
+
+private func calendarTaskCountText(_ count: Int) -> String {
+    count > 9 ? "9+" : "\(count)"
+}
+
+private extension Optional where Wrapped == [TodoItem] {
+    var orEmpty: [TodoItem] {
+        self ?? []
+    }
+}
+
+private struct CalendarElasticTopBar: View {
+    let title: String
+    let accentColor: Color
+    /// Read here and nowhere above: this bar is the one view that depends on the
+    /// collapse, so a pan frame redraws the bar and not the calendar under it. Handed
+    /// the box rather than a progress for that reason — a `CGFloat` would have to be
+    /// read in the screen's body to be passed. See `CalendarTitleCollapseState`.
+    let collapse: CalendarTitleCollapseState
+    let onBack: () -> Void
+    var actionLabel: String?
+    let action: TimelineTopBarAction?
+    /// Leads the trailing cluster, as the search button does on every other bar.
+    let onSearchOpen: () -> Void
+    /// While set, the field takes the WHOLE row: the back chevron, the title and
+    /// the action cluster all give way to it, exactly as they do on the timeline
+    /// bar. Only this one row changes — the mark and the expanded title below it
+    /// are what every collapse progress on this screen is measured from.
+    let searchActive: Bool
+    @Binding var searchText: String
+    let searchPlaceholder: String
+    let searchFieldFocused: FocusState<Bool>.Binding?
+    let onSearchClose: () -> Void
+
+    /// What the title wants at the size it is drawn, measured off a hidden copy
+    /// of it — see `tdayMeasuresDockedTitle`. Zero until the probe has a box.
+    @State private var dockedTitleWidth: CGFloat = 0
+    /// The bar's inner width, from the same probe. Zero until the first layout.
+    @State private var barWidth: CGFloat = 0
+    /// What the word on the Today pill wants at the size the pill draws it, off
+    /// the same kind of probe and for the same reason: the cap's width is a
+    /// function of the word, so the word's own width is the answer rather than
+    /// the question. Zero until the probe has a box.
+    @State private var todayActionLabelWidth: CGFloat = 0
+
+    private var progress: CGFloat {
+        collapse.progress
+    }
+
+    /// The one font the docked and expanded copies of the title are both drawn
+    /// with, named once because the probe has to measure against exactly what the
+    /// visible `Text` will be laid out in. Two copies that spelled the size
+    /// separately could drift, and the measurement would then be answering a
+    /// question about a title nobody is looking at.
+    private var dockedTitleFont: Font {
+        .tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy)
+    }
+
+    /// How much of the row the title may not have, and whether it gets one at all.
+    ///
+    /// Read from `TdayBarTitleReserve`, which is the same rule Android's
+    /// `tdayBarTitleReserve` and web's `nativePageBarTitleReserve` run, and the
+    /// reason this bar no longer shrinks or ellipsises the word it is handing off
+    /// from. The controls are the ones that are actually there whenever the title
+    /// is on screen: one 56pt back chevron on the left, and on the right the two
+    /// 56pt circles the search button and the Today button have both folded into
+    /// by the time `collapsedTitleOpacity` leaves zero.
+    private var titleReserve: TdayBarTitleReserve {
+        tdayBarTitleReserve(
+            barWidth: barWidth,
+            leading: TodoTimelineMetrics.topBarButtonFrame,
+            trailing: trailingActionReservedWidth,
+            titleWidth: dockedTitleWidth
+        )
+    }
+
+    /// How much of the word "Today" is still out: 1 while the bar is at rest, 0
+    /// once the pill has closed onto its glyph.
+    ///
+    /// A ramp on `progress`, like every other leg of this collapse and unlike the
+    /// `showLabel = progress < 0.5` it replaces — a boolean is not a frame of a
+    /// collapse, and whatever it swaps between, it swaps in one. This is the leg
+    /// the pill's whole shape reads: its width, and (through the width) the point
+    /// at which the word's fade begins.
+    private var todayActionLabelReveal: CGFloat {
+        1 - linearProgress(
+            progress,
+            from: CalendarTitleHandoff.todayLabelFoldStart,
+            to: CalendarTitleHandoff.todayLabelFoldEnd
+        )
+    }
+
+    /// The pill's cap: `topBarButtonFrame` once the word is gone, and the word's
+    /// own width plus the cap's share while it is out. Lerped on the reveal above,
+    /// so the cap narrows frame by frame with the scroll and a slow drag is a slow
+    /// fold rather than a resize that happened at one scroll position.
+    private var todayActionPillWidth: CGFloat {
+        let collapsed = TodoTimelineMetrics.topBarButtonFrame
+        let expanded = CalendarTodayActionMetrics.expandedWidth(wordWidth: todayActionLabelWidth)
+        return collapsed + ((expanded - collapsed) * todayActionLabelReveal)
+    }
+
+    /// The word leaves with the cap that closes over it: whole while the cap is
+    /// still wider than the word's tail, gone by the time the cap is a circle.
+    ///
+    /// Both ends of the ramp are WIDTHS and not fractions of the collapse, and both
+    /// are read off the cap's own width, so the fade is fitted to whatever word this
+    /// locale drew rather than to English's, and the fade and the clip cannot
+    /// disagree about where the word went — they are one number read twice.
+    /// `RootFeedHeroHeader` fades its search placeholder off its capsule's width for
+    /// the same reason. Zero until the probe has a box: a wordless pill for one frame
+    /// rather than a chopped word, which is the trade the title's own probe makes in
+    /// the other direction (its reserve mirrors for a frame before the title has a
+    /// width). The pill's width leans the same way — `expandedWidth(wordWidth: 0)` is
+    /// the cap's own share — so the first frame is a narrow empty pill and the second
+    /// is the real one, with no third state between them.
+    private var todayActionLabelOpacity: CGFloat {
+        guard todayActionLabelWidth > 0 else { return 0 }
+        return linearProgress(
+            todayActionPillWidth,
+            from: TodoTimelineMetrics.topBarButtonFrame,
+            to: CalendarTodayActionMetrics.wordTailWidth(wordWidth: todayActionLabelWidth)
+        )
+    }
+
+    /// Reports what the word "Today" wants at the size the pill draws it, off a
+    /// hidden copy of it — `tdayMeasuresDockedTitle`'s shape, hung the same way, in
+    /// a background on the row so it can add no width, no height and no layout of
+    /// its own. `fixedSize`, so it answers with the word's natural width rather
+    /// than with the width the cap happens to leave it, and `hidden`, so it is
+    /// drawn nowhere and read by nobody.
+    ///
+    /// It draws in the same font constant the pill draws in, which is the one thing
+    /// here that must not drift: a probe measuring a size nobody draws would have
+    /// the pill sizing its cap from a word that is not on screen.
+    private var todayActionLabelProbe: some View {
+        Text(actionLabel ?? "")
+            .font(CalendarTodayActionMetrics.labelFont)
+            .lineLimit(1)
+            .fixedSize()
+            .hidden()
+            .background {
+                GeometryReader { label in
+                    Color.clear
+                        .preference(
+                            key: TdayTodayActionLabelWidthKey.self,
+                            value: label.size.width
+                        )
+                }
+            }
+    }
+
+    private var expandedTitleHeight: CGFloat {
+        CalendarTitleHandoff.expandedTitleHeight * (1 - progress)
+    }
+
+    private var expandedSpacerHeight: CGFloat {
+        CalendarTitleHandoff.expandedTitleSpacerHeight * (1 - progress)
+    }
+
+    private var expandedTitleOpacity: Double {
+        let fade = linearProgress(
+            progress,
+            from: CalendarTitleHandoff.expandedFadeStart,
+            to: CalendarTitleHandoff.expandedFadeEnd
+        )
+        return Double(1 - fade)
+    }
+
+    private var collapsedTitleOpacity: Double {
+        Double(
+            linearProgress(
+                progress,
+                from: CalendarTitleHandoff.collapsedFadeStart,
+                to: CalendarTitleHandoff.collapsedFadeEnd
+            )
+        )
+    }
+
+    private var collapsedTitleOffsetY: CGFloat {
+        CalendarTitleHandoff.collapsedTitleRevealDistance * (1 - CGFloat(collapsedTitleOpacity))
+    }
+
+    private var expandedTitleOffsetY: CGFloat {
+        -CalendarTitleHandoff.expandedTitleLiftDistance * progress
+    }
+
+    private var markFade: CGFloat {
+        1 - linearProgress(progress, from: 0, to: CalendarTitleHandoff.markFadeEnd)
+    }
+
+    /// The collapsed title only surfaces past `collapsedFadeStart`, by which
+    /// point the Today button has folded down to a circle — so whenever the
+    /// title is on screen, two round buttons and the gap between them are what
+    /// sits to its right.
+    private var trailingActionReservedWidth: CGFloat {
+        (TodoTimelineMetrics.topBarButtonFrame * 2) + TodoTimelineMetrics.topBarButtonSpacing
+    }
+
+    /// Collapses over the whole scroll, unlike its opacity — otherwise the bar
+    /// would keep 96pt of empty height long after the circle had gone.
+    private var markBlockHeight: CGFloat {
+        (TodoTimelineMetrics.heroMarkTopGap
+            + TodoTimelineMetrics.heroMarkBox
+            + TodoTimelineMetrics.heroMarkBottomGap) * (1 - progress)
+    }
+
+    /// The capsule is exactly as tall as the bar's button row, so swapping it in
+    /// changes what the row holds and never how tall it is.
+    private var searchRow: some View {
+        TdaySearchCapsule(
+            text: $searchText,
+            placeholder: searchPlaceholder,
+            clearAccessibilityLabel: L("Cancel search"),
+            focused: searchFieldFocused,
+            // The one control in the row, so its X leaves the search — the same
+            // bargain the timeline bar and the root feeds make.
+            onClose: onSearchClose
+        )
+    }
+
+    var body: some View {
+        VStack(alignment: .center, spacing: 0) {
+            ZStack {
+                HStack(spacing: 0) {
+                    // Not drawn at all while the field is up: a back chevron
+                    // beside an open search is a second way out that leaves the
+                    // screen rather than the query, and it costs the field the
+                    // width that makes a placeholder readable.
+                    if !searchActive {
+                        CalendarTopBarButton(systemName: "chevron.left", chrome: .filled, action: onBack)
+                    }
+                    if searchActive {
+                        searchRow
+                    } else {
+                        Spacer(minLength: 0)
+                        HStack(spacing: TodoTimelineMetrics.topBarButtonSpacing) {
+                            CalendarTopBarButton(
+                                systemName: "magnifyingglass",
+                                assetName: "NavSearch",
+                                chrome: .filled,
+                                action: onSearchOpen
+                            )
+                            .accessibilityLabel(Text(L("Search")))
+
+                            if let action {
+                                if let actionLabel {
+                                    CalendarTodayActionButton(
+                                        systemName: action.systemName,
+                                        label: actionLabel,
+                                        tint: action.tint,
+                                        pillWidth: todayActionPillWidth,
+                                        labelOpacity: todayActionLabelOpacity,
+                                        action: action.action
+                                    )
+                                } else {
+                                    CalendarTopBarButton(
+                                        systemName: action.systemName,
+                                        chrome: action.usesCircularChrome ? .filled : .plain,
+                                        tint: action.tint,
+                                        action: action.action
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if !searchActive, titleReserve.hasRoom {
+                    Text(title)
+                        .font(dockedTitleFont)
+                        .foregroundStyle(accentColor)
+                        .lineLimit(1)
+                        // The backstop below the floor, and nothing more now. It
+                        // is Android's `DockedTitleMinScale` in origin — that
+                        // constant was taken from this line — and it stays where
+                        // it is because there is still one bar in the app that
+                        // needs it: `TimelineTopBar`'s three- and four-action
+                        // scopes, whose comment books the same modifier as owed.
+                        // Here it is reached only past the give-up above, so a
+                        // title is either whole or not drawn.
+                        .minimumScaleFactor(0.72)
+                        .opacity(collapsedTitleOpacity)
+                        .offset(y: collapsedTitleOffsetY)
+                        .scaleEffect(0.985 + (0.015 * CGFloat(collapsedTitleOpacity)))
+                        // Each side for what actually sits there, and the WIDER
+                        // side mirrored on both wherever the name fits inside that.
+                        // The choice is `tdayBarTitleReserve`'s, argued in full on
+                        // that function; what matters at this call site is the
+                        // second branch.
+                        //
+                        // This comment used to end by saying the bar did not need
+                        // that arithmetic because `.minimumScaleFactor(0.72)` stood
+                        // in for it, and that the word therefore survived. It does
+                        // not. Mirroring two 56pt circles spends 132pt on BOTH
+                        // sides — 264 of the 357pt this bar has on a 393pt phone —
+                        // which leaves "Calendar" 93pt for a word that is 137.5pt
+                        // at 32pt Nunito ExtraBold, and the 0.72 floor still needs
+                        // 99. So the copy was not merely small: it was ellipsised
+                        // to "Cale…" at the one moment it was supposed to be
+                        // handing off from the same word drawn in full in the block
+                        // underneath. The arithmetic the comment waved away is the
+                        // fix.
+                        //
+                        // What the fall-through costs is the crossfade, and it is
+                        // spent only here. Per-side leaves the room for the word
+                        // but centres the docked copy on the leftovers rather than
+                        // on the bar, so it sits (trailing - leading) / 2 — 32pt on
+                        // this phone — to the left of the expanded copy while both
+                        // are on screen over progress 0.72-0.86. That is real, and
+                        // it is what the mirrored branch exists to prevent. It is
+                        // still the right trade: the mirrored reserve is what put
+                        // the two copies at DIFFERENT SIZES over that same window,
+                        // which is a worse disagreement than a lateral one, and
+                        // past about a 437pt device neither branch is needed. Both
+                        // other clients reached the same conclusion — Android's
+                        // `tdayBarTitleReserve` and web's `nativePageBarTitleReserve`
+                        // fall through in as many words.
+                        .padding(.leading, titleReserve.leading)
+                        .padding(.trailing, titleReserve.trailing)
+                        .frame(maxWidth: .infinity)
+                        .allowsHitTesting(false)
+                }
+            }
+            .frame(height: TodoTimelineMetrics.topBarRowHeight)
+            // The two numbers the reserve is a function of, taken off this row:
+            // its own inner width, and the natural width of the title about to
+            // dock into it. Hung as a background so neither can move anything —
+            // the title's own box is the thing being sized, so its width is the
+            // answer rather than the question, and the probe is a hidden copy at
+            // `fixedSize` for exactly that reason.
+            .tdayMeasuresDockedTitle(barTitle: title, font: dockedTitleFont)
+            // And the word the Today pill is about to draw, measured the same way
+            // and for the same reason one level down: the pill's cap is sized from
+            // the word rather than by it, so it has to be told what the word wants.
+            // A background on this row, so it can add no width, no height and no
+            // layout of its own.
+            .background { todayActionLabelProbe }
+
+            if markBlockHeight > 0.5 {
+                heroMark
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .frame(height: markBlockHeight, alignment: .center)
+                    .clipped()
+            }
+
+            Color.clear
+                .frame(height: expandedSpacerHeight)
+
+            ZStack(alignment: .bottom) {
+                Text(title)
+                    // The same object the probe measures against, so a change to
+                    // either copy cannot leave the reserve answering a question
+                    // about a size nobody draws.
+                    .font(dockedTitleFont)
+                    .foregroundStyle(accentColor)
+                    .lineLimit(1)
+                    .opacity(expandedTitleOpacity)
+                    .offset(y: expandedTitleOffsetY)
+            }
+            .frame(
+                maxWidth: .infinity,
+                minHeight: expandedTitleHeight,
+                maxHeight: expandedTitleHeight,
+                alignment: .bottom
+            )
+            .clipped()
+        }
+        .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
+        .padding(.top, 2)
+        .padding(.bottom, 2)
+        .background(colors.background)
+        // Painted outside the bar's bounds so the grid dissolves into it rather
+        // than being cut off at its edge. Keeping it out of the VStack keeps the
+        // bar's own height — and every collapse calculation — untouched.
+        //
+        // A `background` rather than an `overlay`, and that is the whole of this
+        // line's argument. An overlay paints ON TOP of the bar's own content, so
+        // once the bar is short enough for the back button's shadow to reach
+        // past its bottom edge the band's opaque top edge landed on the shadow
+        // and cut it off in a straight horizontal line across the bar's edge,
+        // while the button was still drawing it. It is a late-collapse defect
+        // and not an early one, which is why it reads as "when the toolbar
+        // shrinks": the button sits 2pt below the bar's top, the shared bar
+        // button's shadow reaches about 26pt past its own frame (`.shadow` at
+        // radius 16, y 10), and the mark block, its spacer and the expanded
+        // title hold ~200pt of bar under the row until the collapse is nearly
+        // done — so the two only meet once the bar is down to its docked
+        // height, which is where the title lives.
+        //
+        // Paint order is the fix rather than geometry: nothing moves, the band
+        // still starts exactly at the bar's edge and the gap under the title is
+        // unchanged, but the shadow now falls on top of the band and fades out
+        // with it.
+        //
+        // Android's twin of this bar had the identical defect and the identical
+        // fix one client over — its band was a Column sibling drawn after the
+        // bar, and it is drawn first now (`TdayHeroTitleHeader`, "Drawn FIRST,
+        // and offset below the bar rather than stacked after it").
+        //
+        // Web is NOT a precedent for this ordering and must not be read as one.
+        // Its `NativePageHeader` paints the band below the bar's box but renders
+        // the back button and the actions BEFORE it, so that bar is exposed the
+        // same way; only the pages that happen to render `MobileSearchHeader`
+        // instead — the calendar among them — escape it, and there the band
+        // precedes the leading block. Fixing web is a separate change with its
+        // own blast radius and is not done here.
+        .background(alignment: .bottom) {
+            LinearGradient(
+                colors: [colors.background, colors.background.opacity(0)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: TodoTimelineMetrics.contentFadeHeight)
+            .offset(y: TodoTimelineMetrics.contentFadeHeight)
+            .opacity(Double(min(1, progress * 8)))
+            .allowsHitTesting(false)
+        }
+        // Both readings land one frame after the row they describe, which is the
+        // same frame the reserve's own degenerate case is written for: until the
+        // title has a width the reserve mirrors, exactly as this bar did before
+        // anything measured it, and until the bar has a width it reserves only
+        // what is really there. So the first frame is the old behaviour and the
+        // second is the fixed one, with no third state between them.
+        .onPreferenceChange(TdayBarWidthKey.self) { width in
+            barWidth = width
+        }
+        .onPreferenceChange(TdayDockedTitleWidthKey.self) { width in
+            dockedTitleWidth = width
+        }
+        .onPreferenceChange(TdayTodayActionLabelWidthKey.self) { width in
+            todayActionLabelWidth = width
+        }
+    }
+
+    /// Same treatment the timeline screens use: a flat glyph over an
+    /// oversized, washed-out echo of itself inside a gradient disc.
+    private var heroMark: some View {
+        ZStack {
+            Image("LucideCalendar")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(
+                    width: TodoTimelineMetrics.heroMarkEchoGlyph,
+                    height: TodoTimelineMetrics.heroMarkEchoGlyph
+                )
+                .foregroundStyle(accentColor.opacity(TodoTimelineMetrics.heroMarkEchoAlpha))
+                .offset(x: 22, y: 26)
+
+            Image("LucideCalendar")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(
+                    width: TodoTimelineMetrics.heroMarkGlyph,
+                    height: TodoTimelineMetrics.heroMarkGlyph
+                )
+                .foregroundStyle(accentColor)
+        }
+        .frame(width: TodoTimelineMetrics.heroMarkBox, height: TodoTimelineMetrics.heroMarkBox)
+        .background(
+            LinearGradient(
+                colors: [
+                    accentColor.opacity(TodoTimelineMetrics.heroMarkWashTopAlpha),
+                    accentColor.opacity(TodoTimelineMetrics.heroMarkWashBottomAlpha),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            in: Circle()
+        )
+        .clipShape(Circle())
+        .opacity(Double(markFade))
+        .scaleEffect(0.85 + (0.15 * markFade))
+        .allowsHitTesting(false)
+    }
+
+    @Environment(\.tdayColors) private var colors
+
+    private func linearProgress(_ value: CGFloat, from start: CGFloat, to end: CGFloat) -> CGFloat {
+        guard end > start else { return value >= end ? 1 : 0 }
+        return min(max((value - start) / (end - start), 0), 1)
+    }
+}
+
+private struct CalendarTopBarButton: View {
+    enum Chrome {
+        case plain
+        case filled
+    }
+
+    let systemName: String
+    /// Preferred over `systemName` when set, so this bar can use the same drawn
+    /// glyph the rest of the app does rather than the SF symbol that resembles it.
+    let assetName: String?
+    let chrome: Chrome
+    let tint: Color?
+    let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    init(
+        systemName: String,
+        assetName: String? = nil,
+        chrome: Chrome,
+        tint: Color? = nil,
+        action: @escaping () -> Void
+    ) {
+        self.systemName = systemName
+        self.assetName = assetName
+        self.chrome = chrome
+        self.tint = tint
+        self.action = action
+    }
+
+    @ViewBuilder
+    private var glyph: some View {
+        if let assetName {
+            // Assets are drawn at the filled-chrome size whatever the chrome: an
+            // SF symbol at 28pt leaves margin inside its box, a resized asset
+            // fills it edge to edge and would read a size larger.
+            Image(assetName)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(
+                    width: TodoTimelineMetrics.topBarButtonIconSize,
+                    height: TodoTimelineMetrics.topBarButtonIconSize
+                )
+        } else {
+            Image(systemName: systemName)
+                .font(.system(size: iconSize, weight: .semibold))
+        }
+    }
+
+    var body: some View {
+        Button(action: action) {
+            glyph
+                .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
+                .background {
+                    if chrome == .filled {
+                        // The material `TimelineTopBarButton` gives every other
+                        // screen's bar circle: fill, hairline and the shared lift.
+                        Circle()
+                            .fill(colors.surface)
+                            .overlay {
+                                Circle()
+                                    .stroke(
+                                        colors.onSurface.opacity(
+                                            RootFeedHeroHeaderMetrics.barControlBorderOpacity
+                                        ),
+                                        lineWidth: 1
+                                    )
+                            }
+                    }
+                }
+                .contentShape(Circle())
+        }
+        .buttonStyle(TdayToolbarButtonStyle(shadowsEnabled: chrome == .filled))
+        .foregroundStyle(foregroundColor)
+    }
+
+    private var iconSize: CGFloat {
+        chrome == .filled ? TodoTimelineMetrics.topBarButtonIconSize : 28
+    }
+
+    private var foregroundColor: Color {
+        switch chrome {
+        case .filled:
+            return colors.onSurface
+        case .plain:
+            return tint ?? Color.accentColor
+        }
+    }
+}
+
+/// What the Today pill's word wants at the size the pill draws it, reported by a
+/// hidden copy of it — the shape `tdayMeasuresDockedTitle` uses, for the reason
+/// the pill itself exists in this form: the cap's width is a function of the
+/// word, so the word's width is the answer rather than the question.
+///
+/// Its own key rather than the title's, deliberately. The title's is reduced with
+/// `max`, and a pill's word wider than the docked title would quietly become the
+/// reserve's answer — the title would then be reserved room it does not need, on
+/// the strength of a word it never draws.
+private struct TdayTodayActionLabelWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+/// Outlined top-bar action that shows a "Today" label while the calendar title
+/// is expanded and collapses to an icon-only pill once the title is pulled up.
+///
+/// The pill narrows through one width rather than swapping between two of them.
+/// `pillWidth` and `labelOpacity` are the bar's collapse legs, computed there like
+/// every other leg on this bar and handed down, so this view knows nothing about
+/// `progress` and names no animation of its own.
+///
+/// What it replaced, and why each piece of it is here rather than there. The cap's
+/// width was `showLabel ? … : …` on a `progress < 0.5` boolean, so the pill's size
+/// was a threshold on a scroll rather than a function of it, and that one flip
+/// changed three layout facts in the same frame: the word's presence, the row's
+/// spacing (`7` or `0`) and the cap's padding (`16` or `0`). The word itself was
+/// `.fixedSize()` — so it kept its full width through the flip and told the pill
+/// under it how wide to be — while `.transition(.opacity)` gave it no geometry and
+/// nothing clipped it. The result was a word drawn at full size while the cap had
+/// already narrowed, and a spring on this view alone (`.spring(response: 0.32,
+/// dampingFraction: 0.9)`, no rung) finishing the resize after the title hand-off
+/// it was supposed to be part of had settled.
+private struct CalendarTodayActionButton: View {
+    let systemName: String
+    let label: String
+    let tint: Color?
+    /// The cap's width at this frame of the fold, from the bar.
+    let pillWidth: CGFloat
+    /// How much of the word is still out, from the bar. Zero when the word has
+    /// been measured as nothing yet, which draws a wordless pill rather than a
+    /// chopped one for that frame.
+    let labelOpacity: CGFloat
+    let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+    /// Read for one question only: whether this leg's size change should ride the
+    /// transaction it is drawn inside. See the `.transaction` below.
+    @Environment(\.tdayAnimation) private var tdayAnimation
+
+    var body: some View {
+        Button(action: action) {
+            // A clear base fixes the cap's size and both states ride on top of it,
+            // which is `RootFeedHeroHeader.searchField`'s construction and its
+            // reason: an `HStack` whose intrinsic width is the container's width
+            // lets the word set the cap's minimum, and that is this defect exactly
+            // — the cap was whatever the word plus its padding came to, measured
+            // one frame too late to be the thing that moved.
+            Color.clear
+                .frame(width: pillWidth, height: TodoTimelineMetrics.topBarButtonFrame)
+                .overlay(alignment: .leading) { content }
+                // The glyph is pinned to the cap's leading edge and the word simply
+                // runs off the end and is clipped, as the search field's placeholder
+                // is. Nothing the word does can leave the pill, and nothing it does
+                // can widen it: the word's `fixedSize` — the modifier that used to
+                // make it the container's minimum width — can only choose where the
+                // word is cut now that the base's width is its own number.
+                .clipShape(Capsule(style: .continuous))
+                .background {
+                    Capsule(style: .continuous)
+                        .fill(fillColor)
+                        .overlay {
+                            Capsule(style: .continuous)
+                                .stroke(borderColor, lineWidth: 1)
+                        }
+                }
+                .contentShape(Capsule(style: .continuous))
+                .transaction { transaction in
+                    // At full motion this is left exactly as the scroll or the snap
+                    // built it, which is why the pill names no animation: a
+                    // scroll-driven leg that names one trails the finger by its
+                    // duration, and a `.animation(_:value:)` keyed on a value that
+                    // changes every frame is that same lag written shorter.
+                    //
+                    // Under the gate the pill does not ride the bar's snap. This leg
+                    // changes size, and a size change is the thing the gate is for,
+                    // so it arrives at its final width in the frame the state
+                    // changed. It is done here rather than by gating the snap itself
+                    // because that transaction is every other leg's too.
+                    guard !tdayAnimation.isEnabled else { return }
+                    transaction.animation = nil
+                    transaction.disablesAnimations = true
+                }
+        }
+            // The bar's shared lift, as the search circle beside it wears. The accent
+            // stays on the ink alone — the one coloured thing in the bar — which is
+            // what Android's and web's Today pill do on the same material.
+        .buttonStyle(TdayToolbarButtonStyle())
+        .foregroundStyle(tint ?? colors.onSurface)
+    }
+
+    /// The glyph and the word, in the order they are read and both of them the
+    /// cap's passengers. The word is `fixedSize` for the reason it always was —
+    /// it must answer with its natural width, not with the width the cap happens
+    /// to have left it, or the cap would have to be wide enough for a word that
+    /// is on its way out and the pill would never close.
+    private var content: some View {
+        HStack(spacing: CalendarTodayActionMetrics.labelSpacing) {
+            Image(systemName: systemName)
+                .font(.system(size: 28, weight: .semibold))
+                .frame(width: CalendarTodayActionMetrics.glyphSlot)
+
+            Text(label)
+                .font(CalendarTodayActionMetrics.labelFont)
+                .lineLimit(1)
+                .fixedSize()
+                .opacity(Double(labelOpacity))
+        }
+        .padding(.leading, CalendarTodayActionMetrics.leadingPadding)
+    }
+
+    private var fillColor: Color {
+        colors.surface
+    }
+
+    private var borderColor: Color {
+        colors.onSurface.opacity(RootFeedHeroHeaderMetrics.barControlBorderOpacity)
+    }
+}
+
+private struct CalendarTitleCollapseScrollObserver: UIViewRepresentable {
+    /// Handed on and never read on this side. `updateUIView` runs under observation, so
+    /// a read of `state.offset` there would make this representable a dependent of every
+    /// pan frame; the coordinator reads it from UIKit callbacks instead.
+    let state: CalendarTitleCollapseState
+    let collapseDistance: CGFloat
+    let sliderPartialSnapDistance: CGFloat
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(state: state)
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.update(
+            collapseDistance: collapseDistance,
+            sliderPartialSnapDistance: sliderPartialSnapDistance,
+            onChange: { value, animated in
+                if animated {
+                    withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
+                        state.offset = value
+                    }
+                } else {
+                    state.offset = value
+                }
+            }
+        )
+        DispatchQueue.main.async {
+            context.coordinator.attach(to: uiView)
+        }
+    }
+
+    final class Coordinator: NSObject {
+        /// The one copy of the offset, read back by every guard below rather than
+        /// mirrored. `onChange` is its only writer and writes it synchronously — inside
+        /// `withAnimation` too — so a read straight after a set sees the new value.
+        private let state: CalendarTitleCollapseState
+        private var collapseDistance: CGFloat = 0
+        private var sliderPartialSnapDistance: CGFloat = 0
+        private var onChange: ((CGFloat, Bool) -> Void)?
+        private weak var observedScrollView: UIScrollView?
+        private var offsetObservation: NSKeyValueObservation?
+        private var snapTimer: Timer?
+        private var lastTranslationY: CGFloat = 0
+        private var releaseVelocityY: CGFloat = 0
+        private var isAdjustingScrollOffset = false
+
+        init(state: CalendarTitleCollapseState) {
+            self.state = state
+        }
+
+        deinit {
+            snapTimer?.invalidate()
+        }
+
+        func update(
+            collapseDistance: CGFloat,
+            sliderPartialSnapDistance: CGFloat,
+            onChange: @escaping (CGFloat, Bool) -> Void
+        ) {
+            self.collapseDistance = collapseDistance
+            self.sliderPartialSnapDistance = sliderPartialSnapDistance
+            self.onChange = onChange
+        }
+
+        func attach(to view: UIView) {
+            guard let scrollView = view.calendarEnclosingScrollView() else {
+                return
+            }
+
+            guard observedScrollView !== scrollView else {
+                return
+            }
+
+            observedScrollView = scrollView
+            scrollView.panGestureRecognizer.addTarget(self, action: #selector(handlePan(_:)))
+            offsetObservation = scrollView.observe(\.contentOffset, options: .new) { [weak self] scrollView, _ in
+                self?.clampListScrollIfTitleIsConsuming(scrollView)
+            }
+        }
+
+        @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+            guard let scrollView = observedScrollView else {
+                return
+            }
+
+            let translationY = gesture.translation(in: scrollView).y
+
+            switch gesture.state {
+            case .began:
+                snapTimer?.invalidate()
+                lastTranslationY = translationY
+                releaseVelocityY = 0
+            case .changed:
+                let deltaY = translationY - lastTranslationY
+                lastTranslationY = translationY
+                consume(deltaY: deltaY, in: scrollView)
+            case .ended, .cancelled, .failed:
+                releaseVelocityY = gesture.velocity(in: scrollView).y
+                scheduleSnapCheck(for: scrollView)
+            default:
+                break
+            }
+        }
+
+        private func consume(deltaY: CGFloat, in scrollView: UIScrollView) {
+            guard collapseDistance > 0 else {
+                return
+            }
+
+            if deltaY < 0 {
+                let previous = state.offset
+                let next = min(max(previous - deltaY, 0), collapseDistance)
+                if next > previous {
+                    setCollapseOffset(next, animated: false)
+                    holdListAtTop(scrollView)
+                }
+                return
+            }
+
+            if deltaY > 0 {
+                guard isListAtTop(scrollView), state.offset > 0 else {
+                    return
+                }
+                let previous = state.offset
+                let next = min(max(previous - deltaY, 0), collapseDistance)
+                if next < previous {
+                    setCollapseOffset(next, animated: false)
+                    holdListAtTop(scrollView)
+                }
+            }
+        }
+
+        private func scheduleSnapCheck(for scrollView: UIScrollView) {
+            snapTimer?.invalidate()
+            snapTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self, weak scrollView] timer in
+                guard let self, let scrollView else {
+                    timer.invalidate()
+                    return
+                }
+                if !scrollView.isTracking && !scrollView.isDragging && !scrollView.isDecelerating {
+                    timer.invalidate()
+                    self.snapTitleCollapseAndSlider(in: scrollView)
+                }
+            }
+        }
+
+        private func snapTitleCollapseAndSlider(in scrollView: UIScrollView) {
+            snapTitleCollapse(in: scrollView)
+            snapSliderIfPartiallyVisible(in: scrollView)
+        }
+
+        private func snapTitleCollapse(in scrollView: UIScrollView) {
+            guard collapseDistance > 0 else {
+                return
+            }
+            let bounded = min(max(state.offset, 0), collapseDistance)
+            guard bounded > 0, bounded < collapseDistance else {
+                return
+            }
+
+            let target: CGFloat
+            if !isListAtTop(scrollView) {
+                target = collapseDistance
+            } else if releaseVelocityY < -1 {
+                target = collapseDistance
+            } else if releaseVelocityY > 1 {
+                target = 0
+            } else {
+                target = (bounded / collapseDistance) >= 0.5 ? collapseDistance : 0
+            }
+
+            if isListAtTop(scrollView) {
+                stopScrollMotion(scrollView)
+                holdListAtTop(scrollView)
+            }
+            setCollapseOffset(target, animated: true)
+        }
+
+        private func snapSliderIfPartiallyVisible(in scrollView: UIScrollView) {
+            guard sliderPartialSnapDistance > 0 else {
+                return
+            }
+            guard state.offset >= collapseDistance - 0.5 else {
+                return
+            }
+
+            let offset = normalizedOffset(for: scrollView)
+            guard offset > 0.5, offset < sliderPartialSnapDistance else {
+                return
+            }
+
+            animateListToTop(scrollView)
+        }
+
+        private func clampListScrollIfTitleIsConsuming(_ scrollView: UIScrollView) {
+            guard !isAdjustingScrollOffset else {
+                return
+            }
+            guard collapseDistance > 0 else {
+                return
+            }
+            guard state.offset < collapseDistance - 0.5 else {
+                return
+            }
+            guard normalizedOffset(for: scrollView) > 0.5 else {
+                return
+            }
+            holdListAtTop(scrollView)
+        }
+
+        private func setCollapseOffset(_ offset: CGFloat, animated: Bool) {
+            let bounded = min(max(offset, 0), collapseDistance)
+            guard abs(state.offset - bounded) > 0.1 else {
+                return
+            }
+            // Always set by now: `attach` is what hooks the pan and the KVO up, and it
+            // is only ever scheduled from `updateUIView` after `update` has stored this.
+            onChange?(bounded, animated)
+        }
+
+        private func isListAtTop(_ scrollView: UIScrollView) -> Bool {
+            normalizedOffset(for: scrollView) <= 0.5
+        }
+
+        private func normalizedOffset(for scrollView: UIScrollView) -> CGFloat {
+            max(scrollView.contentOffset.y + scrollView.adjustedContentInset.top, 0)
+        }
+
+        private func holdListAtTop(_ scrollView: UIScrollView) {
+            let topY = -scrollView.adjustedContentInset.top
+            guard abs(scrollView.contentOffset.y - topY) > 0.1 else {
+                return
+            }
+            isAdjustingScrollOffset = true
+            scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: topY), animated: false)
+            isAdjustingScrollOffset = false
+        }
+
+        private func animateListToTop(_ scrollView: UIScrollView) {
+            let topY = -scrollView.adjustedContentInset.top
+            guard abs(scrollView.contentOffset.y - topY) > 0.5 else {
+                return
+            }
+
+            isAdjustingScrollOffset = true
+            UIView.animate(
+                withDuration: 0.24,
+                delay: 0,
+                options: [.allowUserInteraction, .beginFromCurrentState, .curveEaseInOut]
+            ) {
+                scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: topY), animated: false)
+            } completion: { [weak self] _ in
+                self?.isAdjustingScrollOffset = false
+            }
+        }
+
+        private func stopScrollMotion(_ scrollView: UIScrollView) {
+            scrollView.setContentOffset(scrollView.contentOffset, animated: false)
+            let wasScrollEnabled = scrollView.isScrollEnabled
+            scrollView.isScrollEnabled = false
+            scrollView.isScrollEnabled = wasScrollEnabled
+        }
+    }
+}
+
+private extension UIView {
+    func calendarEnclosingScrollView() -> UIScrollView? {
+        var current: UIView? = self
+        while let view = current {
+            if let scrollView = view as? UIScrollView {
+                return scrollView
+            }
+            current = view.superview
+        }
+        return nil
+    }
+}
+
+private struct CalendarInAppDragModifier: ViewModifier {
+    let enabled: Bool
+    let todo: TodoItem
+    let onStart: (TodoItem, CGPoint) -> Void
+    let onMove: (TodoItem, CGPoint) -> Void
+    let onEnd: (TodoItem, CGPoint?) -> Void
+    let onCancel: () -> Void
+
+    func body(content: Content) -> some View {
+        if enabled {
+            content.background {
+                GeometryReader { _ in
+                    CalendarInAppLongPressBridge(
+                        todo: todo,
+                        onStart: onStart,
+                        onMove: onMove,
+                        onEnd: onEnd,
+                        onCancel: onCancel
+                    )
+                    .allowsHitTesting(false)
+                }
+            }
+        } else {
+            content
+        }
+    }
+}
+
+private struct CalendarInAppLongPressBridge: UIViewRepresentable {
+    let todo: TodoItem
+    let onStart: (TodoItem, CGPoint) -> Void
+    let onMove: (TodoItem, CGPoint) -> Void
+    let onEnd: (TodoItem, CGPoint?) -> Void
+    let onCancel: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(
+            todo: todo,
+            onStart: onStart,
+            onMove: onMove,
+            onEnd: onEnd,
+            onCancel: onCancel
+        )
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.backgroundColor = .clear
+        view.isUserInteractionEnabled = false
+        context.coordinator.markerView = view
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.todo = todo
+        context.coordinator.onStart = onStart
+        context.coordinator.onMove = onMove
+        context.coordinator.onEnd = onEnd
+        context.coordinator.onCancel = onCancel
+        DispatchQueue.main.async {
+            context.coordinator.attach(to: uiView.calendarEnclosingScrollView() ?? uiView.superview, markerView: uiView)
+        }
+    }
+
+    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+        coordinator.detach()
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var todo: TodoItem
+        var onStart: (TodoItem, CGPoint) -> Void
+        var onMove: (TodoItem, CGPoint) -> Void
+        var onEnd: (TodoItem, CGPoint?) -> Void
+        var onCancel: () -> Void
+
+        weak var markerView: UIView?
+        private weak var attachedView: UIView?
+        private let recognizer: UILongPressGestureRecognizer
+        private var isDragging = false
+
+        init(
+            todo: TodoItem,
+            onStart: @escaping (TodoItem, CGPoint) -> Void,
+            onMove: @escaping (TodoItem, CGPoint) -> Void,
+            onEnd: @escaping (TodoItem, CGPoint?) -> Void,
+            onCancel: @escaping () -> Void
+        ) {
+            self.todo = todo
+            self.onStart = onStart
+            self.onMove = onMove
+            self.onEnd = onEnd
+            self.onCancel = onCancel
+            self.recognizer = UILongPressGestureRecognizer()
+            super.init()
+
+            recognizer.minimumPressDuration = 0.22
+            recognizer.allowableMovement = 24
+            recognizer.cancelsTouchesInView = false
+            recognizer.delaysTouchesBegan = false
+            recognizer.delaysTouchesEnded = false
+            recognizer.delegate = self
+            recognizer.addTarget(self, action: #selector(handleLongPress(_:)))
+        }
+
+        func attach(to view: UIView?, markerView: UIView) {
+            self.markerView = markerView
+            guard let view else {
+                detach()
+                return
+            }
+
+            guard attachedView !== view else {
+                return
+            }
+
+            detach()
+            attachedView = view
+            view.addGestureRecognizer(recognizer)
+        }
+
+        func detach() {
+            if isDragging {
+                isDragging = false
+                onCancel()
+            }
+            attachedView?.removeGestureRecognizer(recognizer)
+            attachedView = nil
+        }
+
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard let markerView else {
+                return false
+            }
+
+            let localPoint = gestureRecognizer.location(in: markerView)
+            return markerView.bounds.insetBy(dx: -6, dy: -6).contains(localPoint)
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            guard let markerView else {
+                return false
+            }
+
+            let localPoint = touch.location(in: markerView)
+            return markerView.bounds.insetBy(dx: -6, dy: -6).contains(localPoint)
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            if let scrollView = attachedView as? UIScrollView,
+               otherGestureRecognizer === scrollView.panGestureRecognizer {
+                return false
+            }
+            return true
+        }
+
+        @objc private func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {
+            let location = globalLocation(for: recognizer)
+            switch recognizer.state {
+            case .began:
+                isDragging = true
+                onStart(todo, location)
+            case .changed:
+                guard isDragging else {
+                    return
+                }
+                onMove(todo, location)
+            case .ended:
+                guard isDragging else {
+                    return
+                }
+                isDragging = false
+                onEnd(todo, location)
+            case .cancelled, .failed:
+                guard isDragging else {
+                    return
+                }
+                isDragging = false
+                onCancel()
+            default:
+                break
+            }
+        }
+
+        private func globalLocation(for recognizer: UILongPressGestureRecognizer) -> CGPoint {
+            guard let view = recognizer.view else {
+                return .zero
+            }
+
+            return view.convert(recognizer.location(in: view), to: nil)
+        }
+    }
+}
+
+private struct CalendarTaskDragPreview: View {
+    let todo: TodoItem
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        let previewShape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+
+        HStack(spacing: 10) {
+            Image(systemName: "circle")
+                .font(.system(size: 22, weight: .regular))
+                .foregroundStyle(colors.onSurfaceVariant.opacity(0.76))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(todo.title)
+                    .font(.tdayRounded(size: 16, weight: .bold))
+                    .foregroundStyle(colors.onSurface)
+                    .lineLimit(1)
+
+                if let due = todo.due {
+                    Text(due.formatted(.dateTime.hour().minute().locale(AppLocale.current)))
+                        .font(.tdayRounded(size: 12, weight: .semibold))
+                        .foregroundStyle(colors.onSurfaceVariant)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            if let priorityIcon = priorityIndicatorSymbolName(todo.priority) {
+                Image(systemName: priorityIcon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(priorityColor(todo.priority))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .frame(width: 260, alignment: .leading)
+        .background(colors.surface)
+        .clipShape(previewShape)
+        .overlay(
+            previewShape.stroke(colors.onSurfaceVariant.opacity(0.14), lineWidth: 1)
+        )
+        .contentShape(previewShape)
+        .compositingGroup()
+        .shadow(color: Color.black.opacity(0.18), radius: 16, x: 0, y: 8)
+        .opacity(0.96)
+    }
+}
+
+private struct CalendarPendingTaskRow: View {
+    let todo: TodoItem
+    let list: ListSummary?
+    let onComplete: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+    @State private var completionPhase = CalendarTaskCompletionPhase.active
+
+    private var showCheckmark: Bool {
+        completionPhase != .active || todo.completed
+    }
+
+    private var showStrikethrough: Bool {
+        completionPhase == .struck || completionPhase == .fading || todo.completed
+    }
+
+    private var isCompleting: Bool {
+        completionPhase != .active
+    }
+
+    private var isFading: Bool {
+        completionPhase == .fading
+    }
+
+    var body: some View {
+        let priorityIcon = priorityIndicatorSymbolName(todo.priority)
+
+        VStack(spacing: 0) {
+            // The task list's stacking, in the calendar's day list — see
+            // `TodoListScreen.minimalTimelineRow`. This row's titles wrap and carry a
+            // due line and notes under them, so a centred toggle drifted further from
+            // line one the more the task had to say.
+            HStack(alignment: .firstTextBaseline, spacing: TodoTimelineMetrics.minimalRowContentSpacing) {
+                Button(action: startCompletion) {
+                    Image(systemName: showCheckmark ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: TodoTimelineMetrics.minimalRowToggleSize, weight: .regular))
+                        .foregroundStyle(showCheckmark ? Color.green : colors.onSurfaceVariant.opacity(0.78))
+                        .frame(width: TodoTimelineMetrics.minimalRowToggleFrame, height: TodoTimelineMetrics.minimalRowToggleFrame)
+                }
+                .buttonStyle(
+                    TdayPressButtonStyle(
+                        shadowColor: Color.black,
+                        pressedShadowOpacity: 0,
+                        normalShadowOpacity: 0
+                    )
+                )
+                // A button carries no text and so reports no text baseline; the guide
+                // hands back its centre, nudged onto the title's.
+                .alignmentGuide(.firstTextBaseline) { dimension in
+                    dimension[VerticalAlignment.center] + TodoTimelineMetrics.minimalRowBaselineNudge
+                }
+
+                VStack(alignment: .leading, spacing: TodoTimelineMetrics.minimalRowTextSpacing) {
+                    TodoTimelineTaskTitle(
+                        text: todo.title,
+                        isCompleted: showStrikethrough,
+                        titleColor: showStrikethrough ? colors.onSurface.opacity(0.78) : colors.onSurface,
+                        strikeColor: colors.onSurface.opacity(0.65)
+                    )
+
+                    if let due = todo.due {
+                        Text(due.formatted(.dateTime.hour().minute().locale(AppLocale.current)))
+                            .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .semibold))
+                            .foregroundStyle(colors.onSurfaceVariant.opacity(0.8))
+                    }
+
+                    let flattenedDescription = flattenNotesToPlainText(todo.description)
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !flattenedDescription.isEmpty {
+                        Text(flattenedDescription)
+                            .font(.tdayRounded(size: 12, weight: .semibold))
+                            .foregroundStyle(colors.onSurfaceVariant)
+                            // Struck alongside the title so the whole task reads
+                            // as done during the completion animation.
+                            .strikethrough(showStrikethrough, color: colors.onSurfaceVariant)
+                            .animation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis), value: showStrikethrough)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                if list != nil || priorityIcon != nil {
+                    HStack(spacing: 8) {
+                        if let list {
+                            TdayListIcon(iconKey: list.iconKey, listName: list.name, size: TodoTimelineMetrics.minimalRowIndicatorSize)
+                                .foregroundStyle(calendarListAccentColor(for: list.color))
+                        }
+                        if let priorityIcon {
+                            Image(systemName: priorityIcon)
+                                .font(.system(size: TodoTimelineMetrics.minimalRowIndicatorSize, weight: .semibold))
+                                .foregroundStyle(priorityColor(todo.priority))
+                        }
+                    }
+                    .padding(.trailing, TodoTimelineMetrics.minimalRowTrailingIndicatorPadding)
+                    // Keep the trailing indicators on the first line too.
+                    .alignmentGuide(.firstTextBaseline) { dimension in
+                        dimension[VerticalAlignment.center] + TodoTimelineMetrics.minimalRowBaselineNudge
+                    }
+                }
+            }
+            .padding(.vertical, CalendarTaskListMetrics.rowVerticalPadding)
+            .contentShape(Rectangle())
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(colors.background)
+        .opacity(isFading ? 0 : 1)
+        .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
+        .offset(y: isFading ? -10 : 0)
+        .animation(TdayMotion.standard(duration: TdayMotion.Durations.change), value: isFading)
+        .allowsHitTesting(!isCompleting)
+    }
+
+    private func startCompletion() {
+        guard completionPhase == .active else {
+            return
+        }
+
+        HapticManager.completion()
+        // The pop the other two task rows play. The calendar row fired the haptic
+        // and drew the whole sequence in silence, so a task ticked off here was the
+        // one place in the app where finishing something made no sound.
+        SoundManager.taskCompleted()
+        Task { @MainActor in
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)) {
+                completionPhase = .checked
+            }
+            try? await Task.sleep(nanoseconds: 160_000_000)
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis)) {
+                completionPhase = .struck
+            }
+            try? await Task.sleep(nanoseconds: 360_000_000)
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)) {
+                completionPhase = .fading
+            }
+            try? await Task.sleep(nanoseconds: 260_000_000)
+            onComplete()
+            if completionPhase == .fading {
+                completionPhase = .active
+            }
+        }
+    }
+}
+
+private func calendarListAccentColor(for key: String?) -> Color {
+    switch key {
+    case "PINK":
+        return calendarHexColor(0xC987A5)
+    case "GOLD":
+        return calendarHexColor(0xC7AA63)
+    case "DEEP_BLUE":
+        return calendarHexColor(0x6F86C6)
+    case "CORAL":
+        return calendarHexColor(0xD39A82)
+    case "TEAL":
+        return calendarHexColor(0x67AAA7)
+    case "SLATE", "GRAY":
+        return calendarHexColor(0x7F8996)
+    case "BLUE":
+        return calendarHexColor(0x6F9FCE)
+    case "PURPLE":
+        return calendarHexColor(0x9A86CF)
+    case "ROSE":
+        return calendarHexColor(0xC98299)
+    case "LIGHT_RED":
+        return calendarHexColor(0xD58D8D)
+    case "BRICK":
+        return calendarHexColor(0xAD786E)
+    case "YELLOW":
+        return calendarHexColor(0xCFB866)
+    case "LIME", "GREEN":
+        return calendarHexColor(0x8DBB73)
+    case "ORANGE":
+        return calendarHexColor(0xD69B63)
+    case "RED":
+        return calendarHexColor(0xD97873)
+    default:
+        // The scheduled default (BLUE), as `tdayListAccentColor` falls back to.
+        return calendarHexColor(0x6F9FCE)
+    }
+}
+
+private func calendarHexColor(_ hex: UInt) -> Color {
+    Color(
+        .sRGB,
+        red: Double((hex >> 16) & 0xFF) / 255,
+        green: Double((hex >> 8) & 0xFF) / 255,
+        blue: Double(hex & 0xFF) / 255,
+        opacity: 1
+    )
+}

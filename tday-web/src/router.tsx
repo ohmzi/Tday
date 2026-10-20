@@ -1,0 +1,149 @@
+import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
+import { resolveInitialLocale } from "@/i18n";
+import ShareTargetRedirectPage from "@/pages/ShareTargetRedirectPage";
+import LocaleAppRedirectPage from "@/pages/LocaleAppRedirectPage";
+import ProtectedRoute from "@/pages/ProtectedRoute";
+import { lazy, Suspense } from "react";
+import RouteErrorPage from "@/pages/RouteErrorPage";
+import AppShellSkeleton from "@/components/app/AppShellSkeleton";
+
+const LandingPage = lazy(() => import("@/pages/LandingPage"));
+const LoginPage = lazy(() => import("@/pages/LoginPage"));
+const RegisterPage = lazy(() => import("@/pages/RegisterPage"));
+const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage"));
+const PrivacyPage = lazy(() => import("@/pages/PrivacyPage"));
+const TermsPage = lazy(() => import("@/pages/TermsPage"));
+const BlogsPage = lazy(() => import("@/pages/BlogsPage"));
+const BlogArticlePage = lazy(() => import("@/pages/BlogArticlePage"));
+const HelpGuidePage = lazy(() => import("@/pages/HelpGuidePage"));
+const GuideRedirectPage = lazy(() => import("@/pages/GuideRedirectPage"));
+const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
+const AppLayout = lazy(() => import("@/pages/AppLayout"));
+const GeneralLayout = lazy(() => import("@/pages/GeneralLayout"));
+const CalendarLayout = lazy(() => import("@/pages/CalendarLayout"));
+const ScheduledTaskHomePage = lazy(() => import("@/pages/ScheduledTaskHomePage"));
+const TodayTasksPage = lazy(() => import("@/pages/TodayTasksPage"));
+const OverduePage = lazy(() => import("@/pages/OverduePage"));
+const TodoPage = lazy(() => import("@/pages/TodoPage"));
+const PriorityPage = lazy(() => import("@/pages/PriorityPage"));
+const ScheduledPage = lazy(() => import("@/pages/ScheduledPage"));
+const CompletedPage = lazy(() => import("@/pages/CompletedPage"));
+const FloaterTaskHomePage = lazy(() => import("@/pages/FloaterTaskHomePage"));
+const FloaterListPage = lazy(() => import("@/pages/FloaterListPage"));
+const AdminPage = lazy(() => import("@/pages/AdminPage"));
+const AdminRoute = lazy(() => import("@/pages/AdminRoute"));
+const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const VersionPage = lazy(() => import("@/pages/VersionPage"));
+const VersionRedirectPage = lazy(() => import("@/pages/VersionRedirectPage"));
+const ListPage = lazy(() => import("@/pages/ListPage"));
+const CalendarPage = lazy(() => import("@/pages/CalendarPage"));
+const AuthLayout = lazy(() => import("@/pages/AuthLayout"));
+const AppHomeRedirectPage = lazy(() => import("@/pages/AppHomeRedirectPage"));
+
+function LazyFallback() {
+  return <AppShellSkeleton />;
+}
+
+function SuspenseOutlet() {
+  return (
+    <Suspense fallback={<LazyFallback />}>
+      <Outlet />
+    </Suspense>
+  );
+}
+
+export const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Navigate to={`/${resolveInitialLocale()}`} replace />,
+    errorElement: <RouteErrorPage />,
+  },
+  {
+    // PWA share_target entry (manifest.webmanifest): bounce into the app.
+    path: "/share",
+    element: <ShareTargetRedirectPage />,
+    errorElement: <RouteErrorPage />,
+  },
+  {
+    // Locale-less app entry: the installed PWA's manifest start_url and shortcuts
+    // (and any home-screen bookmark) are `/app/...`, which has no locale segment.
+    // Static `app` outranks the dynamic `:locale` below, so this claims those URLs
+    // and the real `/:locale/app/...` routes are untouched. Keep it above `/:locale`.
+    path: "/app/*",
+    element: <LocaleAppRedirectPage />,
+    errorElement: <RouteErrorPage />,
+  },
+  {
+    path: `/:locale`,
+    element: <SuspenseOutlet />,
+    errorElement: <RouteErrorPage />,
+    children: [
+      { index: true, element: <LandingPage /> },
+      {
+        element: <AuthLayout />,
+        children: [
+          { path: "login", element: <LoginPage /> },
+          { path: "register", element: <RegisterPage /> },
+          { path: "forgot-password", element: <ForgotPasswordPage /> },
+        ],
+      },
+      { path: "privacy", element: <PrivacyPage /> },
+      { path: "terms", element: <TermsPage /> },
+      // Legacy standalone guide URLs — the guide now renders inside the app shell.
+      { path: "guide", element: <GuideRedirectPage /> },
+      { path: "guide/:topicId", element: <GuideRedirectPage /> },
+      { path: "blogs", element: <BlogsPage /> },
+      { path: "blogs/page/:slug", element: <BlogArticlePage /> },
+      {
+        path: "app",
+        element: <ProtectedRoute />,
+        errorElement: <RouteErrorPage />,
+        children: [
+          {
+            element: <AppLayout />,
+            children: [
+              // The default-home-screen decision: see AppHomeRedirectPage's doc comment.
+              { index: true, element: <AppHomeRedirectPage /> },
+              {
+                element: <GeneralLayout />,
+                children: [
+                  { path: "tday", element: <ScheduledTaskHomePage /> },
+                  { path: "today", element: <TodayTasksPage /> },
+                  { path: "overdue", element: <OverduePage /> },
+                  { path: "todo", element: <TodoPage /> },
+                  { path: "priority", element: <PriorityPage /> },
+                  { path: "scheduled", element: <ScheduledPage /> },
+                  { path: "completed", element: <CompletedPage /> },
+                  { path: "floater", element: <FloaterTaskHomePage /> },
+                  { path: "floater-list/:id", element: <FloaterListPage /> },
+                  { path: "settings", element: <SettingsPage /> },
+                  { path: "guide", element: <HelpGuidePage /> },
+                  { path: "guide/:topicId", element: <HelpGuidePage /> },
+                  {
+                    element: <AdminRoute />,
+                    children: [
+                      { path: "admin", element: <AdminPage /> },
+                      { path: "admin/version", element: <VersionPage /> },
+                    ],
+                  },
+                  {
+                    path: "version",
+                    element: <VersionRedirectPage />,
+                  },
+                  { path: "list/:id", element: <ListPage /> },
+                ],
+              },
+              {
+                element: <CalendarLayout />,
+                children: [
+                  { path: "calendar", element: <CalendarPage /> },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      { path: "*", element: <NotFoundPage /> },
+    ],
+  },
+]);

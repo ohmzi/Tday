@@ -1,0 +1,19 @@
+.DS_Store
+.build/
+.swiftpm/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+
+# fastlane / TestFlight lane local output (see fastlane/Fastfile)
+.spm-cache/
+build/
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+*.ipa
+*.dSYM.zip
+
+# Local xcconfig with this checkout's own build settings (Sentry DSN); see ios-swiftUI/Local.xcconfig.
+Local.xcconfig

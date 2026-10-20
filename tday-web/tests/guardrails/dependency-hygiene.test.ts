@@ -1,0 +1,413 @@
+import { readFileSync, existsSync } from "fs";
+import path from "path";
+import { describe, it, expect } from "vitest";
+
+const ROOT = path.resolve(__dirname, "..", "..");
+const MONO = path.resolve(ROOT, "..");
+
+function readSource(filePath: string): string {
+  return readFileSync(filePath, "utf-8");
+}
+
+function readJSON(filePath: string): Record<string, unknown> {
+  return JSON.parse(readSource(filePath));
+}
+
+describe("dependency and configuration hygiene", () => {
+  describe("tday-web package.json structure", () => {
+    const pkg = readJSON(path.join(ROOT, "package.json")) as {
+      version?: string;
+      scripts?: Record<string, string>;
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+      private?: boolean;
+    };
+
+    it("should have a valid semver version", () => {
+      expect(pkg.version).toMatch(/^\d+\.\d+\.\d+$/);
+    });
+
+    it("should be marked as private", () => {
+      expect(pkg.private).toBe(true);
+    });
+
+    it("should have required scripts", () => {
+      const REQUIRED_SCRIPTS = ["dev", "build", "lint", "test"];
+      for (const script of REQUIRED_SCRIPTS) {
+        expect(pkg.scripts).toHaveProperty(script);
+      }
+    });
+  });
+
+  describe("Git configuration", () => {
+    it(".gitignore should exist", () => {
+      expect(existsSync(path.join(MONO, ".gitignore"))).toBe(true);
+    });
+
+    it(".gitignore should exclude node_modules and .env", () => {
+      const gitignore = readSource(path.join(MONO, ".gitignore"));
+      expect(gitignore).toContain("node_modules");
+      expect(gitignore).toContain(".env");
+    });
+
+    it(".gitignore should exclude tday-web/dist", () => {
+      const gitignore = readSource(path.join(MONO, ".gitignore"));
+      expect(gitignore).toContain("tday-web/dist");
+    });
+  });
+
+  describe("environment configuration", () => {
+    it(".env.example should exist as a setup reference", () => {
+      expect(existsSync(path.join(MONO, ".env.example"))).toBe(true);
+    });
+
+    it(".env.example should document all critical variables", () => {
+      const envExample = readSource(path.join(MONO, ".env.example"));
+      const REQUIRED_VARS = [
+        "DATABASE_URL",
+        "AUTH_SECRET",
+        "OLLAMA_URL",
+        "OLLAMA_MODEL",
+        "AUTH_PBKDF2_ITERATIONS",
+        "AUTH_SESSION_MAX_AGE_SEC",
+      ];
+      for (const v of REQUIRED_VARS) {
+        expect(envExample).toContain(v);
+      }
+    });
+
+    it(".env.example should not contain real secrets", () => {
+      const envExample = readSource(path.join(MONO, ".env.example"));
+      const lines = envExample.split("\n");
+      for (const line of lines) {
+        if (line.startsWith("#") || !line.includes("=")) continue;
+        const value = line.split("=").slice(1).join("=").trim();
+        if (
+          value.length > 40 &&
+          !value.startsWith("postgresql://") &&
+          !value.startsWith("http") &&
+          !value.startsWith("/")
+        ) {
+          expect(value).toMatch(/CHANGE_ME|example|placeholder|dummy/i);
+        }
+      }
+    });
+  });
+
+  describe("Docker configuration", () => {
+    it("docker-compose.yaml should exist", () => {
+      expect(existsSync(path.join(MONO, "docker-compose.yaml"))).toBe(true);
+    });
+
+    it("Dockerfile.backend should exist", () => {
+      expect(existsSync(path.join(MONO, "Dockerfile.backend"))).toBe(true);
+    });
+
+    it("Docker compose should define required services", () => {
+      const compose = readSource(path.join(MONO, "docker-compose.yaml"));
+      expect(compose).toContain("database:");
+      expect(compose).toContain("tday-backend:");
+      expect(compose).toContain("ollama:");
+    });
+
+    it("tday container should drop all capabilities", () => {
+      const compose = readSource(path.join(MONO, "docker-compose.yaml"));
+      expect(compose).toContain("cap_drop");
+      expect(compose).toContain("ALL");
+    });
+
+    it("tday container should prevent privilege escalation", () => {
+      const compose = readSource(path.join(MONO, "docker-compose.yaml"));
+      expect(compose).toContain("no-new-privileges");
+    });
+  });
+
+  describe("CI/CD workflows", () => {
+    const workflowDir = path.join(MONO, ".github", "workflows");
+
+    it("PR gate workflow should exist", () => {
+      expect(existsSync(path.join(workflowDir, "pr-gate.yml"))).toBe(true);
+    });
+
+    it("release workflow should exist", () => {
+      expect(existsSync(path.join(workflowDir, "release.yml"))).toBe(true);
+    });
+
+    it("PR gate should enforce develop-only merges to master", () => {
+      const content = readSource(path.join(workflowDir, "pr-gate.yml"));
+      expect(content).toContain("develop");
+      expect(content).toContain("master");
+    });
+
+    it("CI should run lint and tests in tday-web context", () => {
+      const content = readSource(path.join(workflowDir, "pr-gate.yml"));
+      expect(content).toContain("npm run lint");
+      expect(content).toContain("npm run test");
+      expect(content).toContain("tday-web");
+    });
+
+    it("release workflow should run tests before building Docker image", () => {
+      const content = readSource(path.join(workflowDir, "release.yml"));
+      expect(content).toContain("lint-and-test");
+      expect(content).toContain("needs: lint-and-test");
+    });
+
+    it("release workflow should read version from version.json", () => {
+      const content = readSource(path.join(workflowDir, "release.yml"));
+      expect(content).toContain("version.json");
+      expect(content).toContain("scripts/version.mjs check");
+    });
+
+    it("release workflow should build from Dockerfile.backend", () => {
+      const content = readSource(path.join(workflowDir, "release.yml"));
+      expect(content).toContain("Dockerfile.backend");
+    });
+
+    it("release workflow should bump the patch version when it is already tagged", () => {
+      const content = readSource(path.join(workflowDir, "release.yml"));
+      expect(content).toContain("scripts/version.mjs bump patch");
+    });
+
+    it("release workflow should publish a release with the APK attached", () => {
+      const content = readSource(path.join(workflowDir, "release.yml"));
+      expect(content).toContain("gh release create");
+      expect(content).toContain("steps.apk.outputs.file");
+    });
+  });
+
+  describe("commit and PR hygiene", () => {
+    it("commit-msg hook script should exist in scripts/", () => {
+      expect(existsSync(path.join(MONO, "scripts", "commit-msg"))).toBe(true);
+    });
+
+    it("commit-msg hook should strip Made-with trailers", () => {
+      const hook = readSource(path.join(MONO, "scripts", "commit-msg"));
+      expect(hook).toMatch(/Made-with/);
+    });
+
+    it("install-hooks.sh script should exist", () => {
+      expect(existsSync(path.join(MONO, "scripts", "install-hooks.sh"))).toBe(true);
+    });
+  });
+
+  describe("documentation completeness", () => {
+    const REQUIRED_DOCS = [
+      "README.md",
+      "CONTRIBUTING.md",
+      "SECURITY.md",
+      "AGENTS.md",
+      "docs/PRODUCT_DIRECTION.md",
+      "docs/DATA_MODEL.md",
+      "docs/REPO_HOUSEKEEPING.md",
+      "docs/ARCHITECTURE.md",
+      "docs/CODING_STANDARDS.md",
+      "docs/API_GUIDELINES.md",
+      "docs/TESTING.md",
+      "docs/DEPLOYMENT.md",
+      ".github/PULL_REQUEST_TEMPLATE.md",
+    ];
+
+    it.each(REQUIRED_DOCS)("%s should exist", (docPath) => {
+      expect(existsSync(path.join(MONO, docPath))).toBe(true);
+    });
+  });
+
+  describe("version synchronization", () => {
+    function manifestVersion(): string {
+      const manifest = readJSON(path.join(MONO, "version.json")) as {
+        version: string;
+      };
+      return manifest.version;
+    }
+
+    it("root version manifest should be a valid exact compatibility manifest", () => {
+      const manifest = readJSON(path.join(MONO, "version.json")) as {
+        version?: string;
+        compatibility?: { mode?: string; updateRequired?: boolean };
+        ios?: { buildNumber?: number; updateUrl?: string };
+      };
+
+      expect(manifest.version).toMatch(/^\d+\.\d+\.\d+$/);
+      expect(manifest.compatibility?.mode).toBe("exact");
+      expect(typeof manifest.compatibility?.updateRequired).toBe("boolean");
+      expect(Number.isInteger(manifest.ios?.buildNumber)).toBe(true);
+      expect(typeof manifest.ios?.updateUrl).toBe("string");
+    });
+
+    it("web package metadata should mirror version.json", () => {
+      const version = manifestVersion();
+      const pkg = readJSON(path.join(ROOT, "package.json")) as { version?: string };
+      const lock = readJSON(path.join(ROOT, "package-lock.json")) as {
+        version?: string;
+        packages?: Record<string, { version?: string }>;
+      };
+
+      expect(pkg.version).toBe(version);
+      expect(lock.version).toBe(version);
+      expect(lock.packages?.[""]?.version).toBe(version);
+    });
+
+    it("Android build.gradle.kts should derive version from version.json", () => {
+      const gradlePath = path.join(
+        MONO,
+        "android-compose",
+        "app",
+        "build.gradle.kts",
+      );
+      if (existsSync(gradlePath)) {
+        const content = readSource(gradlePath);
+        expect(content).toContain("version.json");
+        expect(content).toContain("projectVersion");
+      }
+    });
+
+    // Android refuses to install an update whose versionCode is not strictly
+    // greater than the installed one. The encoding used to be
+    // `major * 10000 + minor * 100 + patch`, which gave 0.7.100 and 0.8.0 the
+    // same code (800) — and release.yml bumps the patch on every merge to
+    // master, so three-digit patches are reachable. CI does not run the Android
+    // unit tests, so this is the gate that actually catches a regression.
+    it("Android versionCode encoding should be collision-free and monotonic", () => {
+      const content = readSource(
+        path.join(MONO, "android-compose", "app", "build.gradle.kts"),
+      );
+
+      function gradleInt(name: string): number {
+        const raw = content.match(new RegExp(`val ${name} = ([0-9_]+)`))?.[1];
+        if (!raw) {
+          throw new Error(`${name} is not declared in android-compose/app/build.gradle.kts`);
+        }
+        return Number(raw.replace(/_/g, ""));
+      }
+
+      const patchSlot = gradleInt("versionCodePatchSlot");
+      const minorSlot = gradleInt("versionCodeMinorSlot");
+      const ceiling = gradleInt("versionCodeCeiling");
+      const highestShipped = gradleInt("highestShippedVersionCode");
+      const majorScale = patchSlot * minorSlot;
+
+      function encode(version: string): number {
+        const [major, minor, patch] = version.split(".").map(Number);
+        expect(minor).toBeLessThan(minorSlot);
+        expect(patch).toBeLessThan(patchSlot);
+        return major * majorScale + minor * patchSlot + patch;
+      }
+
+      // The comment above the formula quotes the old one, so match on code only.
+      const gradleCode = content
+        .split("\n")
+        .filter((line) => !line.trim().startsWith("//"))
+        .join("\n");
+
+      // The encoding must be expressed with the slot constants validated below,
+      // not with literals that could drift away from them.
+      expect(gradleCode).toMatch(/\*\s*versionCodeMajorScale/);
+      expect(gradleCode).toMatch(/\*\s*versionCodePatchSlot/);
+      expect(gradleCode).not.toMatch(/major(?:\.toLong\(\))?\s*\*\s*10_?000\b/);
+
+      const ordered = [
+        "0.7.2",
+        `0.7.${patchSlot - 1}`,
+        "0.8.0",
+        `0.${minorSlot - 1}.${patchSlot - 1}`,
+        "1.0.0",
+        "1.44.0",
+        "2.0.0",
+      ];
+      for (let index = 1; index < ordered.length; index += 1) {
+        expect(encode(ordered[index - 1])).toBeLessThan(encode(ordered[index]));
+      }
+      expect(encode("0.7.100")).not.toBe(encode("0.8.0"));
+
+      // The version being built must clear every code this project ever shipped,
+      // otherwise the in-app APK updater cannot install over the old build.
+      expect(encode(manifestVersion())).toBeGreaterThan(highestShipped);
+
+      // The largest version the slots admit must still fit a signed 32-bit int.
+      const maxMajor = Math.floor(ceiling / majorScale) - 1;
+      expect(
+        encode(`${maxMajor}.${minorSlot - 1}.${patchSlot - 1}`),
+      ).toBeLessThanOrEqual(ceiling);
+      expect(ceiling).toBeLessThanOrEqual(2_147_483_647);
+    });
+
+    it("backend build.gradle.kts should derive artifact version from version.json", () => {
+      const content = readSource(path.join(MONO, "tday-backend", "build.gradle.kts"));
+      expect(content).toContain("version.json");
+      expect(content).not.toMatch(/version\s*=\s*"[0-9]+\.[0-9]+\.[0-9]+"/);
+    });
+
+    it("iOS checked-in version mirrors should match version.json", () => {
+      const version = manifestVersion();
+      const manifest = readJSON(path.join(MONO, "version.json")) as {
+        ios?: { buildNumber?: number; updateUrl?: string };
+      };
+      const infoPlist = readSource(
+        path.join(MONO, "ios-swiftUI", "Tday", "Info.plist"),
+      );
+      const projectYml = readSource(path.join(MONO, "ios-swiftUI", "project.yml"));
+      const pbxproj = readSource(
+        path.join(MONO, "ios-swiftUI", "TdayApp.xcodeproj", "project.pbxproj"),
+      );
+      const ymlMarketingVersions =
+        projectYml.match(/MARKETING_VERSION: [0-9]+\.[0-9]+\.[0-9]+/g) ?? [];
+      const ymlBuildVersions = projectYml.match(/CURRENT_PROJECT_VERSION: \d+/g) ?? [];
+      const expectedBuildConfigurationCount = ymlMarketingVersions.length * 2;
+
+      expect(infoPlist).toContain(`<key>CFBundleShortVersionString</key>`);
+      expect(infoPlist).toContain(`<string>${version}</string>`);
+      expect(infoPlist).toContain(`<key>TdayUpdateURL</key>`);
+      expect(infoPlist).toContain(`<string>${manifest.ios?.updateUrl ?? ""}</string>`);
+      expect(ymlMarketingVersions.length).toBeGreaterThan(0);
+      expect(ymlMarketingVersions).toEqual(
+        Array(ymlMarketingVersions.length).fill(`MARKETING_VERSION: ${version}`),
+      );
+      expect(ymlBuildVersions).toEqual(
+        Array(ymlMarketingVersions.length).fill(
+          `CURRENT_PROJECT_VERSION: ${manifest.ios?.buildNumber}`,
+        ),
+      );
+      expect(pbxproj.match(/MARKETING_VERSION = ([0-9]+\.[0-9]+\.[0-9]+);/g)).toEqual(
+        Array(expectedBuildConfigurationCount).fill(`MARKETING_VERSION = ${version};`),
+      );
+      expect(pbxproj.match(/CURRENT_PROJECT_VERSION = \d+;/g)).toEqual(
+        Array(expectedBuildConfigurationCount).fill(
+          `CURRENT_PROJECT_VERSION = ${manifest.ios?.buildNumber};`,
+        ),
+      );
+    });
+
+    it("backend compatibility examples should match version.json", () => {
+      const version = manifestVersion();
+      const manifest = readJSON(path.join(MONO, "version.json")) as {
+        compatibility?: { updateRequired?: boolean };
+      };
+      for (const envPath of [
+        path.join(MONO, ".env.example"),
+        path.join(MONO, "tday-backend", ".env.example"),
+      ]) {
+        const content = readSource(envPath);
+        expect(content).toMatch(new RegExp(`^TDAY_APP_VERSION=${version}$`, "m"));
+        expect(content).toMatch(
+          new RegExp(`^TDAY_UPDATE_REQUIRED=${manifest.compatibility?.updateRequired}$`, "m"),
+        );
+      }
+    });
+
+    it("postversion hook should stage every checked-in version mirror", () => {
+      const pkg = readJSON(path.join(ROOT, "package.json")) as {
+        scripts?: Record<string, string>;
+      };
+      const postversion = pkg.scripts?.postversion ?? "";
+
+      expect(postversion).toContain("scripts/version.mjs");
+      expect(postversion).toContain("version.json");
+      expect(postversion).toContain("package-lock.json");
+      expect(postversion).toContain("ios-swiftUI/Tday/Info.plist");
+      expect(postversion).toContain("ios-swiftUI/project.yml");
+      expect(postversion).toContain("ios-swiftUI/TdayApp.xcodeproj/project.pbxproj");
+      expect(postversion).toContain(".env.example");
+      expect(postversion).toContain("tday-backend/.env.example");
+    });
+  });
+});

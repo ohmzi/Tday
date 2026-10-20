@@ -1,0 +1,11 @@
+// Committed build settings for the Tday target, and the hook a checkout uses to point its own builds
+// at a reporting endpoint.
+//
+// `Local.xcconfig` is gitignored, and `#include?` makes it optional: a fork, CI, or any clean
+// checkout builds exactly as before — `SENTRY_DSN` undefined, `$(SENTRY_DSN)` in Info.plist
+// expanding to empty, and crash reporting off with its consent surfaces hidden.
+//
+// The target itself no longer sets SENTRY_DSN, because a target build setting would outrank this
+// file. The release lane passes its own `-xcconfig`, which outranks both, so TestFlight builds are
+// unaffected either way.
+#include? "Local.xcconfig"

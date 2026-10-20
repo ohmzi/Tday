@@ -1,0 +1,476 @@
+import com.android.build.api.artifact.SingleArtifact
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
+
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.serialization")
+    id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.devtools.ksp")
+    id("com.google.dagger.hilt.android")
+    id("io.sentry.android.gradle")
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+    }
+}
+
+// `rootProject` follows the directory Gradle was pointed at, and this repository is built from two
+// places: `android-compose/` on its own, and the repository root, which includes `:android-compose:app`
+// and is what Android Studio opens because the backend build lives there too. Reading only
+// `rootProject`'s file made a key such as `sentryDsn` silently vanish in one of them — a build with no
+// DSN has no crash-report surface at all. Both files are read, and the module's own is read last so it
+// wins where both define the same key.
+val localProps: Properties = Properties().apply {
+    listOf(
+        rootProject.projectDir.parentFile?.let { File(it, "local.properties") },
+        rootProject.file("local.properties"),
+        File(rootProject.projectDir, "android-compose/local.properties"),
+    ).filterNotNull().distinct().forEach { f ->
+        if (f.exists()) f.reader().use { load(it) }
+    }
+}
+
+val projectVersion: String by lazy {
+    val manifestCandidates = listOf(
+        File(rootProject.projectDir, "version.json"),
+        File(rootProject.projectDir.parentFile, "version.json"),
+    )
+    val manifest = manifestCandidates.firstOrNull { it.exists() }
+        ?: error("Could not locate version.json from ${rootProject.projectDir}")
+    val match = Regex(""""version"\s*:\s*"([^"]+)"""").find(manifest.readText())
+    match?.groupValues?.get(1) ?: error("Could not read version from version.json")
+}
+
+// Android refuses to install an update whose versionCode is not strictly greater
+// than the installed one, so this encoding has to be strictly increasing in
+// (major, minor, patch). The previous `major * 10000 + minor * 100 + patch` was
+// not: 0.7.100 and 0.8.0 both encoded to 800. release.yml bumps the patch on
+// every merge to master, so three-digit patch numbers are reachable rather than
+// theoretical, and a collision would silently stop the in-app APK updater.
+//
+// Every component now owns its own decimal slot — <major><minor:3><patch:4> —
+// so 0.7.2 -> 70_002 and 1.44.0 -> 10_440_000. The slot widths are asserted
+// below because a component that overflows its slot collides with the next slot
+// up, which is exactly the bug this replaces.
+val versionCodePatchSlot = 10_000 // patch owns 4 decimal digits: 0..9_999
+val versionCodeMinorSlot = 1_000 // minor owns 3 decimal digits: 0..999
+val versionCodeMajorScale = versionCodePatchSlot * versionCodeMinorSlot // 10_000_000
+
+// versionCode is a signed 32-bit int and Play caps it at 2_100_000_000. With the
+// slots above that still leaves room for major versions up to 209.
+val versionCodeCeiling = 2_100_000_000
+
+// The highest versionCode this project ever produced is 14_400, from the legacy
+// v1.44.0 tag under the old formula. Anything at or below that could not install
+// over an already-shipped APK, so fail the build rather than ship a dud update.
+val highestShippedVersionCode = 14_400
+
+val projectVersionCode: Int by lazy {
+    val parts = projectVersion.split(".")
+    require(parts.size == 3) {
+        "version.json version must be major.minor.patch, got '$projectVersion'"
+    }
+    val (major, minor, patch) = parts.map { it.toInt() }
+    require(minor in 0 until versionCodeMinorSlot) {
+        "version.json minor $minor overflows its versionCode slot " +
+            "(max ${versionCodeMinorSlot - 1}); widen the slots in app/build.gradle.kts"
+    }
+    require(patch in 0 until versionCodePatchSlot) {
+        "version.json patch $patch overflows its versionCode slot " +
+            "(max ${versionCodePatchSlot - 1}); widen the slots in app/build.gradle.kts"
+    }
+
+    val code = major.toLong() * versionCodeMajorScale +
+        minor.toLong() * versionCodePatchSlot +
+        patch.toLong()
+    require(code <= versionCodeCeiling) {
+        "versionCode $code for $projectVersion exceeds Android's $versionCodeCeiling ceiling"
+    }
+    require(code > highestShippedVersionCode) {
+        "versionCode $code for $projectVersion is not above the highest already-shipped " +
+            "$highestShippedVersionCode; Android would reject the update"
+    }
+    code.toInt()
+}
+
+// One name for the release build type, its signing config and the variant filter below, so the
+// three do not drift apart (and so the literal is not repeated — DeepSource KT-W1042).
+val releaseBuildType = "release"
+
+val releaseKeystorePath = System.getenv("RELEASE_KEYSTORE_PATH")
+val releaseKeystoreFile = releaseKeystorePath
+    ?.takeIf(String::isNotBlank)
+    ?.let(::File)
+val hasReleaseSigning = releaseKeystoreFile?.exists() == true &&
+    !System.getenv("RELEASE_KEYSTORE_PASSWORD").isNullOrBlank() &&
+    !System.getenv("RELEASE_KEY_ALIAS").isNullOrBlank() &&
+    !System.getenv("RELEASE_KEY_PASSWORD").isNullOrBlank()
+val allowDebugSignedRelease = providers.gradleProperty("allowDebugSignedRelease").orNull == "true"
+val isReleaseTaskRequested = gradle.startParameter.taskNames.any { taskName ->
+    taskName.contains("Release", ignoreCase = true)
+}
+
+if (isReleaseTaskRequested && !hasReleaseSigning && !allowDebugSignedRelease) {
+    error(
+        "Release builds require the release keystore so APK signatures stay stable for updates. " +
+            "Set RELEASE_KEYSTORE_PATH, RELEASE_KEYSTORE_PASSWORD, RELEASE_KEY_ALIAS, and " +
+            "RELEASE_KEY_PASSWORD, or rerun with -PallowDebugSignedRelease=true for a local-only build.",
+    )
+}
+
+android {
+    namespace = "com.ohmz.tday.compose"
+    compileSdk = 37
+
+    defaultConfig {
+        applicationId = "com.ohmz.tday.compose"
+        minSdk = 26
+        targetSdk = 35
+        versionCode = projectVersionCode
+        versionName = projectVersion
+        manifestPlaceholders["usesCleartextTraffic"] = "false"
+
+        buildConfigField(
+            "String",
+            "PROBE_ENCRYPTION_KEY",
+            "\"${localProps.getProperty("probeEncryptionKey") ?: System.getenv("TDAY_PROBE_ENCRYPTION_KEY") ?: ""}\"",
+        )
+        buildConfigField(
+            "String",
+            "SENTRY_DSN",
+            "\"${localProps.getProperty("sentryDsn") ?: System.getenv("SENTRY_DSN") ?: ""}\"",
+        )
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary = true
+        }
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create(releaseBuildType) {
+                storeFile = releaseKeystoreFile
+                storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
+        }
+
+        release {
+            manifestPlaceholders["usesCleartextTraffic"] = "false"
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            signingConfig = signingConfigs.findByName(releaseBuildType)
+                ?: signingConfigs.getByName("debug")
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
+    }
+
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+
+    // The exported Room schemas, so the migration test can build an old version of the database.
+    sourceSets {
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
+}
+
+// Export the Room schema so future version bumps can ship real Migration objects
+// (the offline cache also stores unsynced pending mutations, which destructive
+// migration would lose). Commit the generated app/schemas/*.json files.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+dependencies {
+    implementation(project(":shared"))
+
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+
+    // On-device natural-language date parsing for the task-title field (offline,
+    // no AI/network). Same engine the backend uses, so behaviour matches.
+    implementation("com.joestelmach:natty:0.13")
+
+    // HTML sanitizer for the notes rich-text encoding — allow-lists the same
+    // small tag set as tday-web's DOMParser-based sanitizer (see richNotes.ts).
+    implementation("org.jsoup:jsoup:1.23.2")
+
+    implementation("androidx.core:core-ktx:1.19.1")
+    // Per-app language override (AppCompatDelegate.setApplicationLocales); works
+    // back to API 21 via the AppLocalesMetadataHolderService manifest hook.
+    implementation("androidx.appcompat:appcompat:1.8.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
+    implementation("androidx.activity:activity-compose:1.13.0")
+    // Installs the APK's baseline profile (src/main/baseline-prof.txt plus the libraries' own) on
+    // first launch, for ART to compile at its next idle dexopt. Sideloaded APKs get no install-time
+    // profile, so this is the only way it reaches them. Pinned because the 1.3.1 that arrives
+    // transitively predates Android 14's ART and refuses to install anything there.
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
+
+    // The Compose BOM keeps every Compose artifact (including the ones only reached transitively, like
+    // foundation and animation) on one release; 2026.09.00 maps ui to 1.12.1 and material3 to 1.4.0.
+    implementation(platform("androidx.compose:compose-bom:2026.09.00"))
+    androidTestImplementation(platform("androidx.compose:compose-bom:2026.09.00"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
+    // Backdrop blur for the bottom toast so it matches iOS's translucent
+    // .ultraThinMaterial look (RenderEffect on API 31+, translucent fallback below).
+    implementation("dev.chrisbanes.haze:haze:2.0.1")
+    implementation("dev.chrisbanes.haze:haze-blur:2.0.1")
+    implementation("androidx.navigation:navigation-compose:2.10.2")
+    implementation("com.google.android.material:material:1.14.0")
+    implementation("androidx.credentials:credentials:1.6.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
+
+    implementation("com.google.dagger:hilt-android:2.60.1")
+    ksp("com.google.dagger:hilt-compiler:2.60.1")
+    implementation("androidx.hilt:hilt-navigation-compose:1.4.0")
+    implementation("androidx.hilt:hilt-work:1.4.0")
+    ksp("androidx.hilt:hilt-compiler:1.4.0")
+
+    implementation("androidx.work:work-runtime-ktx:2.12.0")
+
+    implementation("androidx.room:room-runtime:2.8.5")
+    implementation("androidx.room:room-ktx:2.8.5")
+    ksp("androidx.room:room-compiler:2.8.5")
+
+    // The offline cache holds task titles, notes and unsynced mutations, so it is encrypted at
+    // rest with SQLCipher. androidx-compatible artifact (net.zetetic:sqlcipher-android) so it
+    // plugs into Room's openHelperFactory directly. See DatabaseModule / DatabasePassphraseStore.
+    implementation("net.zetetic:sqlcipher-android:4.19.1")
+    implementation("androidx.sqlite:sqlite:2.7.1")
+
+    // Optional, opt-in app lock (BiometricPrompt with device-credential fallback).
+    implementation("androidx.biometric:biometric:1.1.0")
+
+    // Widget task lists: RemoteCollectionItems, backported below API 31 by its own service.
+    implementation("androidx.core:core-remoteviews:1.1.0")
+
+    implementation("com.squareup.retrofit2:retrofit:3.0.0")
+    implementation("com.squareup.retrofit2:converter-kotlinx-serialization:3.0.0")
+    implementation("com.squareup.okhttp3:okhttp:5.5.0")
+    implementation("com.squareup.okhttp3:okhttp-urlconnection:5.5.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:5.5.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+
+    implementation("io.sentry:sentry-okhttp:8.59.0")
+
+    implementation("androidx.security:security-crypto:1.1.0")
+
+    // UnifiedPush: lets Server-Mode self-hosters receive server pushes through their
+    // own distributor (e.g. ntfy) instead of FCM. Local reminders remain the default.
+    //
+    // The connector's runtime dependency on the JVM `tink` collides with the `tink-android` that
+    // security-crypto brings: both define com.google.crypto.tink.*, which fails
+    // checkReleaseDuplicateClasses. tink-android is the one that has to stay (EncryptedSharedPreferences
+    // needs its Android keystore integration, which the JVM artifact lacks), and it carries every
+    // Tink class the connector calls (HybridDecrypt/HybridEncrypt and the subtle.* helpers; checked
+    // against the connector's bytecode), so the JVM copy is dropped rather than the other way round.
+    implementation("org.unifiedpush.android:connector:3.3.5") {
+        exclude(group = "com.google.crypto.tink", module = "tink")
+    }
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+    testImplementation("io.mockk:mockk:1.14.11")
+    testImplementation("app.cash.turbine:turbine:1.2.1")
+
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    androidTestImplementation("androidx.room:room-testing:2.8.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    // Leak hunting for debug builds only: Sentry reports an out-of-memory kill, never a leak. It
+    // installs itself from a content provider, so there is no code to call.
+    debugImplementation("com.squareup.leakcanary:leakcanary-android:2.14")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+}
+
+val hasSentryAuth = !System.getenv("SENTRY_AUTH_TOKEN").isNullOrBlank()
+
+sentry {
+    includeSourceContext = hasSentryAuth
+    includeProguardMapping = true
+    autoUploadProguardMapping = hasSentryAuth
+    org = "tday-kb"
+    projectName = "tday-android"
+    authToken = System.getenv("SENTRY_AUTH_TOKEN")
+    // Failures only (docs/TELEMETRY.md): the app sends no traces, so none of the plugin's
+    // bytecode instrumentation (OkHttp, Room, file I/O, Compose navigation, app start) has anything
+    // to feed. Switching `enabled` off skips all of it; logcat and appStart are off as well so that
+    // turning tracing back on for a local experiment cannot quietly bring either back, since logcat
+    // would turn every `Log.w`/`Log.e` message into a breadcrumb.
+    tracingInstrumentation {
+        enabled = false
+        logcat {
+            enabled = false
+        }
+        appStart {
+            enabled = false
+        }
+    }
+    autoInstallation {
+        enabled = true
+        sentryVersion = "8.59.0"
+    }
+}
+
+// ── Widget class identity (R8) ──────────────────────────────────────────────
+//
+// `WidgetInstanceCatalog` resolves a placed widget's kind from the provider class NAME the platform
+// reports for it, compared against each receiver's runtime `Class.name`. A receiver that R8 merged,
+// shrank or renamed would make its instances resolve to no kind at all — painted by nothing, or
+// routed by an `onUpdate` alone. (The Glance renderer these receivers once fronted had the sharper
+// version of this: R8 merged its three widget classes and a widget rendered as the wrong kind.)
+//
+// The keep rule in `proguard-rules.pro` prevents it, but a keep rule is easy to delete and the
+// symptom only appears in a signed release build on a real home screen. This reads the R8 mapping
+// back and fails the build instead.
+//
+// Release-only by construction — there is no mapping file without R8 — so it runs in
+// `release.yml`'s `assembleRelease`, not in the PR unit-test job.
+//
+// Every class below is pinned by a `-keep` rule, so R8 must emit it under its ORIGINAL name. The
+// check is therefore `output == original`, not merely "no two share an output name" — see the
+// three defect shapes enumerated at the comparison itself.
+val widgetClassesRequiringOwnRuntimeName = listOf(
+    "com.ohmz.tday.compose.feature.widget.TodayTasksWidgetSmallReceiver",
+    "com.ohmz.tday.compose.feature.widget.TodayTasksWidgetReceiver",
+    "com.ohmz.tday.compose.feature.widget.TodayTasksWidgetLargeReceiver",
+    "com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetSmallReceiver",
+    "com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetReceiver",
+    "com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetLargeReceiver",
+    "com.ohmz.tday.compose.feature.widget.ListWidgetSmallReceiver",
+    "com.ohmz.tday.compose.feature.widget.ListWidgetReceiver",
+    "com.ohmz.tday.compose.feature.widget.ListWidgetLargeReceiver",
+)
+
+// The mapping comes from AGP's artifact API rather than a hardcoded
+// `outputs/mapping/<variant>/mapping.txt`. With core library desugaring enabled that path is only
+// finalised by `l8DexDesugarLibRelease`, several tasks AFTER `minifyReleaseWithR8` — reading the
+// literal path just gets the PREVIOUS build's mapping, which is worse than no check at all. The
+// artifact provider carries whichever task actually produces it.
+androidComponents.onVariants { variant ->
+    if (variant.buildType != releaseBuildType) return@onVariants
+
+    val mappingFile = variant.artifacts.get(SingleArtifact.OBFUSCATION_MAPPING_FILE)
+    val expected = widgetClassesRequiringOwnRuntimeName
+    val variantName = variant.name.replaceFirstChar { it.uppercase() }
+
+    val verifyWidgetClassIdentity = tasks.register("verify${variantName}WidgetClassIdentity") {
+        group = "verification"
+        description =
+            "Fails if R8 merged, removed or renamed an app widget receiver."
+
+        inputs.file(mappingFile).withPropertyName("r8Mapping")
+        // Cheap, and a stale "pass" here would be a silently broken gate.
+        outputs.upToDateWhen { false }
+
+        doLast {
+            val mapping = mappingFile.get().asFile
+            if (!mapping.isFile) {
+                throw GradleException(
+                    "No R8 mapping at ${mapping.absolutePath}; cannot verify widget class identity.",
+                )
+            }
+
+            // A class definition in mapping.txt is the only kind of line starting at column 0:
+            // `<original> -> <obfuscated>:`. Member lines are all indented.
+            val outputNameByClass = mutableMapOf<String, String>()
+            mapping.useLines { lines ->
+                for (line in lines) {
+                    if (line.isEmpty() || line[0].isWhitespace() || line.startsWith("#")) continue
+                    val arrow = line.indexOf(" -> ")
+                    if (arrow < 0 || !line.endsWith(":")) continue
+                    val original = line.substring(0, arrow)
+                    if (original in expected) {
+                        outputNameByClass[original] = line.substring(arrow + 4, line.length - 1)
+                    }
+                }
+            }
+
+            // These classes are `-keep`-pinned, so the contract is the strongest one available:
+            // each must appear under its OWN name. Asserting that catches all three ways the
+            // guarantee can be lost, where a "no two share an output name" check catches only one:
+            //
+            //  - MERGED into a sibling — the class loses its definition line entirely. This is how
+            //    the old Glance TodayTasksWidget and ListTasksWidget classes vanished.
+            //  - SHRUNK OUT — R8 still writes a line, as `<original> -> R8$$REMOVED$$CLASS$$<N>:`.
+            //    It has the same `" -> "` + trailing-colon shape as a real class, so a naive parse
+            //    records it as present, and <N> is unique per removed class so it collides with
+            //    nothing. A distinctness-only check would report success on a class that is not in
+            //    the APK at all. Not hypothetical: this build's own mapping carries ~1000 of them.
+            //  - RENAMED — the keep rule stopped matching (a package move, a rule edit).
+            //    `WidgetInstanceCatalog` looks kinds up by class name, so a rename breaks the same
+            //    resolution a merge does.
+            val removedMarker = "R8\$\$REMOVED\$\$CLASS\$\$"
+            val defects = expected.mapNotNull { original ->
+                val output = outputNameByClass[original]
+                when {
+                    output == null -> original to "no mapping entry: merged into another class"
+                    output == original -> null
+                    output.startsWith(removedMarker) ->
+                        original to "shrunk out of the APK: R8 emitted '$output'"
+                    else -> original to "renamed to '$output': its keep rule is not applying"
+                }
+            }
+
+            if (defects.isNotEmpty()) {
+                val detail = buildString {
+                    appendLine(
+                        "App widget receivers lost their own runtime names in the release build.",
+                    )
+                    appendLine("WidgetInstanceCatalog resolves a placed widget's kind by receiver")
+                    appendLine("class name, so affected instances would resolve to no kind at all.")
+                    defects.forEach { (original, reason) -> appendLine("  - $original — $reason") }
+                    appendLine("Restore the widget receiver keep rule in app/proguard-rules.pro.")
+                    append("Mapping: ${mapping.absolutePath}")
+                }
+                throw GradleException(detail)
+            }
+
+            logger.lifecycle(
+                "verifyWidgetClassIdentity: ${expected.size} widget receivers kept their own " +
+                    "runtime names.",
+            )
+        }
+    }
+
+    // Hung off `assemble`/`bundle` rather than finalizing the R8 task: a finalizer also runs when
+    // R8 itself failed, and would then report a missing mapping on top of the real error.
+    tasks.matching { it.name == "assemble$variantName" || it.name == "bundle$variantName" }
+        .configureEach { dependsOn(verifyWidgetClassIdentity) }
+}

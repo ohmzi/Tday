@@ -1,0 +1,1808 @@
+{
+  "currentVersion": "0.8.5",
+  "ui": {
+    "title": "使用方法与技巧",
+    "subtitle": "T'Day 能做的一切——显而易见的，和隐藏起来的。",
+    "searchPlaceholder": "搜索功能…",
+    "searchAria": "搜索指南",
+    "whatsNew": "新功能",
+    "tryIt": "试一试",
+    "clearSearch": "清除",
+    "noResults": "没有匹配项。换个词试试。",
+    "results": "{{count}} 条结果",
+    "badges.hiddenGem": "隐藏惊喜",
+    "badges.proTip": "高手技巧",
+    "badges.new": "新增",
+    "badges.server": "服务器模式",
+    "sections.gettingStarted": "快速上手",
+    "sections.captureAndDates": "记录与日期",
+    "sections.gestures": "手势",
+    "sections.organizing": "整理",
+    "sections.recurrenceAndReminders": "重复与提醒",
+    "sections.widgetsAndSurfaces": "小组件与展示界面",
+    "sections.modesAndSync": "模式与同步",
+    "sections.integrations": "集成",
+    "sections.keyboardShortcuts": "键盘快捷键"
+  },
+  "sections": [
+    {
+      "id": "GETTING_STARTED",
+      "title": "快速上手",
+      "order": 0
+    },
+    {
+      "id": "CAPTURE_AND_DATES",
+      "title": "记录与日期",
+      "order": 1
+    },
+    {
+      "id": "GESTURES",
+      "title": "手势",
+      "order": 2
+    },
+    {
+      "id": "ORGANIZING",
+      "title": "整理",
+      "order": 3
+    },
+    {
+      "id": "RECURRENCE_AND_REMINDERS",
+      "title": "重复与提醒",
+      "order": 4
+    },
+    {
+      "id": "WIDGETS_AND_SURFACES",
+      "title": "小组件与展示界面",
+      "order": 5
+    },
+    {
+      "id": "MODES_AND_SYNC",
+      "title": "模式与同步",
+      "order": 6
+    },
+    {
+      "id": "INTEGRATIONS",
+      "title": "集成",
+      "order": 7
+    },
+    {
+      "id": "KEYBOARD_SHORTCUTS",
+      "title": "键盘快捷键",
+      "order": 8
+    }
+  ],
+  "topics": [
+    {
+      "id": "root-feeds",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "layout-dashboard",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "已安排与随时",
+      "summary": "两个宁静的主信息流，可从底栏切换。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day 有两个并列的信息流。“已安排”存放你今天及以后有日期的任务。“随时”存放浮动任务——没有日期的任务。从底部的底栏在两者之间切换，也可以从任意一个创建任务。"
+          ]
+        }
+      ],
+      "searchTitle": "已安排与随时",
+      "searchKeywords": "已安排, 随时, 信息流, 底栏, 根, 导航, 标签页, scheduled, anytime, feed, tabs",
+      "searchBody": "两个宁静的主信息流，可从底栏切换。 t'day 有两个并列的信息流。“已安排”存放你今天及以后有日期的任务。“随时”存放浮动任务——没有日期的任务。从底部的底栏在两者之间切换，也可以从任意一个创建任务。"
+    },
+    {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "默认主屏幕",
+      "summary": "选择 T'Day 启动后打开“已安排”还是“随时”。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "设置中有一个“行为”部分，可以选择启动时先打开哪个信息流——“已安排”或“随时”。这只决定启动时看到的画面；底栏仍然可以随时在两者间切换。"
+          ]
+        }
+      ],
+      "searchTitle": "默认主屏幕",
+      "searchKeywords": "默认, 主屏幕, 启动, 已安排, 随时, 行为, 设置",
+      "searchBody": "选择 t'day 启动后打开“已安排”还是“随时”。 设置中有一个“行为”部分，可以选择启动时先打开哪个信息流——“已安排”或“随时”。这只决定启动时看到的画面；底栏仍然可以随时在两者间切换。"
+    },
+    {
+      "id": "create-task",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "plus",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "创建任务",
+      "summary": "几下点按即可添加一个已安排的任务或一个无日期的浮动任务。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "点按创建按钮来添加任务。给它一个标题，如果有日期，再加上截止时间。不填日期，它就会变成随时信息流里的一个浮动任务。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "直接在标题里输入日期——T'Day 会替你识别。参见“输入日期”。"
+          ]
+        }
+      ],
+      "searchTitle": "创建任务",
+      "searchKeywords": "创建, 添加, 新建, 任务, 加号, 悬浮按钮, 撰写, create, add, new, task",
+      "searchBody": "几下点按即可添加一个已安排的任务或一个无日期的浮动任务。 点按创建按钮来添加任务。给它一个标题，如果有日期，再加上截止时间。不填日期，它就会变成随时信息流里的一个浮动任务。 直接在标题里输入日期——t'day 会替你识别。参见“输入日期”。"
+    },
+    {
+      "id": "nlp-date-syntax",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "nlp-title-input"
+      ],
+      "title": "输入日期",
+      "summary": "把日期写进标题，T'Day 就会替你安排好时间。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "无需选择器。直接在标题里输入日期（\"tomorrow 3pm\"）、重复（\"every day\"、\"weekly\"、\"every weekday\"）或优先级（\"!\"、\"!!\"，或结尾的 \"high\"/\"low\"）。T'Day 在设备上解析——无需账户或网络——高亮它理解的日期，并自动填入日程、重复和优先级。"
+          ]
+        },
+        {
+          "type": "EXAMPLE",
+          "texts": [
+            "牙医 tuesday 3pm every weekday !!"
+          ]
+        }
+      ],
+      "searchTitle": "输入日期",
+      "searchKeywords": "自然语言, 日期, 明天, 下周, 解析, 快捷, 智能, 本地识别, natural language, tomorrow, nlp",
+      "searchBody": "把日期写进标题，t'day 就会替你安排好时间。 无需选择器。直接在标题里输入日期（\"tomorrow 3pm\"）、重复（\"every day\"、\"weekly\"、\"every weekday\"）或优先级（\"!\"、\"!!\"，或结尾的 \"high\"/\"low\"）。t'day 在设备上解析——无需账户或网络——高亮它理解的日期，并自动填入日程、重复和优先级。 牙医 tuesday 3pm every weekday !!"
+    },
+    {
+      "id": "calendar-views",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "calendar",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": "calendar",
+        "android": "calendar",
+        "ios": "calendar"
+      },
+      "helpAnchors": [],
+      "title": "日历视图",
+      "summary": "按月、周或日查看你已安排的任务。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "打开日历，按月、周或日查看已安排的任务。滑动或使用箭头在不同时间段之间切换；右上角的按钮能让你回到今天而不改变视图。"
+          ]
+        }
+      ],
+      "searchTitle": "日历视图",
+      "searchKeywords": "日历, 月, 周, 日, 日程, 视图, 日期, calendar, month, week, day, agenda",
+      "searchBody": "按月、周或日查看你已安排的任务。 打开日历，按月、周或日查看已安排的任务。滑动或使用箭头在不同时间段之间切换；右上角的按钮能让你回到今天而不改变视图。"
+    },
+    {
+      "id": "priorities",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "flag",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "优先级",
+      "summary": "用低、中、高标记重要程度。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "给任务设置优先级，标明它有多重要。优先级会在任务上显示为一个小小的强调色圆点，帮你排出哪些事最值得先关注。"
+          ]
+        }
+      ],
+      "searchTitle": "优先级",
+      "searchKeywords": "优先级, 高, 中, 低, 重要, 紧急, 标记, priority, high, medium, low",
+      "searchBody": "用低、中、高标记重要程度。 给任务设置优先级，标明它有多重要。优先级会在任务上显示为一个小小的强调色圆点，帮你排出哪些事最值得先关注。"
+    },
+    {
+      "id": "pin-task",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "pin",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "置顶任务",
+      "summary": "让重要任务始终留在列表顶部。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "置顶一个任务，让它固定在信息流顶部，位于常规顺序之上。取消置顶后，它会回到原来的位置。"
+          ]
+        }
+      ],
+      "searchTitle": "置顶任务",
+      "searchKeywords": "置顶, 已置顶, 固定, 顶部, 重要, 保留, pin, top",
+      "searchBody": "让重要任务始终留在列表顶部。 置顶一个任务，让它固定在信息流顶部，位于常规顺序之上。取消置顶后，它会回到原来的位置。"
+    },
+    {
+      "id": "swipe-actions",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "pointer",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": null,
+        "android": "todos/today",
+        "ios": "today"
+      },
+      "helpAnchors": [],
+      "title": "滑动操作",
+      "summary": "在任务行上滑动，无需打开即可快速操作。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "在任务行上滑动即可显示快捷操作——完成它，或移除它——完全不用打开任务。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "已完成的任务会显示几秒钟的撤销提示，所以误滑绝不会成为定局。"
+          ]
+        }
+      ],
+      "searchTitle": "滑动操作",
+      "searchKeywords": "滑动, 手势, 滑, 完成, 删除, 快捷, 行, swipe, gesture, complete, delete",
+      "searchBody": "在任务行上滑动，无需打开即可快速操作。 在任务行上滑动即可显示快捷操作——完成它，或移除它——完全不用打开任务。 已完成的任务会显示几秒钟的撤销提示，所以误滑绝不会成为定局。"
+    },
+    {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.8",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "复制任务详情",
+      "summary": "将任务的标题、备注、截止日期和优先级复制为文本。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "滑动任务并点击复制——或在桌面端使用复制按钮——即可将其标题、备注、截止日期和优先级复制为纯文本，随时粘贴到任何地方。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "方便将任务粘贴到消息、邮件或其他应用中，无需重新输入。"
+          ]
+        }
+      ],
+      "searchTitle": "复制任务详情",
+      "searchKeywords": "复制, 剪贴板, 分享, 文本, 滑动",
+      "searchBody": "将任务的标题、备注、截止日期和优先级复制为文本。 滑动任务并点击复制——或在桌面端使用复制按钮——即可将其标题、备注、截止日期和优先级复制为纯文本，随时粘贴到任何地方。 方便将任务粘贴到消息、邮件或其他应用中，无需重新输入。"
+    },
+    {
+      "id": "long-press-actions",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "hand",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "长按任务",
+      "summary": "按住不放以查看更多选项并开始重新排序。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "按住一个任务不放，打开它的选项，或者把它拿起来拖到列表中的新位置。"
+          ]
+        }
+      ],
+      "searchTitle": "长按任务",
+      "searchKeywords": "长按, 按住, 快捷菜单, 选项, 重新排序, 拖动, long press, hold, reorder, drag",
+      "searchBody": "按住不放以查看更多选项并开始重新排序。 按住一个任务不放，打开它的选项，或者把它拿起来拖到列表中的新位置。"
+    },
+    {
+      "id": "drag-reorder",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "拖动重新排序",
+      "summary": "把任务拖成你想要的顺序。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "你的列表会保持你设定的顺序。上下拖动任务，按照你思考的方式来安排你的一天。"
+          ]
+        }
+      ],
+      "searchTitle": "拖动重新排序",
+      "searchKeywords": "拖动, 重新排序, 移动, 排序, 顺序, 排列, drag, reorder, sort",
+      "searchBody": "把任务拖成你想要的顺序。 你的列表会保持你设定的顺序。上下拖动任务，按照你思考的方式来安排你的一天。"
+    },
+    {
+      "id": "swipe-sheet-away",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.23",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "向下滑动关闭卡片",
+      "summary": "把新建任务卡片往下拉即可关闭。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "新建任务卡片顶部的小横条表示它可以向下拉。拖动时卡片会跟随手指；下拉约四分之一后松手就会关闭，效果与点击它后面的暗色区域完全相同。快速轻甩同样有效——判断依据是你正要去往何处，而不是松手时停在哪里。中途改主意的话，卡片会弹回原位。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "如果卡片内容可以滚动，请从卡片顶部拖动：中间部分属于列表。"
+          ]
+        }
+      ],
+      "searchTitle": "向下滑动关闭卡片",
+      "searchKeywords": "滑动, 拖动, 下拉, 关闭, 取消, 卡片, 手柄, 手势, 向下, swipe, drag, dismiss, sheet",
+      "searchBody": "把新建任务卡片往下拉即可关闭。 新建任务卡片顶部的小横条表示它可以向下拉。拖动时卡片会跟随手指；下拉约四分之一后松手就会关闭，效果与点击它后面的暗色区域完全相同。快速轻甩同样有效——判断依据是你正要去往何处，而不是松手时停在哪里。中途改主意的话，卡片会弹回原位。 如果卡片内容可以滚动，请从卡片顶部拖动：中间部分属于列表。"
+    },
+    {
+      "id": "floaters-vs-todos",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "浮动任务与已安排任务",
+      "summary": "无日期任务住在“随时”里；有日期任务住在“已安排”里。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "有截止日期的任务会出现在“已安排”和日历里。浮动任务没有日期——它安静地在你的随时信息流里等待，直到你准备好。用浮动任务来放那些“将来某天”要做、又不该扰乱今天的事。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "浮动任务从不出现在日历上——那片空间只留给有日期的事。"
+          ]
+        }
+      ],
+      "searchTitle": "浮动任务与已安排任务",
+      "searchKeywords": "浮动任务, 随时, 未安排, 无日期, 待办, 已安排, 区别, floater, anytime, todo",
+      "searchBody": "无日期任务住在“随时”里；有日期任务住在“已安排”里。 有截止日期的任务会出现在“已安排”和日历里。浮动任务没有日期——它安静地在你的随时信息流里等待，直到你准备好。用浮动任务来放那些“将来某天”要做、又不该扰乱今天的事。 浮动任务从不出现在日历上——那片空间只留给有日期的事。"
+    },
+    {
+      "id": "resting-floaters",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "休眠浮动任务",
+      "summary": "长期未动的 Anytime 任务会淡出并休眠，让列表保持平静。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "一个月未触碰的 Anytime 任务会轻轻淡出，三个月后会聚到底部平静的“休眠”分组。任何任务都不会被删除——它们只是不再争夺注意力，直到你再回来。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "这只是显示提示；轻点即可唤醒浮动任务。"
+          ]
+        }
+      ],
+      "searchTitle": "休眠浮动任务",
+      "searchKeywords": "休眠, 浮动, anytime, 淡出, 变暗, 老化, 闲置, 旧, 平静",
+      "searchBody": "长期未动的 anytime 任务会淡出并休眠，让列表保持平静。 一个月未触碰的 anytime 任务会轻轻淡出，三个月后会聚到底部平静的“休眠”分组。任何任务都不会被删除——它们只是不再争夺注意力，直到你再回来。 这只是显示提示；轻点即可唤醒浮动任务。"
+    },
+    {
+      "id": "promote-and-float",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "升级与放漂",
+      "summary": "把漂浮任务安排成正式任务，或让搁置的任务重新漂浮。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "当某个漂浮任务准备变成正式工作时，使用它的“安排”操作：选好时间后，它会作为有日期的任务进入“已安排”信息流。反过来也可以——一直拖延的逾期任务可以安静地漂浮：将它降级后，它会不带日期地回到“随时”，并保留标题、备注和优先级。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "重复任务不能漂浮——若想让它没有日期，请先结束重复系列。"
+          ]
+        }
+      ],
+      "searchTitle": "升级与放漂",
+      "searchKeywords": "升级, 安排漂浮任务, 降级, 放漂, 转换, 随时, 移动, 逾期",
+      "searchBody": "把漂浮任务安排成正式任务，或让搁置的任务重新漂浮。 当某个漂浮任务准备变成正式工作时，使用它的“安排”操作：选好时间后，它会作为有日期的任务进入“已安排”信息流。反过来也可以——一直拖延的逾期任务可以安静地漂浮：将它降级后，它会不带日期地回到“随时”，并保留标题、备注和优先级。 重复任务不能漂浮——若想让它没有日期，请先结束重复系列。"
+    },
+    {
+      "id": "quick-defer",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "快速推迟",
+      "summary": "一键把任务移到今天晚些时候、今晚、明天或下周。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "当任务需要挪动但不用挪太远时，不必打开日期选择器：“推迟”操作提供今天晚些时候（+3 小时）、今晚（19:00）、明天早上（09:00）和下周（周一 09:00）四个一键选项。效果与编辑表单的修改完全相同——只是更快。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "重复任务请在编辑表单中按单次推迟，因此一键菜单不会出现在它们上面。"
+          ]
+        }
+      ],
+      "searchTitle": "快速推迟",
+      "searchKeywords": "推迟, 延后, 稍后, 今晚, 明天, 下周, 改期",
+      "searchBody": "一键把任务移到今天晚些时候、今晚、明天或下周。 当任务需要挪动但不用挪太远时，不必打开日期选择器：“推迟”操作提供今天晚些时候（+3 小时）、今晚（19:00）、明天早上（09:00）和下周（周一 09:00）四个一键选项。效果与编辑表单的修改完全相同——只是更快。 重复任务请在编辑表单中按单次推迟，因此一键菜单不会出现在它们上面。"
+    },
+    {
+      "id": "day-done",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "今日完成",
+      "summary": "完成今天的所有任务，“今天”页面会安静地庆祝。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "当今天安排的每项任务都已完成——而不仅仅是没有任务——“今天”页面会把“无任务”提示换成平静的完成状态：柔和的双勾、“今天的任务全部完成”字样和日期。没有连胜，没有积分，只有真正完成一天的小小回报。"
+          ]
+        }
+      ],
+      "searchTitle": "今日完成",
+      "searchKeywords": "今日完成, 全部完成, 完成, 做完了, 今天为空",
+      "searchBody": "完成今天的所有任务，“今天”页面会安静地庆祝。 当今天安排的每项任务都已完成——而不仅仅是没有任务——“今天”页面会把“无任务”提示换成平静的完成状态：柔和的双勾、“今天的任务全部完成”字样和日期。没有连胜，没有积分，只有真正完成一天的小小回报。"
+    },
+    {
+      "id": "floater-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "list",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "浮动任务列表",
+      "summary": "把你的随时任务归入各自的列表。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "把浮动任务整理进不同的列表——采购、打包、点子——每个都有自己的名称、颜色和各自的完成记录。"
+          ]
+        }
+      ],
+      "searchTitle": "浮动任务列表",
+      "searchKeywords": "浮动任务列表, 随时, 分组, 列表, 分类, 购物, 打包, floater list, group, category",
+      "searchBody": "把你的随时任务归入各自的列表。 把浮动任务整理进不同的列表——采购、打包、点子——每个都有自己的名称、颜色和各自的完成记录。"
+    },
+    {
+      "id": "reusable-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "可重用清单",
+      "summary": "重置清单以再次使用——收拾行李、家务、购物。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "将某个 Anytime 清单标记为可重用，就会出现“重置”。一键取消所有勾选，即可再次使用同一清单，无需重新创建。"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "打开一个浮动清单，在其设置中开启“可重用”。",
+            "照常逐项勾选完成。",
+            "再次需要时，点“重置”即可取消全部勾选。"
+          ]
+        }
+      ],
+      "searchTitle": "可重用清单",
+      "searchKeywords": "可重用, 重置, 清单, 浮动, 重复, 模板, 再次",
+      "searchBody": "重置清单以再次使用——收拾行李、家务、购物。 将某个 anytime 清单标记为可重用，就会出现“重置”。一键取消所有勾选，即可再次使用同一清单，无需重新创建。 打开一个浮动清单，在其设置中开启“可重用”。 照常逐项勾选完成。 再次需要时，点“重置”即可取消全部勾选。"
+    },
+    {
+      "id": "scheduled-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "list-todo",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "已安排任务的列表",
+      "summary": "把有日期的任务归入命名的、带颜色的列表。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "给已安排的任务分配一个列表，让相关的事聚在一起。列表带有名称和颜色，还可以按其筛选。"
+          ]
+        }
+      ],
+      "searchTitle": "已安排任务的列表",
+      "searchKeywords": "列表, 项目, 分组, 颜色, 已安排, 分类, list, project, group, color",
+      "searchBody": "把有日期的任务归入命名的、带颜色的列表。 给已安排的任务分配一个列表，让相关的事聚在一起。列表带有名称和颜色，还可以按其筛选。"
+    },
+    {
+      "id": "list-icons",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.28",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "自动列表图标",
+      "summary": "尚未选择图标的列表会自动获得与名称相符的图标。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "把列表命名为 Groceries，它就会显示购物车；Gym 会得到哑铃，Work 会得到公文包。只有在你没有自己选择图标时，T'Day 才会推测；名称不够明确时，它会保留默认图标。目前仅按英文名称匹配。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "你随时可以在列表设置中选择图标：一旦选定就会保留，绝不会被推测覆盖。"
+          ]
+        }
+      ],
+      "searchTitle": "自动列表图标",
+      "searchKeywords": "列表图标, 自动, 建议, 字形, 名称, 购物, 健身, 工作",
+      "searchBody": "尚未选择图标的列表会自动获得与名称相符的图标。 把列表命名为 groceries，它就会显示购物车；gym 会得到哑铃，work 会得到公文包。只有在你没有自己选择图标时，t'day 才会推测；名称不够明确时，它会保留默认图标。目前仅按英文名称匹配。 你随时可以在列表设置中选择图标：一旦选定就会保留，绝不会被推测覆盖。"
+    },
+    {
+      "id": "completed-history",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "完成记录",
+      "summary": "你完成的一切，都替你留存下来供回顾。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "完成的任务不会被丢弃——它们会转入你的完成记录，按天分组，让你看到自己实际做成了哪些事。"
+          ]
+        }
+      ],
+      "searchTitle": "完成记录",
+      "searchKeywords": "已完成, 完成, 历史, 完成记录, 归档, 过往, completed, done, history, archive",
+      "searchBody": "你完成的一切，都替你留存下来供回顾。 完成的任务不会被丢弃——它们会转入你的完成记录，按天分组，让你看到自己实际做成了哪些事。"
+    },
+    {
+      "id": "overdue-view",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": "overdue",
+        "android": "todos/overdue",
+        "ios": "overdueTodos"
+      },
+      "helpAnchors": [],
+      "title": "逾期",
+      "summary": "一个专门存放已过时限任务的地方。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "截止时间已过的任务会汇集到逾期视图里，这样什么都不会悄悄溜走。等你准备好，再给它们重新安排时间。"
+          ]
+        }
+      ],
+      "searchTitle": "逾期",
+      "searchKeywords": "逾期, 迟到, 过期, 错过, 顺延, 积压, overdue, late, past due, backlog",
+      "searchBody": "一个专门存放已过时限任务的地方。 截止时间已过的任务会汇集到逾期视图里，这样什么都不会悄悄溜走。等你准备好，再给它们重新安排时间。"
+    },
+    {
+      "id": "morning-sweep",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "hand",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": {
+        "web": "overdue",
+        "android": "morning-sweep",
+        "ios": "morning-sweep"
+      },
+      "helpAnchors": [],
+      "title": "晨间清理",
+      "summary": "逐张卡片处理积压的任务。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "落后不再让人焦虑：逾期页面上的“清理”按钮会带你逐张卡片处理积压任务——今天、明天、选择日期、变为漂浮任务或放手。赶时间？“全部移到今天”一次移动所有任务，只需一次撤销。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "重复任务不参与清理；它们的单次安排请在编辑表单中改期，以保持系列完整。"
+          ]
+        }
+      ],
+      "searchTitle": "晨间清理",
+      "searchKeywords": "清理, 逾期, 分流, 积压, 赶上进度, 待办堆积, 早晨",
+      "searchBody": "逐张卡片处理积压的任务。 落后不再让人焦虑：逾期页面上的“清理”按钮会带你逐张卡片处理积压任务——今天、明天、选择日期、变为漂浮任务或放手。赶时间？“全部移到今天”一次移动所有任务，只需一次撤销。 重复任务不参与清理；它们的单次安排请在编辑表单中改期，以保持系列完整。"
+    },
+    {
+      "id": "bulk-actions",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "circle-check-big",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.4",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "批量操作",
+      "summary": "一次选中多项任务，然后统一处理。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "在任务列表的标题栏点按「选择」进入选择模式。逐项点选任务，或点按「全选」，然后对整批任务执行一个操作——标记完成、更改优先级、移动到其他列表，或者删除。"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "打开任务列表，在标题栏点按「选择」。",
+            "点按任务将其选中，或用「全选」选中屏幕上的全部任务。",
+            "在底部操作栏中选择「完成」「优先级」「移动」或「删除」。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "删除会先让你确认具体数量，之后仍会留下可撤销的提示。重复任务完全不参与批量操作，以免整个系列被误改——请单独打开来完成、移动或删除。"
+          ]
+        }
+      ],
+      "searchTitle": "批量操作",
+      "searchKeywords": "批量, 多选, 全选, 一批, 多项, 完成, 删除, 优先级, 移动, 选择",
+      "searchBody": "一次选中多项任务，然后统一处理。 在任务列表的标题栏点按「选择」进入选择模式。逐项点选任务，或点按「全选」，然后对整批任务执行一个操作——标记完成、更改优先级、移动到其他列表，或者删除。 打开任务列表，在标题栏点按「选择」。 点按任务将其选中，或用「全选」选中屏幕上的全部任务。 在底部操作栏中选择「完成」「优先级」「移动」或「删除」。 删除会先让你确认具体数量，之后仍会留下可撤销的提示。重复任务完全不参与批量操作，以免整个系列被误改——请单独打开来完成、移动或删除。"
+    },
+    {
+      "id": "search-tasks",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "search",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "搜索你的任务",
+      "summary": "按标题、备注或列表名称找到任何任务。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "使用搜索栏，按标题、描述或列表名称即时筛选你的任务——无需滚动查找。"
+          ]
+        }
+      ],
+      "searchTitle": "搜索你的任务",
+      "searchKeywords": "搜索, 查找, 筛选, 检索, 查询, search, find, filter, query",
+      "searchBody": "按标题、备注或列表名称找到任何任务。 使用搜索栏，按标题、描述或列表名称即时筛选你的任务——无需滚动查找。"
+    },
+    {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "通知",
+      "summary": "一个开关决定 T'Day 是否可以打扰你。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "设置里只有一个通知开关，所有送达你的内容都要经过它——任务提醒和次日摘要。关闭它会清空队列，而不是把它静音，所以重新打开时不会有内容延迟送达。还需要系统权限：只要设备上 T'Day 的通知被屏蔽，这个开关就保持关闭，并提示你打开系统设置。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "两半都必须打开。缺少系统权限时，无论你在这里如何设置，开关都会显示为关闭。"
+          ]
+        }
+      ],
+      "searchTitle": "通知",
+      "searchKeywords": "通知, 权限, 开关, 允许, 静音, 提醒, 摘要, 系统设置",
+      "searchBody": "一个开关决定 t'day 是否可以打扰你。 设置里只有一个通知开关，所有送达你的内容都要经过它——任务提醒和次日摘要。关闭它会清空队列，而不是把它静音，所以重新打开时不会有内容延迟送达。还需要系统权限：只要设备上 t'day 的通知被屏蔽，这个开关就保持关闭，并提示你打开系统设置。 两半都必须打开。缺少系统权限时，无论你在这里如何设置，开关都会显示为关闭。"
+    },
+    {
+      "id": "recurrence-presets",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "recurrence-picker"
+      ],
+      "title": "重复任务",
+      "summary": "让任务每天、每周或按更多规律重复。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "把任务设为重复，它就会按自己的节奏回来。从预设中挑选——每天、工作日、每周或每月——完成其中一次，系列里的其余次数依旧保留。"
+          ]
+        },
+        {
+          "type": "EXAMPLE",
+          "texts": [
+            "给植物浇水 · 每周"
+          ]
+        }
+      ],
+      "searchTitle": "重复任务",
+      "searchKeywords": "重复, 循环, 周期, 每天, 每周, 每月, 安排, repeat, recurring, weekly, rrule",
+      "searchBody": "让任务每天、每周或按更多规律重复。 把任务设为重复，它就会按自己的节奏回来。从预设中挑选——每天、工作日、每周或每月——完成其中一次，系列里的其余次数依旧保留。 给植物浇水 · 每周"
+    },
+    {
+      "id": "repeat-suggestions",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "重复建议",
+      "summary": "T'Day 发现你按节奏完成的任务，并建议将其设为重复。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "当你以稳定节奏反复完成同一任务——每周浇花、每月付房租——T'Day 会注意到，并提供一键芯片将其设为重复。它只读取设备上的已完成历史，任何数据都不会离开设备。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "不需要？点 ✕，该标题不再询问。"
+          ]
+        }
+      ],
+      "searchTitle": "重复建议",
+      "searchKeywords": "重复, 建议, 循环, 节奏, 习惯, 模式, 智能, 自动",
+      "searchBody": "t'day 发现你按节奏完成的任务，并建议将其设为重复。 当你以稳定节奏反复完成同一任务——每周浇花、每月付房租——t'day 会注意到，并提供一键芯片将其设为重复。它只读取设备上的已完成历史，任何数据都不会离开设备。 不需要？点 ✕，该标题不再询问。"
+    },
+    {
+      "id": "reminders",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "提醒",
+      "summary": "在任务到期前收到通知。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "给已安排的任务添加提醒，你的设备会在恰当的时间通知你。提醒在你的设备上安排，所以即便在本地模式下也能用。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "提醒的提前时间选项会因任务而略有不同——挑一个能给你足够预留时间的。"
+          ]
+        }
+      ],
+      "searchTitle": "提醒",
+      "searchKeywords": "提醒, 通知, 提示, 闹钟, 通知我, 提前, reminder, notification, alert",
+      "searchBody": "在任务到期前收到通知。 给已安排的任务添加提醒，你的设备会在恰当的时间通知你。提醒在你的设备上安排，所以即便在本地模式下也能用。 提醒的提前时间选项会因任务而略有不同——挑一个能给你足够预留时间的。"
+    },
+    {
+      "id": "reminder-snooze",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "暂停提醒",
+      "summary": "提醒通知带有“暂停1小时”和“今晚”操作。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "提醒来得不巧时，无需打开应用：“暂停1小时”会在一小时后重新送达同一条提醒，“今晚”则把任务本身移到今天 19:00。“今晚”适用于一次性任务——重复任务请在应用内改期，以保持系列完整。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "暂停只是推迟通知；在你移动任务之前，它仍保留原定时间。"
+          ]
+        }
+      ],
+      "searchTitle": "暂停提醒",
+      "searchKeywords": "暂停, 提醒, 通知, 稍后, 今晚, 推迟提醒",
+      "searchBody": "提醒通知带有“暂停1小时”和“今晚”操作。 提醒来得不巧时，无需打开应用：“暂停1小时”会在一小时后重新送达同一条提醒，“今晚”则把任务本身移到今天 19:00。“今晚”适用于一次性任务——重复任务请在应用内改期，以保持系列完整。 暂停只是推迟通知；在你移动任务之前，它仍保留原定时间。"
+    },
+    {
+      "id": "quiet-hours",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-notifications"
+      ],
+      "title": "免打扰时段",
+      "summary": "夜间暂缓提醒，睡觉时不会有任何响动。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "设置一个时段——例如 22:00 到 07:00——凡是会在其中触发的提醒都会保留到时段结束。仅在设备本地生效；本地提醒会等到早晨。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "时段可跨越午夜（22:00 → 07:00），计算会自动处理。"
+          ]
+        }
+      ],
+      "searchTitle": "免打扰时段",
+      "searchKeywords": "免打扰, 时段, 勿扰, 夜间, 睡眠, 提醒, 计划",
+      "searchBody": "夜间暂缓提醒，睡觉时不会有任何响动。 设置一个时段——例如 22:00 到 07:00——凡是会在其中触发的提醒都会保留到时段结束。仅在设备本地生效；本地提醒会等到早晨。 时段可跨越午夜（22:00 → 07:00），计算会自动处理。"
+    },
+    {
+      "id": "day-ahead",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell-ring",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "今日摘要",
+      "summary": "每天早晨一条安静的通知，告诉你今天的任务数量。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "在设置中开启并选择时间：每天早晨一条通知告诉你今天的安排——“今天 4 项任务，2 项积压”——点开即进入“今天”页面；有积压时则直接进入晨间清理。完全在设备本地运行：任何数据都不会离开你的手机。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "没有任务的日子摘要保持安静——没有消息就是好消息。"
+          ]
+        }
+      ],
+      "searchTitle": "今日摘要",
+      "searchKeywords": "摘要, 今日, 早晨, 每日通知, 概览",
+      "searchBody": "每天早晨一条安静的通知，告诉你今天的任务数量。 在设置中开启并选择时间：每天早晨一条通知告诉你今天的安排——“今天 4 项任务，2 项积压”——点开即进入“今天”页面；有积压时则直接进入晨间清理。完全在设备本地运行：任何数据都不会离开你的手机。 没有任务的日子摘要保持安静——没有消息就是好消息。"
+    },
+    {
+      "id": "home-widget",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "主屏幕小组件",
+      "summary": "不打开应用也能看到今天的任务。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "把 T'Day 小组件添加到主屏幕，随手一瞥就能看到今天的任务。点按小组件会把应用打开到相应的位置。"
+          ]
+        }
+      ],
+      "searchTitle": "主屏幕小组件",
+      "searchKeywords": "小组件, 主屏幕, 一瞥, 今天, 锁屏, widget, home screen, today, lock screen",
+      "searchBody": "不打开应用也能看到今天的任务。 把 t'day 小组件添加到主屏幕，随手一瞥就能看到今天的任务。点按小组件会把应用打开到相应的位置。"
+    },
+    {
+      "id": "widget-list-selection",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "list-todo",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "为小组件选择一个列表",
+      "summary": "让小组件只显示某一个列表，而不是整个动态。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "长按 T'Day 小组件并选择「编辑小组件」，即可精确指定它显示哪个列表——可以是你的任意计划列表或浮动任务列表。计划列表会显示截止时间并标出逾期任务；浮动任务列表则显示一个没有截止时间的开放列表。若不设置，小组件会继续显示完整的「今天」或「浮动任务」动态。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "添加多个小组件，每个指向不同的列表，就能在主屏幕上同时看到它们。"
+          ]
+        }
+      ],
+      "searchTitle": "为小组件选择一个列表",
+      "searchKeywords": "小组件, 列表, 配置, 编辑小组件, 按列表, 主屏幕, ios, widget, list",
+      "searchBody": "让小组件只显示某一个列表，而不是整个动态。 长按 t'day 小组件并选择「编辑小组件」，即可精确指定它显示哪个列表——可以是你的任意计划列表或浮动任务列表。计划列表会显示截止时间并标出逾期任务；浮动任务列表则显示一个没有截止时间的开放列表。若不设置，小组件会继续显示完整的「今天」或「浮动任务」动态。 添加多个小组件，每个指向不同的列表，就能在主屏幕上同时看到它们。"
+    },
+    {
+      "id": "list-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.45",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "列表小组件",
+      "summary": "第三种小组件，显示你选择的一个内置视图或列表。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "除了「今天」和「浮动任务」，还有一个列表小组件。放置后它会询问要显示什么——内置的「已安排」和「逾期」视图，或任意计划列表或浮动任务列表。之后它只显示该选择，点它的 + 会添加任务：若你选了列表，则直接加入该列表。再放一个即可显示另一个视图或列表；每个小组件都保留自己的设置。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "要把列表小组件切换到另一个列表，长按它并选择「编辑」（iPhone 上为「编辑小组件」）。"
+          ]
+        }
+      ],
+      "searchTitle": "列表小组件",
+      "searchKeywords": "小组件, 主屏幕, 列表, 设置, 选择器, 浮动任务, 计划任务, 添加",
+      "searchBody": "第三种小组件，显示你选择的一个内置视图或列表。 除了「今天」和「浮动任务」，还有一个列表小组件。放置后它会询问要显示什么——内置的「已安排」和「逾期」视图，或任意计划列表或浮动任务列表。之后它只显示该选择，点它的 + 会添加任务：若你选了列表，则直接加入该列表。再放一个即可显示另一个视图或列表；每个小组件都保留自己的设置。 要把列表小组件切换到另一个列表，长按它并选择「编辑」（iphone 上为「编辑小组件」）。"
+    },
+    {
+      "id": "widget-quick-add",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "square-plus",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "从小组件快速添加",
+      "summary": "直接从小组件开始一个新任务。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "小组件上有一个创建按钮，所以你可以直接从主屏幕记录任务，无需先打开应用——而且在本地模式下也能用。"
+          ]
+        }
+      ],
+      "searchTitle": "从小组件快速添加",
+      "searchKeywords": "小组件, 快速添加, 创建, 快捷方式, 主屏幕, widget, quick add, create, shortcut",
+      "searchBody": "直接从小组件开始一个新任务。 小组件上有一个创建按钮，所以你可以直接从主屏幕记录任务，无需先打开应用——而且在本地模式下也能用。"
+    },
+    {
+      "id": "interactive-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "check-check",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "在小组件上直接完成",
+      "summary": "在主屏幕小组件上直接勾掉任务。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "今日任务和浮动任务的小组件现在支持点按：点一下任意一行开头的圆环，无需打开应用即可完成该任务。这一行会立即消失，完成操作也会照常同步——离线时的点按会先排队，联网后自动补上。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "点错了？在应用里打开完成记录，从那里恢复任务即可。"
+          ]
+        }
+      ],
+      "searchTitle": "在小组件上直接完成",
+      "searchKeywords": "小组件, 完成, 勾选, 主屏幕, 交互, 点按",
+      "searchBody": "在主屏幕小组件上直接勾掉任务。 今日任务和浮动任务的小组件现在支持点按：点一下任意一行开头的圆环，无需打开应用即可完成该任务。这一行会立即消失，完成操作也会照常同步——离线时的点按会先排队，联网后自动补上。 点错了？在应用里打开完成记录，从那里恢复任务即可。"
+    },
+    {
+      "id": "today-widget-progress",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "circle-check-big",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.44",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "今日小组件一目了然",
+      "summary": "看看今天完成了多少、哪些已逾期、接下来是什么。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "今日小组件以日期和进度环开头：今天到期的任务中已完成了多少。逾期的任务单独列在今天任务的下方，并标出原定日期。今天没有到期任务时，小组件会显示下一个有任务的日子。勾选任务后，它会先保持勾选和划线状态片刻，然后再消失。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "进度环只统计今天到期的任务。完成其他日子的任务不会让它增加。"
+          ]
+        }
+      ],
+      "searchTitle": "今日小组件一目了然",
+      "searchKeywords": "小组件, 今天, 进度, 圆环, 完成, 逾期, 明天, 日期, 主屏幕",
+      "searchBody": "看看今天完成了多少、哪些已逾期、接下来是什么。 今日小组件以日期和进度环开头：今天到期的任务中已完成了多少。逾期的任务单独列在今天任务的下方，并标出原定日期。今天没有到期任务时，小组件会显示下一个有任务的日子。勾选任务后，它会先保持勾选和划线状态片刻，然后再消失。 进度环只统计今天到期的任务。完成其他日子的任务不会让它增加。"
+    },
+    {
+      "id": "share-into-tday",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "share-2",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "分享到 T'Day",
+      "summary": "把任意应用里的文字直接变成一条新任务。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "在别的应用里看到想记下的内容？打开系统分享面板选择 T'Day，分享的文字就会进入新任务表单——分享网页时，标题会成为任务名，链接则收进备注。在 Android 和网页版中表单会立即打开；在 iOS 上分享会即时保存，下次打开应用时会看到已填好的表单。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "分享带有日期的文字，解析器会自动帮你设置截止时间。"
+          ]
+        }
+      ],
+      "searchTitle": "分享到 t'day",
+      "searchKeywords": "分享, 分享面板, 发送到, 捕获, 导入, 来自其他应用",
+      "searchBody": "把任意应用里的文字直接变成一条新任务。 在别的应用里看到想记下的内容？打开系统分享面板选择 t'day，分享的文字就会进入新任务表单——分享网页时，标题会成为任务名，链接则收进备注。在 android 和网页版中表单会立即打开；在 ios 上分享会即时保存，下次打开应用时会看到已填好的表单。 分享带有日期的文字，解析器会自动帮你设置截止时间。"
+    },
+    {
+      "id": "carplay",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "car",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "CarPlay 上的 T'Day",
+      "summary": "开车时安全地一瞥并记录任务。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "在 CarPlay 上，T'Day 会显示一个专为车内设计、一瞥即知的精简列表，让你无需伸手去拿手机，就能看看接下来要做什么，或用语音添加任务。"
+          ]
+        }
+      ],
+      "searchTitle": "carplay 上的 t'day",
+      "searchKeywords": "carplay, 车, 开车, 语音, 苹果, 免提, car, driving, voice, hands free",
+      "searchBody": "开车时安全地一瞥并记录任务。 在 carplay 上，t'day 会显示一个专为车内设计、一瞥即知的精简列表，让你无需伸手去拿手机，就能看看接下来要做什么，或用语音添加任务。"
+    },
+    {
+      "id": "focus-filters",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "专注过滤",
+      "summary": "让 iOS 专注模式决定「今天」列表中显示哪些清单。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day 可接入 iOS 专注模式。选择一个专注模式（如「工作」或「个人」），指定它应显示哪些清单；当该专注模式开启时，你的「今天」列表和主屏幕小组件会悄悄隐藏其余内容。关闭专注模式后，所有任务都会回来——不会删除任何内容。"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "在 iPhone 上打开「设置」▸「专注模式」并选择一个专注模式。",
+            "添加一个专注过滤器并选择 T'Day，然后挑选你的清单。",
+            "开启专注模式——「今天」和小组件现在只显示这些清单。"
+          ]
+        }
+      ],
+      "searchTitle": "专注过滤",
+      "searchKeywords": "专注, 过滤, ios, 工作, 个人, 勿扰, 清单, 隐藏, 集中",
+      "searchBody": "让 ios 专注模式决定「今天」列表中显示哪些清单。 t'day 可接入 ios 专注模式。选择一个专注模式（如「工作」或「个人」），指定它应显示哪些清单；当该专注模式开启时，你的「今天」列表和主屏幕小组件会悄悄隐藏其余内容。关闭专注模式后，所有任务都会回来——不会删除任何内容。 在 iphone 上打开「设置」▸「专注模式」并选择一个专注模式。 添加一个专注过滤器并选择 t'day，然后挑选你的清单。 开启专注模式——「今天」和小组件现在只显示这些清单。"
+    },
+    {
+      "id": "apple-watch",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "alarm-clock",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Apple Watch",
+      "summary": "把「今天」的任务戴在手腕上，从 iPhone 实时镜像同步。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "在 Apple Watch 上安装 T'Day，今天的任务便随你戴在手腕上。手表会镜像 iPhone 生成的同一份「今天」列表——无需单独登录——表盘上的复杂功能会显示还剩多少任务，让你无需打开应用即可一瞥了然。每当 iPhone 同步时，它都会更新。"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "在 iPhone 上打开 Watch 应用并安装 T'Day。",
+            "在表盘上添加 T'Day 复杂功能。",
+            "瞥一眼数量，或打开应用查看完整列表。"
+          ]
+        }
+      ],
+      "searchTitle": "apple watch",
+      "searchKeywords": "apple watch, 手表, 手腕, 复杂功能, watchos, 今天, 一瞥, 镜像",
+      "searchBody": "把「今天」的任务戴在手腕上，从 iphone 实时镜像同步。 在 apple watch 上安装 t'day，今天的任务便随你戴在手腕上。手表会镜像 iphone 生成的同一份「今天」列表——无需单独登录——表盘上的复杂功能会显示还剩多少任务，让你无需打开应用即可一瞥了然。每当 iphone 同步时，它都会更新。 在 iphone 上打开 watch 应用并安装 t'day。 在表盘上添加 t'day 复杂功能。 瞥一眼数量，或打开应用查看完整列表。"
+    },
+    {
+      "id": "local-mode",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "wifi-off",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "本地模式",
+      "summary": "完全离线使用 T'Day，无需服务器或账户。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "本地模式把一切都留在你的设备上——不登录、不用服务器、不上传。这是私密使用 T'Day 的一流方式，你的本地数据绝不会自行被发送到任何地方。 在浏览器里，它保存在该浏览器自己的存储中，因此清除 Cookie 和网站数据也会一并清除这个工作区 — 想保留就先导出。 如果你开启崩溃报告，只有在出现故障时才会发送一份简短的技术报告，绝不包含你的任务或列表。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "仅限服务器的功能在这里会标注“服务器模式”徽标，让你知道登录后会有哪些变化。"
+          ]
+        }
+      ],
+      "searchTitle": "本地模式",
+      "searchKeywords": "本地模式, 离线, 私密, 无账户, 无服务器, 设备本地, local mode, offline, private",
+      "searchBody": "完全离线使用 t'day，无需服务器或账户。 本地模式把一切都留在你的设备上——不登录、不用服务器、不上传。这是私密使用 t'day 的一流方式，你的本地数据绝不会自行被发送到任何地方。 在浏览器里，它保存在该浏览器自己的存储中，因此清除 cookie 和网站数据也会一并清除这个工作区 — 想保留就先导出。 如果你开启崩溃报告，只有在出现故障时才会发送一份简短的技术报告，绝不包含你的任务或列表。 仅限服务器的功能在这里会标注“服务器模式”徽标，让你知道登录后会有哪些变化。"
+    },
+    {
+      "id": "server-mode",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "cloud",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "服务器模式",
+      "summary": "通过你自己的私有服务器在多台设备间同步。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "登录你自托管的服务器，即可在多台设备间实时同步任务。写入会立即在你的设备上生效，再回放到服务器，所以即使网络不稳，应用依然流畅。"
+          ]
+        }
+      ],
+      "searchTitle": "服务器模式",
+      "searchKeywords": "服务器模式, 同步, 自托管, 账户, 登录, 设备, 实时, server mode, sync, self hosted",
+      "searchBody": "通过你自己的私有服务器在多台设备间同步。 登录你自托管的服务器，即可在多台设备间实时同步任务。写入会立即在你的设备上生效，再回放到服务器，所以即使网络不稳，应用依然流畅。"
+    },
+    {
+      "id": "offline-sync",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "refresh-cw",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "离线同步",
+      "summary": "离线也能继续工作；重新联网后改动会回放。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "在服务器模式下，你的改动会先保存在本地，离线时进入队列。一旦重新联网，T'Day 就会按顺序把它们回放到服务器。"
+          ]
+        }
+      ],
+      "searchTitle": "离线同步",
+      "searchKeywords": "离线, 同步, 待处理, 队列, 回放, 连接, 冲突, offline, sync, queue, replay",
+      "searchBody": "离线也能继续工作；重新联网后改动会回放。 在服务器模式下，你的改动会先保存在本地，离线时进入队列。一旦重新联网，t'day 就会按顺序把它们回放到服务器。"
+    },
+    {
+      "id": "export-your-data",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "download",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "导出你的数据",
+      "summary": "把所有内容下载为一个可携带的文件，随时都能带回来。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "在设置里，你可以把整个账户——任务、清单、完成记录和偏好——下载为一个 JSON 文件。把它导入到另一个 T'Day（服务器，或本地模式下的设备），所有内容都会作为新条目进入：导入只会新增、绝不覆盖，所以已有的内容不会丢失。在服务器上，描述会被解密写入文件，即使你换到使用不同密钥的服务器也依然可读。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "这个文件就是普通、可读的 JSON——留一份副本当作个人备份。"
+          ]
+        }
+      ],
+      "searchTitle": "导出你的数据",
+      "searchKeywords": "导出, 导入, 下载, 备份, 我的数据, 可携带, 恢复, 迁移",
+      "searchBody": "把所有内容下载为一个可携带的文件，随时都能带回来。 在设置里，你可以把整个账户——任务、清单、完成记录和偏好——下载为一个 json 文件。把它导入到另一个 t'day（服务器，或本地模式下的设备），所有内容都会作为新条目进入：导入只会新增、绝不覆盖，所以已有的内容不会丢失。在服务器上，描述会被解密写入文件，即使你换到使用不同密钥的服务器也依然可读。 这个文件就是普通、可读的 json——留一份副本当作个人备份。"
+    },
+    {
+      "id": "local-to-server-migration",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "cloud",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "从本设备迁移到服务器",
+      "summary": "切换到服务器模式时，把设备上的任务一起带走。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "先用本地模式，后来又搭了服务器？绝不会自动上传任何内容。迁移数据的方法：先在设置里导出，登录你的服务器，然后在那里导入文件。任务、清单和历史会在你主动的一步里迁移过去——时机由你决定，在此之前设备上的数据保持原样。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "导入后，先留着导出的文件，等确认全部到齐再删——它同时也是一份备份。"
+          ]
+        }
+      ],
+      "searchTitle": "从本设备迁移到服务器",
+      "searchKeywords": "迁移, 本地到服务器, 迁移数据, 切换模式, 上传, 登录, 转移",
+      "searchBody": "切换到服务器模式时，把设备上的任务一起带走。 先用本地模式，后来又搭了服务器？绝不会自动上传任何内容。迁移数据的方法：先在设置里导出，登录你的服务器，然后在那里导入文件。任务、清单和历史会在你主动的一步里迁移过去——时机由你决定，在此之前设备上的数据保持原样。 导入后，先留着导出的文件，等确认全部到齐再删——它同时也是一份备份。"
+    },
+    {
+      "id": "crash-reports",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "activity",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.8.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-privacy"
+      ],
+      "title": "崩溃与问题报告",
+      "summary": "默认关闭。由谁决定取决于平台。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "崩溃与问题报告是可选的，默认关闭。由谁决定因平台而异：在网页版中，管理员的一个回答适用于整个服务器——包括网站、服务器自身的错误以及所有使用者——不会逐个询问用户。在 Android 和 iOS 上，每个人都会在登录流程中被询问，因此回答是按设备保存的，并且每次登录都会重新询问。它的作用类似 Crashlytics：目的是修复缺陷，而不是衡量你如何使用应用。一切正常运行时，你的设备上没有使用情况分析，没有会话跟踪，也没有性能监控。"
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "一份报告包含：应用版本、你的设备型号和系统版本（或浏览器及其版本）、错误以及它在代码中发生的位置、出错前的几个带标签的步骤、不含任何 ID 的屏幕或 API 路由名称、状态码，以及在移动端上大致的设备状况，例如可用内存、电量和是否联网。报告还包含你的时区偏移（例如 UTC+2）和语言，因为日期对任务规划应用至关重要。"
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "报告绝不包含：你的姓名、用户名、电子邮件或任何账户信息；你的 IP 地址或位置；你的服务器地址；任务、列表或备注的标题和内容；你的数据库内容；密码、Cookie 或令牌；屏幕截图或录屏。错误消息在发送前，会先在你的设备上清除其中的地址、标识符和引用的文字，但这只是尽力而为。报告不带任何用户 ID，因此无法追溯到你，也无法按个人删除。"
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "只有在出现故障、并且该平台已开启报告时才会发送报告：网页版需要管理员为服务器开启，移动端需要你在设备上同意。如果报告关闭期间出现故障，不会存储任何内容，也不会排队等待；之后再开启，也不会补发更早的故障。哪些情况算作故障取决于平台：Android 会报告崩溃、卡死和内存不足导致的崩溃；iOS 会报告崩溃、卡死，以及系统因应用占用内存过多而结束应用；网页版只报告意外错误。T'Day 不会检测内存泄漏。"
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "报告会通过崩溃报告服务 Sentry 发送给 T'Day 的维护者。报告保留 30 天，仅用于修复缺陷，绝不出售，也不会共享用于广告。报告直接发送到 Sentry，不经过你的服务器。与任何在线服务一样，Sentry 能看到每个连接的网络地址，但已设置为不存储该地址；网页版还会告知 Sentry 该报告来自哪个网站。如果你运行自己的服务器，同一个管理员回答也会覆盖服务器自身的错误报告，以及一小部分请求的耗时；其中绝不包含你的任务。没有报告端点的版本（例如你自行构建的版本）不会显示此设置。"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "打开“设置”。",
+            "在网页版中，管理员在“隐私”中关闭“服务器错误报告”；在移动端，由你自己关闭“崩溃与问题报告”。",
+            "报告会立即停止发送，所有等待发送的内容都会被删除。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "拒绝不会有任何损失。你可以随时在“设置 → 隐私”中更改回答——网页版由管理员更改，移动端由你自己更改。技术细节：T'Day 仓库中的 docs/TELEMETRY.md。"
+          ]
+        }
+      ],
+      "searchTitle": "崩溃与问题报告",
+      "searchKeywords": "崩溃, 错误, 报告, 问题报告, 隐私, 诊断, 遥测, 卡死, 无响应, 内存, 分析, 统计, crash, error, report, sentry, privacy, diagnostics, telemetry, hang, anr, memory, analytics",
+      "searchBody": "默认关闭。由谁决定取决于平台。 崩溃与问题报告是可选的，默认关闭。由谁决定因平台而异：在网页版中，管理员的一个回答适用于整个服务器——包括网站、服务器自身的错误以及所有使用者——不会逐个询问用户。在 android 和 ios 上，每个人都会在登录流程中被询问，因此回答是按设备保存的，并且每次登录都会重新询问。它的作用类似 crashlytics：目的是修复缺陷，而不是衡量你如何使用应用。一切正常运行时，你的设备上没有使用情况分析，没有会话跟踪，也没有性能监控。 一份报告包含：应用版本、你的设备型号和系统版本（或浏览器及其版本）、错误以及它在代码中发生的位置、出错前的几个带标签的步骤、不含任何 id 的屏幕或 api 路由名称、状态码，以及在移动端上大致的设备状况，例如可用内存、电量和是否联网。报告还包含你的时区偏移（例如 utc+2）和语言，因为日期对任务规划应用至关重要。 报告绝不包含：你的姓名、用户名、电子邮件或任何账户信息；你的 ip 地址或位置；你的服务器地址；任务、列表或备注的标题和内容；你的数据库内容；密码、cookie 或令牌；屏幕截图或录屏。错误消息在发送前，会先在你的设备上清除其中的地址、标识符和引用的文字，但这只是尽力而为。报告不带任何用户 id，因此无法追溯到你，也无法按个人删除。 只有在出现故障、并且该平台已开启报告时才会发送报告：网页版需要管理员为服务器开启，移动端需要你在设备上同意。如果报告关闭期间出现故障，不会存储任何内容，也不会排队等待；之后再开启，也不会补发更早的故障。哪些情况算作故障取决于平台：android 会报告崩溃、卡死和内存不足导致的崩溃；ios 会报告崩溃、卡死，以及系统因应用占用内存过多而结束应用；网页版只报告意外错误。t'day 不会检测内存泄漏。 报告会通过崩溃报告服务 sentry 发送给 t'day 的维护者。报告保留 30 天，仅用于修复缺陷，绝不出售，也不会共享用于广告。报告直接发送到 sentry，不经过你的服务器。与任何在线服务一样，sentry 能看到每个连接的网络地址，但已设置为不存储该地址；网页版还会告知 sentry 该报告来自哪个网站。如果你运行自己的服务器，同一个管理员回答也会覆盖服务器自身的错误报告，以及一小部分请求的耗时；其中绝不包含你的任务。没有报告端点的版本（例如你自行构建的版本）不会显示此设置。 打开“设置”。 在网页版中，管理员在“隐私”中关闭“服务器错误报告”；在移动端，由你自己关闭“崩溃与问题报告”。 报告会立即停止发送，所有等待发送的内容都会被删除。 拒绝不会有任何损失。你可以随时在“设置 → 隐私”中更改回答——网页版由管理员更改，移动端由你自己更改。技术细节：t'day 仓库中的 docs/telemetry.md。"
+    },
+    {
+      "id": "ai-summary",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": true,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "任务摘要",
+      "summary": "对你一天的简短、宁静的概览——可选配本地 AI。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day 可以用一两句话概括你的一天。配上本地的 Ollama 模型，读起来自然流畅；没有它，则会退回到一段温暖、确定的回顾——无论哪种方式，都不会有任何东西离开你的服务器。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "摘要从不依赖云端 AI 服务——要么本地生成，要么就没有。"
+          ]
+        }
+      ],
+      "searchTitle": "任务摘要",
+      "searchKeywords": "摘要, ai, ollama, 概览, 摘要, 本地, 私密, summary, overview, digest, local",
+      "searchBody": "对你一天的简短、宁静的概览——可选配本地 ai。 t'day 可以用一两句话概括你的一天。配上本地的 ollama 模型，读起来自然流畅；没有它，则会退回到一段温暖、确定的回顾——无论哪种方式，都不会有任何东西离开你的服务器。 摘要从不依赖云端 ai 服务——要么本地生成，要么就没有。"
+    },
+    {
+      "id": "device-calendar-sync",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "calendar",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "在设备日历中查看任务",
+      "summary": "将带日期的任务同步到手机上的 T'Day 日历。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "开启后，每个带日期的任务都会被复制到手机上一个名为 T'Day 的日历中，与其他日历并列显示。Anytime 任务不会包含在内，因为它们没有日期。同步是单向的：T'Day 写入该日历，因此你在日历中的修改会在任务下次变更时被覆盖。"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "在设置中开启“将安排的任务添加到我的日历”。",
+            "当手机询问时，允许访问日历。",
+            "打开日历应用 —— 带日期的任务就在 T'Day 日历里。"
+          ]
+        }
+      ],
+      "searchTitle": "在设备日历中查看任务",
+      "searchKeywords": "日历, 设备日历, 同步, google 日历, apple 日历, eventkit, 手机日历, 镜像",
+      "searchBody": "将带日期的任务同步到手机上的 t'day 日历。 开启后，每个带日期的任务都会被复制到手机上一个名为 t'day 的日历中，与其他日历并列显示。anytime 任务不会包含在内，因为它们没有日期。同步是单向的：t'day 写入该日历，因此你在日历中的修改会在任务下次变更时被覆盖。 在设置中开启“将安排的任务添加到我的日历”。 当手机询问时，允许访问日历。 打开日历应用 —— 带日期的任务就在 t'day 日历里。"
+    }
+  ]
+}

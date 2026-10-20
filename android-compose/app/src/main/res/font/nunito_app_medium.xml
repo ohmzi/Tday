@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The same Nunito variable font as nunito_app, pinned lighter for widget task titles, counts and
+     section names: medium against the 800 headers, so a list of tasks stops reading as all bold. -->
+<font-family xmlns:android="http://schemas.android.com/apk/res/android">
+    <font
+        android:font="@font/nunito_wght"
+        android:fontVariationSettings="'wght' 600"
+        android:fontStyle="normal"
+        android:fontWeight="600" />
+</font-family>

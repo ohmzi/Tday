@@ -1,0 +1,265 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { api, ApiError } from "@/lib/api-client";
+import { clearClientUserData } from "@/lib/security/clearClientUserData";
+import { clearPendingApproval } from "@/lib/pendingApproval";
+import { onSessionExpired } from "@/lib/auth/sessionExpiry";
+import { isLocalMode, setAppMode, APP_MODE_STORAGE_KEY } from "@/lib/local/appMode";
+import {
+  LOCAL_WORKSPACE_STORAGE_KEY,
+  flushWorkspaceWrites,
+  lockLocalVault,
+} from "@/lib/local/localDb";
+import {
+  markReturningBrowser,
+  RETURNING_BROWSER_STORAGE_KEY,
+} from "@/lib/security/returningBrowser";
+import {
+  HAPTICS_STORAGE_KEY,
+  SOUND_STORAGE_KEY,
+} from "@/lib/feedbackPreferences";
+
+const AUTH_SESSION_RETRY_DELAY_MS = 15_000;
+
+// Kept across a sign-out / session expiry. The chosen workspace mode decides
+// which onboarding step the wizard reopens on, and the Local Mode workspace
+// belongs to the browser rather than to any server account — clearing a server
+// session must not silently delete it.
+//
+// The sound and vibration switches are here on the same rule, and one more: they
+// are the browser's accessibility settings. Somebody who turned the buzz off
+// because it hurts did not ask for it back when a token expired behind them, and
+// an expiry is not something they did.
+//
+// Crash-report consent is not here: it is one instance-wide answer an admin gives
+// on the server, held in memory for the page load, so there is nothing for this
+// list to carry. Old per-browser keys from earlier builds are ignored.
+const PRESERVED_STORAGE_KEYS = [
+  RETURNING_BROWSER_STORAGE_KEY,
+  APP_MODE_STORAGE_KEY,
+  LOCAL_WORKSPACE_STORAGE_KEY,
+  SOUND_STORAGE_KEY,
+  HAPTICS_STORAGE_KEY,
+];
+
+export type AuthSessionState =
+  | "loading"
+  | "authenticated"
+  | "unauthenticated"
+  | "unavailable";
+
+export type AuthUser = {
+  id: string;
+  name: string | null;
+  username: string | null;
+  role: string | null;
+  approvalStatus: string | null;
+  timeZone: string | null;
+  requirePasswordChange?: boolean;
+  requireSecurityQuestions?: boolean;
+};
+
+type AuthContextValue = {
+  user: AuthUser | null;
+  authState: AuthSessionState;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  login: (username: string, credentialPayload: Record<string, string>) => Promise<{ ok: boolean; code?: string; message?: string }>;
+  logout: () => Promise<void>;
+  refreshSession: () => Promise<void>;
+};
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [authState, setAuthState] = useState<AuthSessionState>("loading");
+  const queryClient = useQueryClient();
+  const authStateRef = useRef<AuthSessionState>("loading");
+  const userRef = useRef<AuthUser | null>(null);
+
+  const applySessionState = useCallback((nextAuthState: AuthSessionState, nextUser: AuthUser | null) => {
+    authStateRef.current = nextAuthState;
+    userRef.current = nextUser;
+    setAuthState(nextAuthState);
+    setUser(nextUser);
+  }, []);
+
+  const setSessionAvailability = useCallback((nextAuthState: AuthSessionState) => {
+    authStateRef.current = nextAuthState;
+    setAuthState(nextAuthState);
+  }, []);
+
+  const fetchSession = useCallback(async () => {
+    try {
+      const data = await api.GET({ url: "/api/auth/session" });
+      const nextUser = data?.user ?? null;
+
+      if (nextUser) {
+        markReturningBrowser();
+        // An authenticated session means approval came through — drop the
+        // holding-screen marker so it doesn't reappear on the next load.
+        clearPendingApproval();
+        applySessionState("authenticated", nextUser);
+        return;
+      }
+
+      applySessionState("unauthenticated", null);
+    } catch (error) {
+      const apiError = error instanceof ApiError ? error : null;
+
+      if (apiError?.status === 401) {
+        const hadAuthenticatedSession =
+          authStateRef.current === "authenticated" || userRef.current !== null;
+
+        if (hadAuthenticatedSession) {
+          queryClient.clear();
+          await clearClientUserData({
+            preserveLocalStorageKeys: PRESERVED_STORAGE_KEYS,
+          });
+        }
+
+        applySessionState("unauthenticated", null);
+        return;
+      }
+
+      setSessionAvailability("unavailable");
+    }
+  }, [applySessionState, queryClient, setSessionAvailability]);
+
+  const handleSessionExpired = useCallback(async () => {
+    // Only react while a session is (or was) live. Once unauthenticated this is
+    // a no-op, which also dedupes a burst of 401s into a single expiry/redirect.
+    const hadAuthenticatedSession =
+      authStateRef.current === "authenticated" || userRef.current !== null;
+    if (!hadAuthenticatedSession) return;
+
+    queryClient.clear();
+    await clearClientUserData({
+      preserveLocalStorageKeys: PRESERVED_STORAGE_KEYS,
+    });
+    applySessionState("unauthenticated", null);
+    toast.error("Your session expired — please sign in again.");
+  }, [applySessionState, queryClient]);
+
+  useEffect(() => {
+    return onSessionExpired(() => {
+      void handleSessionExpired();
+    });
+  }, [handleSessionExpired]);
+
+  useEffect(() => {
+    void fetchSession();
+  }, [fetchSession]);
+
+  useEffect(() => {
+    if (authState !== "unavailable") return;
+
+    const retryTimer = window.setTimeout(() => {
+      void fetchSession();
+    }, AUTH_SESSION_RETRY_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(retryTimer);
+    };
+  }, [authState, fetchSession]);
+
+  const login = useCallback(
+    async (username: string, credentialPayload: Record<string, string>) => {
+      try {
+        await api.POST({
+          url: "/api/auth/callback/credentials",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, ...credentialPayload }),
+        });
+        markReturningBrowser();
+        await fetchSession();
+
+        if (authStateRef.current === "unauthenticated") {
+          return {
+            ok: false,
+            message: "Unable to establish a session. Please try again.",
+          };
+        }
+
+        return { ok: true };
+      } catch (e) {
+        const err = e instanceof ApiError ? e : null;
+        return {
+          ok: false,
+          code: err?.code,
+          message: err?.message ?? "Invalid credentials",
+        };
+      }
+    },
+    [fetchSession],
+  );
+
+  const logout = useCallback(async () => {
+    markReturningBrowser();
+
+    // Leaving the local workspace is a mode switch, not a session teardown:
+    // there is nothing to revoke server-side, and the browser's tasks stay put
+    // so the user can come back to them (or delete them from Settings).
+    if (isLocalMode()) {
+      // Queued writes land first, then this session's hold on the workspace goes
+      // now rather than waiting on the redirect to tear the page down. For an
+      // encrypted workspace that relocks it — the derived key goes with the rows.
+      // For one stored in the clear there is no key to drop, and re-entering
+      // Local Mode opens it again without asking; that is what the user chose.
+      await flushWorkspaceWrites();
+      lockLocalVault();
+      setAppMode(null);
+      queryClient.clear();
+      applySessionState("unauthenticated", null);
+      window.location.replace(window.location.origin);
+      return;
+    }
+
+    try {
+      await api.POST({ url: "/api/auth/logout", body: "{}" });
+    } catch (error) {
+      const message = error instanceof ApiError
+        ? error.message
+        : "Unable to log out. Please try again.";
+      throw new Error(message);
+    }
+    queryClient.clear();
+    await clearClientUserData({
+      preserveLocalStorageKeys: PRESERVED_STORAGE_KEYS,
+    });
+    applySessionState("unauthenticated", null);
+    window.location.replace(window.location.origin);
+  }, [applySessionState, queryClient]);
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      authState,
+      isLoading: authState === "loading",
+      isAuthenticated: authState === "authenticated",
+      login,
+      logout,
+      refreshSession: fetchSession,
+    }),
+    [user, authState, login, logout, fetchSession],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  return ctx;
+}

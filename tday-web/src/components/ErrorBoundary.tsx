@@ -1,0 +1,145 @@
+import React, { Component, ReactNode } from "react";
+import { RefreshCw, ShieldAlert, Home } from "lucide-react";
+import { captureUiException } from "@/lib/observability/sentry";
+import { isStaleChunkError, reloadOnceForStaleChunk } from "@/lib/chunkError";
+
+interface Props {
+  children: ReactNode;
+  fallback?: ReactNode;
+}
+
+interface State {
+  hasError: boolean;
+  isChunkError: boolean;
+  errorMessage: string;
+  errorStack: string;
+  componentStack: string;
+}
+
+/** Detects dynamic-import / chunk-loading failures caused by stale bundles. */
+const isChunkLoadError = isStaleChunkError;
+
+class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false, isChunkError: false, errorMessage: "", errorStack: "", componentStack: "" };
+  }
+
+  static getDerivedStateFromError(error: Error): State {
+    return {
+      hasError: true,
+      isChunkError: isChunkLoadError(error),
+      errorMessage: error?.message ?? String(error),
+      errorStack: error?.stack ?? "",
+      componentStack: "",
+    };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    // Stale chunk after a deploy: reload once into the fresh build instead of
+    // surfacing a crash screen.
+    if (isChunkLoadError(error) && reloadOnceForStaleChunk()) return;
+    captureUiException(error, "ui.error_boundary", {
+      componentStack: errorInfo.componentStack,
+    });
+    console.error("Error caught by ErrorBoundary:", error, errorInfo);
+    this.setState({ componentStack: errorInfo.componentStack ?? "" });
+  }
+
+  static handleReload() {
+    window.location.reload();
+  }
+
+  handleReset = () => {
+    this.setState({ hasError: false, isChunkError: false });
+  };
+
+  static handleGoHome() {
+    window.location.href = "/";
+  }
+
+  render() {
+    if (this.state.hasError) {
+      if (this.props.fallback) return this.props.fallback;
+
+      const { isChunkError } = this.state;
+
+      return (
+        <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background px-6">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 select-none text-[min(28vw,14rem)] font-extrabold leading-none tracking-tighter text-muted-foreground/[0.06]"
+          >
+            {isChunkError ? "Update" : "Error"}
+          </span>
+
+          <div className="relative z-10 mx-auto flex max-w-md flex-col items-center text-center">
+            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground ring-1 ring-border/60">
+              {isChunkError ? (
+                <RefreshCw className="h-7 w-7" />
+              ) : (
+                <ShieldAlert className="h-7 w-7" />
+              )}
+            </div>
+
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+              {isChunkError ? "New version available" : "Something went wrong"}
+            </h1>
+            <p className="mt-2 text-[0.938rem] leading-relaxed text-muted-foreground">
+              {isChunkError
+                ? "The app has been updated since you last loaded it. A quick reload will get you back on track."
+                : "An unexpected error occurred. We've logged it so we can investigate."}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground/70">
+              {isChunkError
+                ? "This usually happens after we ship improvements."
+                : "Try refreshing the page."}
+            </p>
+
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={ErrorBoundary.handleGoHome}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
+              >
+                <Home className="h-4 w-4" />
+                Go home
+              </button>
+
+              <button
+                type="button"
+                onClick={ErrorBoundary.handleReload}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-4 py-2.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Reload
+              </button>
+            </div>
+
+            {/* Debug error details — visible in all builds so crash reports can be screenshotted */}
+            {this.state.errorMessage && (
+              <details className="mt-6 w-full max-w-lg text-left">
+                <summary className="cursor-pointer text-xs font-bold text-muted-foreground/60 hover:text-muted-foreground">
+                  Error details
+                </summary>
+                <div className="mt-2 max-h-60 overflow-auto rounded-lg bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground ring-1 ring-border/40">
+                  <p className="font-bold text-destructive">{this.state.errorMessage}</p>
+                  {this.state.errorStack && (
+                    <pre className="mt-2 whitespace-pre-wrap break-all opacity-70">{this.state.errorStack}</pre>
+                  )}
+                  {this.state.componentStack && (
+                    <pre className="mt-2 whitespace-pre-wrap break-all border-t border-border/30 pt-2 opacity-60">{this.state.componentStack}</pre>
+                  )}
+                </div>
+              </details>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+export default ErrorBoundary;

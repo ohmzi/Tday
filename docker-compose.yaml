@@ -1,0 +1,111 @@
+services:
+  database:
+    security_opt:
+      - no-new-privileges:true
+    image: postgres:15
+    container_name: tday_db
+    restart: always
+    pids_limit: 512
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+    environment:
+      # Overridable via the root .env so production isn't stuck with weak,
+      # source-committed credentials. If you override these, set DATABASE_URL in
+      # .env.docker to match (same user/password/db).
+      POSTGRES_USER: ${POSTGRES_USER:-myuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mypass}
+      POSTGRES_DB: ${POSTGRES_DB:-mydb}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  ollama:
+    security_opt:
+      - no-new-privileges:true
+    image: ollama/ollama:latest
+    pull_policy: always
+    container_name: tday_ollama
+    profiles: ["ai"]
+    restart: always
+    pids_limit: 512
+    # CPU by default so `up` works on any host. For NVIDIA GPU acceleration,
+    # add the override: `docker compose -f docker-compose.yaml
+    # -f docker-compose.gpu.yaml --profile ai up` (requires the NVIDIA
+    # Container Toolkit). See docker-compose.gpu.yaml.
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - ollama_data:/root/.ollama
+
+  ollama-model-setup:
+    security_opt:
+      - no-new-privileges:true
+    image: ollama/ollama:latest
+    pull_policy: always
+    container_name: tday_ollama_model_setup
+    profiles: ["ai"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:0.8b}
+    # Pull the configured model, then drop the previous default — but never delete
+    # the model we just pulled (guard against OLLAMA_MODEL == the old default).
+    command: >
+      sh -c "ollama pull \"$${OLLAMA_MODEL}\" &&
+      (if [ \"$${OLLAMA_MODEL}\" != \"qwen2.5:0.5b\" ]; then ollama rm qwen2.5:0.5b || true; fi)"
+
+  tday-backend:
+    # Production runs the image CI published for a release, never a working-tree build:
+    # a local build ships whatever is checked out (including uncommitted code) and
+    # re-hashes every SPA chunk, which strands already-open PWA clients.
+    # scripts/deploy-release.sh pins TDAY_BACKEND_IMAGE to ghcr.io/ohmzi/tday:v<version>
+    # read from root version.json; the default below tracks the newest release.
+    # To build locally instead, layer docker-compose.build.yaml on top (see docs/DEPLOYMENT.md).
+    image: ${TDAY_BACKEND_IMAGE:-ghcr.io/ohmzi/tday:latest}
+    container_name: tday_backend
+    restart: always
+    # Caps runaway thread/process creation. Memory limits are deliberately NOT set here: the JVM
+    # under `restart: always` would OOM-crash-loop on a too-low value, which is worse than the DoS
+    # it defends against. Set mem_limit only after measuring real RSS, together with
+    # -XX:MaxRAMPercentage on the entrypoint.
+    pids_limit: 512
+    ports:
+      - "${TDAY_HOST_BIND:-127.0.0.1}:${TDAY_HOST_PORT:-2525}:8080"
+    env_file:
+      - .env.docker
+    environment:
+      # Container timezone. Defaults to UTC; set TZ in the root .env to your
+      # local zone (e.g. America/New_York) so log timestamps and any
+      # server-local time logic line up with the host. IANA names only.
+      TZ: ${TZ:-UTC}
+      APPLE_TEAM_ID: ${APPLE_TEAM_ID:-JUFACN2FS3}
+      IOS_BUNDLE_ID: ${IOS_BUNDLE_ID:-com.ohmz.tday.ios}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:0.8b}
+    # Report real readiness so restart:always and any orchestration can tell a
+    # booted-but-broken backend (DB down, migration failed) from a healthy one.
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    depends_on:
+      database:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  ollama_data:

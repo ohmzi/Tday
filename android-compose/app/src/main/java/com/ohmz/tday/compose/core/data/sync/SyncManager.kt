@@ -1,0 +1,2171 @@
+package com.ohmz.tday.compose.core.data.sync
+
+import android.util.Log
+import com.ohmz.tday.compose.core.data.CachedFloaterListRecord
+import com.ohmz.tday.compose.core.data.CachedFloaterRecord
+import com.ohmz.tday.compose.core.data.CachedListRecord
+import com.ohmz.tday.compose.core.data.CachedTodoRecord
+import com.ohmz.tday.compose.core.data.MutationKind
+import com.ohmz.tday.compose.core.data.OfflineSyncState
+import com.ohmz.tday.compose.core.data.PendingMutationRecord
+import com.ohmz.tday.compose.core.data.SecureConfigStore
+import com.ohmz.tday.compose.core.data.cache.LOCAL_FLOATER_LIST_PREFIX
+import com.ohmz.tday.compose.core.data.cache.LOCAL_FLOATER_PREFIX
+import com.ohmz.tday.compose.core.data.cache.LOCAL_LIST_PREFIX
+import com.ohmz.tday.compose.core.data.cache.LOCAL_STEP_PREFIX
+import com.ohmz.tday.compose.core.data.cache.LOCAL_TODO_PREFIX
+import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.cache.completedFloaterToCache
+import com.ohmz.tday.compose.core.data.cache.completedToCache
+import com.ohmz.tday.compose.core.data.cache.floaterListToCache
+import com.ohmz.tday.compose.core.data.cache.floaterToCache
+import com.ohmz.tday.compose.core.data.cache.listToCache
+import com.ohmz.tday.compose.core.data.cache.mapCompletedDto
+import com.ohmz.tday.compose.core.data.cache.mapCompletedFloaterDto
+import com.ohmz.tday.compose.core.data.cache.mapFloaterDto
+import com.ohmz.tday.compose.core.data.cache.mapFloaterListDto
+import com.ohmz.tday.compose.core.data.cache.mapListDto
+import com.ohmz.tday.compose.core.data.cache.mapTodoDto
+import com.ohmz.tday.compose.core.data.cache.orderFloaterListsLikeWeb
+import com.ohmz.tday.compose.core.data.cache.orderListsLikeWeb
+import com.ohmz.tday.compose.core.data.cache.replaceLocalFloaterListId
+import com.ohmz.tday.compose.core.data.cache.replaceLocalListId
+import com.ohmz.tday.compose.core.data.cache.todoMergeKey
+import com.ohmz.tday.compose.core.data.cache.todoToCache
+import com.ohmz.tday.compose.core.data.ConnectionFailureKind
+import com.ohmz.tday.compose.core.data.classifyConnectionFailure
+import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
+import com.ohmz.tday.compose.core.data.isLikelyUnrecoverableMutationError
+import com.ohmz.tday.compose.core.data.ApiCallException
+import com.ohmz.tday.compose.core.data.requireApiBody
+import com.ohmz.tday.compose.core.model.CompletedItem
+import com.ohmz.tday.compose.core.model.CreateFloaterListRequest
+import com.ohmz.tday.compose.core.model.CreateFloaterRequest
+import com.ohmz.tday.compose.core.model.CreateListRequest
+import com.ohmz.tday.compose.core.model.CreateTaskStepRequest
+import com.ohmz.tday.compose.core.model.CreateTodoRequest
+import com.ohmz.tday.compose.core.model.DeleteFloaterListRequest
+import com.ohmz.tday.compose.core.model.DeleteFloaterRequest
+import com.ohmz.tday.compose.core.model.DeleteListRequest
+import com.ohmz.tday.compose.core.model.DeleteTaskStepRequest
+import com.ohmz.tday.compose.core.model.DeleteTodoRequest
+import com.ohmz.tday.compose.core.model.ReorderTaskStepsRequest
+import com.ohmz.tday.compose.core.model.ToggleTaskStepRequest
+import com.ohmz.tday.compose.core.model.FloaterCompleteRequest
+import com.ohmz.tday.compose.core.model.FloaterUncompleteRequest
+import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.PromoteFloaterRequest
+import com.ohmz.tday.compose.core.model.TodoCompleteRequest
+import com.ohmz.tday.compose.core.model.TodoInstanceUpdateRequest
+import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.core.model.TodoPrioritizeRequest
+import com.ohmz.tday.compose.core.model.TodoUncompleteRequest
+import com.ohmz.tday.compose.core.model.UpdateFloaterListRequest
+import com.ohmz.tday.compose.core.model.UpdateFloaterRequest
+import com.ohmz.tday.compose.core.model.UpdateListRequest
+import com.ohmz.tday.compose.core.model.UpdateTodoRequest
+import com.ohmz.tday.compose.core.network.TdayApiService
+import com.ohmz.tday.compose.core.observability.TdayTelemetry
+import com.ohmz.tday.compose.feature.widget.WidgetRefresher
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.withTimeout
+import java.time.Instant
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class SyncManager @Inject constructor(
+    private val api: TdayApiService,
+    private val cacheManager: OfflineCacheManager,
+    private val secureConfigStore: SecureConfigStore,
+    private val widgetRefresher: WidgetRefresher,
+) {
+    private val offlineSyncFailureMutable = MutableSharedFlow<Unit>(extraBufferCapacity = 8)
+    val offlineSyncFailures: SharedFlow<Unit> = offlineSyncFailureMutable.asSharedFlow()
+    // Connectivity failures from user-initiated syncs (pull-to-refresh) carry the failure
+    // kind so the app can force-show the matching toast every time, even when already offline.
+    /**
+     * When the server last told us we were over its rate limit, how long we may not
+     * ask again. In-memory rather than persisted on purpose: a rate-limit window is
+     * seconds, so a process that restarts has outlived it, and a stored deadline would
+     * be a stale guess about a server we have not spoken to since.
+     */
+    @Volatile
+    private var rateLimitedUntilEpochMs: Long = 0L
+
+    private val userInitiatedSyncFailureMutable =
+        MutableSharedFlow<ConnectionFailureKind>(extraBufferCapacity = 8)
+    val userInitiatedSyncFailures: SharedFlow<ConnectionFailureKind> =
+        userInitiatedSyncFailureMutable.asSharedFlow()
+    private val offlineSyncSuccessMutable = MutableSharedFlow<Unit>(extraBufferCapacity = 8)
+    val offlineSyncSuccesses: SharedFlow<Unit> = offlineSyncSuccessMutable.asSharedFlow()
+
+    fun hasPendingMutations(): Boolean =
+        !isLocalMode() && cacheManager.loadOfflineStateBlocking().pendingMutations.isNotEmpty()
+
+    fun isLocalMode(): Boolean = secureConfigStore.isLocalMode()
+
+    suspend fun syncCachedData(
+        force: Boolean = false,
+        replayPendingMutations: Boolean = true,
+        notifyOfflineFailure: Boolean = true,
+        userInitiated: Boolean = false,
+        connectionProbeTimeoutMs: Long? = null,
+    ): Result<Unit> {
+        if (isLocalMode()) {
+            TdayTelemetry.addBreadcrumb("local_mode.sync_noop")
+            cacheManager.updateOfflineState { state ->
+                if (state.pendingMutations.isEmpty() &&
+                    state.lastSuccessfulSyncEpochMs == 0L &&
+                    state.lastSyncAttemptEpochMs == 0L
+                ) {
+                    state
+                } else {
+                    state.copy(
+                        lastSuccessfulSyncEpochMs = 0L,
+                        lastSyncAttemptEpochMs = 0L,
+                        pendingMutations = emptyList(),
+                    )
+                }
+            }
+            refreshTaskWidgets()
+            return Result.success(Unit)
+        }
+
+        val result = runCatching {
+            var contactedServer = false
+            if (connectionProbeTimeoutMs != null) {
+                TdayTelemetry.addBreadcrumb("server.probe", data = mapOf("phase" to "sync"))
+                verifyServerConnection(connectionProbeTimeoutMs)
+                contactedServer = true
+            }
+            val syncedRemoteData = cacheManager.withSyncLock {
+                syncLocalCache(
+                    force = force,
+                    replayPendingMutations = replayPendingMutations,
+                )
+            }
+            refreshTaskWidgets()
+            // A sync that got all the way through means the limiter has let us back in,
+            // so whatever cooldown we were serving is over. Cleared rather than left to
+            // expire on its own: a successful sync is better evidence than the deadline
+            // the server quoted, which is a floor, not a promise.
+            rateLimitedUntilEpochMs = 0L
+            if (contactedServer || syncedRemoteData) {
+                offlineSyncSuccessMutable.tryEmit(Unit)
+            }
+            Unit
+        }
+        val error = result.exceptionOrNull()
+        if (error != null) recordRateLimitCooldown(error)
+        if (error != null && isLikelyConnectivityIssue(error)) {
+            val kind = classifyConnectionFailure(error)
+            if (userInitiated && kind == ConnectionFailureKind.RATE_LIMITED) {
+                // A pull-to-refresh that the server answered with "slow down" gets no
+                // toast at all, rather than the connectivity one the branch below
+                // carries. The device is online, the request was received and answered,
+                // and the cooldown is measured in seconds — there is nothing for the
+                // user to do and nothing they could have done differently, so the honest
+                // message is none. `recordRateLimitCooldown` has already parked the next
+                // sync, which is the part that actually matters.
+            } else if (userInitiated) {
+                // Dedicated channel: force-shows the toast even when already offline.
+                userInitiatedSyncFailureMutable.tryEmit(kind)
+            } else if (notifyOfflineFailure) {
+                offlineSyncFailureMutable.tryEmit(Unit)
+            }
+        }
+        return result
+    }
+
+    /**
+     * Starts the cooldown a 429 asks for, taking the server's own `Retry-After` when it
+     * sent one.
+     *
+     * The value is CLAMPED to [MAX_RATE_LIMIT_COOLDOWN_MS] rather than trusted. The
+     * backend computes it from `config.apiRateLimitWindowSec` (60 s by default), so a
+     * self-hosted instance that configured a long window would otherwise be able to
+     * park the client for that whole window from one response — and the retry path is
+     * a background listener, so nothing else would be looking to lift it. The floor
+     * covers a 429 with no usable `Retry-After` at all: back off by something
+     * meaningful rather than retrying into the same limiter on the next frame.
+     */
+    private fun recordRateLimitCooldown(error: Throwable) {
+        var current: Throwable? = error
+        while (current != null) {
+            if (current is ApiCallException && current.statusCode == 429) {
+                val seconds = current.retryAfterSeconds
+                    ?.takeIf { it > 0 }
+                    ?.toLong()
+                    ?: (MIN_RATE_LIMIT_COOLDOWN_MS / 1000L)
+                val cooldownMs = (seconds * 1000L).coerceIn(
+                    MIN_RATE_LIMIT_COOLDOWN_MS,
+                    MAX_RATE_LIMIT_COOLDOWN_MS,
+                )
+                rateLimitedUntilEpochMs = System.currentTimeMillis() + cooldownMs
+                TdayTelemetry.addBreadcrumb(
+                    "sync.rate_limited",
+                    data = mapOf("cooldownMs" to cooldownMs),
+                )
+                return
+            }
+            current = current.cause?.takeIf { it !== current }
+        }
+    }
+
+    private suspend fun verifyServerConnection(timeoutMs: Long) {
+        withTimeout(timeoutMs) {
+            requireApiBody(
+                api.probeConfiguredServer(),
+                "Could not connect to server",
+            )
+        }
+    }
+
+    private suspend fun refreshTaskWidgets() {
+        runCatching { widgetRefresher.refreshNow() }
+    }
+
+    private suspend fun syncLocalCache(
+        force: Boolean,
+        replayPendingMutations: Boolean,
+    ): Boolean {
+        var state = cacheManager.loadOfflineState()
+        val now = System.currentTimeMillis()
+        if (force && (now - state.lastSyncAttemptEpochMs) < MIN_FORCE_SYNC_INTERVAL_MS) {
+            return false
+        }
+        // A 429 the server just handed us is a standing instruction not to ask again
+        // yet. Honoured for EVERY sync, forced or not — the throttle above is about
+        // not hammering a healthy server, this is about not re-tripping a limiter that
+        // is already tripped, and a forced sync is exactly what the retry path uses.
+        // Without it the retry would be a tight loop: sync → 429 → offline-failure
+        // listener → sync, which is the storm this cooldown exists to end.
+        if (now < rateLimitedUntilEpochMs) return false
+
+        val shouldReplayPendingMutations = replayPendingMutations &&
+            state.pendingMutations.isNotEmpty()
+        if (shouldReplayPendingMutations) {
+            TdayTelemetry.addBreadcrumb(
+                "sync.replay",
+                data = mapOf("pendingMutationCount" to state.pendingMutations.size),
+            )
+        }
+        val shouldSync = force ||
+            shouldReplayPendingMutations ||
+            state.lastSuccessfulSyncEpochMs == 0L ||
+            (now - state.lastSyncAttemptEpochMs) >= OFFLINE_RESYNC_INTERVAL_MS
+
+        if (!shouldSync) return false
+
+        state = state.copy(lastSyncAttemptEpochMs = now)
+        cacheManager.saveOfflineState(state)
+
+        // Every save below is derived from THIS pre-network snapshot, but the network
+        // phase takes seconds — long enough for a concurrent writer (a widget check-off
+        // is the common one) to queue a mutation the snapshot never saw. Handing the
+        // cache the ids this sync is authoritative over lets it tell "this sync
+        // deliberately consumed the mutation" from "someone queued it mid-flight, keep
+        // it" — otherwise the save silently drops that completion.
+        val syncStartPendingIds = state.pendingMutations.mapTo(HashSet()) { it.mutationId }
+
+        val initialPendingCount = state.pendingMutations.size
+        val firstRemote = fetchRemoteSnapshot()
+
+        if (initialPendingCount == 0 || !shouldReplayPendingMutations) {
+            var mergedWithoutMutations = mergeRemoteWithLocal(
+                localState = state,
+                remote = firstRemote,
+            )
+            if (replayPendingMutations && mergedWithoutMutations.pendingMutations.isNotEmpty()) {
+                val afterPending = applyPendingMutations(
+                    initialState = mergedWithoutMutations,
+                    remoteSnapshot = firstRemote,
+                )
+                val shouldRefetchRemote =
+                    afterPending.pendingMutations.size < mergedWithoutMutations.pendingMutations.size
+                val latestRemote = if (shouldRefetchRemote) fetchRemoteSnapshot() else firstRemote
+                mergedWithoutMutations = mergeRemoteWithLocal(
+                    localState = afterPending,
+                    remote = latestRemote,
+                )
+            }
+            cacheManager.saveOfflineState(
+                mergedWithoutMutations.copy(
+                    lastSyncAttemptEpochMs = now,
+                    lastSuccessfulSyncEpochMs = now,
+                ),
+                consumedMutationIds = syncStartPendingIds,
+            )
+            return true
+        }
+
+        val afterPending = applyPendingMutations(state, firstRemote)
+        cacheManager.saveOfflineState(
+            afterPending.copy(lastSyncAttemptEpochMs = now),
+            consumedMutationIds = syncStartPendingIds,
+        )
+        val shouldRefetchRemote = afterPending.pendingMutations.size < initialPendingCount
+        val latestRemote = if (shouldRefetchRemote) fetchRemoteSnapshot() else firstRemote
+        val mergedState = mergeRemoteWithLocal(
+            localState = afterPending,
+            remote = latestRemote,
+        ).copy(
+            lastSyncAttemptEpochMs = now,
+            lastSuccessfulSyncEpochMs = now,
+        )
+
+        cacheManager.saveOfflineState(mergedState, consumedMutationIds = syncStartPendingIds)
+        return true
+    }
+
+    private suspend fun fetchRemoteSnapshot(): RemoteSnapshot = coroutineScope {
+        val todos = async {
+            requireApiBody(
+                api.getTodos(timeline = true),
+                "Could not load timeline tasks",
+            ).todos.map(::mapTodoDto)
+        }
+
+        val completed = async {
+            requireApiBody(
+                api.getCompletedTodos(),
+                "Could not load completed tasks",
+            ).completedTodos.map(::mapCompletedDto)
+        }
+
+        val floaters = async {
+            requireApiBody(
+                api.getFloaters(),
+                "Could not load floaters",
+            ).floaters.map(::mapFloaterDto)
+        }
+
+        val completedFloaters = async {
+            requireApiBody(
+                api.getCompletedFloaters(),
+                "Could not load completed floaters",
+            ).completedFloaters.map(::mapCompletedFloaterDto)
+        }
+
+        val lists = async {
+            requireApiBody(
+                api.getLists(),
+                "Could not load lists",
+            ).lists.map { mapListDto(it, iconFallback = secureConfigStore.getListIcon(it.id)) }
+        }
+
+        val floaterLists = async {
+            requireApiBody(
+                api.getFloaterLists(),
+                "Could not load floater lists",
+            ).lists.map {
+                mapFloaterListDto(
+                    it,
+                    iconFallback = secureConfigStore.getListIcon(it.id)
+                )
+            }
+        }
+
+        // One GET feeds BOTH preference mirrors below: the AI-summary gate and the root feed a
+        // cold launch opens on. The default home screen is an account preference, so it has to
+        // arrive with sync — it used to be dropped here (only SyncManager's `aiSummaryEnabled`
+        // was read) and was therefore refreshed on nothing but a Settings resume, which left a
+        // second device, or a reinstall, opening the hardcoded Scheduled feed until its owner
+        // happened to visit Settings over there. `null` means the GET failed; each mirror then
+        // keeps whatever the cache already holds.
+        val preferences = async {
+            runCatching {
+                requireApiBody(
+                    api.getPreferences(),
+                    "Could not load preferences",
+                )
+            }.getOrElse { null }
+        }
+
+        // Capability (configured/healthy) lives in SecureConfigStore, not Room. Refresh it
+        // best-effort alongside the snapshot; failures keep the previously-stored values.
+        val aiCapability = async {
+            runCatching {
+                val settings = requireApiBody(
+                    api.getAppSettings(),
+                    "Could not load app settings",
+                )
+                secureConfigStore.setAiSummaryConfigured(settings.aiSummaryConfigured)
+                secureConfigStore.setAiSummaryHealthy(settings.aiSummaryHealthy)
+            }
+        }
+
+        val remotePreferences = preferences.await()
+
+        RemoteSnapshot(
+            todos = todos.await(),
+            floaters = floaters.await(),
+            completedItems = completed.await(),
+            completedFloaters = completedFloaters.await(),
+            lists = lists.await(),
+            floaterLists = floaterLists.await(),
+            // A failed preferences GET falls back to the cache the state is being merged into,
+            // which leaves that field exactly as it was.
+            aiSummaryEnabled = remotePreferences?.aiSummaryEnabled
+                ?: cacheManager.loadOfflineState().aiSummaryEnabled,
+            defaultHomeScreen = remotePreferences?.defaultHomeScreen
+                ?: cacheManager.loadOfflineState().defaultHomeScreen,
+        ).also { aiCapability.await() }
+    }
+
+    // KT-R1006 (cyclomatic complexity) is suppressed on this declaration rather
+    // than fixed further here. Two separate facts, both worth writing down:
+    //
+    //   * The decomposition already happened, and it helped a lot. DeepSource
+    //     measured this function at 176 (Critical) when it was one `when` with
+    //     26 inline mutation-kind bodies. Pulling each branch out into its own
+    //     applyXMutation handler — see CREATE_LIST through REORDER_STEPS below
+    //     — brought it to 59. DeepSource fingerprints an occurrence by its
+    //     line and by the number in its message, so that improvement still
+    //     reads as "1 introduced, 0 resolved" and turns the check red on its
+    //     own — the same reason TodoListScreen.kt re-suppresses KT-R1006 at
+    //     its own reduced number instead of going green.
+    //   * The remaining 59 is the dispatch itself, not leftover mutation
+    //     logic. Each branch is now a single call plus a
+    //     `.also { state = it.second }`, but a `when` exhaustive over all 26
+    //     `MutationKind` values is 26 decision points no matter how thin each
+    //     arm is. Replacing it with a runtime `Map<MutationKind, Handler>`
+    //     would lower the number, but it would also drop the compiler's
+    //     exhaustiveness check: a new MutationKind added later would silently
+    //     fall through at runtime instead of failing the build. That trade is
+    //     backwards for the function that replays every offline mutation
+    //     against the server, so the `when` stays.
+    //
+    // One declaration, one issue code — the narrowest form the tool has, and
+    // the style the repo already uses for KT-W1042, KT-C1001, and
+    // TodoListScreen's own KT-R1006 suppressions.
+    private suspend fun applyPendingMutations( // skipcq: KT-R1006
+        initialState: OfflineSyncState,
+        remoteSnapshot: RemoteSnapshot,
+    ): OfflineSyncState {
+        if (initialState.pendingMutations.isEmpty()) return initialState
+
+        var state = initialState
+        // The mutation ids this replay owns; anything else in the cache was queued
+        // concurrently and must survive our saves (see the bail-out save below).
+        val replayStartPendingIds = initialState.pendingMutations.mapTo(HashSet()) { it.mutationId }
+        val pending = initialState.pendingMutations.sortedBy { it.timestampEpochMs }.toMutableList()
+        val resolvedTodoIds = mutableMapOf<String, String>()
+        val resolvedListIds = mutableMapOf<String, String>()
+        val resolvedFloaterListIds = mutableMapOf<String, String>()
+        val remaining = mutableListOf<PendingMutationRecord>()
+
+        for (mutation in pending) {
+            if (mutation.staged) {
+                // A delayed-commit list/floater-list delete still inside its undo
+                // window (see PendingMutationRecord.staged): never replay it — that
+                // would leak the delete to the server before Undo/commit resolves —
+                // just keep it pending so mergeRemoteWithLocal's resurrection guard
+                // keeps covering the list for as long as it stays staged.
+                remaining.add(mutation)
+                continue
+            }
+
+            val resolvedTargetId = resolveTargetId(
+                targetId = mutation.targetId,
+                todoIdMap = resolvedTodoIds,
+                listIdMap = resolvedListIds + resolvedFloaterListIds,
+            )
+
+            val success = runCatching {
+                when (mutation.kind) {
+                    MutationKind.CREATE_LIST ->
+                        applyCreateListMutation(mutation, state, resolvedListIds)
+                            .also { state = it.second }.first
+
+                    MutationKind.UPDATE_LIST ->
+                        applyUpdateListMutation(mutation, resolvedTargetId, remoteSnapshot, state)
+                            .also { state = it.second }.first
+
+                    MutationKind.DELETE_LIST ->
+                        applyDeleteListMutation(resolvedTargetId, state)
+                            .also { state = it.second }.first
+
+                    MutationKind.CREATE_FLOATER_LIST ->
+                        applyCreateFloaterListMutation(mutation, state, resolvedFloaterListIds)
+                            .also { state = it.second }.first
+
+                    MutationKind.UPDATE_FLOATER_LIST ->
+                        applyUpdateFloaterListMutation(
+                            mutation,
+                            resolvedTargetId,
+                            remoteSnapshot,
+                            state,
+                        ).also { state = it.second }.first
+
+                    MutationKind.RESET_FLOATER_LIST ->
+                        applyResetFloaterListMutation(resolvedTargetId, state)
+                            .also { state = it.second }.first
+
+                    MutationKind.DELETE_FLOATER_LIST ->
+                        applyDeleteFloaterListMutation(resolvedTargetId, state)
+                            .also { state = it.second }.first
+
+                    MutationKind.CREATE_TODO ->
+                        applyCreateTodoMutation(mutation, state, resolvedListIds, resolvedTodoIds)
+                            .also { state = it.second }.first
+
+                    MutationKind.UPDATE_TODO ->
+                        applyUpdateTodoMutation(
+                            mutation,
+                            resolvedTargetId,
+                            remoteSnapshot,
+                            state,
+                            resolvedListIds,
+                        ).also { state = it.second }.first
+
+                    MutationKind.DELETE_TODO ->
+                        applyDeleteTodoMutation(mutation, resolvedTargetId, remoteSnapshot, state)
+                            .also { state = it.second }.first
+
+                    MutationKind.CREATE_FLOATER ->
+                        applyCreateFloaterMutation(
+                            mutation,
+                            state,
+                            resolvedFloaterListIds,
+                            resolvedTodoIds,
+                        ).also { state = it.second }.first
+
+                    MutationKind.UPDATE_FLOATER ->
+                        applyUpdateFloaterMutation(
+                            mutation,
+                            resolvedTargetId,
+                            remoteSnapshot,
+                            state,
+                            resolvedFloaterListIds,
+                        ).also { state = it.second }.first
+
+                    MutationKind.DELETE_FLOATER ->
+                        applyDeleteFloaterMutation(mutation, resolvedTargetId, remoteSnapshot, state)
+                            .also { state = it.second }.first
+
+                    MutationKind.SET_PINNED ->
+                        applySetPinnedMutation(mutation, resolvedTargetId, remoteSnapshot, state)
+                            .also { state = it.second }.first
+
+                    MutationKind.SET_PRIORITY ->
+                        applySetPriorityMutation(mutation, resolvedTargetId, remoteSnapshot, state)
+                            .also { state = it.second }.first
+
+                    MutationKind.COMPLETE_TODO ->
+                        applyCompleteTodoMutation(mutation, resolvedTargetId, remoteSnapshot, state)
+                            .also { state = it.second }.first
+
+                    MutationKind.COMPLETE_TODO_INSTANCE ->
+                        applyCompleteTodoInstanceMutation(mutation, resolvedTargetId, state)
+                            .also { state = it.second }.first
+
+                    MutationKind.UNCOMPLETE_TODO ->
+                        applyUncompleteTodoMutation(mutation, resolvedTargetId, state)
+                            .also { state = it.second }.first
+
+                    MutationKind.COMPLETE_FLOATER ->
+                        applyCompleteFloaterMutation(mutation, resolvedTargetId, remoteSnapshot, state)
+                            .also { state = it.second }.first
+
+                    MutationKind.UNCOMPLETE_FLOATER ->
+                        applyUncompleteFloaterMutation(resolvedTargetId, state)
+                            .also { state = it.second }.first
+
+                    MutationKind.PROMOTE_FLOATER ->
+                        applyPromoteFloaterMutation(mutation, resolvedTargetId, state, resolvedTodoIds)
+                            .also { state = it.second }.first
+
+                    MutationKind.DEMOTE_TODO ->
+                        applyDemoteTodoMutation(mutation, resolvedTargetId, state, resolvedTodoIds)
+                            .also { state = it.second }.first
+
+                    MutationKind.CREATE_STEP ->
+                        applyCreateStepMutation(mutation, resolvedTargetId, state, resolvedTodoIds)
+                            .also { state = it.second }.first
+
+                    MutationKind.TOGGLE_STEP ->
+                        applyToggleStepMutation(mutation, resolvedTargetId, state)
+                            .also { state = it.second }.first
+
+                    MutationKind.DELETE_STEP ->
+                        applyDeleteStepMutation(resolvedTargetId, state)
+                            .also { state = it.second }.first
+
+                    MutationKind.REORDER_STEPS ->
+                        applyReorderStepsMutation(mutation, resolvedTargetId, state, resolvedTodoIds)
+                            .also { state = it.second }.first
+                }
+            }.getOrElse { error ->
+                if (isLikelyConnectivityIssue(error)) {
+                    remaining.add(resolveLatestMutationSnapshot(state, mutation))
+                    remaining.addAll(
+                        pending
+                            .dropWhile { it.mutationId != mutation.mutationId }
+                            .drop(1)
+                            .map { queued -> resolveLatestMutationSnapshot(state, queued) },
+                    )
+                    // Same concurrent-writer hazard as the caller's saves: `remaining` is
+                    // built from this replay's starting snapshot, so a mutation queued
+                    // mid-replay (e.g. a widget check-off) isn't in it and would be
+                    // dropped. Only the ids this replay owns may be removed.
+                    cacheManager.saveOfflineState(
+                        state.copy(pendingMutations = remaining),
+                        consumedMutationIds = replayStartPendingIds,
+                    )
+                    return state.copy(pendingMutations = remaining)
+                }
+                if (isLikelyUnrecoverableMutationError(error, mutation)) {
+                    Log.w(
+                        LOG_TAG,
+                        "Dropping unrecoverable mutation kind=${mutation.kind} target=${mutation.targetId}: ${error.message}",
+                    )
+                    true
+                } else {
+                    false
+                }
+            }
+
+            if (!success) {
+                remaining.add(resolveLatestMutationSnapshot(state, mutation))
+            }
+        }
+
+        return state.copy(pendingMutations = remaining)
+    }
+
+    private suspend fun applyCreateListMutation(
+        mutation: PendingMutationRecord,
+        state: OfflineSyncState,
+        resolvedListIds: MutableMap<String, String>,
+    ): Pair<Boolean, OfflineSyncState> {
+        var nextState = state
+        val localListId = mutation.targetId ?: return false to nextState
+        if (!localListId.startsWith(LOCAL_LIST_PREFIX)) return true to nextState
+        val localListExists = nextState.lists.any { it.id == localListId }
+        if (!localListExists) return true to nextState
+        val response = requireApiBody(
+            api.createList(
+                CreateListRequest(
+                    name = mutation.name?.trim().orEmpty(),
+                    color = mutation.color,
+                    iconKey = mutation.iconKey,
+                ),
+            ),
+            "Could not create list",
+        )
+        val serverListId = response.list?.id ?: return false to nextState
+        resolvedListIds[localListId] = serverListId
+        nextState = replaceLocalListId(nextState, localListId, serverListId)
+        return true to nextState
+    }
+
+    private suspend fun applyUpdateListMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        remoteSnapshot: RemoteSnapshot,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_LIST_PREFIX)) return false to state
+        val remoteUpdatedAt = remoteSnapshot.listUpdatedAtById[targetId] ?: 0L
+        if (remoteUpdatedAt > mutation.timestampEpochMs) return true to state
+        requireApiBody(
+            api.patchListByBody(
+                UpdateListRequest(
+                    id = targetId,
+                    name = mutation.name,
+                    color = mutation.color,
+                    iconKey = mutation.iconKey,
+                ),
+            ),
+            "Could not update list",
+        )
+        return true to state
+    }
+
+    private suspend fun applyDeleteListMutation(
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_LIST_PREFIX)) return true to state
+        requireApiBody(
+            api.deleteListByBody(DeleteListRequest(id = targetId)),
+            "Could not delete list",
+        )
+        return true to state
+    }
+
+    private suspend fun applyCreateFloaterListMutation(
+        mutation: PendingMutationRecord,
+        state: OfflineSyncState,
+        resolvedFloaterListIds: MutableMap<String, String>,
+    ): Pair<Boolean, OfflineSyncState> {
+        var nextState = state
+        val localListId = mutation.targetId ?: return false to nextState
+        if (!localListId.startsWith(LOCAL_FLOATER_LIST_PREFIX)) return true to nextState
+        val localListExists = nextState.floaterLists.any { it.id == localListId }
+        if (!localListExists) return true to nextState
+        val response = requireApiBody(
+            api.createFloaterList(
+                CreateFloaterListRequest(
+                    name = mutation.name?.trim().orEmpty(),
+                    color = mutation.color,
+                    iconKey = mutation.iconKey,
+                    reusable = mutation.reusable ?: false,
+                ),
+            ),
+            "Could not create floater list",
+        )
+        val serverListId = response.list?.id ?: return false to nextState
+        resolvedFloaterListIds[localListId] = serverListId
+        nextState = replaceLocalFloaterListId(nextState, localListId, serverListId)
+        return true to nextState
+    }
+
+    private suspend fun applyUpdateFloaterListMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        remoteSnapshot: RemoteSnapshot,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_FLOATER_LIST_PREFIX)) return false to state
+        val remoteUpdatedAt =
+            remoteSnapshot.floaterListUpdatedAtById[targetId] ?: 0L
+        if (remoteUpdatedAt > mutation.timestampEpochMs) return true to state
+        requireApiBody(
+            api.patchFloaterListByBody(
+                UpdateFloaterListRequest(
+                    id = targetId,
+                    name = mutation.name,
+                    color = mutation.color,
+                    iconKey = mutation.iconKey,
+                    reusable = mutation.reusable,
+                ),
+            ),
+            "Could not update floater list",
+        )
+        return true to state
+    }
+
+    private suspend fun applyResetFloaterListMutation(
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_FLOATER_LIST_PREFIX)) return false to state
+        requireApiBody(
+            api.resetFloaterList(targetId),
+            "Could not reset floater list",
+        )
+        return true to state
+    }
+
+    private suspend fun applyDeleteFloaterListMutation(
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_FLOATER_LIST_PREFIX)) return true to state
+        requireApiBody(
+            api.deleteFloaterListByBody(DeleteFloaterListRequest(id = targetId)),
+            "Could not delete floater list",
+        )
+        return true to state
+    }
+
+    private suspend fun applyCreateTodoMutation(
+        mutation: PendingMutationRecord,
+        state: OfflineSyncState,
+        resolvedListIds: MutableMap<String, String>,
+        resolvedTodoIds: MutableMap<String, String>,
+    ): Pair<Boolean, OfflineSyncState> {
+        var nextState = state
+        val localTodoId = mutation.targetId ?: return false to nextState
+        if (!localTodoId.startsWith(LOCAL_TODO_PREFIX)) return true to nextState
+        val localTodoExists = nextState.todos.any { it.canonicalId == localTodoId }
+        if (!localTodoExists) return true to nextState
+        val resolvedListId = mutation.listId?.let {
+            resolvedListIds[it] ?: it
+        }
+        if (resolvedListId != null && resolvedListId.startsWith(LOCAL_LIST_PREFIX)) {
+            return false to nextState
+        }
+        val created = requireApiBody(
+            api.createTodo(
+                CreateTodoRequest(
+                    title = mutation.title?.trim().orEmpty(),
+                    description = mutation.description,
+                    priority = mutation.priority ?: "Low",
+                    due = mutation.dueEpochMs?.let {
+                        Instant.ofEpochMilli(it).toString()
+                    } ?: return false to nextState,
+                    rrule = mutation.rrule?.takeIf { mutation.dueEpochMs != null },
+                    listID = resolvedListId,
+                ),
+            ),
+            "Could not create task",
+        ).todo ?: return false to nextState
+        val createdTodo = mapTodoDto(created)
+        resolvedTodoIds[localTodoId] = createdTodo.canonicalId
+        nextState = replaceLocalTodoId(nextState, localTodoId, createdTodo.canonicalId)
+        return true to nextState
+    }
+
+    // KT-R1006 (cyclomatic complexity, reported at 29) is suppressed on this
+    // declaration rather than split further. This function was extracted out
+    // of applyPendingMutations's UPDATE_TODO branch by an earlier commit on
+    // this same PR; DeepSource fingerprints an occurrence by its line, so the
+    // complexity this branch always had (see applyPendingMutations's own
+    // KT-R1006 note above) reads as newly introduced the moment it gets its
+    // own function boundary, not because it grew.
+    //
+    // The 29 is real: the due-only-move special case, the remote-staleness
+    // check, the null-vs-blank "tombstone" handling for
+    // description/rrule/listId, and the instance-patch-vs-full-patch branch
+    // are genuine mutation-replay semantics, not incidental structure. A
+    // further split would only relocate these same checks into more, smaller
+    // functions crossing the same `state`/`resolvedListIds` boundary, on
+    // sync-critical code with no unit test today that exercises this
+    // function's branch combinations directly.
+    //
+    // One declaration, one issue code — the narrowest form the tool has, and
+    // the style the repo already uses for KT-W1042, KT-C1001, and
+    // TodoListScreen's own KT-R1006 suppressions.
+    private suspend fun applyUpdateTodoMutation( // skipcq: KT-R1006
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        remoteSnapshot: RemoteSnapshot,
+        state: OfflineSyncState,
+        resolvedListIds: MutableMap<String, String>,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return false to state
+        val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
+        if (remoteUpdatedAt > mutation.timestampEpochMs) return true to state
+
+        val resolvedListId = mutation.listId?.let { resolvedListIds[it] ?: it }
+        if (!resolvedListId.isNullOrBlank() && resolvedListId.startsWith(LOCAL_LIST_PREFIX)) {
+            return false to state
+        }
+
+        val remoteTodo = remoteSnapshot.todos.firstOrNull { it.canonicalId == targetId }
+        val isDueOnlyMove = mutation.dueEpochMs != null &&
+                mutation.title == null &&
+                mutation.description == null &&
+                mutation.priority == null &&
+                mutation.pinned == null &&
+                mutation.completed == null &&
+                mutation.rrule == null &&
+                mutation.listId == null
+        val descriptionForApi = if (isDueOnlyMove) {
+            null
+        } else {
+            mutation.description
+                ?: if (remoteTodo?.description != null) "" else null
+        }
+        val rruleForApi = if (isDueOnlyMove) {
+            null
+        } else {
+            mutation.rrule ?: if (!remoteTodo?.rrule.isNullOrBlank()) "" else null
+        }
+        val listIdForApi = if (isDueOnlyMove) {
+            null
+        } else {
+            resolvedListId ?: if (!remoteTodo?.listId.isNullOrBlank()) "" else null
+        }
+
+        if (mutation.instanceDateEpochMs != null) {
+            requireApiBody(
+                api.patchTodoInstanceByBody(
+                    TodoInstanceUpdateRequest(
+                        todoId = targetId,
+                        instanceDate = Instant.ofEpochMilli(
+                            mutation.instanceDateEpochMs,
+                        ).toString(),
+                        title = mutation.title,
+                        description = descriptionForApi,
+                        priority = mutation.priority,
+                        due = mutation.dueEpochMs?.let {
+                            Instant.ofEpochMilli(it).toString()
+                        },
+                    ),
+                ),
+                "Could not update recurring task instance",
+            )
+        } else {
+            requireApiBody(
+                api.patchTodoByBody(
+                    UpdateTodoRequest(
+                        id = targetId,
+                        title = mutation.title,
+                        description = descriptionForApi,
+                        pinned = mutation.pinned,
+                        priority = mutation.priority,
+                        due = mutation.dueEpochMs?.let { Instant.ofEpochMilli(it).toString() },
+                        rrule = rruleForApi,
+                        listID = listIdForApi,
+                        dateChanged = true,
+                        rruleChanged = if (isDueOnlyMove) null else true,
+                        instanceDate = null,
+                    ),
+                ),
+                "Could not update task",
+            )
+        }
+        return true to state
+    }
+
+    private suspend fun applyDeleteTodoMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        remoteSnapshot: RemoteSnapshot,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return true to state
+
+        val instanceDateEpochMs = mutation.instanceDateEpochMs
+        if (instanceDateEpochMs != null) {
+            requireApiBody(
+                api.deleteTodoInstanceByBody(
+                    com.ohmz.tday.compose.core.model.TodoInstanceDeleteRequest(
+                        todoId = targetId,
+                        instanceDate = Instant.ofEpochMilli(instanceDateEpochMs).toString(),
+                    ),
+                ),
+                "Could not delete recurring task instance",
+            )
+            return true to state
+        }
+
+        val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
+        if (remoteUpdatedAt > mutation.timestampEpochMs) return true to state
+        requireApiBody(
+            api.deleteTodoByBody(DeleteTodoRequest(id = targetId)),
+            "Could not delete task",
+        )
+        return true to state
+    }
+
+    private suspend fun applyCreateFloaterMutation(
+        mutation: PendingMutationRecord,
+        state: OfflineSyncState,
+        resolvedFloaterListIds: MutableMap<String, String>,
+        resolvedTodoIds: MutableMap<String, String>,
+    ): Pair<Boolean, OfflineSyncState> {
+        var nextState = state
+        val localFloaterId = mutation.targetId ?: return false to nextState
+        if (!localFloaterId.startsWith(LOCAL_FLOATER_PREFIX)) return true to nextState
+        val localFloaterExists =
+            nextState.floaters.any { it.canonicalId == localFloaterId }
+        if (!localFloaterExists) return true to nextState
+        val resolvedListId = mutation.listId?.let {
+            resolvedFloaterListIds[it] ?: it
+        }
+        if (resolvedListId != null && resolvedListId.startsWith(
+                LOCAL_FLOATER_LIST_PREFIX
+            )
+        ) {
+            return false to nextState
+        }
+        val created = requireApiBody(
+            api.createFloater(
+                CreateFloaterRequest(
+                    title = mutation.title?.trim().orEmpty(),
+                    description = mutation.description,
+                    priority = mutation.priority ?: "Low",
+                    listID = resolvedListId,
+                ),
+            ),
+            "Could not create floater",
+        ).floater ?: return false to nextState
+        val createdFloater = mapFloaterDto(created)
+        resolvedTodoIds[localFloaterId] = createdFloater.canonicalId
+        nextState =
+            replaceLocalFloaterId(nextState, localFloaterId, createdFloater.canonicalId)
+        return true to nextState
+    }
+
+    private suspend fun applyUpdateFloaterMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        remoteSnapshot: RemoteSnapshot,
+        state: OfflineSyncState,
+        resolvedFloaterListIds: MutableMap<String, String>,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_FLOATER_PREFIX)) return false to state
+        val remoteUpdatedAt =
+            remoteSnapshot.floaterUpdatedAtByCanonical[targetId] ?: 0L
+        if (remoteUpdatedAt > mutation.timestampEpochMs) return true to state
+        val resolvedListId =
+            mutation.listId?.let { resolvedFloaterListIds[it] ?: it }
+        if (!resolvedListId.isNullOrBlank() && resolvedListId.startsWith(
+                LOCAL_FLOATER_LIST_PREFIX
+            )
+        ) {
+            return false to state
+        }
+        val remoteFloater =
+            remoteSnapshot.floaters.firstOrNull { it.canonicalId == targetId }
+        val listIdForApi = resolvedListId
+            ?: if (!remoteFloater?.listId.isNullOrBlank()) "" else null
+        requireApiBody(
+            api.patchFloaterByBody(
+                UpdateFloaterRequest(
+                    id = targetId,
+                    title = mutation.title,
+                    description = mutation.description
+                        ?: if (remoteFloater?.description != null) "" else null,
+                    pinned = mutation.pinned,
+                    priority = mutation.priority,
+                    completed = mutation.completed,
+                    listID = listIdForApi,
+                ),
+            ),
+            "Could not update floater",
+        )
+        return true to state
+    }
+
+    private suspend fun applyDeleteFloaterMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        remoteSnapshot: RemoteSnapshot,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_FLOATER_PREFIX)) return true to state
+        val remoteUpdatedAt =
+            remoteSnapshot.floaterUpdatedAtByCanonical[targetId] ?: 0L
+        if (remoteUpdatedAt > mutation.timestampEpochMs) return true to state
+        requireApiBody(
+            api.deleteFloaterByBody(DeleteFloaterRequest(id = targetId)),
+            "Could not delete floater",
+        )
+        return true to state
+    }
+
+    private suspend fun applySetPinnedMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        remoteSnapshot: RemoteSnapshot,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return false to state
+        val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
+        if (remoteUpdatedAt > mutation.timestampEpochMs) return true to state
+        requireApiBody(
+            api.patchTodoByBody(
+                UpdateTodoRequest(id = targetId, pinned = mutation.pinned ?: false),
+            ),
+            "Could not update pin",
+        )
+        return true to state
+    }
+
+    private suspend fun applySetPriorityMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        remoteSnapshot: RemoteSnapshot,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return false to state
+        val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
+        if (remoteUpdatedAt > mutation.timestampEpochMs) return true to state
+
+        val priority = mutation.priority ?: "Low"
+        val instanceDateEpochMs = mutation.instanceDateEpochMs
+        if (instanceDateEpochMs != null) {
+            requireApiBody(
+                api.prioritizeTodoByBody(
+                    TodoPrioritizeRequest(
+                        id = targetId,
+                        priority = priority,
+                        instanceDate = Instant.ofEpochMilli(instanceDateEpochMs).toString(),
+                    ),
+                ),
+                "Could not update priority",
+            )
+        } else {
+            requireApiBody(
+                api.patchTodoByBody(
+                    UpdateTodoRequest(id = targetId, priority = priority),
+                ),
+                "Could not update priority",
+            )
+        }
+        return true to state
+    }
+
+    private suspend fun applyCompleteTodoMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        remoteSnapshot: RemoteSnapshot,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return false to state
+        val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
+        if (remoteUpdatedAt > mutation.timestampEpochMs) return true to state
+        requireApiBody(
+            api.completeTodoByBody(TodoCompleteRequest(id = targetId)),
+            "Could not complete task",
+        )
+        return true to state
+    }
+
+    private suspend fun applyCompleteTodoInstanceMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return false to state
+        requireApiBody(
+            api.completeTodoByBody(
+                TodoCompleteRequest(
+                    id = targetId,
+                    instanceDate = mutation.instanceDateEpochMs?.let {
+                        Instant.ofEpochMilli(it).toString()
+                    },
+                ),
+            ),
+            "Could not complete recurring task",
+        )
+        return true to state
+    }
+
+    private suspend fun applyUncompleteTodoMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return false to state
+        requireApiBody(
+            api.uncompleteTodoByBody(
+                TodoUncompleteRequest(
+                    id = targetId,
+                    instanceDate = mutation.instanceDateEpochMs?.let {
+                        Instant.ofEpochMilli(it).toString()
+                    },
+                ),
+            ),
+            "Could not restore task",
+        )
+        return true to state
+    }
+
+    private suspend fun applyCompleteFloaterMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        remoteSnapshot: RemoteSnapshot,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_FLOATER_PREFIX)) return false to state
+        val remoteUpdatedAt =
+            remoteSnapshot.floaterUpdatedAtByCanonical[targetId] ?: 0L
+        if (remoteUpdatedAt > mutation.timestampEpochMs) return true to state
+        requireApiBody(
+            api.completeFloaterByBody(FloaterCompleteRequest(id = targetId)),
+            "Could not complete floater",
+        )
+        return true to state
+    }
+
+    private suspend fun applyUncompleteFloaterMutation(
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_FLOATER_PREFIX)) return false to state
+        requireApiBody(
+            api.uncompleteFloaterByBody(FloaterUncompleteRequest(id = targetId)),
+            "Could not restore floater",
+        )
+        return true to state
+    }
+
+    private suspend fun applyPromoteFloaterMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+        resolvedTodoIds: MutableMap<String, String>,
+    ): Pair<Boolean, OfflineSyncState> {
+        var nextState = state
+        // A floater that never reached the server has nothing to
+        // promote yet; its CREATE_FLOATER replays first and
+        // resolvedTargetId remaps us to the server id.
+        val targetId = resolvedTargetId ?: return false to nextState
+        if (targetId.startsWith(LOCAL_FLOATER_PREFIX)) return false to nextState
+        val due = mutation.dueEpochMs ?: return true to nextState
+        val promoted = requireApiBody(
+            api.promoteFloater(
+                targetId,
+                PromoteFloaterRequest(
+                    due = Instant.ofEpochMilli(due).toString(),
+                    rrule = mutation.rrule,
+                ),
+            ),
+            "Could not schedule floater",
+        ).todo
+        // Remap the optimistic local todo (minted at enqueue time,
+        // carried in `name`) to the server row — CREATE_TODO-style.
+        val localTodoId = mutation.name
+        if (promoted != null && localTodoId != null &&
+            localTodoId.startsWith(LOCAL_TODO_PREFIX)
+        ) {
+            val promotedTodo = mapTodoDto(promoted)
+            resolvedTodoIds[localTodoId] = promotedTodo.canonicalId
+            nextState = replaceLocalTodoId(nextState, localTodoId, promotedTodo.canonicalId)
+        }
+        return true to nextState
+    }
+
+    private suspend fun applyDemoteTodoMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+        resolvedTodoIds: MutableMap<String, String>,
+    ): Pair<Boolean, OfflineSyncState> {
+        var nextState = state
+        val targetId = resolvedTargetId ?: return false to nextState
+        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return false to nextState
+        val demoted = requireApiBody(
+            api.demoteTodo(targetId),
+            "Could not float task",
+        ).floater
+        val localFloaterId = mutation.name
+        if (demoted != null && localFloaterId != null &&
+            localFloaterId.startsWith(LOCAL_FLOATER_PREFIX)
+        ) {
+            val demotedFloater = mapFloaterDto(demoted)
+            resolvedTodoIds[localFloaterId] = demotedFloater.canonicalId
+            nextState = replaceLocalFloaterId(nextState, localFloaterId, demotedFloater.canonicalId)
+        }
+        return true to nextState
+    }
+
+    private suspend fun applyCreateStepMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+        resolvedTodoIds: MutableMap<String, String>,
+    ): Pair<Boolean, OfflineSyncState> {
+        val todoId = resolvedTargetId ?: return false to state
+        // The parent todo must exist server-side before a step attaches.
+        if (todoId.startsWith(LOCAL_TODO_PREFIX)) return false to state
+        val created = requireApiBody(
+            api.createTaskStep(
+                CreateTaskStepRequest(
+                    todoId = todoId,
+                    title = mutation.title?.trim().orEmpty(),
+                ),
+            ),
+            "Could not add step",
+        ).step ?: return false to state
+        // Remap the optimistic local step id (carried in `name`) so a
+        // later TOGGLE/DELETE in this same batch resolves correctly.
+        val localStepId = mutation.name
+        if (localStepId != null && localStepId.startsWith(LOCAL_STEP_PREFIX)) {
+            resolvedTodoIds[localStepId] = created.id
+        }
+        return true to state
+    }
+
+    private suspend fun applyToggleStepMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val stepId = resolvedTargetId ?: return false to state
+        if (stepId.startsWith(LOCAL_STEP_PREFIX)) return false to state
+        requireApiBody(
+            api.toggleTaskStep(
+                ToggleTaskStepRequest(id = stepId, completed = mutation.completed ?: false),
+            ),
+            "Could not update step",
+        )
+        return true to state
+    }
+
+    private suspend fun applyDeleteStepMutation(
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val stepId = resolvedTargetId ?: return false to state
+        // A step that never synced has nothing to delete server-side.
+        if (stepId.startsWith(LOCAL_STEP_PREFIX)) return true to state
+        requireApiBody(
+            api.deleteTaskStep(DeleteTaskStepRequest(id = stepId)),
+            "Could not delete step",
+        )
+        return true to state
+    }
+
+    private suspend fun applyReorderStepsMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+        resolvedTodoIds: MutableMap<String, String>,
+    ): Pair<Boolean, OfflineSyncState> {
+        val todoId = resolvedTargetId ?: return false to state
+        if (todoId.startsWith(LOCAL_TODO_PREFIX)) return false to state
+        val orderedIds = mutation.orderedIds.orEmpty()
+            .map { resolvedTodoIds[it] ?: it }
+            .filterNot { it.startsWith(LOCAL_STEP_PREFIX) }
+        if (orderedIds.isEmpty()) return true to state
+        requireApiBody(
+            api.reorderTaskSteps(
+                ReorderTaskStepsRequest(todoId = todoId, orderedIds = orderedIds),
+            ),
+            "Could not reorder steps",
+        )
+        return true to state
+    }
+
+    // KT-R1006 (cyclomatic complexity) is suppressed on this declaration rather
+    // than fixed further here. Two separate facts, both worth writing down:
+    //
+    //   * DeepSource measured this function at 82 (Critical risk). That number
+    //     is not something this PR added: the diff here only removes one
+    //     `.filterNot { ... }` line from the `remoteCompletedFloaters` build
+    //     (see docs/design/completed-floaters-durability.md for why), which
+    //     if anything lowers the branch count by one. The other ~300 lines —
+    //     four structurally identical merge passes, one each for todos,
+    //     floaters, lists, and floaterLists — predate this PR untouched.
+    //     DeepSource fingerprints an issue by (file, line, message) against
+    //     whatever baseline it has for the base branch; `develop`'s tip has
+    //     no independent analysis recorded for this file, so the whole
+    //     function reads as "introduced" the moment this PR's diff touches
+    //     any line in it, regardless of which lines actually changed.
+    //   * The four passes look copy-pasted but are not: each collection has
+    //     its own id/key function (`todoMergeKey` vs. plain `canonicalId` vs.
+    //     `id`), its own pending-mutation-kind predicate, and its own
+    //     unsynced-local prefix marker. A shared `mergeOneCollection` helper
+    //     generic enough to cover all four would be the right long-term fix,
+    //     but designing and regression-testing that generalization is a much
+    //     larger and riskier change than the one-line, single-bug-fix scope
+    //     of this PR — this is pre-existing structure, not something this
+    //     change should opportunistically refactor.
+    //
+    // One declaration, one issue code — the narrowest form the tool has, and
+    // the style the repo already uses for KT-W1042, KT-C1001, and this file's
+    // own applyPendingMutations/applyUpdateTodoMutation KT-R1006 suppressions.
+    private fun mergeRemoteWithLocal( // skipcq: KT-R1006
+        localState: OfflineSyncState,
+        remote: RemoteSnapshot,
+    ): OfflineSyncState {
+        // Deliberately kind-only (not filtered on `staged`): a delayed-commit delete's
+        // staged marker (PendingMutationRecord.staged) carries the same DELETE_LIST /
+        // DELETE_FLOATER_LIST kind specifically so it counts here too — otherwise a
+        // refresh mid-undo-window would write the still-server-side list straight back
+        // into the cache (the bug this guard exists to prevent).
+        val pendingDeletedListIds = localState.pendingMutations
+            .filter { it.kind == MutationKind.DELETE_LIST }
+            .mapNotNull { it.targetId }
+            .toSet()
+        val pendingDeletedFloaterListIds = localState.pendingMutations
+            .filter { it.kind == MutationKind.DELETE_FLOATER_LIST }
+            .mapNotNull { it.targetId }
+            .toSet()
+        val remoteTodos = remote.todos
+            .filterNot { it.listId != null && pendingDeletedListIds.contains(it.listId) }
+            .map(::todoToCache)
+        val remoteLists = remote.lists.map(::listToCache)
+        val remoteFloaterLists = remote.floaterLists.map(::floaterListToCache)
+        val remoteCompleted = remote.completedItems
+            .filterNot { it.listId != null && pendingDeletedListIds.contains(it.listId) }
+            .map(::completedToCache)
+            .toMutableList()
+        val remoteFloaters = remote.floaters
+            .filterNot { it.listId != null && pendingDeletedFloaterListIds.contains(it.listId) }
+            .map(::floaterToCache)
+        // Deliberately NOT filtered on pendingDeletedFloaterListIds (unlike remoteCompleted
+        // above, the Todo-side twin, which stays list-delete-pending-sensitive on purpose —
+        // that bug is a separate, deliberately out-of-scope product decision, see
+        // docs/design/completed-floaters-durability.md). stageDeleteList/deleteList no
+        // longer prune completedFloaters locally on floater-list delete, so a remote
+        // completed-floater row for a list with a pending (or staged/undoable) delete is
+        // exactly what the local cache already has — filtering it here would re-introduce
+        // the same transient loss the local-pruning removal was for, for the length of the
+        // delete's staging/replay window.
+        val remoteCompletedFloaters = remote.completedFloaters
+            .map(::completedFloaterToCache)
+            .toMutableList()
+
+        val pendingTodoCanonicalIds = localState.pendingMutations
+            .filter { it.kind.affectsTodo() }
+            .mapNotNull { it.targetId }
+            .toSet()
+        val pendingFloaterCanonicalIds = localState.pendingMutations
+            .filter { it.kind.affectsFloater() }
+            .mapNotNull { it.targetId }
+            .toSet()
+        // Un-completing a task from the Completed screen is optimistic and un-staged:
+        // CompletedRepository.uncomplete() prunes the completion record locally and
+        // queues UNCOMPLETE_TODO, then drops that mutation the moment the server
+        // acknowledges. The window between the two is exactly when every other sync
+        // in the app is most likely to look — the un-complete publishes a `completed`
+        // realtime event to the actor itself, which AppViewModel coalesces into a sync
+        // ~400 ms later, and that sync's getCompletedTodos() began its round trip while
+        // the server still had the task completed.
+        //
+        // `remoteCompleted` is assigned to the cache wholesale below, so without this
+        // that stale read put the restored row straight back — the user watched a task
+        // they had just dismissed come back struck-through and then leave again when
+        // the next merge landed. The guard directly below covers the opposite
+        // direction (re-adding a LOCAL completion a remote read is missing); this is
+        // its inverse, and both are needed for the pair to be a rule rather than a
+        // one-way patch.
+        //
+        // Keyed on UNCOMPLETE_TODO specifically, not affectsTodo(): an update, pin or
+        // priority change carries no opinion about where the row belongs, and letting
+        // one hide a genuine completion made on another device would be a second bug
+        // wearing this one's clothes. Deliberately not filtered on `staged` either —
+        // this path has no undo window to wait out, so the marker's absence is the
+        // signal that the local removal is the answer until the server has seen it.
+        val pendingUncompletedTodoIds = localState.pendingMutations
+            .filter { it.kind == MutationKind.UNCOMPLETE_TODO }
+            .mapNotNull { it.targetId }
+            .toSet()
+        // …except when the user has since completed it AGAIN. Both mutations can be in
+        // flight at once — the restore is unacknowledged for as long as its PATCH takes —
+        // and hiding the row then would take a task away from the very list the user just
+        // put it in, which is the same complaint this guard exists to fix, mirrored. The
+        // later intent is the one the user can see themselves having expressed, so the
+        // completion counts and the restore's guard stands down for that row.
+        val pendingCompletedTodoIds = localState.pendingMutations
+            .filter {
+                it.kind == MutationKind.COMPLETE_TODO ||
+                    it.kind == MutationKind.COMPLETE_TODO_INSTANCE
+            }
+            .mapNotNull { it.targetId }
+            .toSet()
+        val restoredTodoIds = pendingUncompletedTodoIds - pendingCompletedTodoIds
+        if (restoredTodoIds.isNotEmpty()) {
+            remoteCompleted.removeAll { completed -> completed.originalTodoId in restoredTodoIds }
+        }
+        val pendingListIds = localState.pendingMutations
+            .filter {
+                it.kind == MutationKind.CREATE_LIST ||
+                        it.kind == MutationKind.UPDATE_LIST ||
+                        it.kind == MutationKind.DELETE_LIST
+            }
+            .mapNotNull { it.targetId }
+            .toSet()
+        val pendingFloaterListIds = localState.pendingMutations
+            .filter {
+                it.kind == MutationKind.CREATE_FLOATER_LIST ||
+                        it.kind == MutationKind.UPDATE_FLOATER_LIST ||
+                        it.kind == MutationKind.DELETE_FLOATER_LIST
+            }
+            .mapNotNull { it.targetId }
+            .toSet()
+        val pendingDeleteAllCanonicals = localState.pendingMutations
+            .filter { it.kind == MutationKind.DELETE_TODO && it.instanceDateEpochMs == null }
+            .mapNotNull { it.targetId }
+            .toSet()
+        val pendingDeleteSpecificKeys = localState.pendingMutations
+            .filter { it.kind == MutationKind.DELETE_TODO && it.instanceDateEpochMs != null }
+            .mapNotNull { mutation ->
+                mutation.targetId?.let { targetId ->
+                    todoMergeKey(targetId, mutation.instanceDateEpochMs)
+                }
+            }
+            .toSet()
+        val pendingDeletedFloaterIds = localState.pendingMutations
+            .filter { it.kind == MutationKind.DELETE_FLOATER }
+            .mapNotNull { it.targetId }
+            .toSet()
+
+        val localTodoByKey = localState.todos.associateBy(::todoMergeKey)
+        val remoteTodoByKey = remoteTodos.associateBy(::todoMergeKey)
+        val mergedTodos = mutableListOf<CachedTodoRecord>()
+        val allTodoKeys = LinkedHashSet<String>().apply {
+            addAll(remoteTodoByKey.keys)
+            addAll(localTodoByKey.keys)
+        }
+
+        allTodoKeys.forEach { key ->
+            val localTodo = localTodoByKey[key]
+            val remoteTodo = remoteTodoByKey[key]
+
+            if (remoteTodo != null) {
+                val blockedByPendingDelete =
+                    pendingDeleteAllCanonicals.contains(remoteTodo.canonicalId) ||
+                        pendingDeleteSpecificKeys.contains(key)
+                if (blockedByPendingDelete) return@forEach
+            }
+
+            if (remoteTodo == null && localTodo != null) {
+                val hasPendingLocalMutation = pendingTodoCanonicalIds.contains(localTodo.canonicalId)
+                val isUnsyncedLocalTodo = localTodo.canonicalId.startsWith(LOCAL_TODO_PREFIX)
+                if (!hasPendingLocalMutation && !isUnsyncedLocalTodo) return@forEach
+            }
+
+            val merged = when {
+                localTodo != null && remoteTodo != null -> {
+                    if (shouldPreferLocalTodo(localTodo, remoteTodo, pendingTodoCanonicalIds)) {
+                        localTodo
+                    } else {
+                        remoteTodo
+                    }
+                }
+                localTodo != null -> localTodo
+                remoteTodo != null -> remoteTodo
+                else -> null
+            }
+            if (merged != null) mergedTodos.add(merged)
+        }
+
+        pendingTodoCanonicalIds.forEach { canonicalId ->
+            val localCompletedForTodo = localState.completedItems.filter { it.originalTodoId == canonicalId }
+            if (localCompletedForTodo.isNotEmpty()) {
+                remoteCompleted.removeAll { it.originalTodoId == canonicalId }
+                remoteCompleted.addAll(localCompletedForTodo)
+            }
+        }
+
+        val localFloaterById = localState.floaters.associateBy { it.canonicalId }
+        val remoteFloaterById = remoteFloaters.associateBy { it.canonicalId }
+        val mergedFloaters = mutableListOf<CachedFloaterRecord>()
+        val allFloaterIds = LinkedHashSet<String>().apply {
+            addAll(remoteFloaterById.keys)
+            addAll(localFloaterById.keys)
+        }
+
+        allFloaterIds.forEach { canonicalId ->
+            val localFloater = localFloaterById[canonicalId]
+            val remoteFloater = remoteFloaterById[canonicalId]
+
+            if (remoteFloater != null && pendingDeletedFloaterIds.contains(remoteFloater.canonicalId)) {
+                return@forEach
+            }
+            if (remoteFloater == null && localFloater != null) {
+                val hasPendingLocalMutation =
+                    pendingFloaterCanonicalIds.contains(localFloater.canonicalId)
+                val isUnsyncedLocalFloater =
+                    localFloater.canonicalId.startsWith(LOCAL_FLOATER_PREFIX)
+                if (!hasPendingLocalMutation && !isUnsyncedLocalFloater) return@forEach
+            }
+
+            val merged = when {
+                localFloater != null && remoteFloater != null -> {
+                    if (pendingFloaterCanonicalIds.contains(localFloater.canonicalId) ||
+                        localFloater.updatedAtEpochMs > remoteFloater.updatedAtEpochMs
+                    ) {
+                        localFloater
+                    } else {
+                        remoteFloater
+                    }
+                }
+
+                localFloater != null -> localFloater
+                remoteFloater != null -> remoteFloater
+                else -> null
+            }
+            if (merged != null) mergedFloaters.add(merged)
+        }
+
+        pendingFloaterCanonicalIds.forEach { canonicalId ->
+            val localCompletedForFloater =
+                localState.completedFloaters.filter { it.originalFloaterId == canonicalId }
+            if (localCompletedForFloater.isNotEmpty()) {
+                remoteCompletedFloaters.removeAll { it.originalFloaterId == canonicalId }
+                remoteCompletedFloaters.addAll(localCompletedForFloater)
+            }
+        }
+
+        val localListById = localState.lists.associateBy { it.id }
+        val remoteListById = remoteLists.associateBy { it.id }
+        val mergedLists = mutableListOf<CachedListRecord>()
+        val allListIds = LinkedHashSet<String>().apply {
+            addAll(remoteListById.keys)
+            addAll(localListById.keys)
+        }
+
+        allListIds.forEach { listId ->
+            val localList = localListById[listId]
+            val remoteList = remoteListById[listId]
+
+            if (remoteList != null && pendingDeletedListIds.contains(remoteList.id)) {
+                return@forEach
+            }
+
+            if (remoteList == null && localList != null) {
+                val hasPendingLocalMutation = pendingListIds.contains(localList.id)
+                val isUnsyncedLocalList = localList.id.startsWith(LOCAL_LIST_PREFIX)
+                if (!hasPendingLocalMutation && !isUnsyncedLocalList) return@forEach
+            }
+
+            val merged = when {
+                localList != null && remoteList != null -> {
+                    if (
+                        pendingListIds.contains(listId) ||
+                        localList.updatedAtEpochMs > remoteList.updatedAtEpochMs
+                    ) {
+                        localList
+                    } else {
+                        remoteList
+                    }
+                }
+                localList != null -> localList
+                remoteList != null -> remoteList
+                else -> null
+            }
+            if (merged != null) mergedLists.add(merged)
+        }
+
+        val localFloaterListById = localState.floaterLists.associateBy { it.id }
+        val remoteFloaterListById = remoteFloaterLists.associateBy { it.id }
+        val mergedFloaterLists = mutableListOf<CachedFloaterListRecord>()
+        val allFloaterListIds = LinkedHashSet<String>().apply {
+            addAll(remoteFloaterListById.keys)
+            addAll(localFloaterListById.keys)
+        }
+
+        allFloaterListIds.forEach { listId ->
+            val localList = localFloaterListById[listId]
+            val remoteList = remoteFloaterListById[listId]
+
+            if (remoteList != null && pendingDeletedFloaterListIds.contains(remoteList.id)) {
+                return@forEach
+            }
+
+            if (remoteList == null && localList != null) {
+                val hasPendingLocalMutation = pendingFloaterListIds.contains(localList.id)
+                val isUnsyncedLocalList = localList.id.startsWith(LOCAL_FLOATER_LIST_PREFIX)
+                if (!hasPendingLocalMutation && !isUnsyncedLocalList) return@forEach
+            }
+
+            val merged = when {
+                localList != null && remoteList != null -> {
+                    if (
+                        pendingFloaterListIds.contains(listId) ||
+                        localList.updatedAtEpochMs > remoteList.updatedAtEpochMs
+                    ) {
+                        localList
+                    } else {
+                        remoteList
+                    }
+                }
+
+                localList != null -> localList
+                remoteList != null -> remoteList
+                else -> null
+            }
+            if (merged != null) mergedFloaterLists.add(merged)
+        }
+
+        val todoCountByList = mergedTodos
+            .asSequence()
+            .filterNot { it.completed }
+            .groupingBy { it.listId }
+            .eachCount()
+        val normalizedLists = orderListsLikeWeb(
+            mergedLists.map {
+                it.copy(todoCount = todoCountByList[it.id] ?: 0)
+            },
+        )
+        val floaterCountByList = mergedFloaters
+            .asSequence()
+            .filterNot { it.completed }
+            .groupingBy { it.listId }
+            .eachCount()
+        val normalizedFloaterLists = orderFloaterListsLikeWeb(
+            mergedFloaterLists.map {
+                it.copy(todoCount = floaterCountByList[it.id] ?: 0)
+            },
+        )
+
+        val dataMergedState = localState.copy(
+            todos = mergedTodos,
+            floaters = mergedFloaters,
+            completedItems = remoteCompleted,
+            completedFloaters = remoteCompletedFloaters,
+            lists = normalizedLists,
+            floaterLists = normalizedFloaterLists,
+            aiSummaryEnabled = remote.aiSummaryEnabled,
+            // Account preference, so the server wins: this is what makes a change made on
+            // another device (or on the web) show up on this one's next cold launch, instead
+            // of waiting for someone to open Settings here.
+            defaultHomeScreen = remote.defaultHomeScreen,
+        )
+        val localWinsMutations = buildLocalWinsMutations(
+            mergedState = dataMergedState,
+            remote = remote,
+        )
+        if (localWinsMutations.isEmpty()) return dataMergedState
+
+        return dataMergedState.copy(
+            pendingMutations = mergePendingMutations(
+                existing = dataMergedState.pendingMutations,
+                generated = localWinsMutations,
+            ),
+        )
+    }
+
+    // KT-R1006 (cyclomatic complexity) is suppressed on this declaration rather
+    // than fixed further here, for the same reason given on mergeRemoteWithLocal
+    // just above: DeepSource measured 44 (Very High risk) here, but this PR's
+    // diff does not touch this function at all — every line of it predates this
+    // change. With no independent DeepSource baseline recorded for `develop` on
+    // this file, the check still reports it as "introduced" the moment this PR
+    // touches any other line in the same file, so the suppression is added here
+    // purely to keep the check's signal accurate about what this PR did, not
+    // because this PR is the source of the complexity. The complexity itself has
+    // the same structural cause as mergeRemoteWithLocal — four parallel
+    // local-wins passes (todos, floaters, lists, floaterLists), each with its
+    // own id/key function and pending-mutation predicate — and the same
+    // argument against a bigger generalization applies: real future work, not
+    // something to rush into this PR's one-line bug fix.
+    //
+    // One declaration, one issue code — the narrowest form the tool has, and
+    // the style the repo already uses for KT-W1042, KT-C1001, and
+    // mergeRemoteWithLocal's own KT-R1006 suppression above.
+    private fun buildLocalWinsMutations( // skipcq: KT-R1006
+        mergedState: OfflineSyncState,
+        remote: RemoteSnapshot,
+    ): List<PendingMutationRecord> {
+        val existingPending = mergedState.pendingMutations
+        val pendingTodoCanonicalIds = existingPending
+            .filter { it.kind.affectsTodo() }
+            .mapNotNull { it.targetId }
+            .toSet()
+        val pendingFloaterCanonicalIds = existingPending
+            .filter { it.kind.affectsFloater() }
+            .mapNotNull { it.targetId }
+            .toSet()
+        val pendingListIds = existingPending
+            .filter {
+                it.kind == MutationKind.CREATE_LIST ||
+                        it.kind == MutationKind.UPDATE_LIST ||
+                        it.kind == MutationKind.DELETE_LIST
+            }
+            .mapNotNull { it.targetId }
+            .toSet()
+        val pendingFloaterListIds = existingPending
+            .filter {
+                it.kind == MutationKind.CREATE_FLOATER_LIST ||
+                        it.kind == MutationKind.UPDATE_FLOATER_LIST ||
+                        it.kind == MutationKind.DELETE_FLOATER_LIST
+            }
+            .mapNotNull { it.targetId }
+            .toSet()
+        val pendingLocalListCreates = existingPending
+            .filter { it.kind == MutationKind.CREATE_LIST }
+            .mapNotNull { it.targetId }
+            .toSet()
+        val pendingLocalFloaterListCreates = existingPending
+            .filter { it.kind == MutationKind.CREATE_FLOATER_LIST }
+            .mapNotNull { it.targetId }
+            .toSet()
+
+        val remoteTodoByKey = remote.todos
+            .map(::todoToCache)
+            .associateBy(::todoMergeKey)
+        val remoteFloaterById = remote.floaters
+            .map(::floaterToCache)
+            .associateBy { it.canonicalId }
+        val remoteListById = remote.lists
+            .map(::listToCache)
+            .associateBy { it.id }
+        val remoteFloaterListById = remote.floaterLists
+            .map(::floaterListToCache)
+            .associateBy { it.id }
+
+        val generated = mutableListOf<PendingMutationRecord>()
+
+        mergedState.todos.forEach { localTodo ->
+            if (localTodo.canonicalId.startsWith(LOCAL_TODO_PREFIX)) return@forEach
+            if (pendingTodoCanonicalIds.contains(localTodo.canonicalId)) return@forEach
+
+            val remoteTodo = remoteTodoByKey[todoMergeKey(localTodo)] ?: return@forEach
+            if (!hasTodoMeaningfulDifferences(local = localTodo, remote = remoteTodo)) return@forEach
+            val localUpdatedAt = localTodo.updatedAtEpochMs
+            val remoteUpdatedAt = remoteTodo.updatedAtEpochMs
+            if (localUpdatedAt <= 0L || localUpdatedAt <= remoteUpdatedAt) return@forEach
+
+            val mutation = if (localTodo.completed != remoteTodo.completed) {
+                if (localTodo.completed) {
+                    PendingMutationRecord(
+                        mutationId = UUID.randomUUID().toString(),
+                        kind = if (localTodo.instanceDateEpochMs != null) {
+                            MutationKind.COMPLETE_TODO_INSTANCE
+                        } else {
+                            MutationKind.COMPLETE_TODO
+                        },
+                        targetId = localTodo.canonicalId,
+                        timestampEpochMs = localUpdatedAt,
+                        instanceDateEpochMs = localTodo.instanceDateEpochMs,
+                    )
+                } else {
+                    PendingMutationRecord(
+                        mutationId = UUID.randomUUID().toString(),
+                        kind = MutationKind.UNCOMPLETE_TODO,
+                        targetId = localTodo.canonicalId,
+                        timestampEpochMs = localUpdatedAt,
+                        instanceDateEpochMs = localTodo.instanceDateEpochMs,
+                    )
+                }
+            } else {
+                val localListId = localTodo.listId
+                if (!localListId.isNullOrBlank() &&
+                    localListId.startsWith(LOCAL_LIST_PREFIX) &&
+                    !pendingLocalListCreates.contains(localListId)
+                ) {
+                    return@forEach
+                }
+                PendingMutationRecord(
+                    mutationId = UUID.randomUUID().toString(),
+                    kind = MutationKind.UPDATE_TODO,
+                    targetId = localTodo.canonicalId,
+                    timestampEpochMs = localUpdatedAt,
+                    title = localTodo.title,
+                    description = localTodo.description,
+                    priority = localTodo.priority,
+                    pinned = localTodo.pinned,
+                    dueEpochMs = localTodo.dueEpochMs,
+                    rrule = localTodo.rrule,
+                    listId = localTodo.listId,
+                    instanceDateEpochMs = localTodo.instanceDateEpochMs,
+                )
+            }
+            generated.add(mutation)
+        }
+
+        mergedState.floaters.forEach { localFloater ->
+            if (localFloater.canonicalId.startsWith(LOCAL_FLOATER_PREFIX)) return@forEach
+            if (pendingFloaterCanonicalIds.contains(localFloater.canonicalId)) return@forEach
+
+            val remoteFloater = remoteFloaterById[localFloater.canonicalId] ?: return@forEach
+            if (!hasFloaterMeaningfulDifferences(
+                    local = localFloater,
+                    remote = remoteFloater
+                )
+            ) return@forEach
+            val localUpdatedAt = localFloater.updatedAtEpochMs
+            val remoteUpdatedAt = remoteFloater.updatedAtEpochMs
+            if (localUpdatedAt <= 0L || localUpdatedAt <= remoteUpdatedAt) return@forEach
+
+            val mutation = if (localFloater.completed != remoteFloater.completed) {
+                PendingMutationRecord(
+                    mutationId = UUID.randomUUID().toString(),
+                    kind = if (localFloater.completed) MutationKind.COMPLETE_FLOATER else MutationKind.UNCOMPLETE_FLOATER,
+                    targetId = localFloater.canonicalId,
+                    timestampEpochMs = localUpdatedAt,
+                )
+            } else {
+                val localListId = localFloater.listId
+                if (!localListId.isNullOrBlank() &&
+                    localListId.startsWith(LOCAL_FLOATER_LIST_PREFIX) &&
+                    !pendingLocalFloaterListCreates.contains(localListId)
+                ) {
+                    return@forEach
+                }
+                PendingMutationRecord(
+                    mutationId = UUID.randomUUID().toString(),
+                    kind = MutationKind.UPDATE_FLOATER,
+                    targetId = localFloater.canonicalId,
+                    timestampEpochMs = localUpdatedAt,
+                    title = localFloater.title,
+                    description = localFloater.description,
+                    priority = localFloater.priority,
+                    pinned = localFloater.pinned,
+                    completed = localFloater.completed,
+                    listId = localFloater.listId,
+                )
+            }
+            generated.add(mutation)
+        }
+
+        mergedState.lists.forEach { localList ->
+            if (localList.id.startsWith(LOCAL_LIST_PREFIX)) return@forEach
+            if (pendingListIds.contains(localList.id)) return@forEach
+
+            val remoteList = remoteListById[localList.id] ?: return@forEach
+            if (!hasListMeaningfulDifferences(local = localList, remote = remoteList)) return@forEach
+            val localUpdatedAt = localList.updatedAtEpochMs
+            val remoteUpdatedAt = remoteList.updatedAtEpochMs
+            if (localUpdatedAt <= 0L || localUpdatedAt <= remoteUpdatedAt) return@forEach
+
+            generated.add(
+                PendingMutationRecord(
+                    mutationId = UUID.randomUUID().toString(),
+                    kind = MutationKind.UPDATE_LIST,
+                    targetId = localList.id,
+                    timestampEpochMs = localUpdatedAt,
+                    name = localList.name,
+                    color = localList.color,
+                    iconKey = localList.iconKey,
+                ),
+            )
+        }
+
+        mergedState.floaterLists.forEach { localList ->
+            if (localList.id.startsWith(LOCAL_FLOATER_LIST_PREFIX)) return@forEach
+            if (pendingFloaterListIds.contains(localList.id)) return@forEach
+
+            val remoteList = remoteFloaterListById[localList.id] ?: return@forEach
+            if (!hasFloaterListMeaningfulDifferences(
+                    local = localList,
+                    remote = remoteList
+                )
+            ) return@forEach
+            val localUpdatedAt = localList.updatedAtEpochMs
+            val remoteUpdatedAt = remoteList.updatedAtEpochMs
+            if (localUpdatedAt <= 0L || localUpdatedAt <= remoteUpdatedAt) return@forEach
+
+            generated.add(
+                PendingMutationRecord(
+                    mutationId = UUID.randomUUID().toString(),
+                    kind = MutationKind.UPDATE_FLOATER_LIST,
+                    targetId = localList.id,
+                    timestampEpochMs = localUpdatedAt,
+                    name = localList.name,
+                    color = localList.color,
+                    iconKey = localList.iconKey,
+                    reusable = localList.reusable,
+                ),
+            )
+        }
+
+        return generated
+    }
+
+    private fun shouldPreferLocalTodo(
+        localTodo: CachedTodoRecord,
+        remoteTodo: CachedTodoRecord,
+        pendingTodoCanonicalIds: Set<String>,
+    ): Boolean {
+        if (pendingTodoCanonicalIds.contains(localTodo.canonicalId)) return true
+        return localTodo.updatedAtEpochMs > remoteTodo.updatedAtEpochMs
+    }
+
+    private fun hasTodoMeaningfulDifferences(
+        local: CachedTodoRecord,
+        remote: CachedTodoRecord,
+    ): Boolean {
+        return local.title != remote.title ||
+            local.description != remote.description ||
+            local.priority != remote.priority ||
+            local.dueEpochMs != remote.dueEpochMs ||
+            local.rrule != remote.rrule ||
+            local.instanceDateEpochMs != remote.instanceDateEpochMs ||
+            local.pinned != remote.pinned ||
+            local.completed != remote.completed ||
+            local.listId != remote.listId
+    }
+
+    private fun hasFloaterMeaningfulDifferences(
+        local: CachedFloaterRecord,
+        remote: CachedFloaterRecord,
+    ): Boolean {
+        return local.title != remote.title ||
+                local.description != remote.description ||
+                local.priority != remote.priority ||
+                local.pinned != remote.pinned ||
+                local.completed != remote.completed ||
+                local.listId != remote.listId
+    }
+
+    private fun hasListMeaningfulDifferences(
+        local: CachedListRecord,
+        remote: CachedListRecord,
+    ): Boolean {
+        return local.name != remote.name ||
+            local.color != remote.color ||
+            local.iconKey != remote.iconKey
+    }
+
+    private fun hasFloaterListMeaningfulDifferences(
+        local: CachedFloaterListRecord,
+        remote: CachedFloaterListRecord,
+    ): Boolean {
+        return local.name != remote.name ||
+                local.color != remote.color ||
+                local.iconKey != remote.iconKey ||
+                local.reusable != remote.reusable
+    }
+
+    private fun mergePendingMutations(
+        existing: List<PendingMutationRecord>,
+        generated: List<PendingMutationRecord>,
+    ): List<PendingMutationRecord> {
+        if (generated.isEmpty()) return existing
+        val merged = existing.toMutableList()
+        generated.forEach { candidate ->
+            val replaceIndex = merged.indexOfFirst { existingMutation ->
+                shouldReplacePendingMutation(existing = existingMutation, candidate = candidate)
+            }
+            if (replaceIndex >= 0) {
+                merged[replaceIndex] = candidate
+            } else {
+                merged.add(candidate)
+            }
+        }
+        return merged.sortedBy { it.timestampEpochMs }
+    }
+
+    private fun shouldReplacePendingMutation(
+        existing: PendingMutationRecord,
+        candidate: PendingMutationRecord,
+    ): Boolean {
+        if (existing.kind != candidate.kind) return false
+        if (existing.targetId != candidate.targetId) return false
+        return existing.instanceDateEpochMs == candidate.instanceDateEpochMs
+    }
+
+    private fun MutationKind.affectsTodo(): Boolean {
+        return this == MutationKind.CREATE_TODO ||
+            this == MutationKind.UPDATE_TODO ||
+            this == MutationKind.DELETE_TODO ||
+            this == MutationKind.SET_PINNED ||
+            this == MutationKind.SET_PRIORITY ||
+            this == MutationKind.COMPLETE_TODO ||
+            this == MutationKind.COMPLETE_TODO_INSTANCE ||
+            this == MutationKind.UNCOMPLETE_TODO ||
+            // Consumes a todo (its optimistic floater is local-prefixed and
+            // therefore already merge-protected).
+            this == MutationKind.DEMOTE_TODO
+    }
+
+    private fun MutationKind.affectsFloater(): Boolean {
+        return this == MutationKind.CREATE_FLOATER ||
+                this == MutationKind.UPDATE_FLOATER ||
+                this == MutationKind.DELETE_FLOATER ||
+                this == MutationKind.COMPLETE_FLOATER ||
+                this == MutationKind.UNCOMPLETE_FLOATER ||
+                // Consumes a floater (its optimistic todo is local-prefixed and
+                // therefore already merge-protected).
+                this == MutationKind.PROMOTE_FLOATER
+    }
+
+    private fun replaceLocalTodoId(
+        state: OfflineSyncState,
+        localTodoId: String,
+        serverTodoId: String,
+    ): OfflineSyncState {
+        return state.copy(
+            todos = state.todos.map {
+                if (it.canonicalId == localTodoId) {
+                    it.copy(
+                        id = if (it.id == localTodoId) serverTodoId else it.id,
+                        canonicalId = serverTodoId,
+                    )
+                } else {
+                    it
+                }
+            },
+            pendingMutations = state.pendingMutations.map {
+                if (it.targetId == localTodoId) it.copy(targetId = serverTodoId) else it
+            },
+        )
+    }
+
+    private fun replaceLocalFloaterId(
+        state: OfflineSyncState,
+        localFloaterId: String,
+        serverFloaterId: String,
+    ): OfflineSyncState {
+        return state.copy(
+            floaters = state.floaters.map {
+                if (it.canonicalId == localFloaterId) {
+                    it.copy(
+                        id = if (it.id == localFloaterId) serverFloaterId else it.id,
+                        canonicalId = serverFloaterId,
+                    )
+                } else {
+                    it
+                }
+            },
+            pendingMutations = state.pendingMutations.map {
+                if (it.targetId == localFloaterId) it.copy(targetId = serverFloaterId) else it
+            },
+        )
+    }
+
+    private fun resolveTargetId(
+        targetId: String?,
+        todoIdMap: Map<String, String>,
+        listIdMap: Map<String, String>,
+    ): String? {
+        if (targetId == null) return null
+        return todoIdMap[targetId] ?: listIdMap[targetId] ?: targetId
+    }
+
+    private fun resolveLatestMutationSnapshot(
+        state: OfflineSyncState,
+        mutation: PendingMutationRecord,
+    ): PendingMutationRecord =
+        state.pendingMutations.firstOrNull { it.mutationId == mutation.mutationId } ?: mutation
+
+    private data class RemoteSnapshot(
+        val todos: List<TodoItem>,
+        val floaters: List<TodoItem>,
+        val completedItems: List<CompletedItem>,
+        val completedFloaters: List<CompletedItem>,
+        val lists: List<ListSummary>,
+        val floaterLists: List<ListSummary>,
+        val aiSummaryEnabled: Boolean,
+        /** "scheduled" or "floater" — the account's default home screen, mirrored into the cache. */
+        val defaultHomeScreen: String,
+    ) {
+        val todoUpdatedAtByCanonical: Map<String, Long> = todos
+            .groupBy { it.canonicalId }
+            .mapValues { (_, entries) ->
+                entries.maxOfOrNull { it.updatedAt?.toEpochMilli() ?: 0L } ?: 0L
+            }
+
+        val listUpdatedAtById: Map<String, Long> = lists
+            .groupBy { it.id }
+            .mapValues { (_, entries) ->
+                entries.maxOfOrNull { it.updatedAt?.toEpochMilli() ?: 0L } ?: 0L
+            }
+
+        val floaterListUpdatedAtById: Map<String, Long> = floaterLists
+            .groupBy { it.id }
+            .mapValues { (_, entries) ->
+                entries.maxOfOrNull { it.updatedAt?.toEpochMilli() ?: 0L } ?: 0L
+            }
+
+        val floaterUpdatedAtByCanonical: Map<String, Long> = floaters
+            .groupBy { it.canonicalId }
+            .mapValues { (_, entries) ->
+                entries.maxOfOrNull { it.updatedAt?.toEpochMilli() ?: 0L } ?: 0L
+            }
+    }
+
+    companion object {
+        // Reachability probe budget for user-initiated refresh, foreground reconnect, and
+        // cached-session restore. 2s was too aggressive — a cold TLS handshake over cellular
+        // or dual-stack IPv6 routinely exceeds it and falsely flips the app to "offline".
+        // 8s leaves ample headroom while still failing fast when there is genuinely no route
+        // (the OS surfaces "no network" errors immediately, independent of this timeout).
+        const val USER_REFRESH_CONNECTION_TIMEOUT_MS = 8_000L
+        private const val LOG_TAG = "SyncManager"
+        private const val OFFLINE_RESYNC_INTERVAL_MS = 5 * 60 * 1000L
+        private const val MIN_FORCE_SYNC_INTERVAL_MS = 1_200L
+
+        /** Applied when a 429 arrives without a usable `Retry-After`. */
+        private const val MIN_RATE_LIMIT_COOLDOWN_MS = 5_000L
+
+        /** Ceiling on a server-supplied `Retry-After`, so one response cannot park the
+         *  client indefinitely on a self-hosted instance with a long window. */
+        private const val MAX_RATE_LIMIT_COOLDOWN_MS = 5 * 60 * 1000L
+    }
+}

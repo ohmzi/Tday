@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The List widget's setup picture (and its picker preview): a list card with one task ticked,
+     a second card peeking out behind it, two sparkles and a "+" bubble — "pick a list and it
+     lives here". Drawn once for both platforms: iOS draws the same shapes in SwiftUI
+     (ListWidgetSetupArt). Colours come from tday_widget_setup_art_* so dark mode has its own. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="100dp"
+    android:viewportWidth="120"
+    android:viewportHeight="100">
+
+    <!-- The card behind, tilted. -->
+    <group
+        android:pivotX="60"
+        android:pivotY="52"
+        android:rotation="-9">
+        <path
+            android:fillColor="@color/tday_widget_setup_art_back_card"
+            android:pathData="M36,20 L84,20 A10,10 0 0,1 94,30 L94,80 A10,10 0 0,1 84,90 L36,90 A10,10 0 0,1 26,80 L26,30 A10,10 0 0,1 36,20 Z" />
+    </group>
+
+    <!-- The card in front. -->
+    <path
+        android:fillColor="@color/tday_widget_setup_art_card"
+        android:strokeColor="@color/tday_widget_setup_art_card_edge"
+        android:strokeWidth="1.2"
+        android:pathData="M38,14 L86,14 A10,10 0 0,1 96,24 L96,78 A10,10 0 0,1 86,88 L38,88 A10,10 0 0,1 28,78 L28,24 A10,10 0 0,1 38,14 Z" />
+
+    <!-- Its title bar. -->
+    <path
+        android:fillColor="@color/tday_widget_setup_art_accent"
+        android:pathData="M40,23 L62,23 A3,3 0 0,1 62,29 L40,29 A3,3 0 0,1 40,23 Z" />
+
+    <!-- Row 1: ticked. -->
+    <path
+        android:fillColor="@color/tday_widget_setup_art_green"
+        android:pathData="M43,43 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M40.8,43.2 L42.6,45 L45.6,41.6"
+        android:strokeColor="@android:color/white"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="1.5" />
+    <path
+        android:fillColor="@color/tday_widget_setup_art_line"
+        android:pathData="M53,41 L82,41 A2,2 0 0,1 82,45 L53,45 A2,2 0 0,1 53,41 Z" />
+
+    <!-- Row 2. -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M43,58 m-4.2,0 a4.2,4.2 0 1,0 8.4,0 a4.2,4.2 0 1,0 -8.4,0"
+        android:strokeColor="@color/tday_widget_setup_art_orange"
+        android:strokeWidth="1.6" />
+    <path
+        android:fillColor="@color/tday_widget_setup_art_line"
+        android:pathData="M53,56 L76,56 A2,2 0 0,1 76,60 L53,60 A2,2 0 0,1 53,56 Z" />
+
+    <!-- Row 3. -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M43,73 m-4.2,0 a4.2,4.2 0 1,0 8.4,0 a4.2,4.2 0 1,0 -8.4,0"
+        android:strokeColor="@color/tday_widget_setup_art_accent"
+        android:strokeWidth="1.6" />
+    <path
+        android:fillColor="@color/tday_widget_setup_art_line"
+        android:pathData="M53,71 L70,71 A2,2 0 0,1 70,75 L53,75 A2,2 0 0,1 53,71 Z" />
+
+    <!-- The "+" bubble. -->
+    <path
+        android:fillColor="@color/tday_widget_setup_art_pink"
+        android:pathData="M97,80 m-11,0 a11,11 0 1,0 22,0 a11,11 0 1,0 -22,0" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M97,74.5 L97,85.5 M91.5,80 L102.5,80"
+        android:strokeColor="@android:color/white"
+        android:strokeLineCap="round"
+        android:strokeWidth="2.2" />
+
+    <!-- Sparkles. -->
+    <path
+        android:fillColor="@color/tday_widget_setup_art_sparkle"
+        android:pathData="M104,14 Q105,21 111,22 Q105,23 104,30 Q103,23 97,22 Q103,21 104,14 Z" />
+    <path
+        android:fillColor="@color/tday_widget_setup_art_sparkle"
+        android:pathData="M17,40 Q17.7,44.3 22,45 Q17.7,45.7 17,50 Q16.3,45.7 12,45 Q16.3,44.3 17,40 Z" />
+    <path
+        android:fillColor="@color/tday_widget_setup_art_sparkle_soft"
+        android:pathData="M22,76 m-2.2,0 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0" />
+</vector>

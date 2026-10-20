@@ -1,0 +1,487 @@
+package com.ohmz.tday.security
+
+import com.ohmz.tday.config.AppConfig
+import com.ohmz.tday.db.tables.AuthSignals
+import com.ohmz.tday.db.tables.AuthThrottles
+import com.ohmz.tday.db.util.CuidGenerator
+import com.ohmz.tday.services.SecurityAlertService
+import com.ohmz.tday.services.SecurityAlertType
+import io.ktor.server.request.ApplicationRequest
+import kotlinx.coroutines.Dispatchers
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.jdbc.update
+import org.jetbrains.exposed.v1.core.between
+import org.jetbrains.exposed.v1.core.eq
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import kotlin.math.ceil
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.pow
+
+enum class ThrottleAction { credentials, register, csrf, sessionGet, credentialsKey }
+
+/**
+ * [ipUsername] is the punitive bucket for sign-in: failures lock the (IP, account) pair, not the
+ * account. A bare [username] lockout let anyone who knew a username keep them locked out
+ * of their own server indefinitely, from anywhere, for the cost of one wrong password per backoff
+ * window. Account-wide pressure is now handled by a non-punitive quota instead — see
+ * [AuthThrottleImpl.accountCeilingPolicy].
+ */
+enum class ThrottleDimension { ip, username, device, ipUsername }
+
+data class ThrottleResult(
+    val allowed: Boolean,
+    val reasonCode: String? = null,
+    val retryAfterSeconds: Int = 0,
+    val dimension: ThrottleDimension? = null,
+)
+
+data class SubjectKey(val scope: String, val bucketKey: String, val dimension: ThrottleDimension)
+
+/**
+ * What one recorded failure did.
+ *
+ * [lockoutTriggered] is true only on the failure that *crosses* the lockout threshold, so it
+ * counts lockout EPISODES rather than individual wrong passwords. [AbuseGuard] escalates on
+ * repeated episodes; counting raw failures there would turn one forgetful session into a block.
+ */
+data class FailureOutcome(val lockoutTriggered: Boolean = false, val lockSeconds: Int = 0)
+
+/** Scope of the account-wide sign-in quota. Deliberately not derived from [ThrottleAction]. */
+internal const val CREDENTIALS_ACCOUNT_SCOPE = "credentials_account:username"
+
+/**
+ * Dimensions a failed sign-in is allowed to *lock*. Anything outside this set may still consume a
+ * request quota, but must never reach [AuthThrottleImpl.incrementFailureCounter] — a lockout keyed
+ * on something an unauthenticated stranger controls (an account name) is a remote denial of service
+ * against the account's owner, not a defense.
+ */
+internal val LOCKABLE_DIMENSIONS = setOf(
+    ThrottleDimension.ip,
+    ThrottleDimension.device,
+    ThrottleDimension.ipUsername,
+)
+
+/**
+ * Derives the throttle buckets a request belongs to. Pure — no DB, no clock, no request object —
+ * so the keying rules can be unit-tested directly (this repo has no test database).
+ *
+ * Sign-in binds the account to the source IP; every other action keeps the plain username bucket,
+ * because only [ThrottleAction.credentials] feeds [AuthThrottle.recordFailure] and so only it can
+ * produce a lockout.
+ */
+internal fun buildSubjectKeys(
+    action: ThrottleAction,
+    ip: String,
+    deviceHint: String?,
+    normalizedIdentifier: String?,
+    hash: (String) -> String,
+): List<SubjectKey> {
+    val subjects = mutableListOf<SubjectKey>()
+    subjects.add(makeSubjectKey(action, ThrottleDimension.ip, ip, hash))
+
+    if (deviceHint != null) {
+        subjects.add(makeSubjectKey(action, ThrottleDimension.device, deviceHint, hash))
+    }
+
+    if (action != ThrottleAction.csrf && normalizedIdentifier != null) {
+        if (action == ThrottleAction.credentials) {
+            subjects.add(makeSubjectKey(action, ThrottleDimension.ipUsername, "$ip|$normalizedIdentifier", hash))
+        } else {
+            subjects.add(makeSubjectKey(action, ThrottleDimension.username, normalizedIdentifier, hash))
+        }
+    }
+    return subjects
+}
+
+internal fun makeSubjectKey(
+    action: ThrottleAction,
+    dimension: ThrottleDimension,
+    value: String,
+    hash: (String) -> String,
+): SubjectKey = SubjectKey("${action.name}:${dimension.name}", hash("${dimension.name}:$value"), dimension)
+
+/** Client-facing reason code for a blocked bucket. */
+internal fun reasonCodeFor(dimension: ThrottleDimension): String = when (dimension) {
+    ThrottleDimension.username -> "auth_limit_username"
+    // From the caller's seat an (IP, account) block is still "too many attempts from here"; the
+    // precise dimension is carried in the security event log rather than the HTTP response.
+    ThrottleDimension.ip, ThrottleDimension.device, ThrottleDimension.ipUsername -> "auth_limit_ip"
+}
+
+interface AuthThrottle {
+    suspend fun enforceRateLimit(action: ThrottleAction, request: ApplicationRequest, identifier: String? = null): ThrottleResult
+    suspend fun recordFailure(request: ApplicationRequest, identifier: String? = null): FailureOutcome
+    suspend fun clearFailures(request: ApplicationRequest, identifier: String? = null)
+    suspend fun recordSuccessSignal(request: ApplicationRequest, identifier: String? = null)
+    fun formatRetryWait(seconds: Int): String
+}
+
+class AuthThrottleImpl(
+    private val config: AppConfig,
+    private val clientSignals: ClientSignals,
+    private val eventLogger: SecurityEventLogger,
+    private val alertService: SecurityAlertService,
+) : AuthThrottle {
+    private data class Policy(val windowMs: Long, val maxRequests: Int)
+
+    /** Stricter short-window IP ceiling layered on top of the hourly register cap. */
+    private val registerBurstPolicy by lazy {
+        Policy(config.limitRegisterBurstWindowSec * 1000L, config.limitRegisterBurstMax)
+    }
+
+    /**
+     * Account-wide sign-in ceiling — the backstop against a distributed guessing attack now that
+     * failures lock (IP, account) rather than the account.
+     *
+     * This is a *quota*, never a lockout: it is enforced only through [consumeRequestQuota] and is
+     * never handed to [incrementFailureCounter]. A quota self-heals at the end of its fixed window
+     * and its worst-case wait is bounded by the window; a lockout compounds and is bounded only by
+     * `lockoutMaxSec`. That difference is what stops this from becoming the very denial of service
+     * the username lockout used to be.
+     */
+    private val accountCeilingPolicy by lazy {
+        Policy(config.limitCredentialsAccountWindowSec * 1000L, config.limitCredentialsAccountMax)
+    }
+
+    private val policies by lazy {
+        mapOf(
+            ThrottleAction.credentials to Policy(config.limitCredentialsWindowSec * 1000L, config.limitCredentialsMax),
+            ThrottleAction.register to Policy(config.limitRegisterWindowSec * 1000L, config.limitRegisterMax),
+            ThrottleAction.csrf to Policy(config.limitCsrfWindowSec * 1000L, config.limitCsrfMax),
+            ThrottleAction.sessionGet to Policy(config.limitSessionGetWindowSec * 1000L, config.limitSessionGetMax),
+            ThrottleAction.credentialsKey to Policy(config.limitCredentialsKeyWindowSec * 1000L, config.limitCredentialsKeyMax),
+        )
+    }
+
+    override suspend fun enforceRateLimit(action: ThrottleAction, request: ApplicationRequest, identifier: String?): ThrottleResult {
+        val subjects = buildSubjects(action, request, identifier)
+        val policy = policies[action] ?: return ThrottleResult(allowed = true)
+
+        var blocked: ThrottleResult? = null
+        for (subject in subjects) {
+            val verdict = consumeRequestQuota(policy, subject)
+            if (!verdict.allowed) {
+                blocked = pickStronger(blocked, verdict)
+            }
+        }
+
+        // Sign-in gets an account-wide ceiling so that binding lockouts to (IP, account) does not
+        // hand a distributed attacker unlimited guesses against one account. Quota only — it can
+        // slow an account down for at most one window, but it can never lock it.
+        if (action == ThrottleAction.credentials) {
+            val norm = clientSignals.normalizeIdentifier(identifier)
+            if (norm != null) {
+                val accountSubject = SubjectKey(
+                    scope = CREDENTIALS_ACCOUNT_SCOPE,
+                    bucketKey = clientSignals.hashSecurityValue("username:$norm"),
+                    dimension = ThrottleDimension.username,
+                )
+                val accountVerdict = consumeRequestQuota(accountCeilingPolicy, accountSubject)
+                if (!accountVerdict.allowed) {
+                    blocked = pickStronger(blocked, accountVerdict.copy(reasonCode = "auth_limit_account"))
+                }
+            }
+        }
+
+        // Account creation gets a second, stricter per-IP tier: even before the
+        // hourly cap is reached, a single IP can only burst a few sign-ups in a
+        // short window. The hourly cap above remains the hard ceiling.
+        if (action == ThrottleAction.register) {
+            val ip = clientSignals.getClientIp(request)
+            val burstSubject = SubjectKey(
+                scope = "register_burst:ip",
+                bucketKey = clientSignals.hashSecurityValue("ip:$ip"),
+                dimension = ThrottleDimension.ip,
+            )
+            val burstVerdict = consumeRequestQuota(registerBurstPolicy, burstSubject)
+            if (!burstVerdict.allowed) {
+                blocked =
+                    pickStronger(blocked, burstVerdict.copy(reasonCode = "auth_limit_ip_burst"))
+            }
+        }
+
+        if (blocked != null) {
+            eventLogger.log(
+                blocked.reasonCode ?: "auth_limit",
+                mapOf(
+                    "action" to action.name,
+                    "retryAfterSeconds" to blocked.retryAfterSeconds,
+                    "dimension" to blocked.dimension?.name,
+                ),
+            )
+            return blocked
+        }
+        return ThrottleResult(allowed = true)
+    }
+
+    override suspend fun recordFailure(request: ApplicationRequest, identifier: String?): FailureOutcome {
+        val subjects = buildSubjects(ThrottleAction.credentials, request, identifier)
+        var longestLock = 0
+        var highestIpFailures = 0
+        var lockoutTriggered = false
+
+        // Only lockable dimensions may accrue a lock. buildSubjectKeys already avoids emitting an
+        // account-scoped subject here, but this guard is what makes that a property of the lockout
+        // path itself rather than of one call site.
+        for (subject in subjects.filter { it.dimension in LOCKABLE_DIMENSIONS }) {
+            val result = incrementFailureCounter(subject)
+            longestLock = max(longestLock, result.lockSeconds)
+            if (result.crossedThreshold) lockoutTriggered = true
+            if (subject.dimension == ThrottleDimension.ip) {
+                highestIpFailures = max(highestIpFailures, result.failures)
+            }
+        }
+
+        if (longestLock > 0) {
+            eventLogger.log("auth_lockout", mapOf("action" to "credentials", "retryAfterSeconds" to longestLock))
+            if (longestLock >= config.alertLockoutBurstSec) {
+                eventLogger.log("auth_alert_lockout_burst", mapOf("retryAfterSeconds" to longestLock))
+                alertService.raise(
+                    SecurityAlertType.LOCKOUT_BURST,
+                    "Sign-in lockout now at ${formatRetryWait(longestLock)} for one source.",
+                )
+            }
+        }
+        if (highestIpFailures >= config.alertIpFailureThreshold) {
+            eventLogger.log("auth_alert_ip_concentration", mapOf("ipFailureCount" to highestIpFailures))
+            alertService.raise(
+                SecurityAlertType.IP_CONCENTRATION,
+                "$highestIpFailures failed sign-ins from one source.",
+            )
+        }
+        return FailureOutcome(lockoutTriggered = lockoutTriggered, lockSeconds = longestLock)
+    }
+
+    override suspend fun clearFailures(request: ApplicationRequest, identifier: String?) {
+        val subjects = buildSubjects(ThrottleAction.credentials, request, identifier)
+        newSuspendedTransaction(Dispatchers.IO) {
+            for (subject in subjects) {
+                AuthThrottles.update({
+                    (AuthThrottles.scope eq subject.scope) and (AuthThrottles.bucketKey eq subject.bucketKey)
+                }) {
+                    it[failureCount] = 0
+                    it[lockUntil] = null
+                    it[lastFailureAt] = null
+                }
+            }
+        }
+    }
+
+    override suspend fun recordSuccessSignal(request: ApplicationRequest, identifier: String?) {
+        val normalized = clientSignals.normalizeIdentifier(identifier) ?: return
+        val identifierHash = clientSignals.hashSecurityValue("username:$normalized")
+        val ipHash = clientSignals.hashSecurityValue("ip:${clientSignals.getClientIp(request)}")
+        val deviceHint = clientSignals.getDeviceHint(request)
+        val deviceHash = deviceHint?.let { clientSignals.hashSecurityValue("device:$it") }
+        val now = LocalDateTime.now(ZoneOffset.UTC)
+        val anomalyWindowMs = config.signalAnomalyWindowSec * 1000L
+
+        newSuspendedTransaction(Dispatchers.IO) {
+            val existing = AuthSignals.selectAll().where { AuthSignals.identifierHash eq identifierHash }.firstOrNull()
+
+            if (existing != null) {
+                val lastSeen = existing[AuthSignals.lastSeenAt]
+                val lastIp = existing[AuthSignals.lastIpHash]
+                val lastDevice = existing[AuthSignals.lastDeviceHash]
+
+                if (lastSeen != null && lastIp != null && lastDevice != null && deviceHash != null) {
+                    val elapsed = now.toInstant(ZoneOffset.UTC).toEpochMilli() -
+                        lastSeen.toInstant(ZoneOffset.UTC).toEpochMilli()
+                    if (elapsed <= anomalyWindowMs && lastIp != ipHash && lastDevice != deviceHash) {
+                        eventLogger.log(
+                            "auth_signal_anomaly",
+                            mapOf(
+                                "reason" to "ip_and_device_changed",
+                                "identifierHash" to identifierHash,
+                            ),
+                        )
+                        // A single new device is routine (new phone, new laptop); the alert
+                        // service only pages once these repeat.
+                        alertService.raise(
+                            SecurityAlertType.SIGNAL_ANOMALY,
+                            "A sign-in succeeded from both a new address and a new device.",
+                        )
+                    }
+                }
+
+                AuthSignals.update({ AuthSignals.identifierHash eq identifierHash }) {
+                    it[lastIpHash] = ipHash
+                    it[lastDeviceHash] = deviceHash
+                    it[lastSeenAt] = now
+                    it[updatedAt] = now
+                }
+            } else {
+                AuthSignals.insert {
+                    it[id] = CuidGenerator.newCuid()
+                    it[AuthSignals.identifierHash] = identifierHash
+                    it[lastIpHash] = ipHash
+                    it[lastDeviceHash] = deviceHash
+                    it[lastSeenAt] = now
+                    it[createdAt] = now
+                    it[updatedAt] = now
+                }
+            }
+        }
+    }
+
+    override fun formatRetryWait(seconds: Int): String {
+        if (seconds < 60) return "${seconds}s"
+        val m = seconds / 60
+        val s = seconds % 60
+        return if (s == 0) "${m}m" else "${m}m ${s}s"
+    }
+
+    private fun buildSubjects(action: ThrottleAction, request: ApplicationRequest, identifier: String?): List<SubjectKey> =
+        buildSubjectKeys(
+            action = action,
+            ip = clientSignals.getClientIp(request),
+            deviceHint = clientSignals.getDeviceHint(request),
+            normalizedIdentifier = clientSignals.normalizeIdentifier(identifier),
+            hash = clientSignals::hashSecurityValue,
+        )
+
+    private suspend fun consumeRequestQuota(policy: Policy, subject: SubjectKey): ThrottleResult {
+        val now = LocalDateTime.now(ZoneOffset.UTC)
+        return newSuspendedTransaction(Dispatchers.IO) {
+            val row = AuthThrottles.selectAll().where {
+                (AuthThrottles.scope eq subject.scope) and (AuthThrottles.bucketKey eq subject.bucketKey)
+            }.forUpdate().firstOrNull()
+
+            if (row == null) {
+                AuthThrottles.insert {
+                    it[id] = CuidGenerator.newCuid()
+                    it[scope] = subject.scope
+                    it[bucketKey] = subject.bucketKey
+                    it[windowStart] = now
+                    it[requestCount] = 1
+                    it[createdAt] = now
+                    it[updatedAt] = now
+                }
+                return@newSuspendedTransaction ThrottleResult(allowed = true)
+            }
+
+            val lockUntil = row[AuthThrottles.lockUntil]
+            if (lockUntil != null && lockUntil.isAfter(now)) {
+                return@newSuspendedTransaction ThrottleResult(
+                    allowed = false,
+                    reasonCode = "auth_lockout",
+                    retryAfterSeconds = retryAfterFromDateTime(lockUntil, now),
+                    dimension = subject.dimension,
+                )
+            }
+
+            val windowStart = row[AuthThrottles.windowStart]
+            val windowResetNeeded = java.time.Duration.between(windowStart, now).toMillis() >= policy.windowMs
+            val nextWindowStart = if (windowResetNeeded) now else windowStart
+            val nextRequestCount = if (windowResetNeeded) 1 else row[AuthThrottles.requestCount] + 1
+            val rowId = row[AuthThrottles.id]
+
+            AuthThrottles.update({ AuthThrottles.id eq rowId }) {
+                it[AuthThrottles.windowStart] = nextWindowStart
+                it[requestCount] = nextRequestCount
+                it[updatedAt] = now
+            }
+
+            if (nextRequestCount <= policy.maxRequests) {
+                return@newSuspendedTransaction ThrottleResult(allowed = true)
+            }
+
+            val windowEndsAt = nextWindowStart.plusNanos(policy.windowMs * 1_000_000)
+            ThrottleResult(
+                allowed = false,
+                reasonCode = reasonCodeFor(subject.dimension),
+                retryAfterSeconds = retryAfterFromDateTime(windowEndsAt, now),
+                dimension = subject.dimension,
+            )
+        }
+    }
+
+    private data class FailureCounterResult(val lockSeconds: Int, val failures: Int, val crossedThreshold: Boolean)
+
+    private suspend fun incrementFailureCounter(subject: SubjectKey): FailureCounterResult {
+        val now = LocalDateTime.now(ZoneOffset.UTC)
+        val lockoutResetMs = config.lockoutResetSec * 1000L
+
+        return newSuspendedTransaction(Dispatchers.IO) {
+            val row = AuthThrottles.selectAll().where {
+                (AuthThrottles.scope eq subject.scope) and (AuthThrottles.bucketKey eq subject.bucketKey)
+            }.forUpdate().firstOrNull()
+
+            val lastFailure = row?.get(AuthThrottles.lastFailureAt)
+            val baseFailures = if (row != null && lastFailure != null) {
+                val elapsed = java.time.Duration.between(lastFailure, now).toMillis()
+                if (elapsed <= lockoutResetMs) row[AuthThrottles.failureCount] else 0
+            } else {
+                0
+            }
+
+            val nextFailures = baseFailures + 1
+            val computedLock = lockUntilFromFailures(nextFailures, now)
+            val existingLock = row?.get(AuthThrottles.lockUntil)?.takeIf { it.isAfter(now) }
+            val lockUntil = laterDateTime(computedLock, existingLock)
+
+            if (row == null) {
+                AuthThrottles.insert {
+                    it[id] = CuidGenerator.newCuid()
+                    it[scope] = subject.scope
+                    it[bucketKey] = subject.bucketKey
+                    it[windowStart] = now
+                    it[requestCount] = 0
+                    it[failureCount] = nextFailures
+                    it[lastFailureAt] = now
+                    it[AuthThrottles.lockUntil] = lockUntil
+                    it[createdAt] = now
+                    it[updatedAt] = now
+                }
+            } else {
+                AuthThrottles.update({ AuthThrottles.id eq row[AuthThrottles.id] }) {
+                    it[failureCount] = nextFailures
+                    it[lastFailureAt] = now
+                    it[AuthThrottles.lockUntil] = lockUntil
+                    it[updatedAt] = now
+                }
+            }
+
+            val lockSec = if (lockUntil != null) retryAfterFromDateTime(lockUntil, now) else 0
+            FailureCounterResult(
+                lockSeconds = lockSec,
+                failures = nextFailures,
+                // Exactly the failure that crosses the threshold, so one lockout episode counts once.
+                crossedThreshold = nextFailures == config.lockoutFailThreshold,
+            )
+        }
+    }
+
+    private fun lockUntilFromFailures(failures: Int, now: LocalDateTime): LocalDateTime? {
+        if (failures < config.lockoutFailThreshold) return null
+        val exponent = max(0, failures - config.lockoutFailThreshold)
+        val lockMs = min(
+            config.lockoutMaxSec * 1000L,
+            config.lockoutBaseSec * 1000L * 2.0.pow(exponent).toLong(),
+        )
+        return now.plusNanos(lockMs * 1_000_000)
+    }
+
+    private fun laterDateTime(a: LocalDateTime?, b: LocalDateTime?): LocalDateTime? {
+        if (a == null) return b
+        if (b == null) return a
+        return if (a.isAfter(b)) a else b
+    }
+
+    private fun retryAfterFromDateTime(target: LocalDateTime, now: LocalDateTime): Int {
+        val seconds = ceil(java.time.Duration.between(now, target).toMillis() / 1000.0).toInt()
+        return max(1, seconds)
+    }
+
+    private fun pickStronger(current: ThrottleResult?, candidate: ThrottleResult): ThrottleResult {
+        if (current == null) return candidate
+        if (candidate.reasonCode == "auth_lockout" && current.reasonCode != "auth_lockout") return candidate
+        if (candidate.retryAfterSeconds > current.retryAfterSeconds) return candidate
+        return current
+    }
+}

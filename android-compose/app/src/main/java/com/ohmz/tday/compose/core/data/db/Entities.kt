@@ -1,0 +1,162 @@
+package com.ohmz.tday.compose.core.data.db
+
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.Index
+import androidx.room.PrimaryKey
+
+@Entity(
+    tableName = "cached_todos",
+    indices = [
+        Index("listId"),
+        Index("dueEpochMs"),
+        Index("completed"),
+    ],
+)
+data class CachedTodoEntity(
+    @PrimaryKey val id: String,
+    val canonicalId: String,
+    val title: String,
+    val description: String?,
+    val priority: String,
+    val dueEpochMs: Long?,
+    val rrule: String?,
+    val instanceDateEpochMs: Long?,
+    val pinned: Boolean,
+    val completed: Boolean,
+    val listId: String?,
+    val updatedAtEpochMs: Long,
+)
+
+@Entity(
+    tableName = "cached_floaters",
+    indices = [
+        Index("listId"),
+        Index("completed"),
+    ],
+)
+data class CachedFloaterEntity(
+    @PrimaryKey val id: String,
+    val canonicalId: String,
+    val title: String,
+    val description: String?,
+    val priority: String,
+    val pinned: Boolean,
+    val completed: Boolean,
+    val listId: String?,
+    val updatedAtEpochMs: Long,
+)
+
+@Entity(tableName = "cached_lists")
+data class CachedListEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val color: String?,
+    val iconKey: String?,
+    val todoCount: Int,
+    val updatedAtEpochMs: Long,
+    val createdAtEpochMs: Long,
+    @ColumnInfo(defaultValue = "OWNER") val myRole: String = "OWNER",
+    @ColumnInfo(defaultValue = "0") val isShared: Boolean = false,
+    @ColumnInfo(defaultValue = "0") val memberCount: Int = 0,
+    val ownerUsername: String? = null,
+    val defaultPriority: String? = null,
+)
+
+@Entity(tableName = "cached_floater_lists")
+data class CachedFloaterListEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val color: String?,
+    val iconKey: String?,
+    val todoCount: Int,
+    val updatedAtEpochMs: Long,
+    val createdAtEpochMs: Long,
+    @ColumnInfo(defaultValue = "OWNER") val myRole: String = "OWNER",
+    @ColumnInfo(defaultValue = "0") val isShared: Boolean = false,
+    @ColumnInfo(defaultValue = "0") val memberCount: Int = 0,
+    val ownerUsername: String? = null,
+    @ColumnInfo(defaultValue = "0") val reusable: Boolean = false,
+    val defaultPriority: String? = null,
+)
+
+@Entity(
+    tableName = "cached_completed",
+    indices = [Index("completedAtEpochMs")],
+)
+data class CachedCompletedEntity(
+    @PrimaryKey val id: String,
+    val originalTodoId: String?,
+    val title: String,
+    val description: String?,
+    val priority: String,
+    val dueEpochMs: Long?,
+    val completedAtEpochMs: Long,
+    val rrule: String?,
+    val instanceDateEpochMs: Long?,
+    val listId: String?,
+    val listName: String?,
+    val listColor: String?,
+)
+
+@Entity(
+    tableName = "cached_completed_floaters",
+    indices = [Index("completedAtEpochMs")],
+)
+data class CachedCompletedFloaterEntity(
+    @PrimaryKey val id: String,
+    val originalFloaterId: String?,
+    val title: String,
+    val description: String?,
+    val priority: String,
+    val completedAtEpochMs: Long,
+    val listId: String?,
+    val listName: String?,
+    val listColor: String?,
+    @ColumnInfo(defaultValue = "0") val listDeleted: Boolean = false,
+)
+
+@Entity(
+    tableName = "pending_mutations",
+    indices = [Index("timestampEpochMs")],
+)
+data class PendingMutationEntity(
+    @PrimaryKey val mutationId: String,
+    val kind: String,
+    val targetId: String?,
+    val timestampEpochMs: Long,
+    val title: String?,
+    val description: String?,
+    val priority: String?,
+    val dueEpochMs: Long?,
+    val rrule: String?,
+    val listId: String?,
+    val pinned: Boolean?,
+    val completed: Boolean?,
+    val instanceDateEpochMs: Long?,
+    val name: String?,
+    val color: String?,
+    val iconKey: String?,
+    // The list and floater-list create/update mutations' own fields (v13). Without them a
+    // queued edit that outlived its process replayed with all three null — "leave unchanged" —
+    // so e.g. turning a floater list's Reusable off offline never reached the server.
+    val reusable: Boolean? = null,
+    val defaultPriority: String? = null,
+    val defaultPriorityChanged: Boolean? = null,
+    // The non-replayable placeholder a delayed-commit complete/delete parks in the queue for the
+    // length of its Undo window (v14; see PendingMutationRecord.staged). SyncManager starts every
+    // pass from a database read, so a flag this row dropped meant a sync inside the window replayed
+    // the mutation, and a later Undo restored a task the server had already completed or deleted.
+    // Nullable like the v13 columns: a pre-v14 row has no value, and the mapper reads null as false.
+    // A marker that outlives its process is released by ReleaseStagedMutationsOnOpen.
+    val staged: Boolean? = null,
+)
+
+@Entity(tableName = "sync_metadata")
+data class SyncMetadataEntity(
+    @PrimaryKey val id: Int = 1,
+    val lastSuccessfulSyncEpochMs: Long = 0L,
+    val lastSyncAttemptEpochMs: Long = 0L,
+    val aiSummaryEnabled: Boolean = true,
+    val defaultHomeScreen: String = "scheduled",
+)

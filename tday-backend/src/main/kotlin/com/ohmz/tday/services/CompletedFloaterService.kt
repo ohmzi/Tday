@@ -1,0 +1,118 @@
+package com.ohmz.tday.services
+
+import arrow.core.Either
+import arrow.core.right
+import com.ohmz.tday.db.tables.CompletedFloaters
+import com.ohmz.tday.db.tables.FloaterLists
+import com.ohmz.tday.db.tables.Floaters
+import com.ohmz.tday.db.enums.Priority
+import com.ohmz.tday.domain.AppError
+import com.ohmz.tday.models.response.CompletedFloaterResponse
+import com.ohmz.tday.security.FieldEncryption
+import com.ohmz.tday.security.decryptRequired
+import com.ohmz.tday.security.encryptRequired
+import kotlinx.coroutines.Dispatchers
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
+import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTransaction
+
+interface CompletedFloaterService {
+    suspend fun getAll(userId: String): Either<AppError, List<CompletedFloaterResponse>>
+    suspend fun deleteAll(userId: String): Either<AppError, Int>
+    suspend fun deleteById(userId: String, id: String): Either<AppError, Int>
+    suspend fun update(userId: String, id: String, fields: Map<String, Any?>): Either<AppError, Int>
+}
+
+class CompletedFloaterServiceImpl(
+    private val fieldEncryption: FieldEncryption,
+) : CompletedFloaterService {
+    override suspend fun getAll(userId: String): Either<AppError, List<CompletedFloaterResponse>> {
+        val floaters = newSuspendedTransaction(Dispatchers.IO) {
+            CompletedFloaters.selectAll().where { CompletedFloaters.userID eq userId }
+                .orderBy(CompletedFloaters.completedAt, SortOrder.DESC)
+                .map { it.toCompletedFloaterResponse() }
+        }
+        return floaters.right()
+    }
+
+    override suspend fun deleteAll(userId: String): Either<AppError, Int> {
+        val count = newSuspendedTransaction(Dispatchers.IO) {
+            CompletedFloaters.deleteWhere { CompletedFloaters.userID eq userId }
+        }
+        return count.right()
+    }
+
+    override suspend fun deleteById(userId: String, id: String): Either<AppError, Int> {
+        val count = newSuspendedTransaction(Dispatchers.IO) {
+            // Permanent delete: also remove the primary Floaters row this
+            // completion snapshot points at. completeFloater() leaves that
+            // row behind (completed = true) rather than deleting it, so
+            // without this it would be invisible forever (getAll() filters
+            // completed = false) but never cleaned up -- matching what
+            // FloaterService.delete() already does for the direct-delete path.
+            val row = CompletedFloaters.selectAll().where {
+                (CompletedFloaters.id eq id) and (CompletedFloaters.userID eq userId)
+            }.firstOrNull()
+            if (row != null) {
+                Floaters.deleteWhere {
+                    (Floaters.id eq row[CompletedFloaters.originalFloaterID]) and (Floaters.userID eq userId)
+                }
+            }
+            CompletedFloaters.deleteWhere { (CompletedFloaters.id eq id) and (CompletedFloaters.userID eq userId) }
+        }
+        return count.right()
+    }
+
+    override suspend fun update(userId: String, id: String, fields: Map<String, Any?>): Either<AppError, Int> {
+        val result = newSuspendedTransaction(Dispatchers.IO) {
+            val requestedListId = fields["listID"] as? String
+            val list = requestedListId?.let { listId ->
+                FloaterLists.selectAll()
+                    .where { (FloaterLists.id eq listId) and (FloaterLists.userID eq userId) }
+                    .firstOrNull()
+            }
+            if (requestedListId != null && list == null) {
+                return@newSuspendedTransaction null
+            }
+            CompletedFloaters.update({ (CompletedFloaters.id eq id) and (CompletedFloaters.userID eq userId) }) { stmt ->
+                fields["title"]?.let {
+                    stmt[CompletedFloaters.title] = fieldEncryption.encryptRequired("title", it as String)
+                }
+                fields["description"]?.let {
+                    stmt[CompletedFloaters.description] = fieldEncryption.encryptIfSensitive("description", it as? String)
+                }
+                fields["priority"]?.let { stmt[CompletedFloaters.priority] = Priority.valueOf(it as String) }
+                if (fields.containsKey("listID")) {
+                    stmt[CompletedFloaters.listID] = requestedListId
+                    stmt[CompletedFloaters.listName] = list?.get(FloaterLists.name)
+                    stmt[CompletedFloaters.listColor] = list?.get(FloaterLists.color)?.name
+                }
+            }
+        }
+        val count = result ?: return Either.Left(AppError.BadRequest("floater list not found"))
+        return count.right()
+    }
+
+    private fun ResultRow.toCompletedFloaterResponse(): CompletedFloaterResponse = CompletedFloaterResponse(
+        id = this[CompletedFloaters.id],
+        originalFloaterID = this[CompletedFloaters.originalFloaterID],
+        title = fieldEncryption.decryptRequired(this[CompletedFloaters.title]),
+        description = fieldEncryption.decryptIfEncrypted(this[CompletedFloaters.description]),
+        priority = this[CompletedFloaters.priority].name,
+        completedAt = this[CompletedFloaters.completedAt].toString(),
+        daysToComplete = this[CompletedFloaters.daysToComplete].toDouble(),
+        userID = this[CompletedFloaters.userID],
+        listID = this[CompletedFloaters.listID],
+        listName = this[CompletedFloaters.listName],
+        listColor = this[CompletedFloaters.listColor],
+        // originalListID is the immutable snapshot; listID is nulled by
+        // ON DELETE SET NULL the moment the list is actually deleted (see
+        // db/migration/V27) -- had one, don't have it live any more.
+        listDeleted = this[CompletedFloaters.originalListID] != null && this[CompletedFloaters.listID] == null,
+    )
+}

@@ -1,0 +1,2028 @@
+package com.ohmz.tday.compose.feature.onboarding
+
+import android.content.Context
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldColors
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.AutofillNode
+import androidx.compose.ui.autofill.AutofillType
+import androidx.compose.ui.composed
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalAutofill
+import androidx.compose.ui.platform.LocalAutofillTree
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
+import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.data.auth.LoginCredentialSource
+import com.ohmz.tday.compose.core.data.auth.SystemCredential
+import com.ohmz.tday.compose.core.model.SecurityAnswerInput
+import com.ohmz.tday.compose.core.model.SecurityQuestion
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
+import com.ohmz.tday.compose.feature.auth.AuthUiState
+import com.ohmz.tday.compose.feature.auth.ForgotPasswordPanel
+import com.ohmz.tday.compose.feature.auth.LoginCredentialCoordinator
+import com.ohmz.tday.compose.feature.telemetry.TelemetryDisclosure
+import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.compose.ui.theme.TdayTitleIconDayAccent
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+private enum class WizardStep {
+    MODE,
+    SERVER,
+    LOGIN,
+
+    /**
+     * The crash-report consent, after the account exists.
+     *
+     * Not a step the wizard walks to on its own: it is due when a connect flow opens a workspace that
+     * has no required update and no security questions in front of it, under a wizard that was on
+     * screen for it, and the app holds the overlay up for it (see `privacyStepDue` in TdayApp). Every
+     * sign-in owes it again — a device that answered on a previous one is asked once more, and only
+     * an answer given in this flow takes the step away. On a build with no DSN, for a flow that has
+     * already been answered, and for an install that never saw the wizard, it does not exist at all,
+     * and the wizard is exactly what it was.
+     */
+    PRIVACY,
+}
+
+private enum class WizardViewState {
+    MODE,
+    SERVER,
+    CONNECTING,
+    LOGIN,
+    AUTHENTICATING,
+    PRIVACY,
+}
+
+/**
+ * Where this state sits in the wizard's sequence, or `null` if it is not a place in it.
+ *
+ * Spelled out rather than read off `ordinal`, and the reason is not only that CONNECTING
+ * is declared between SERVER and LOGIN. CONNECTING and AUTHENTICATING are panels the
+ * wizard raises *over* wherever the user already is while it waits on the network; they
+ * are not steps, and the chips above them never mark one complete. Giving them a position
+ * would make the wizard slide for them — and slide backwards on the way out of a failed
+ * connect — telling the user they had moved when the step they are on never changed.
+ */
+private val WizardViewState.stepOrder: Int?
+    get() = when (this) {
+        WizardViewState.MODE -> 0
+        WizardViewState.SERVER -> 1
+        WizardViewState.LOGIN -> 2
+        WizardViewState.PRIVACY -> 3
+        WizardViewState.CONNECTING, WizardViewState.AUTHENTICATING -> null
+    }
+
+private enum class AuthPanelMode {
+    SIGN_IN,
+    CREATE_ACCOUNT,
+    CREATE_ACCOUNT_SECURITY,
+    FORGOT_PASSWORD,
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+fun OnboardingWizardOverlay(
+    initialServerUrl: String?,
+    serverErrorMessage: String?,
+    serverCanResetTrust: Boolean,
+    serverTrustFingerprint: String?,
+    pendingApprovalMessage: String?,
+    authUiState: AuthUiState,
+    onConnectServer: (String, (Result<String>) -> Unit) -> Unit,
+    onResetServerTrust: (String, (Result<Unit>) -> Unit) -> Unit,
+    onConfirmServerTrust: (String, String, (Result<String>) -> Unit) -> Unit,
+    onDismissServerTrust: () -> Unit,
+    onLogin: (String, String, LoginCredentialSource) -> Unit,
+    onRegister: (
+        firstName: String,
+        username: String,
+        password: String,
+        securityAnswers: List<SecurityAnswerInput>,
+        onSuccess: () -> Unit,
+    ) -> Unit,
+    onFetchSecurityQuestions: suspend () -> List<SecurityQuestion>,
+    onRequestSavedCredential: suspend (Context, String?) -> SystemCredential?,
+    onRequestSavedServerUrl: suspend (Context) -> String?,
+    onSaveServerUrlCredential: suspend (Context, String) -> Unit,
+    onUseLocalMode: () -> Unit,
+    onClearAuthStatus: () -> Unit,
+    privacyStepOffered: Boolean,
+    privacyStepDue: Boolean,
+    onShareCrashReports: () -> Unit,
+    onDeclineCrashReports: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val consumeAllTouchesSource = remember { MutableInteractionSource() }
+    val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val coroutineScope = rememberCoroutineScope()
+    val credentialCoordinator = remember { LoginCredentialCoordinator() }
+
+    var step by rememberSaveable(initialServerUrl) {
+        mutableStateOf(if (initialServerUrl.isNullOrBlank()) WizardStep.MODE else WizardStep.LOGIN)
+    }
+    var serverUrl by rememberSaveable { mutableStateOf(initialServerUrl.orEmpty()) }
+    var username by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    var firstName by rememberSaveable { mutableStateOf("") }
+    var registerPassword by rememberSaveable { mutableStateOf("") }
+    var confirmRegisterPassword by rememberSaveable { mutableStateOf("") }
+    var securityQuestions by remember { mutableStateOf<List<SecurityQuestion>>(emptyList()) }
+    var securityQuestionId1 by rememberSaveable { mutableStateOf<Int?>(null) }
+    var securityQuestionId2 by rememberSaveable { mutableStateOf<Int?>(null) }
+    var securityQuestionId3 by rememberSaveable { mutableStateOf<Int?>(null) }
+    var securityAnswer1 by rememberSaveable { mutableStateOf("") }
+    var securityAnswer2 by rememberSaveable { mutableStateOf("") }
+    var securityAnswer3 by rememberSaveable { mutableStateOf("") }
+    var authMode by rememberSaveable { mutableStateOf(AuthPanelMode.SIGN_IN) }
+    var localAuthError by rememberSaveable { mutableStateOf<String?>(null) }
+    var serverError by rememberSaveable { mutableStateOf<String?>(null) }
+    var isConnecting by rememberSaveable { mutableStateOf(false) }
+    var isResettingTrust by rememberSaveable { mutableStateOf(false) }
+    var isRegisterInFlight by rememberSaveable { mutableStateOf(false) }
+    // Held true from login submit until the app authenticates (overlay unmounts),
+    // so the loading panel stays up through the gap between authViewModel.isLoading
+    // flipping false and AppViewModel.authenticated flipping true — otherwise the
+    // sign-in form flashes for a frame. Reset on failure/pending so the form
+    // returns. Transient (not saveable) to avoid a stuck spinner after process death.
+    var isCompletingAuthentication by remember { mutableStateOf(false) }
+    var hasRequestedSavedServerUrl by rememberSaveable { mutableStateOf(false) }
+    var serverUrlLoadedFromSystemCredential by rememberSaveable { mutableStateOf(false) }
+    var canRequestSavedLoginCredential by rememberSaveable(initialServerUrl) {
+        mutableStateOf(!initialServerUrl.isNullOrBlank())
+    }
+    val passwordFocusRequester = remember { FocusRequester() }
+    val registerPasswordFocusRequester = remember { FocusRequester() }
+    val registerConfirmFocusRequester = remember { FocusRequester() }
+    val connectErrorFallback = stringResource(R.string.onboarding_error_connect_fallback)
+    val resetTrustErrorFallback = stringResource(R.string.onboarding_error_reset_trust_fallback)
+    val appOutdatedError = stringResource(R.string.error_app_outdated)
+    val firstNameMinError = stringResource(R.string.onboarding_validation_first_name_min)
+    val usernameRequiredError = stringResource(R.string.onboarding_validation_username_required)
+    val usernameInvalidError = stringResource(R.string.onboarding_validation_username_invalid)
+    val passwordRequiredError = stringResource(R.string.onboarding_validation_password_required)
+    val passwordMinError = stringResource(R.string.onboarding_validation_password_min)
+    val passwordUppercaseError = stringResource(R.string.onboarding_validation_password_uppercase)
+    val passwordSpecialError = stringResource(R.string.onboarding_validation_password_special)
+    val passwordMismatchError = stringResource(R.string.onboarding_validation_password_mismatch)
+    val securityQuestionsDistinctError =
+        stringResource(R.string.security_questions_distinct_required)
+    val securityAnswersRequiredError =
+        stringResource(R.string.security_questions_answers_required)
+
+    val finishServerConnection: (String) -> Unit = { savedServerUrl ->
+        coroutineScope.launch {
+            if (!serverUrlLoadedFromSystemCredential) {
+                onSaveServerUrlCredential(context, savedServerUrl)
+                delay(CREDENTIAL_PROMPT_SETTLE_DELAY_MS)
+            }
+            serverUrl = savedServerUrl
+            serverUrlLoadedFromSystemCredential = false
+            isConnecting = false
+            canRequestSavedLoginCredential = true
+            step = WizardStep.LOGIN
+            authMode = AuthPanelMode.SIGN_IN
+            onClearAuthStatus()
+        }
+    }
+
+    val connectToServer: () -> Unit = connect@{
+        if (isResettingTrust) return@connect
+        val value = serverUrl.trim()
+        if (value.isBlank()) return@connect
+        keyboardController?.hide()
+        focusManager.clearFocus(force = true)
+        serverError = null
+        isConnecting = true
+        canRequestSavedLoginCredential = false
+        onConnectServer(value) { result ->
+            result.onSuccess {
+                finishServerConnection(it)
+            }.onFailure { error ->
+                isConnecting = false
+                canRequestSavedLoginCredential = false
+                step = WizardStep.SERVER
+                serverError = onboardingServerErrorMessage(
+                    error = error,
+                    fallback = connectErrorFallback,
+                    appOutdatedMessage = appOutdatedError,
+                )
+            }
+        }
+    }
+    val signIn: () -> Unit = signIn@{
+        if (authUiState.isLoading) return@signIn
+        val userUsername = username.trim()
+        if (userUsername.isBlank() || password.isBlank()) return@signIn
+        keyboardController?.hide()
+        focusManager.clearFocus(force = true)
+        localAuthError = null
+        onClearAuthStatus()
+        isCompletingAuthentication = true
+        onLogin(userUsername, password, LoginCredentialSource.MANUAL)
+    }
+    val createAccount: () -> Unit = createAccount@{
+        if (authUiState.isLoading || isRegisterInFlight) return@createAccount
+        val normalizedFirst = firstName.trim()
+        val normalizedUsername = username.trim().lowercase(java.util.Locale.US)
+        val hasUppercase = registerPassword.any { it.isUpperCase() }
+        val hasSpecial = registerPassword.any { !it.isLetterOrDigit() || it == '_' }
+
+        when {
+            normalizedFirst.length < 2 -> {
+                localAuthError = firstNameMinError
+                return@createAccount
+            }
+            normalizedUsername.isBlank() -> {
+                localAuthError = usernameRequiredError
+                return@createAccount
+            }
+
+            !USERNAME_REGEX.matches(normalizedUsername) -> {
+                localAuthError = usernameInvalidError
+                return@createAccount
+            }
+            registerPassword.isBlank() || confirmRegisterPassword.isBlank() -> {
+                localAuthError = passwordRequiredError
+                return@createAccount
+            }
+            registerPassword.length < 8 -> {
+                localAuthError = passwordMinError
+                return@createAccount
+            }
+            !hasUppercase -> {
+                localAuthError = passwordUppercaseError
+                return@createAccount
+            }
+            !hasSpecial -> {
+                localAuthError = passwordSpecialError
+                return@createAccount
+            }
+            registerPassword != confirmRegisterPassword -> {
+                localAuthError = passwordMismatchError
+                return@createAccount
+            }
+        }
+
+        keyboardController?.hide()
+        focusManager.clearFocus(force = true)
+        localAuthError = null
+        onClearAuthStatus()
+        // Advance to the security-questions sub-step; the account is only created
+        // once two distinct questions are chosen and answered.
+        authMode = AuthPanelMode.CREATE_ACCOUNT_SECURITY
+        if (securityQuestions.isEmpty()) {
+            coroutineScope.launch {
+                val fetched = onFetchSecurityQuestions()
+                securityQuestions = fetched
+                if (securityQuestionId1 == null) securityQuestionId1 = fetched.getOrNull(0)?.id
+                if (securityQuestionId2 == null) securityQuestionId2 = fetched.getOrNull(1)?.id
+                if (securityQuestionId3 == null) securityQuestionId3 = fetched.getOrNull(2)?.id
+            }
+        }
+    }
+
+    val submitSecurityAndRegister: () -> Unit = submit@{
+        if (authUiState.isLoading || isRegisterInFlight) return@submit
+        val normalizedFirst = firstName.trim()
+        val normalizedUsername = username.trim().lowercase(java.util.Locale.US)
+        val id1 = securityQuestionId1
+        val id2 = securityQuestionId2
+        val id3 = securityQuestionId3
+
+        if (id1 == null || id2 == null || id3 == null || setOf(id1, id2, id3).size != 3) {
+            localAuthError = securityQuestionsDistinctError
+            return@submit
+        }
+        if (securityAnswer1.isBlank() || securityAnswer2.isBlank() || securityAnswer3.isBlank()) {
+            localAuthError = securityAnswersRequiredError
+            return@submit
+        }
+
+        keyboardController?.hide()
+        focusManager.clearFocus(force = true)
+        localAuthError = null
+        isRegisterInFlight = true
+        onClearAuthStatus()
+        onRegister(
+            normalizedFirst,
+            normalizedUsername,
+            registerPassword,
+            listOf(
+                SecurityAnswerInput(questionId = id1, answer = securityAnswer1.trim()),
+                SecurityAnswerInput(questionId = id2, answer = securityAnswer2.trim()),
+                SecurityAnswerInput(questionId = id3, answer = securityAnswer3.trim()),
+            ),
+        ) {
+            isRegisterInFlight = false
+            authMode = AuthPanelMode.SIGN_IN
+            password = registerPassword
+            registerPassword = ""
+            confirmRegisterPassword = ""
+            securityAnswer1 = ""
+            securityAnswer2 = ""
+            securityAnswer3 = ""
+        }
+    }
+
+    LaunchedEffect(initialServerUrl) {
+        if (!initialServerUrl.isNullOrBlank()) {
+            if (serverUrl.isBlank()) serverUrl = initialServerUrl
+            if (!isConnecting) {
+                canRequestSavedLoginCredential = true
+                step = WizardStep.LOGIN
+            }
+        }
+    }
+
+    LaunchedEffect(serverErrorMessage) {
+        if (!serverErrorMessage.isNullOrBlank() && step == WizardStep.SERVER) {
+            serverError = serverErrorMessage
+        }
+    }
+
+    LaunchedEffect(authUiState.savedUsername) {
+        if (username.isBlank() && authUiState.savedUsername.isNotBlank()) {
+            username = authUiState.savedUsername
+        }
+    }
+
+    LaunchedEffect(authUiState.isLoading) {
+        if (!authUiState.isLoading) {
+            isRegisterInFlight = false
+        }
+    }
+
+    LaunchedEffect(step, isConnecting, serverUrl) {
+        if (step != WizardStep.SERVER ||
+            isConnecting ||
+            serverUrl.isNotBlank() ||
+            hasRequestedSavedServerUrl
+        ) {
+            return@LaunchedEffect
+        }
+
+        hasRequestedSavedServerUrl = true
+        onRequestSavedServerUrl(context)?.let { savedServerUrl ->
+            serverUrl = savedServerUrl
+            serverUrlLoadedFromSystemCredential = true
+            serverError = null
+        }
+    }
+
+    LaunchedEffect(step, authMode, authUiState.isLoading, canRequestSavedLoginCredential) {
+        if (step != WizardStep.LOGIN ||
+            authMode != AuthPanelMode.SIGN_IN ||
+            !canRequestSavedLoginCredential
+        ) {
+            return@LaunchedEffect
+        }
+
+        credentialCoordinator.requestSavedCredentialIfAvailable(
+            context = context,
+            currentUsername = username,
+            currentPassword = password,
+            isCreatingAccount = false,
+            isAuthLoading = authUiState.isLoading,
+            requestSavedCredential = onRequestSavedCredential,
+        ) { credential ->
+            username = credential.username
+            password = credential.password
+            keyboardController?.hide()
+            focusManager.clearFocus(force = true)
+            localAuthError = null
+            onClearAuthStatus()
+            delay(CREDENTIAL_PROMPT_SETTLE_DELAY_MS)
+            isCompletingAuthentication = true
+            onLogin(
+                credential.username,
+                credential.password,
+                LoginCredentialSource.SYSTEM_PASSWORD_MANAGER,
+            )
+            true
+        }
+    }
+
+    // A failed or pending login drops back to the form (so the error shows). On
+    // success this flag stays true, holding the loading panel until the overlay
+    // unmounts to the scheduled task home screen — no sign-in form flash. Mirrors iOS.
+    LaunchedEffect(authUiState.errorMessage, authUiState.pendingApproval) {
+        if (authUiState.errorMessage != null || authUiState.pendingApproval) {
+            isCompletingAuthentication = false
+        }
+    }
+
+    // The wizard's own step order ends where the account now exists, but the crash-report question
+    // belongs to this flow rather than to the workspace behind it: the app keeps the overlay up for
+    // it (see TdayApp) and this walks onto it in the same breath.
+    //
+    // The loading flag a successful sign-in leaves behind is deliberately NOT cleared here. The step
+    // is checked ahead of both loading panels below instead, which is what keeps "Opening T'Day" off
+    // the question — and leaves the panel as the honest thing to draw if the step stops being due
+    // while it is still on screen (a session that expired under it, say).
+    LaunchedEffect(privacyStepDue) {
+        if (privacyStepDue) {
+            step = WizardStep.PRIVACY
+        }
+    }
+
+    // Back press has never moved the wizard between its steps — the panels carry their own "change
+    // setup" links — and it must not start here: walking back to LOGIN would offer to sign in again
+    // to someone who already is, over a workspace that has already opened. The two answers are the
+    // only ways off this step, so back is consumed while it is up.
+    BackHandler(enabled = step == WizardStep.PRIVACY) {}
+
+    val viewState = when {
+        // Ahead of both loading panels, and it has to be: a successful sign-in leaves
+        // `isCompletingAuthentication` true, so a panel first in this chain would draw "Signing in"
+        // over the question for as long as the step is up.
+        step == WizardStep.PRIVACY -> WizardViewState.PRIVACY
+        isConnecting -> WizardViewState.CONNECTING
+        authUiState.isLoading || isCompletingAuthentication -> WizardViewState.AUTHENTICATING
+        step == WizardStep.LOGIN -> WizardViewState.LOGIN
+        step == WizardStep.SERVER -> WizardViewState.SERVER
+        else -> WizardViewState.MODE
+    }
+    val motionEnabled = rememberTdayMotionEnabled()
+
+    // A certificate the device cannot verify is never trusted silently: the user sees the exact
+    // fingerprint and confirms it here, and only that fingerprint is then pinned.
+    serverTrustFingerprint?.let { fingerprint ->
+        AlertDialog(
+            onDismissRequest = onDismissServerTrust,
+            title = { Text(stringResource(R.string.onboarding_trust_dialog_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg)) {
+                    Text(
+                        text = stringResource(R.string.onboarding_trust_dialog_body),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = fingerprint,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = confirm@{
+                        val value = serverUrl.trim()
+                        if (value.isBlank()) return@confirm
+                        serverError = null
+                        isConnecting = true
+                        canRequestSavedLoginCredential = false
+                        onConfirmServerTrust(value, fingerprint) { result ->
+                            result.onSuccess {
+                                finishServerConnection(it)
+                            }.onFailure { error ->
+                                isConnecting = false
+                                canRequestSavedLoginCredential = false
+                                step = WizardStep.SERVER
+                                serverError = onboardingServerErrorMessage(
+                                    error = error,
+                                    fallback = connectErrorFallback,
+                                    appOutdatedMessage = appOutdatedError,
+                                )
+                            }
+                        }
+                    },
+                ) {
+                    Text(stringResource(R.string.onboarding_trust_dialog_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissServerTrust) {
+                    Text(stringResource(R.string.onboarding_trust_dialog_cancel))
+                }
+            },
+        )
+    }
+
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = colorScheme.onSurface,
+        unfocusedTextColor = colorScheme.onSurface,
+        focusedBorderColor = colorScheme.onSurface,
+        unfocusedBorderColor = colorScheme.onSurface.copy(alpha = 0.3f),
+        focusedLabelColor = colorScheme.onSurface,
+        unfocusedLabelColor = colorScheme.onSurface.copy(alpha = 0.6f),
+        cursorColor = colorScheme.onSurface,
+        focusedPlaceholderColor = colorScheme.onSurface.copy(alpha = 0.4f),
+        unfocusedPlaceholderColor = colorScheme.onSurface.copy(alpha = 0.4f),
+        focusedContainerColor = colorScheme.surface,
+        unfocusedContainerColor = colorScheme.surface,
+        errorContainerColor = colorScheme.surface,
+    )
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.25f))
+            .clickable(
+                interactionSource = consumeAllTouchesSource,
+                indication = null,
+                onClick = {},
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        val targetCardWidth = if (maxWidth >= WIZARD_WIDE_LAYOUT_BREAKPOINT) {
+            WIZARD_WIDE_CARD_WIDTH
+        } else {
+            WIZARD_CARD_MAX_WIDTH
+        }
+        val cardWidth = minOf(
+            targetCardWidth,
+            maxWidth - (WIZARD_SCREEN_EDGE_PADDING * 2),
+        )
+
+        Card(
+            modifier = Modifier
+                .width(cardWidth),
+            shape = RoundedCornerShape(TdayDimens.RadiusSheet),
+            colors = CardDefaults.cardColors(containerColor = colorScheme.background),
+            elevation = CardDefaults.cardElevation(defaultElevation = WIZARD_CARD_ELEVATION),
+            border = BorderStroke(TdayDimens.BorderWidth, colorScheme.onSurface.copy(alpha = 0.08f)),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .drawWithCache {
+                        val tint = colorScheme.onSurface
+                        val wash = Brush.linearGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.18f),
+                                tint.copy(alpha = 0.015f),
+                                Color.Transparent,
+                            ),
+                        )
+                        onDrawWithContent {
+                            drawRect(wash)
+                            drawContent()
+                        }
+                    }
+                    .padding(WIZARD_CARD_CONTENT_PADDING),
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXl),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_sun),
+                            contentDescription = null,
+                            tint = TdayTitleIconDayAccent,
+                            modifier = Modifier.size(WIZARD_BRAND_ICON_SIZE),
+                        )
+                        Text(
+                            text = stringResource(R.string.app_name),
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = colorScheme.onSurface,
+                            fontWeight = FontWeight.Black,
+                        )
+                    }
+
+                    // The chip row grows by one row for the last step, and the card with it. That is
+                    // a change of size on a control the person is watching, arriving with the step
+                    // the panel below is animating in, so it is animated on the same rung — and
+                    // snapped rather than sprung when motion is off, because a preference that asks
+                    // for no motion is not asking for a spring instead.
+                    Column(
+                        modifier = Modifier.animateContentSize(
+                            animationSpec = if (motionEnabled) {
+                                tween(
+                                    durationMillis = TdayMotionTokens.Durations.Enter,
+                                    easing = TdayMotionTokens.Easings.Enter,
+                                )
+                            } else {
+                                snap()
+                            },
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(WIZARD_PANEL_SPACING),
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(WIZARD_PANEL_SPACING)) {
+                            WizardStepChip(
+                                modifier = Modifier.weight(1f),
+                                title = stringResource(R.string.onboarding_step_mode),
+                                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_smartphone),
+                                color = Color(0xFF7FB78A),
+                                active = step == WizardStep.MODE,
+                                completed = step == WizardStep.SERVER ||
+                                    step == WizardStep.LOGIN ||
+                                    step == WizardStep.PRIVACY,
+                            )
+                            WizardStepChip(
+                                modifier = Modifier.weight(1f),
+                                title = stringResource(R.string.onboarding_step_server),
+                                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_globe),
+                                color = Color(0xFF6EA8E1),
+                                active = step == WizardStep.SERVER,
+                                completed = step == WizardStep.LOGIN || step == WizardStep.PRIVACY,
+                            )
+                            WizardStepChip(
+                                modifier = Modifier.weight(1f),
+                                title = stringResource(R.string.onboarding_step_login),
+                                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_user),
+                                color = Color(0xFFD48A8C),
+                                active = step == WizardStep.LOGIN,
+                                completed = step == WizardStep.PRIVACY,
+                            )
+                        }
+
+                        // Its own row rather than a fourth chip beside those three: four at this
+                        // geometry would squeeze the widest labels ("Datenschutz", "Privacidad") into
+                        // a chip narrower than the word, and the last step is the one the person has
+                        // to answer before the workspace opens — it can afford the width.
+                        //
+                        // Offered, not only-while-active: the three chips above are the whole
+                        // sequence, and a step that exists but has not been reached yet is what the
+                        // dimmed third chip already means. A build with no DSN never gets here, so
+                        // there is no chip and no step at all.
+                        if (privacyStepOffered) {
+                            WizardStepChip(
+                                modifier = Modifier.fillMaxWidth(),
+                                title = stringResource(R.string.onboarding_step_privacy),
+                                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_hand),
+                                color = WIZARD_PRIVACY_TINT,
+                                active = step == WizardStep.PRIVACY,
+                            )
+                        }
+                    }
+
+                    // The chips above say WHERE the user is — the last step adding a row of its own
+                    // while it is up — but until now nothing said which WAY they had just gone.
+                    // A crossfade, which is what an AnimatedContent with no transitionSpec plays,
+                    // is the one answer an ordered sequence cannot give, and tapping Back off the
+                    // server form looked exactly like tapping Continue onto it.
+                    //
+                    // The direction comes from `stepOrder` and never from the enum: two of
+                    // the six states are transient panels with no position, and the spec
+                    // below refuses to slide for them rather than inventing one.
+                    //
+                    // A step panel ARRIVES, so the incoming half is Enter; the panel being
+                    // left is an absence and takes Quick, which is the first idiom rule
+                    // capping an exit at the enter it undoes. `SizeTransform(clip = false)`
+                    // in every branch because the panel heights differ and
+                    // the default clips — the taller one would be chopped mid-slide.
+                    AnimatedContent(
+                        targetState = viewState,
+                        transitionSpec = {
+                            val from = initialState.stepOrder
+                            val to = targetState.stepOrder
+                            when {
+                                !motionEnabled ->
+                                    // `using null` as well as the two Nones: the default
+                                    // size transform is a spring, and leaving it on would
+                                    // keep the trip the preference asked to remove.
+                                    EnterTransition.None togetherWith ExitTransition.None using null
+
+                                from != null && to != null -> {
+                                    // Forward means the arriving panel starts to the right
+                                    // of the slot and the one it replaces leaves to the
+                                    // left; going back reverses both.
+                                    val sign = if (to > from) 1 else -1
+                                    slideInHorizontally(
+                                        animationSpec = tween(
+                                            durationMillis = TdayMotionTokens.Durations.Enter,
+                                            easing = TdayMotionTokens.Easings.Enter,
+                                        ),
+                                    ) { sign * (it / 3) } + fadeIn(
+                                        tween(
+                                            durationMillis = TdayMotionTokens.Durations.Enter,
+                                            easing = TdayMotionTokens.Easings.Enter,
+                                        ),
+                                    ) togetherWith slideOutHorizontally(
+                                        animationSpec = tween(
+                                            durationMillis = TdayMotionTokens.Durations.Quick,
+                                            easing = TdayMotionTokens.Easings.Exit,
+                                        ),
+                                    ) { -sign * (it / 3) } + fadeOut(
+                                        tween(
+                                            durationMillis = TdayMotionTokens.Durations.Quick,
+                                            easing = TdayMotionTokens.Easings.Exit,
+                                        ),
+                                    ) using SizeTransform(clip = false)
+                                }
+
+                                // A spinner going up over the step the user is still on, or
+                                // coming back down off it. Nobody moved, so nothing slides.
+                                else -> fadeIn(
+                                    tween(
+                                        durationMillis = TdayMotionTokens.Durations.Enter,
+                                        easing = TdayMotionTokens.Easings.Enter,
+                                    ),
+                                ) togetherWith fadeOut(
+                                    tween(
+                                        durationMillis = TdayMotionTokens.Durations.Quick,
+                                        easing = TdayMotionTokens.Easings.Exit,
+                                    ),
+                                ) using SizeTransform(clip = false)
+                            }
+                        },
+                        label = "wizardState",
+                    ) { state ->
+                        when (state) {
+                            WizardViewState.MODE -> {
+                                Column(verticalArrangement = Arrangement.spacedBy(WIZARD_MODE_PANEL_SPACING)) {
+                                    WizardHeroTile(
+                                        title = stringResource(R.string.onboarding_mode_title),
+                                        subtitle = stringResource(R.string.onboarding_mode_subtitle),
+                                        imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_sparkles),
+                                        color = Color(0xFF6EA8E1),
+                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(WIZARD_PANEL_SPACING)) {
+                                        WizardModeChoiceButton(
+                                            modifier = Modifier.weight(1f),
+                                            title = stringResource(R.string.onboarding_mode_server_short_title),
+                                            subtitle = stringResource(R.string.onboarding_mode_server_short_subtitle),
+                                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_globe),
+                                            color = Color(0xFF6EA8E1),
+                                            enabled = !isResettingTrust,
+                                            onClick = {
+                                                step = WizardStep.SERVER
+                                                serverError = null
+                                                localAuthError = null
+                                                onClearAuthStatus()
+                                            },
+                                        )
+                                        WizardModeChoiceButton(
+                                            modifier = Modifier.weight(1f),
+                                            title = stringResource(R.string.onboarding_mode_local_short_title),
+                                            subtitle = stringResource(R.string.onboarding_mode_local_short_subtitle),
+                                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_smartphone),
+                                            color = Color(0xFF719F84),
+                                            enabled = !isResettingTrust,
+                                            onClick = {
+                                                keyboardController?.hide()
+                                                focusManager.clearFocus(force = true)
+                                                serverError = null
+                                                localAuthError = null
+                                                onClearAuthStatus()
+                                                onUseLocalMode()
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+
+                            WizardViewState.SERVER -> {
+                                Column(verticalArrangement = Arrangement.spacedBy(WIZARD_PANEL_SPACING)) {
+                                    WizardHeroTile(
+                                        title = stringResource(R.string.onboarding_mode_server_title),
+                                        subtitle = stringResource(R.string.onboarding_server_hero_subtitle),
+                                        imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_globe),
+                                        color = Color(0xFF6EA8E1),
+                                    )
+                                    OutlinedTextField(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        value = serverUrl,
+                                        onValueChange = {
+                                            serverUrl = it
+                                            serverUrlLoadedFromSystemCredential = false
+                                            serverError = null
+                                        },
+                                        label = { Text(stringResource(R.string.onboarding_server_url_label)) },
+                                        placeholder = { Text(stringResource(R.string.onboarding_server_url_placeholder)) },
+                                        singleLine = true,
+                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                                        keyboardActions = KeyboardActions(
+                                            onGo = { connectToServer() },
+                                            onDone = { connectToServer() },
+                                        ),
+                                        shape = RoundedCornerShape(TdayDimens.RadiusField),
+                                        colors = fieldColors,
+                                    )
+
+                                    serverError?.let { message ->
+                                        Text(
+                                            modifier = Modifier.padding(top = TdayDimens.SpacingMd),
+                                            text = message,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = colorScheme.error,
+                                        )
+
+                                        if (serverCanResetTrust) {
+                                            TextButton(
+                                                modifier = Modifier.padding(top = TdayDimens.SpacingXs),
+                                                onClick = {
+                                                    val value = serverUrl.trim()
+                                                    if (value.isBlank()) return@TextButton
+                                                    isResettingTrust = true
+                                                    onResetServerTrust(value) { resetResult ->
+                                                        isResettingTrust = false
+                                                        resetResult.onSuccess {
+                                                            serverError = null
+                                                            isConnecting = true
+                                                            canRequestSavedLoginCredential = false
+                                                            onConnectServer(value) { connectResult ->
+                                                                connectResult.onSuccess {
+                                                                    finishServerConnection(it)
+                                                                }.onFailure { error ->
+                                                                    isConnecting = false
+                                                                    canRequestSavedLoginCredential = false
+                                                                    step = WizardStep.SERVER
+                                                                    serverError = onboardingServerErrorMessage(
+                                                                        error = error,
+                                                                        fallback = connectErrorFallback,
+                                                                        appOutdatedMessage = appOutdatedError,
+                                                                    )
+                                                                }
+                                                            }
+                                                        }.onFailure { error ->
+                                                            serverError = onboardingServerErrorMessage(
+                                                                error = error,
+                                                                fallback = resetTrustErrorFallback,
+                                                                appOutdatedMessage = appOutdatedError,
+                                                            )
+                                                        }
+                                                    }
+                                                },
+                                            ) {
+                                                Text(
+                                                    if (isResettingTrust) {
+                                                        stringResource(R.string.onboarding_resetting_trust)
+                                                    } else {
+                                                        stringResource(R.string.onboarding_reset_trust)
+                                                    },
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Button(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(WIZARD_PRIMARY_BUTTON_HEIGHT),
+                                        enabled = serverUrl.isNotBlank() && !isResettingTrust,
+                                        onClick = connectToServer,
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = colorScheme.primary,
+                                            contentColor = colorScheme.onPrimary,
+                                        ),
+                                    ) {
+                                        Text(stringResource(R.string.onboarding_connect))
+                                    }
+
+                                    TextButton(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = TdayDimens.SpacingXs),
+                                        enabled = !isResettingTrust,
+                                        onClick = {
+                                            keyboardController?.hide()
+                                            focusManager.clearFocus(force = true)
+                                            serverError = null
+                                            localAuthError = null
+                                            onClearAuthStatus()
+                                            step = WizardStep.MODE
+                                        },
+                                    ) {
+                                        Text(stringResource(R.string.onboarding_change_setup))
+                                    }
+                                }
+                            }
+
+                            WizardViewState.CONNECTING -> {
+                                WizardLoading(
+                                    title = stringResource(R.string.onboarding_connecting_title),
+                                    subtitle = stringResource(R.string.onboarding_connecting_subtitle),
+                                )
+                            }
+
+                            WizardViewState.LOGIN -> {
+                                Column(modifier = Modifier.animateContentSize()) {
+                                    when (authMode) {
+                                        AuthPanelMode.SIGN_IN -> {
+                                            WizardHeroTile(
+                                                title = stringResource(R.string.onboarding_sign_in),
+                                                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_user),
+                                                color = Color(0xFFC97880),
+                                            )
+                                            OutlinedTextField(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = WIZARD_FIELD_TOP_PADDING)
+                                                    .tdayAutofill(
+                                                        autofillTypes = listOf(
+                                                            AutofillType.Username,
+                                                        ),
+                                                    ) {
+                                                        username = it
+                                                        localAuthError = null
+                                                        onClearAuthStatus()
+                                                    },
+                                                value = username,
+                                                onValueChange = {
+                                                    username = it
+                                                    localAuthError = null
+                                                    onClearAuthStatus()
+                                                },
+                                                label = { Text(stringResource(R.string.onboarding_username_label)) },
+                                                singleLine = true,
+                                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                                                keyboardActions = KeyboardActions(
+                                                    onNext = { passwordFocusRequester.requestFocus() },
+                                                ),
+                                                shape = RoundedCornerShape(TdayDimens.RadiusField),
+                                                colors = fieldColors,
+                                            )
+                                            OutlinedTextField(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = WIZARD_FIELD_TOP_PADDING)
+                                                    .focusRequester(passwordFocusRequester)
+                                                    .tdayAutofill(
+                                                        autofillTypes = listOf(AutofillType.Password),
+                                                    ) {
+                                                        password = it
+                                                        localAuthError = null
+                                                        onClearAuthStatus()
+                                                    },
+                                                value = password,
+                                                onValueChange = {
+                                                    password = it
+                                                    localAuthError = null
+                                                    onClearAuthStatus()
+                                                },
+                                                label = { Text(stringResource(R.string.onboarding_password_label)) },
+                                                singleLine = true,
+                                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                                keyboardActions = KeyboardActions(
+                                                    onDone = { signIn() },
+                                                ),
+                                                visualTransformation = PasswordVisualTransformation(),
+                                                shape = RoundedCornerShape(TdayDimens.RadiusField),
+                                                colors = fieldColors,
+                                            )
+
+                                            localAuthError?.let { message ->
+                                                Text(
+                                                    modifier = Modifier.padding(top = TdayDimens.SpacingMd),
+                                                    text = message,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = colorScheme.error,
+                                                )
+                                            }
+                                            authUiState.errorMessage?.let { message ->
+                                                Text(
+                                                    modifier = Modifier.padding(top = TdayDimens.SpacingMd),
+                                                    text = message,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = colorScheme.error,
+                                                )
+                                            }
+                                            authUiState.infoMessage?.let { message ->
+                                                Text(
+                                                    modifier = Modifier.padding(top = TdayDimens.SpacingMd),
+                                                    text = message,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = colorScheme.tertiary,
+                                                )
+                                            }
+                                            pendingApprovalMessage
+                                                ?.takeIf { it != authUiState.infoMessage }
+                                                ?.let { message ->
+                                                Text(
+                                                    modifier = Modifier.padding(top = TdayDimens.SpacingMd),
+                                                    text = message,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = colorScheme.tertiary,
+                                                )
+                                            }
+
+                                            Button(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = TdayDimens.SpacingXs)
+                                                    .height(WIZARD_PRIMARY_BUTTON_HEIGHT),
+                                                enabled = username.isNotBlank() && password.isNotBlank() && !authUiState.isLoading,
+                                                onClick = signIn,
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = colorScheme.primary,
+                                                    contentColor = colorScheme.onPrimary,
+                                                ),
+                                            ) {
+                                                Text(stringResource(R.string.onboarding_sign_in))
+                                            }
+
+                                            TextButton(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                onClick = {
+                                                    localAuthError = null
+                                                    onClearAuthStatus()
+                                                    authMode = AuthPanelMode.FORGOT_PASSWORD
+                                                },
+                                            ) {
+                                                Text(stringResource(R.string.forgot_password_entry))
+                                            }
+
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                TextButton(
+                                                    onClick = {
+                                                        authMode = AuthPanelMode.CREATE_ACCOUNT
+                                                        localAuthError = null
+                                                        onClearAuthStatus()
+                                                    },
+                                                ) {
+                                                    Text(stringResource(R.string.onboarding_create_account))
+                                                }
+                                                TextButton(
+                                                    onClick = {
+                                                        step = WizardStep.MODE
+                                                        canRequestSavedLoginCredential = false
+                                                        localAuthError = null
+                                                        onClearAuthStatus()
+                                                    },
+                                                ) {
+                                                    Text(stringResource(R.string.onboarding_change_setup))
+                                                }
+                                            }
+                                        }
+
+                                        AuthPanelMode.FORGOT_PASSWORD -> {
+                                            ForgotPasswordPanel(
+                                                initialUsername = username,
+                                                onBackToLogin = {
+                                                    authMode = AuthPanelMode.SIGN_IN
+                                                    localAuthError = null
+                                                    onClearAuthStatus()
+                                                },
+                                                onResetComplete = { resetUsername ->
+                                                    authMode = AuthPanelMode.SIGN_IN
+                                                    username = resetUsername
+                                                    password = ""
+                                                    localAuthError = null
+                                                    onClearAuthStatus()
+                                                },
+                                            )
+                                        }
+
+                                        AuthPanelMode.CREATE_ACCOUNT -> {
+                                            WizardHeroTile(
+                                                title = stringResource(R.string.onboarding_create_account),
+                                                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_user),
+                                                color = Color(0xFFC97880),
+                                            )
+                                            OutlinedTextField(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = WIZARD_FIELD_TOP_PADDING),
+                                                value = firstName,
+                                                onValueChange = {
+                                                    firstName = it
+                                                    localAuthError = null
+                                                    onClearAuthStatus()
+                                                },
+                                                label = { Text(stringResource(R.string.onboarding_first_name_label)) },
+                                                singleLine = true,
+                                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                                                keyboardActions = KeyboardActions(
+                                                    onNext = { passwordFocusRequester.requestFocus() },
+                                                ),
+                                                shape = RoundedCornerShape(TdayDimens.RadiusField),
+                                                colors = fieldColors,
+                                            )
+                                            OutlinedTextField(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = WIZARD_FIELD_TOP_PADDING)
+                                                    .focusRequester(passwordFocusRequester)
+                                                    .tdayAutofill(
+                                                        autofillTypes = listOf(
+                                                            AutofillType.NewUsername,
+                                                        ),
+                                                    ) {
+                                                        username = it
+                                                        localAuthError = null
+                                                        onClearAuthStatus()
+                                                    },
+                                                value = username,
+                                                onValueChange = {
+                                                    username = it
+                                                    localAuthError = null
+                                                    onClearAuthStatus()
+                                                },
+                                                label = { Text(stringResource(R.string.onboarding_username_label)) },
+                                                singleLine = true,
+                                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                                                keyboardActions = KeyboardActions(
+                                                    onNext = { registerPasswordFocusRequester.requestFocus() },
+                                                ),
+                                                shape = RoundedCornerShape(TdayDimens.RadiusField),
+                                                colors = fieldColors,
+                                            )
+                                            OutlinedTextField(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = WIZARD_FIELD_TOP_PADDING)
+                                                    .focusRequester(registerPasswordFocusRequester)
+                                                    .tdayAutofill(
+                                                        autofillTypes = listOf(AutofillType.NewPassword),
+                                                    ) {
+                                                        registerPassword = it
+                                                        localAuthError = null
+                                                        onClearAuthStatus()
+                                                    },
+                                                value = registerPassword,
+                                                onValueChange = {
+                                                    registerPassword = it
+                                                    localAuthError = null
+                                                    onClearAuthStatus()
+                                                },
+                                                label = { Text(stringResource(R.string.onboarding_password_label)) },
+                                                singleLine = true,
+                                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                                                keyboardActions = KeyboardActions(
+                                                    onNext = { registerConfirmFocusRequester.requestFocus() },
+                                                ),
+                                                visualTransformation = PasswordVisualTransformation(),
+                                                shape = RoundedCornerShape(TdayDimens.RadiusField),
+                                                colors = fieldColors,
+                                            )
+                                            OutlinedTextField(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = WIZARD_FIELD_TOP_PADDING)
+                                                    .focusRequester(registerConfirmFocusRequester)
+                                                    .tdayAutofill(
+                                                        autofillTypes = listOf(AutofillType.NewPassword),
+                                                    ) {
+                                                        confirmRegisterPassword = it
+                                                        localAuthError = null
+                                                        onClearAuthStatus()
+                                                    },
+                                                value = confirmRegisterPassword,
+                                                onValueChange = {
+                                                    confirmRegisterPassword = it
+                                                    localAuthError = null
+                                                    onClearAuthStatus()
+                                                },
+                                                label = { Text(stringResource(R.string.onboarding_confirm_password_label)) },
+                                                singleLine = true,
+                                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                                keyboardActions = KeyboardActions(
+                                                    onDone = { createAccount() },
+                                                ),
+                                                visualTransformation = PasswordVisualTransformation(),
+                                                shape = RoundedCornerShape(TdayDimens.RadiusField),
+                                                colors = fieldColors,
+                                            )
+
+                                            localAuthError?.let { message ->
+                                                Text(
+                                                    modifier = Modifier.padding(top = TdayDimens.SpacingMd),
+                                                    text = message,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = colorScheme.error,
+                                                )
+                                            }
+                                            authUiState.errorMessage?.let { message ->
+                                                Text(
+                                                    modifier = Modifier.padding(top = TdayDimens.SpacingMd),
+                                                    text = message,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = colorScheme.error,
+                                                )
+                                            }
+                                            authUiState.infoMessage?.let { message ->
+                                                Text(
+                                                    modifier = Modifier.padding(top = TdayDimens.SpacingMd),
+                                                    text = message,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = colorScheme.tertiary,
+                                                )
+                                            }
+
+                                            Button(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = TdayDimens.SpacingXs)
+                                                    .height(WIZARD_PRIMARY_BUTTON_HEIGHT),
+                                                enabled = firstName.isNotBlank() &&
+                                                        username.isNotBlank() &&
+                                                    registerPassword.isNotBlank() &&
+                                                    confirmRegisterPassword.isNotBlank() &&
+                                                    !authUiState.isLoading &&
+                                                    !isRegisterInFlight,
+                                                onClick = createAccount,
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = colorScheme.primary,
+                                                    contentColor = colorScheme.onPrimary,
+                                                ),
+                                            ) {
+                                                Text(
+                                                    if (authUiState.isLoading || isRegisterInFlight) {
+                                                        stringResource(R.string.onboarding_creating_account)
+                                                    } else {
+                                                        stringResource(R.string.onboarding_create_account)
+                                                    },
+                                                )
+                                            }
+
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                TextButton(
+                                                    onClick = {
+                                                        authMode = AuthPanelMode.SIGN_IN
+                                                        localAuthError = null
+                                                        onClearAuthStatus()
+                                                    },
+                                                ) {
+                                                    Text(stringResource(R.string.onboarding_back_to_sign_in))
+                                                }
+                                                TextButton(
+                                                    onClick = {
+                                                        step = WizardStep.MODE
+                                                        authMode = AuthPanelMode.SIGN_IN
+                                                        canRequestSavedLoginCredential = false
+                                                        localAuthError = null
+                                                        onClearAuthStatus()
+                                                    },
+                                                ) {
+                                                    Text(stringResource(R.string.onboarding_change_setup))
+                                                }
+                                            }
+                                        }
+
+                                        AuthPanelMode.CREATE_ACCOUNT_SECURITY -> {
+                                            WizardHeroTile(
+                                                title = stringResource(R.string.security_questions_title),
+                                                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_user),
+                                                color = Color(0xFFC97880),
+                                            )
+
+                                            SecurityQuestionPicker(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = WIZARD_FIELD_TOP_PADDING),
+                                                label = stringResource(R.string.security_questions_question_1),
+                                                questions = securityQuestions,
+                                                excludeIds = setOfNotNull(
+                                                    securityQuestionId2,
+                                                    securityQuestionId3
+                                                ),
+                                                selectedId = securityQuestionId1,
+                                                onSelected = {
+                                                    securityQuestionId1 = it
+                                                    localAuthError = null
+                                                },
+                                                answer = securityAnswer1,
+                                                onAnswerChange = {
+                                                    securityAnswer1 = it
+                                                    localAuthError = null
+                                                },
+                                                fieldColors = fieldColors,
+                                            )
+                                            SecurityQuestionPicker(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = WIZARD_FIELD_TOP_PADDING),
+                                                label = stringResource(R.string.security_questions_question_2),
+                                                questions = securityQuestions,
+                                                excludeIds = setOfNotNull(
+                                                    securityQuestionId1,
+                                                    securityQuestionId3
+                                                ),
+                                                selectedId = securityQuestionId2,
+                                                onSelected = {
+                                                    securityQuestionId2 = it
+                                                    localAuthError = null
+                                                },
+                                                answer = securityAnswer2,
+                                                onAnswerChange = {
+                                                    securityAnswer2 = it
+                                                    localAuthError = null
+                                                },
+                                                fieldColors = fieldColors,
+                                            )
+                                            SecurityQuestionPicker(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = WIZARD_FIELD_TOP_PADDING),
+                                                label = stringResource(R.string.security_questions_question_3),
+                                                questions = securityQuestions,
+                                                excludeIds = setOfNotNull(
+                                                    securityQuestionId1,
+                                                    securityQuestionId2
+                                                ),
+                                                selectedId = securityQuestionId3,
+                                                onSelected = {
+                                                    securityQuestionId3 = it
+                                                    localAuthError = null
+                                                },
+                                                answer = securityAnswer3,
+                                                onAnswerChange = {
+                                                    securityAnswer3 = it
+                                                    localAuthError = null
+                                                },
+                                                fieldColors = fieldColors,
+                                            )
+
+                                            localAuthError?.let { message ->
+                                                Text(
+                                                    modifier = Modifier.padding(top = TdayDimens.SpacingMd),
+                                                    text = message,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = colorScheme.error,
+                                                )
+                                            }
+                                            authUiState.errorMessage?.let { message ->
+                                                Text(
+                                                    modifier = Modifier.padding(top = TdayDimens.SpacingMd),
+                                                    text = message,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = colorScheme.error,
+                                                )
+                                            }
+
+                                            Button(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = TdayDimens.SpacingXs)
+                                                    .height(WIZARD_PRIMARY_BUTTON_HEIGHT),
+                                                enabled = securityQuestionId1 != null &&
+                                                        securityQuestionId2 != null &&
+                                                        securityQuestionId3 != null &&
+                                                        setOfNotNull(
+                                                            securityQuestionId1,
+                                                            securityQuestionId2,
+                                                            securityQuestionId3
+                                                        ).size == 3 &&
+                                                        securityAnswer1.isNotBlank() &&
+                                                        securityAnswer2.isNotBlank() &&
+                                                        securityAnswer3.isNotBlank() &&
+                                                        !authUiState.isLoading &&
+                                                        !isRegisterInFlight,
+                                                onClick = submitSecurityAndRegister,
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = colorScheme.primary,
+                                                    contentColor = colorScheme.onPrimary,
+                                                ),
+                                            ) {
+                                                Text(
+                                                    if (authUiState.isLoading || isRegisterInFlight) {
+                                                        stringResource(R.string.onboarding_creating_account)
+                                                    } else {
+                                                        stringResource(R.string.onboarding_create_account)
+                                                    },
+                                                )
+                                            }
+
+                                            TextButton(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = TdayDimens.SpacingXs),
+                                                onClick = {
+                                                    authMode = AuthPanelMode.CREATE_ACCOUNT
+                                                    localAuthError = null
+                                                    onClearAuthStatus()
+                                                },
+                                            ) {
+                                                Text(stringResource(R.string.security_questions_back))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            WizardViewState.PRIVACY -> {
+                                WizardPrivacyPanel(
+                                    onShare = onShareCrashReports,
+                                    onNotNow = onDeclineCrashReports,
+                                )
+                            }
+
+                            WizardViewState.AUTHENTICATING -> {
+                                val isRegistering = authMode == AuthPanelMode.CREATE_ACCOUNT ||
+                                        authMode == AuthPanelMode.CREATE_ACCOUNT_SECURITY
+                                WizardLoading(
+                                    title = if (isRegistering) {
+                                        stringResource(R.string.onboarding_creating_account)
+                                    } else {
+                                        stringResource(R.string.onboarding_authenticating_title)
+                                    },
+                                    subtitle = if (isRegistering) {
+                                        stringResource(R.string.onboarding_authenticating_register_subtitle)
+                                    } else {
+                                        stringResource(R.string.onboarding_authenticating_login_subtitle)
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SecurityQuestionPicker(
+    label: String,
+    questions: List<SecurityQuestion>,
+    excludeIds: Set<Int>,
+    selectedId: Int?,
+    onSelected: (Int) -> Unit,
+    answer: String,
+    onAnswerChange: (String) -> Unit,
+    fieldColors: TextFieldColors,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectableQuestions = questions.filter { it.id == selectedId || it.id !in excludeIds }
+    val selectedText = questions.firstOrNull { it.id == selectedId }?.text.orEmpty()
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd)) {
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = it },
+        ) {
+            OutlinedTextField(
+                modifier = Modifier
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    .fillMaxWidth(),
+                value = selectedText,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(label) },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(TdayDimens.RadiusField),
+                colors = fieldColors,
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                selectableQuestions.forEach { question ->
+                    DropdownMenuItem(
+                        text = { Text(question.text) },
+                        onClick = {
+                            onSelected(question.id)
+                            expanded = false
+                        },
+                    )
+                }
+            }
+        }
+        OutlinedTextField(
+            modifier = Modifier.fillMaxWidth(),
+            value = answer,
+            onValueChange = onAnswerChange,
+            label = { Text(stringResource(R.string.security_questions_answer_label)) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            shape = RoundedCornerShape(TdayDimens.RadiusField),
+            colors = fieldColors,
+        )
+    }
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+private fun Modifier.tdayAutofill(
+    autofillTypes: List<AutofillType>,
+    onFill: (String) -> Unit,
+): Modifier = composed {
+    val autofill = LocalAutofill.current
+    val autofillTree = LocalAutofillTree.current
+    val autofillNode = remember(autofillTypes, onFill) {
+        AutofillNode(
+            autofillTypes = autofillTypes,
+            onFill = onFill,
+        )
+    }
+
+    DisposableEffect(autofillTree, autofillNode) {
+        autofillTree += autofillNode
+        onDispose {
+            autofillTree.children.remove(autofillNode.id)
+        }
+    }
+
+    this
+        .onGloballyPositioned { coordinates ->
+            autofillNode.boundingBox = coordinates.boundsInWindow()
+        }
+        .onFocusChanged { focusState ->
+            if (focusState.isFocused) {
+                autofill?.requestAutofillForNode(autofillNode)
+            } else {
+                autofill?.cancelAutofillForNode(autofillNode)
+            }
+        }
+}
+
+private fun onboardingServerErrorMessage(
+    error: Throwable,
+    fallback: String,
+    appOutdatedMessage: String,
+): String {
+    val message = error.message?.trim().orEmpty()
+    if (message.isBlank()) return fallback
+    if (message.contains("serial", ignoreCase = true)) {
+        return appOutdatedMessage
+    }
+    return message
+}
+
+@Composable
+private fun WizardLoading(
+    title: String,
+    subtitle: String,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val transition = rememberInfiniteTransition(label = "wizardLoading")
+    val rotation by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        // not a token — see docs/motion.md. The same category as
+        // `TdayPullRefresh`'s wave: a spinner that repeats forever has a period
+        // rather than a duration, and the ladder only names lengths of motions
+        // that end.
+        animationSpec = infiniteRepeatable(tween(durationMillis = 1300, easing = LinearEasing)),
+        label = "wizardRotation",
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = TdayDimens.SpacingXs),
+        shape = RoundedCornerShape(TdayDimens.RadiusCard),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+        border = BorderStroke(TdayDimens.BorderWidth, colorScheme.onSurface.copy(alpha = 0.08f)),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = WIZARD_LOADING_VERTICAL_PADDING),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(WIZARD_PANEL_SPACING),
+        ) {
+            Icon(
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_languages),
+                contentDescription = null,
+                tint = colorScheme.primary,
+                modifier = Modifier
+                    .size(WIZARD_LOADING_GLYPH_SIZE)
+                    .graphicsLayer(rotationZ = rotation),
+            )
+            CircularProgressIndicator(
+                modifier = Modifier.size(WIZARD_LOADING_SPINNER_SIZE),
+                strokeWidth = WIZARD_LOADING_SPINNER_STROKE,
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = colorScheme.onSurface,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = colorScheme.onSurface.copy(alpha = 0.6f),
+            )
+        }
+    }
+}
+
+@Composable
+internal fun WizardHeroTile(
+    title: String,
+    subtitle: String? = null,
+    imageVector: ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(WIZARD_HERO_TILE_HEIGHT),
+        shape = RoundedCornerShape(TdayDimens.RadiusCard),
+        colors = CardDefaults.cardColors(containerColor = color),
+        elevation = CardDefaults.cardElevation(defaultElevation = WIZARD_TILE_ELEVATION),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .drawWithCache {
+                    val glow = Brush.radialGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.24f),
+                            Color.White.copy(alpha = 0.08f),
+                            Color.Transparent,
+                        ),
+                        center = Offset(size.width * 0.18f, size.height * 0.18f),
+                        radius = size.width * 0.72f,
+                    )
+                    onDrawWithContent {
+                        drawRect(glow)
+                        drawContent()
+                    }
+                },
+        ) {
+            Icon(
+                imageVector = imageVector,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.2f),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .size(WIZARD_HERO_WATERMARK_SIZE)
+                    .offset(x = WIZARD_HERO_WATERMARK_OFFSET_X, y = WIZARD_HERO_WATERMARK_OFFSET_Y),
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = TdayDimens.SpacingXl),
+                horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(WIZARD_HERO_GLYPH_SLOT_SIZE)
+                        .background(Color.White.copy(alpha = 0.18f), RoundedCornerShape(WIZARD_HERO_GLYPH_SLOT_RADIUS)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = imageVector,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(WIZARD_HERO_GLYPH_SIZE),
+                    )
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(WIZARD_HERO_TEXT_SPACING),
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White,
+                        maxLines = 1,
+                    )
+                    if (!subtitle.isNullOrBlank()) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White.copy(alpha = 0.82f),
+                            maxLines = 2,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WizardModeChoiceButton(
+    modifier: Modifier = Modifier,
+    title: String,
+    subtitle: String,
+    imageVector: ImageVector,
+    color: Color,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = modifier
+            .height(WIZARD_MODE_TILE_HEIGHT)
+            .clickable(enabled = enabled, onClick = onClick),
+        shape = RoundedCornerShape(TdayDimens.RadiusCard),
+        colors = CardDefaults.cardColors(
+            containerColor = color.copy(alpha = if (enabled) 1f else 0.55f),
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (enabled) WIZARD_TILE_ELEVATION else TdayDimens.CardElevationDefault,
+        ),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .drawWithCache {
+                    val glow = Brush.radialGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.22f),
+                            Color.White.copy(alpha = 0.08f),
+                            Color.Transparent,
+                        ),
+                        center = Offset(size.width * 0.22f, size.height * 0.18f),
+                        radius = size.maxDimension * 0.9f,
+                    )
+                    val wash = Brush.linearGradient(
+                        colors = listOf(Color.White.copy(alpha = 0.12f), Color.Transparent),
+                    )
+                    onDrawWithContent {
+                        drawRect(glow)
+                        drawRect(wash)
+                        drawContent()
+                    }
+                },
+        ) {
+            Icon(
+                imageVector = imageVector,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.22f),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(WIZARD_MODE_TILE_WATERMARK_SIZE)
+                    .offset(x = WIZARD_MODE_TILE_WATERMARK_OFFSET_X, y = WIZARD_MODE_TILE_WATERMARK_OFFSET_Y),
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(WIZARD_MODE_TILE_PADDING),
+                verticalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Icon(
+                    imageVector = imageVector,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(TdayDimens.IconSm),
+                )
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
+                    maxLines = 2,
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White.copy(alpha = 0.82f),
+                    maxLines = 2,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WizardPrivacyPanel(
+    onShare: () -> Unit,
+    onNotNow: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(WIZARD_PANEL_SPACING),
+    ) {
+        // The card's own wording, not a second telling of it: one offer, two places it can be
+        // answered, and no way for the two to describe different things.
+        TelemetryDisclosure()
+
+        // The wizard's idiom for ending a step: the one filled button it wants tapped, over the
+        // text button that declines. The disclosure's paragraph about Settings answers "what if I
+        // change my mind", so the step needs no second control for it.
+        Button(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = TdayDimens.SpacingXs)
+                .height(WIZARD_PRIMARY_BUTTON_HEIGHT),
+            onClick = onShare,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = colorScheme.primary,
+                contentColor = colorScheme.onPrimary,
+            ),
+        ) {
+            Text(stringResource(R.string.telemetry_card_share))
+        }
+
+        TextButton(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onNotNow,
+        ) {
+            Text(stringResource(R.string.telemetry_card_not_now))
+        }
+    }
+}
+
+@Composable
+private fun WizardStepChip(
+    modifier: Modifier,
+    title: String,
+    imageVector: ImageVector,
+    color: Color,
+    active: Boolean,
+    completed: Boolean = false,
+) {
+    // A step keeps its color once it is the active step or has been completed;
+    // completed steps swap their glyph for a checkmark.
+    val highlighted = active || completed
+    val scale by animateFloatAsState(
+        targetValue = if (active) 1.02f else 1f,
+        // A chip swelling by a fiftieth when the wizard walks onto its step: a
+        // control changing state under its own steam, which is Enter's own
+        // description of itself. The 180 it ran on named no rung and was shared
+        // with nothing.
+        animationSpec = tween(durationMillis = TdayMotionTokens.Durations.Enter),
+        label = "wizardStepChipScale",
+    )
+    val colorScheme = MaterialTheme.colorScheme
+    val ringColor = lerp(color, MaterialTheme.colorScheme.onSurface, 0.35f)
+    val contentColor = if (highlighted) Color.White else colorScheme.onSurface.copy(alpha = 0.68f)
+
+    Card(
+        modifier = modifier.graphicsLayer(
+            scaleX = scale,
+            scaleY = scale,
+        ),
+        shape = RoundedCornerShape(TdayDimens.RadiusLg),
+        colors = CardDefaults.cardColors(containerColor = if (highlighted) color else colorScheme.surface),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (highlighted) WIZARD_TILE_ELEVATION else TdayDimens.CardElevationDefault,
+        ),
+        border = BorderStroke(
+            // A hairline, not an animation: this width used to come from an
+            // `animateDpAsState` targeting this same literal `1.dp`, so it had nothing to
+            // animate towards and never ran a frame. Only the border COLOUR changes with
+            // `highlighted`, and it changes on the same frame as the card's own.
+            TdayDimens.BorderWidth,
+            if (highlighted) ringColor.copy(alpha = 0.62f) else colorScheme.onSurface.copy(alpha = 0.08f),
+        ),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = WIZARD_STEP_CHIP_HORIZONTAL_PADDING, vertical = TdayDimens.SpacingMd)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = if (completed) ImageVector.vectorResource(R.drawable.ic_lucide_check) else imageVector,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(WIZARD_STEP_CHIP_ICON_SIZE),
+                )
+                Text(
+                    text = title,
+                    color = contentColor,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = TdayDimens.SpacingSm),
+                )
+            }
+        }
+    }
+}
+
+private const val CREDENTIAL_PROMPT_SETTLE_DELAY_MS = 600L
+private val USERNAME_REGEX = Regex("^[a-z0-9](?:[a-z0-9._-]{1,28}[a-z0-9])$")
+private val WIZARD_CARD_MAX_WIDTH = 440.dp
+private val WIZARD_CARD_CONTENT_PADDING = 18.dp
+private val WIZARD_SCREEN_EDGE_PADDING = 20.dp
+private val WIZARD_WIDE_LAYOUT_BREAKPOINT = 600.dp
+private val WIZARD_WIDE_CARD_WIDTH = 360.dp
+private val WIZARD_HERO_TILE_HEIGHT = 78.dp
+private val WIZARD_MODE_TILE_HEIGHT = 116.dp
+
+/** The one card the whole wizard is drawn on, floating over whatever it covers. */
+private val WIZARD_CARD_ELEVATION = 12.dp
+private val WIZARD_BRAND_ICON_SIZE = 27.dp
+
+/** The last step's tint: the same violet the root feed accents with, a shade lighter for a chip. */
+private val WIZARD_PRIVACY_TINT = Color(0xFF9E8CDB)
+
+/**
+ * The gap between the card's stacked parts — the step chips, the mode choices, a panel's rows.
+ *
+ * [WIZARD_FIELD_TOP_PADDING] is the same 10 dp carried by a different mechanism: the login panel's
+ * column has no arrangement, because it wraps `animateContentSize` around a body whose height
+ * changes with the auth mode, so each field spaces itself off the one above.
+ */
+private val WIZARD_PANEL_SPACING = 10.dp
+private val WIZARD_FIELD_TOP_PADDING = 10.dp
+
+/** One dp wider than every other panel's, and drawn beside them. Left as it renders today. */
+private val WIZARD_MODE_PANEL_SPACING = 11.dp
+
+/** Connect, sign in, create account: the one button that ends a step, at a finger's height. */
+private val WIZARD_PRIMARY_BUTTON_HEIGHT = 48.dp
+
+private val WIZARD_LOADING_VERTICAL_PADDING = 20.dp
+private val WIZARD_LOADING_GLYPH_SIZE = 34.dp
+private val WIZARD_LOADING_SPINNER_SIZE = 20.dp
+private val WIZARD_LOADING_SPINNER_STROKE = 2.5.dp
+
+/** Hero tile and mode tile alike: the lift that tells a coloured tile from the card behind it. */
+private val WIZARD_TILE_ELEVATION = 8.dp
+
+/** The oversized glyph behind a tile, hung off its edge so it reads as texture, not as an icon. */
+private val WIZARD_HERO_WATERMARK_SIZE = 86.dp
+private val WIZARD_HERO_WATERMARK_OFFSET_X = 22.dp
+private val WIZARD_HERO_WATERMARK_OFFSET_Y = 12.dp
+private val WIZARD_MODE_TILE_WATERMARK_SIZE = 76.dp
+private val WIZARD_MODE_TILE_WATERMARK_OFFSET_X = 18.dp
+private val WIZARD_MODE_TILE_WATERMARK_OFFSET_Y = 16.dp
+
+/**
+ * The hero tile's glyph badge. Its 16 dp corner is not `RadiusRow`: that rung names rows and cells
+ * in a list or a grid, and a badge borrowing its value is how a rung stops meaning anything.
+ */
+private val WIZARD_HERO_GLYPH_SLOT_SIZE = 42.dp
+private val WIZARD_HERO_GLYPH_SLOT_RADIUS = 16.dp
+private val WIZARD_HERO_GLYPH_SIZE = 23.dp
+private val WIZARD_HERO_TEXT_SPACING = 3.dp
+
+private val WIZARD_MODE_TILE_PADDING = 13.dp
+
+private val WIZARD_STEP_CHIP_HORIZONTAL_PADDING = 10.dp
+private val WIZARD_STEP_CHIP_ICON_SIZE = 13.dp

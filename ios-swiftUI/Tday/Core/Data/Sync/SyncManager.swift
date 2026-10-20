@@ -1,0 +1,1642 @@
+import Foundation
+
+extension Notification.Name {
+    static let offlineSyncAttemptFailed = Notification.Name("tday.offline-sync.attempt-failed")
+    static let offlineSyncAttemptSucceeded = Notification.Name("tday.offline-sync.attempt-succeeded")
+    /// A USER-INITIATED refresh (pull-to-refresh) hit a connectivity/backend failure. Unlike
+    /// `offlineSyncAttemptFailed` (background/mutation-triggered, cooldown-gated), this always
+    /// surfaces a toast. userInfo["serverDown"] Bool distinguishes a 5xx from a no-network state.
+    static let userInitiatedSyncFailedOffline = Notification.Name("tday.user-sync.failed-offline")
+}
+
+private struct RemoteSnapshot {
+    let todos: [TodoItem]
+    let floaters: [TodoItem]
+    let completedItems: [CompletedItem]
+    let completedFloaters: [CompletedItem]
+    let lists: [ListSummary]
+    let floaterLists: [ListSummary]
+    let aiSummaryEnabled: Bool
+    /// "scheduled" or "floater" — the account's default home screen, mirrored into the cache.
+    let defaultHomeScreen: String
+
+    var todoUpdatedAtByCanonical: [String: Int64] {
+        todos.reduce(into: [:]) { result, todo in
+            let updatedAt = todo.updatedAt?.epochMilliseconds ?? 0
+            result[todo.canonicalId] = max(result[todo.canonicalId] ?? 0, updatedAt)
+        }
+    }
+
+    var listUpdatedAtByID: [String: Int64] {
+        lists.reduce(into: [:]) { result, list in
+            let updatedAt = list.updatedAt?.epochMilliseconds ?? 0
+            result[list.id] = max(result[list.id] ?? 0, updatedAt)
+        }
+    }
+
+    var floaterListUpdatedAtByID: [String: Int64] {
+        floaterLists.reduce(into: [:]) { result, list in
+            let updatedAt = list.updatedAt?.epochMilliseconds ?? 0
+            result[list.id] = max(result[list.id] ?? 0, updatedAt)
+        }
+    }
+
+    var floaterUpdatedAtByCanonical: [String: Int64] {
+        floaters.reduce(into: [:]) { result, floater in
+            let updatedAt = floater.updatedAt?.epochMilliseconds ?? 0
+            result[floater.canonicalId] = max(result[floater.canonicalId] ?? 0, updatedAt)
+        }
+    }
+}
+
+func mergeCompletedRecordsWithPendingOverrides(
+    localRecords: [CachedCompletedRecord],
+    remoteRecords: [CachedCompletedRecord],
+    pendingTodoTargets: Set<String>,
+    pendingUncompletedTodoTargets: Set<String> = [],
+    pendingDeletedListIds: Set<String> = []
+) -> [CachedCompletedRecord] {
+    var mergedRecords = remoteRecords.filter { record in
+        // A task the user just restored must not come back from a snapshot taken before
+        // their restore reached the server. The loop below covers the opposite direction
+        // — re-adding a LOCAL completion a remote read is missing — and on its own it
+        // left this half open: `uncomplete` prunes the completion record locally, so
+        // `localRecordsForTodo` is empty for exactly the row that needs protecting and
+        // the loop's `guard` skips it.
+        //
+        // Keyed on the un-complete kind specifically, not on `pendingTodoTargets`: an
+        // update, pin or priority change carries no opinion about where the row belongs,
+        // and letting one hide a genuine completion made on another device would be a
+        // second bug wearing this one's clothes.
+        if let originalTodoId = record.originalTodoId,
+           pendingUncompletedTodoTargets.contains(originalTodoId) {
+            return false
+        }
+        guard let listId = record.listId else {
+            return true
+        }
+        return !pendingDeletedListIds.contains(listId)
+    }
+
+    for canonicalID in pendingTodoTargets {
+        let localRecordsForTodo = localRecords.filter { $0.originalTodoId == canonicalID }
+        guard !localRecordsForTodo.isEmpty else {
+            continue
+        }
+        mergedRecords.removeAll { $0.originalTodoId == canonicalID }
+        mergedRecords.append(contentsOf: localRecordsForTodo)
+    }
+
+    return mergedRecords
+}
+
+/// Unlike `mergeCompletedRecordsWithPendingOverrides` (the Todo-side twin, which stays
+/// list-delete-pending-sensitive on purpose — that bug is explicitly out of scope, see
+/// `docs/design/completed-floaters-durability.md`), this has no `pendingDeletedListIds`
+/// filter. `FloaterListRepository.stageDeleteList`/`.deleteList` no longer prune
+/// `completedFloaters` locally, so a remote completed-floater row for a list with a
+/// pending (or staged/undoable) delete is exactly what the local cache already has —
+/// filtering it here would re-introduce the same transient loss the pruning removal was
+/// for, for the length of the delete's staging/replay window.
+func mergeCompletedFloaterRecordsWithPendingOverrides(
+    localRecords: [CachedCompletedFloaterRecord],
+    remoteRecords: [CachedCompletedFloaterRecord],
+    pendingFloaterTargets: Set<String>
+) -> [CachedCompletedFloaterRecord] {
+    var mergedRecords = remoteRecords
+
+    for canonicalID in pendingFloaterTargets {
+        let localRecordsForFloater = localRecords.filter { $0.originalFloaterId == canonicalID }
+        guard !localRecordsForFloater.isEmpty else {
+            continue
+        }
+        mergedRecords.removeAll { $0.originalFloaterId == canonicalID }
+        mergedRecords.append(contentsOf: localRecordsForFloater)
+    }
+
+    return mergedRecords
+}
+
+/// What the pending-mutation replay should do with a mutation whose push just
+/// failed. Pulled out of `SyncManager.applyPendingMutations` so the decision — and
+/// with `applyPendingMutationReplayOutcome`, its effect on the queue — is a pure
+/// state machine the tests can drive without a network or a `SyncManager`.
+enum PendingMutationReplayOutcome: Equatable {
+    /// Stop the replay here, leaving this mutation AND every later one queued for
+    /// the next sync. Nothing is dropped and nothing is marked failed.
+    case stopAndKeepRemaining
+    /// Keep this one mutation queued and carry on with the rest of the replay.
+    case keepAndContinue
+    /// The server will never accept this one; drop it and carry on.
+    case dropAndContinue
+}
+
+func pendingMutationReplayOutcome(for error: Error) -> PendingMutationReplayOutcome {
+    // No network / backend down: every later request would fail the same way.
+    if isLikelyConnectivityIssue(error) {
+        return .stopAndKeepRemaining
+    }
+    // Same treatment, for the same reason. A 429 says the account's rate-limit
+    // window is already closed, and the remaining mutations share that window —
+    // firing them anyway can only push the window further out, and the replay
+    // previously kept going and spent the rest of the queue against a limiter that
+    // was already refusing. They stay queued, so the next sync replays them.
+    if isRateLimitedError(error) {
+        return .stopAndKeepRemaining
+    }
+    return isLikelyUnrecoverableMutationError(error) ? .dropAndContinue : .keepAndContinue
+}
+
+/// Applies `outcome` to the replay's keep-list. Returns true when the replay should
+/// stop, in which case `remaining` has been extended with the failed mutation and
+/// every mutation after it, exactly as the queue needs to look for the next sync.
+func applyPendingMutationReplayOutcome(
+    _ outcome: PendingMutationReplayOutcome,
+    at index: Int,
+    of orderedMutations: [PendingMutationRecord],
+    keeping remaining: inout [PendingMutationRecord]
+) -> Bool {
+    switch outcome {
+    case .stopAndKeepRemaining:
+        remaining.append(contentsOf: orderedMutations[index...])
+        return true
+    case .keepAndContinue:
+        remaining.append(orderedMutations[index])
+        return false
+    case .dropAndContinue:
+        return false
+    }
+}
+
+/// What one pass of the pending-mutation replay left behind.
+struct PendingMutationReplayResult: Equatable {
+    /// Exactly the queue to write back to the cache: staged markers that were never
+    /// attempted, mutations kept after a recoverable failure, and — when the pass
+    /// stopped — the failed mutation plus every later one, in replay order.
+    var remaining: [PendingMutationRecord]
+    /// True when the pass stopped early because the server answered 429. The caller
+    /// uses it to keep the rest of the sync cycle out of a window it already knows
+    /// is closed.
+    var stoppedOnRateLimit: Bool
+}
+
+/// The replay loop itself, with the per-mutation network push pushed out behind
+/// `apply`.
+///
+/// This is the loop `SyncManager.applyPendingMutations` runs, not a copy of it: that
+/// method's only job is to supply the closure and fold the result back into the
+/// state. Keeping the loop here — the staged skip, the classification, the effect on
+/// the keep-list and the early exit — is what lets a test drive the shipping control
+/// flow with a stub that throws a 429 at a chosen index. A test that rebuilt the loop
+/// itself would keep passing if this one were reverted.
+@MainActor
+func runPendingMutationReplay(
+    _ orderedMutations: [PendingMutationRecord],
+    apply: (Int, PendingMutationRecord) async throws -> Void
+) async -> PendingMutationReplayResult {
+    var remaining: [PendingMutationRecord] = []
+    for index in orderedMutations.indices {
+        let mutation = orderedMutations[index]
+        if mutation.staged {
+            // A delayed-commit delete or completion still inside its undo window
+            // (see PendingMutationRecord.staged): never replay it — that would
+            // leak the change to the server before Undo/commit resolves — just
+            // keep it pending so mergeRemoteWithLocal's resurrection guard keeps
+            // covering the row for as long as it stays staged.
+            remaining.append(mutation)
+            continue
+        }
+        do {
+            try await apply(index, mutation)
+        } catch {
+            let shouldStop = applyPendingMutationReplayOutcome(
+                pendingMutationReplayOutcome(for: error),
+                at: index,
+                of: orderedMutations,
+                keeping: &remaining
+            )
+            if shouldStop {
+                return PendingMutationReplayResult(
+                    remaining: remaining,
+                    stoppedOnRateLimit: isRateLimitedError(error)
+                )
+            }
+        }
+    }
+    return PendingMutationReplayResult(remaining: remaining, stoppedOnRateLimit: false)
+}
+
+@MainActor
+final class SyncManager {
+    private let api: TdayAPIService
+    private let cacheManager: OfflineCacheManager
+    private let secureStore: SecureStore
+
+    private let offlineResyncIntervalMs: Int64 = 5 * 60 * 1_000
+    private let minForceSyncIntervalMs: Int64 = 1_200
+
+    init(api: TdayAPIService, cacheManager: OfflineCacheManager, secureStore: SecureStore) {
+        self.api = api
+        self.cacheManager = cacheManager
+        self.secureStore = secureStore
+    }
+
+    var isLocalMode: Bool {
+        secureStore.isLocalMode()
+    }
+
+    func syncCachedData(
+        force: Bool = false,
+        replayPendingMutations: Bool = true,
+        notifyOfflineFailure: Bool = true,
+        userInitiated: Bool = false,
+        connectionProbeTimeoutSeconds: TimeInterval? = nil
+    ) async -> Result<Void, Error> {
+        if isLocalMode {
+            TdayTelemetry.addBreadcrumb("local_mode.sync_noop")
+            if let localState = try? await cacheManager.updateOfflineState({ state in
+                var nextState = state
+                nextState.lastSuccessfulSyncEpochMs = 0
+                nextState.lastSyncAttemptEpochMs = 0
+                nextState.pendingMutations = []
+                return nextState
+            }) {
+                // Queued off the main actor like every cache save's snapshot write, and ordered
+                // behind the one the save above may already have queued (see
+                // `WidgetSnapshotWriter`). A background refresh still ends with the snapshot on
+                // disk: its `refreshTodayWidgetSnapshot` waits behind this write.
+                WidgetSnapshotWriter.shared.submit(localState)
+            }
+            return .success(())
+        }
+
+        do {
+            var contactedServer = false
+            if let connectionProbeTimeoutSeconds {
+                TdayTelemetry.addBreadcrumb("server.probe", data: ["phase": "sync"])
+                _ = try await api.probeConfiguredServer(timeoutInterval: connectionProbeTimeoutSeconds)
+                contactedServer = true
+            }
+            let syncedRemoteData = try await cacheManager.withSyncLock {
+                try await self.syncLocalCache(force: force, replayPendingMutations: replayPendingMutations)
+            }
+            if contactedServer || syncedRemoteData {
+                NotificationCenter.default.post(name: .offlineSyncAttemptSucceeded, object: nil)
+            }
+            // Refresh the widget's shared backend session (base URL + current auth
+            // cookie) so a check-ring tap can sync to the backend instantly. Only
+            // reached in server mode (local mode returns early above) and after the
+            // server calls succeeded, i.e. a valid session exists. No-ops if there
+            // is no cookie yet.
+            if let baseURL = try? api.currentBaseURL() {
+                WidgetBackendSession.save(
+                    baseURL: baseURL,
+                    pinnedFingerprint: api.trustedFingerprint(for: baseURL)
+                )
+            }
+            return .success(())
+        } catch {
+            if isLikelyConnectivityIssue(error) {
+                if userInitiated {
+                    // Pull-to-refresh: always surface a toast (bypasses the cooldown),
+                    // carrying whether it's a backend 5xx vs a no-network state.
+                    NotificationCenter.default.post(
+                        name: .userInitiatedSyncFailedOffline,
+                        object: nil,
+                        userInfo: ["serverDown": isBackendUnavailableError(error)]
+                    )
+                } else if notifyOfflineFailure {
+                    NotificationCenter.default.post(name: .offlineSyncAttemptFailed, object: nil)
+                }
+            }
+            return .failure(error)
+        }
+    }
+
+    private func syncLocalCache(force: Bool, replayPendingMutations: Bool) async throws -> Bool {
+        var state = try await cacheManager.loadOfflineState()
+        let now = Date().epochMilliseconds
+        if force && (now - state.lastSyncAttemptEpochMs) < minForceSyncIntervalMs {
+            return false
+        }
+
+        let shouldReplay = replayPendingMutations && !state.pendingMutations.isEmpty
+        if shouldReplay {
+            TdayTelemetry.addBreadcrumb(
+                "sync.replay",
+                data: ["pendingMutationCount": state.pendingMutations.count]
+            )
+        }
+        let shouldSync = force ||
+            shouldReplay ||
+            state.lastSuccessfulSyncEpochMs == 0 ||
+            (now - state.lastSyncAttemptEpochMs) >= offlineResyncIntervalMs
+        if !shouldSync {
+            return false
+        }
+
+        // Recorded before any network work, so a crash/kill mid-sync still leaves an accurate
+        // "last attempt" on disk (see `OfflineCacheManager.saveOfflineState`'s no-op path: since
+        // nothing but this timestamp differs from what's already persisted, this is a
+        // single-row metadata write, not a full rewrite). `notify: false` because this alone
+        // isn't a user-visible change worth waking every observer for — see the coalesced
+        // notify below.
+        state.lastSyncAttemptEpochMs = now
+        var cacheContentChanged = try await cacheManager.saveOfflineState(state, notify: false)
+
+        let initialRemote = try await fetchRemoteSnapshot()
+        if shouldReplay {
+            let replay = await applyPendingMutations(initialState: state, remoteSnapshot: initialRemote)
+            state = replay.state
+            let replayChangedContent = try await cacheManager.saveOfflineState(state, notify: false)
+            cacheContentChanged = cacheContentChanged || replayChangedContent
+            if replay.stoppedOnRateLimit {
+                // The replay just backed off because the server answered 429. That
+                // limit is per-account and covers the whole `/api/` prefix (backend
+                // `RateLimiting.kt` applies the `api_global` policy to every path
+                // under it), so the second `fetchRemoteSnapshot()` below would fire
+                // seven more GETs straight into the window that had already refused a
+                // write — very likely 429ing again. And a 429 is not a connectivity
+                // error, so unlike the back-off it would propagate out of here and
+                // reach the user as "Too many requests" instead of staying quiet.
+                //
+                // Stop the cycle here instead. Nothing is lost: the retained queue was
+                // persisted by the save above, `lastSyncAttemptEpochMs` was recorded
+                // before any network work, and `lastSuccessfulSyncEpochMs` is
+                // deliberately left untouched so the next cycle re-syncs — which it
+                // will do regardless of the resync interval, because a non-empty
+                // pending queue forces `shouldSync`.
+                if cacheContentChanged {
+                    try await cacheManager.notifyCacheChanged()
+                }
+                return true
+            }
+        }
+
+        let latestRemote = try await fetchRemoteSnapshot()
+        var merged = mergeRemoteWithLocal(localState: state, remote: latestRemote)
+        merged.lastSyncAttemptEpochMs = now
+        merged.lastSuccessfulSyncEpochMs = now
+        let mergeChangedContent = try await cacheManager.saveOfflineState(merged, notify: false)
+        cacheContentChanged = cacheContentChanged || mergeChangedContent
+
+        // Fan out to observers (TodoListViewModel, ScheduledTaskHomeViewModel, AppViewModel,
+        // CompletedViewModel, CalendarViewModel) at most once per sync cycle, not once per
+        // internal `saveOfflineState` call above — each observer does a full cache reload on
+        // receipt, so posting per-call here previously meant up to 3x the reload work per sync.
+        // Tracking `cacheContentChanged` across all three calls (rather than trusting only the
+        // last one) matters because the replay save can be the one that actually changed
+        // something (e.g. remapping a local- to a server-issued id) while the final merge save
+        // turns out to be a no-op against that already-updated state — the merge call's own
+        // returned value alone would miss it.
+        if cacheContentChanged {
+            try await cacheManager.notifyCacheChanged()
+        }
+        return true
+    }
+
+    private func fetchRemoteSnapshot() async throws -> RemoteSnapshot {
+        async let todosTask = api.getTodos(timeline: true)
+        async let floatersTask = api.getFloaters()
+        async let completedTask = api.getCompletedTodos()
+        async let completedFloatersTask = api.getCompletedFloaters()
+        async let listsTask = api.getLists()
+        async let floaterListsTask = api.getFloaterLists()
+        // AI summary is a per-user preference now (the old global app-settings flag is gone).
+        async let preferencesTask = api.getPreferences()
+
+        let todosResponse = try await todosTask
+        let floatersResponse = try await floatersTask
+        let completedResponse = try await completedTask
+        let completedFloatersResponse = try await completedFloatersTask
+        let listsResponse = try await listsTask
+        let floaterListsResponse = try await floaterListsTask
+        let preferencesResponse = try await preferencesTask
+        let todos = todosResponse.todos.map(mapTodoDTO)
+        let floaters = floatersResponse.floaters.map(mapFloaterDTO)
+        let completedItems = completedResponse.completedTodos.map(mapCompletedDTO)
+        let completedFloaters = completedFloatersResponse.completedFloaters.map(mapCompletedFloaterDTO)
+        let lists = listsResponse.lists.map { mapListDTO($0) }
+        let floaterLists = floaterListsResponse.lists.map { mapFloaterListDTO($0) }
+        // NULL preference is treated as enabled (default ON), matching the backend.
+        let aiSummaryEnabled = preferencesResponse.aiSummaryEnabled ?? true
+        // The default home screen is an account preference, so it has to arrive with sync —
+        // it used to be dropped here and refreshed on nothing but a Settings appear, which left
+        // a second device, or a reinstall, opening the hardcoded Scheduled feed until its owner
+        // happened to visit Settings over there. Absent means Scheduled, as on the backend.
+        let defaultHomeScreen = preferencesResponse.defaultHomeScreen ?? "scheduled"
+        return RemoteSnapshot(
+            todos: todos,
+            floaters: floaters,
+            completedItems: completedItems,
+            completedFloaters: completedFloaters,
+            lists: lists,
+            floaterLists: floaterLists,
+            aiSummaryEnabled: aiSummaryEnabled,
+            defaultHomeScreen: defaultHomeScreen
+        )
+    }
+
+    private func mergeRemoteWithLocal(localState: OfflineSyncState, remote: RemoteSnapshot) -> OfflineSyncState {
+        let pendingTodoTargets = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                mutation.kind.affectsTodo ? mutation.targetId : nil
+            }
+        )
+        let pendingFloaterTargets = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                mutation.kind.affectsFloater ? mutation.targetId : nil
+            }
+        )
+        let pendingListTargets = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                switch mutation.kind {
+                case .createList, .updateList, .deleteList:
+                    return mutation.targetId
+                default:
+                    return nil
+                }
+            }
+        )
+        let pendingFloaterListTargets = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                switch mutation.kind {
+                case .createFloaterList, .updateFloaterList, .deleteFloaterList, .resetFloaterList:
+                    return mutation.targetId
+                default:
+                    return nil
+                }
+            }
+        )
+        // Deliberately kind-only (not filtered on `staged`): a delayed-commit delete's
+        // staged marker (PendingMutationRecord.staged) carries the same .deleteList /
+        // .deleteFloaterList kind specifically so it counts here too — otherwise a
+        // refresh mid-undo-window would write the still-server-side list straight back
+        // into the cache (the bug this guard exists to prevent).
+        let pendingDeletedListIds = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                mutation.kind == .deleteList ? mutation.targetId : nil
+            }
+        )
+        let pendingDeletedFloaterListIds = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                mutation.kind == .deleteFloaterList ? mutation.targetId : nil
+            }
+        )
+        let remoteTodos = remote.todos.filter { todo in
+            guard let listId = todo.listId else {
+                return true
+            }
+            return !pendingDeletedListIds.contains(listId)
+        }
+        let remoteFloaters = remote.floaters.filter { floater in
+            guard let listId = floater.listId else {
+                return true
+            }
+            return !pendingDeletedFloaterListIds.contains(listId)
+        }
+        var remoteTodosByKey = Dictionary(uniqueKeysWithValues: remoteTodos.map { (todoMergeKey(item: $0), todoToCache($0)) })
+        var mergedTodos: [CachedTodoRecord] = []
+
+        for localTodo in localState.todos {
+            let key = todoMergeKey(record: localTodo)
+            let remoteTodo = remoteTodosByKey[key]
+
+            if remoteTodo == nil,
+               !localTodo.canonicalId.hasPrefix(LOCAL_TODO_PREFIX),
+               !pendingTodoTargets.contains(localTodo.canonicalId) {
+                continue
+            }
+
+            let localWins = localTodo.canonicalId.hasPrefix(LOCAL_TODO_PREFIX) ||
+                pendingTodoTargets.contains(localTodo.canonicalId) ||
+                localTodo.updatedAtEpochMs > (remoteTodo?.updatedAtEpochMs ?? 0)
+            if localWins {
+                mergedTodos.append(localTodo)
+                remoteTodosByKey.removeValue(forKey: key)
+            }
+        }
+        mergedTodos.append(contentsOf: remoteTodosByKey.values)
+
+        var remoteFloatersByID = Dictionary(uniqueKeysWithValues: remoteFloaters.map { ($0.canonicalId, floaterToCache($0)) })
+        var mergedFloaters: [CachedFloaterRecord] = []
+        for localFloater in localState.floaters {
+            let remoteFloater = remoteFloatersByID[localFloater.canonicalId]
+            if remoteFloater == nil,
+               !localFloater.canonicalId.hasPrefix(LOCAL_FLOATER_PREFIX),
+               !pendingFloaterTargets.contains(localFloater.canonicalId) {
+                continue
+            }
+            let localWins = localFloater.canonicalId.hasPrefix(LOCAL_FLOATER_PREFIX) ||
+                pendingFloaterTargets.contains(localFloater.canonicalId) ||
+                localFloater.updatedAtEpochMs > (remoteFloater?.updatedAtEpochMs ?? 0)
+            if localWins {
+                mergedFloaters.append(localFloater)
+                remoteFloatersByID.removeValue(forKey: localFloater.canonicalId)
+            }
+        }
+        mergedFloaters.append(contentsOf: remoteFloatersByID.values)
+
+        var remoteListsByID = Dictionary(uniqueKeysWithValues: remote.lists.map { ($0.id, listToCache($0)) })
+        var mergedLists: [CachedListRecord] = []
+        for localList in localState.lists {
+            let remoteList = remoteListsByID[localList.id]
+            if remoteList == nil,
+               !localList.id.hasPrefix(LOCAL_LIST_PREFIX),
+               !pendingListTargets.contains(localList.id) {
+                continue
+            }
+            let localWins = localList.id.hasPrefix(LOCAL_LIST_PREFIX) ||
+                pendingListTargets.contains(localList.id) ||
+                localList.updatedAtEpochMs > (remoteList?.updatedAtEpochMs ?? 0)
+            if localWins {
+                mergedLists.append(localList)
+                remoteListsByID.removeValue(forKey: localList.id)
+            }
+        }
+        mergedLists.append(
+            contentsOf: remoteListsByID.values.filter { !pendingDeletedListIds.contains($0.id) }
+        )
+
+        var remoteFloaterListsByID = Dictionary(uniqueKeysWithValues: remote.floaterLists.map { ($0.id, floaterListToCache($0)) })
+        var mergedFloaterLists: [CachedFloaterListRecord] = []
+        for localList in localState.floaterLists {
+            let remoteList = remoteFloaterListsByID[localList.id]
+            if remoteList == nil,
+               !localList.id.hasPrefix(LOCAL_FLOATER_LIST_PREFIX),
+               !pendingFloaterListTargets.contains(localList.id) {
+                continue
+            }
+            let localWins = localList.id.hasPrefix(LOCAL_FLOATER_LIST_PREFIX) ||
+                pendingFloaterListTargets.contains(localList.id) ||
+                localList.updatedAtEpochMs > (remoteList?.updatedAtEpochMs ?? 0)
+            if localWins {
+                mergedFloaterLists.append(localList)
+                remoteFloaterListsByID.removeValue(forKey: localList.id)
+            }
+        }
+        mergedFloaterLists.append(
+            contentsOf: remoteFloaterListsByID.values.filter { !pendingDeletedFloaterListIds.contains($0.id) }
+        )
+
+        // Un-completing is optimistic and un-staged: `CompletedRepository.uncomplete`
+        // prunes the completion record locally and queues `.uncompleteTodo`, then drops
+        // that mutation once the server acknowledges. A read that lands inside that
+        // window — the un-complete publishes a `completed` event to the actor itself,
+        // which `AppViewModel` coalesces into a sync — began its round trip while the
+        // server still had the task completed, so without this the restore is undone
+        // under the user and the row returns struck-through. See
+        // `mergeCompletedRecordsWithPendingOverrides`.
+        let pendingUncompletedTodoTargets = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                mutation.kind == .uncompleteTodo ? mutation.targetId : nil
+            }
+        )
+        // …except where the user has since completed it AGAIN. Both mutations can be in
+        // flight at once — the restore stays unacknowledged for as long as its request
+        // takes — and hiding the row then would take a task out of the very list the user
+        // just put it in: the same complaint this guard exists to fix, mirrored. The later
+        // intent is the one they can see themselves having expressed, so the completion
+        // counts and the restore's guard stands down for that row.
+        let pendingCompletedTodoTargets = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                switch mutation.kind {
+                case .completeTodo, .completeTodoInstance:
+                    return mutation.targetId
+                default:
+                    return nil
+                }
+            }
+        )
+        let mergedCompleted = mergeCompletedRecordsWithPendingOverrides(
+            localRecords: localState.completedItems,
+            remoteRecords: remote.completedItems.map(completedToCache),
+            pendingTodoTargets: pendingTodoTargets,
+            pendingUncompletedTodoTargets: pendingUncompletedTodoTargets.subtracting(pendingCompletedTodoTargets),
+            pendingDeletedListIds: pendingDeletedListIds
+        )
+        let mergedCompletedFloaters = mergeCompletedFloaterRecordsWithPendingOverrides(
+            localRecords: localState.completedFloaters,
+            remoteRecords: remote.completedFloaters.map(completedFloaterToCache),
+            pendingFloaterTargets: pendingFloaterTargets
+        )
+
+        let todoCountsByList = Dictionary(grouping: mergedTodos.filter { !$0.completed }, by: { $0.listId })
+            .mapValues(\.count)
+        let floaterCountsByList = Dictionary(grouping: mergedFloaters.filter { !$0.completed }, by: { $0.listId })
+            .mapValues(\.count)
+
+        let generatedMutations = buildLocalWinsMutations(localState: localState, remote: remote)
+        let pendingMutations = dedupePendingMutations(localState.pendingMutations + generatedMutations)
+
+        return OfflineSyncState(
+            lastSuccessfulSyncEpochMs: localState.lastSuccessfulSyncEpochMs,
+            lastSyncAttemptEpochMs: localState.lastSyncAttemptEpochMs,
+            todos: mergedTodos.sorted(by: cachedTodoSortPrecedes),
+            floaters: mergedFloaters.sorted(by: cachedFloaterSortPrecedes),
+            completedItems: mergedCompleted.sorted { $0.completedAtEpochMs > $1.completedAtEpochMs },
+            completedFloaters: mergedCompletedFloaters.sorted { $0.completedAtEpochMs > $1.completedAtEpochMs },
+            lists: orderListsLikeWeb(
+                mergedLists.map { list in
+                    CachedListRecord(
+                        id: list.id,
+                        name: list.name,
+                        color: list.color,
+                        iconKey: list.iconKey,
+                        todoCount: todoCountsByList[list.id] ?? 0,
+                        updatedAtEpochMs: list.updatedAtEpochMs,
+                        createdAtEpochMs: list.createdAtEpochMs,
+                        defaultPriority: list.defaultPriority
+                    )
+                }
+            ),
+            floaterLists: orderFloaterListsLikeWeb(
+                mergedFloaterLists.map { list in
+                    CachedFloaterListRecord(
+                        id: list.id,
+                        name: list.name,
+                        color: list.color,
+                        iconKey: list.iconKey,
+                        todoCount: floaterCountsByList[list.id] ?? 0,
+                        updatedAtEpochMs: list.updatedAtEpochMs,
+                        createdAtEpochMs: list.createdAtEpochMs,
+                        reusable: list.reusable,
+                        defaultPriority: list.defaultPriority
+                    )
+                }
+            ),
+            pendingMutations: pendingMutations,
+            aiSummaryEnabled: remote.aiSummaryEnabled,
+            // Account preference, so the server wins: this is what makes a change made on
+            // another device (or on the web) show up on this one's next cold launch, instead
+            // of waiting for someone to open Settings here.
+            defaultHomeScreen: remote.defaultHomeScreen
+        )
+    }
+
+    private func buildLocalWinsMutations(localState: OfflineSyncState, remote: RemoteSnapshot) -> [PendingMutationRecord] {
+        let existingKeys = Set(localState.pendingMutations.map { mutationKey(for: $0) })
+        let pendingTodoTargets = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                mutation.kind.affectsTodo ? mutation.targetId : nil
+            }
+        )
+        let pendingFloaterTargets = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                mutation.kind.affectsFloater ? mutation.targetId : nil
+            }
+        )
+        let pendingListTargets = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                switch mutation.kind {
+                case .createList, .updateList, .deleteList:
+                    return mutation.targetId
+                default:
+                    return nil
+                }
+            }
+        )
+        let pendingFloaterListTargets = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                switch mutation.kind {
+                case .createFloaterList, .updateFloaterList, .deleteFloaterList, .resetFloaterList:
+                    return mutation.targetId
+                default:
+                    return nil
+                }
+            }
+        )
+        var generated: [PendingMutationRecord] = []
+        // `RemoteSnapshot`'s `*UpdatedAt*` properties rebuild their dictionary on every
+        // access, so read each once here instead of once per local record in the loops below.
+        let remoteTodoUpdatedAt = remote.todoUpdatedAtByCanonical
+        let remoteFloaterUpdatedAt = remote.floaterUpdatedAtByCanonical
+        let remoteListUpdatedAt = remote.listUpdatedAtByID
+        let remoteFloaterListUpdatedAt = remote.floaterListUpdatedAtByID
+
+        for todo in localState.todos
+            where !todo.canonicalId.hasPrefix(LOCAL_TODO_PREFIX) &&
+                !pendingTodoTargets.contains(todo.canonicalId) {
+            guard let remoteUpdatedAt = remoteTodoUpdatedAt[todo.canonicalId], todo.updatedAtEpochMs > remoteUpdatedAt else {
+                continue
+            }
+            let mutation = PendingMutationRecord(
+                mutationId: UUID().uuidString,
+                kind: .updateTodo,
+                targetId: todo.canonicalId,
+                timestampEpochMs: todo.updatedAtEpochMs,
+                title: todo.title,
+                description: todo.description,
+                priority: todo.priority,
+                dueEpochMs: todo.dueEpochMs,
+                rrule: todo.rrule,
+                listId: todo.listId,
+                pinned: todo.pinned,
+                completed: todo.completed,
+                instanceDateEpochMs: todo.instanceDateEpochMs,
+                name: nil,
+                color: nil,
+                iconKey: nil
+            )
+            if !existingKeys.contains(mutationKey(for: mutation)) {
+                generated.append(mutation)
+            }
+        }
+
+        for floater in localState.floaters
+            where !floater.canonicalId.hasPrefix(LOCAL_FLOATER_PREFIX) &&
+                !pendingFloaterTargets.contains(floater.canonicalId) {
+            guard let remoteUpdatedAt = remoteFloaterUpdatedAt[floater.canonicalId], floater.updatedAtEpochMs > remoteUpdatedAt else {
+                continue
+            }
+            let mutation = PendingMutationRecord(
+                mutationId: UUID().uuidString,
+                kind: .updateFloater,
+                targetId: floater.canonicalId,
+                timestampEpochMs: floater.updatedAtEpochMs,
+                title: floater.title,
+                description: floater.description,
+                priority: floater.priority,
+                dueEpochMs: nil,
+                rrule: nil,
+                listId: floater.listId,
+                pinned: floater.pinned,
+                completed: floater.completed,
+                instanceDateEpochMs: nil,
+                name: nil,
+                color: nil,
+                iconKey: nil
+            )
+            if !existingKeys.contains(mutationKey(for: mutation)) {
+                generated.append(mutation)
+            }
+        }
+
+        for list in localState.lists where !list.id.hasPrefix(LOCAL_LIST_PREFIX) && !pendingListTargets.contains(list.id) {
+            guard let remoteUpdatedAt = remoteListUpdatedAt[list.id], list.updatedAtEpochMs > remoteUpdatedAt else {
+                continue
+            }
+            let mutation = PendingMutationRecord(
+                mutationId: UUID().uuidString,
+                kind: .updateList,
+                targetId: list.id,
+                timestampEpochMs: list.updatedAtEpochMs,
+                title: nil,
+                description: nil,
+                priority: nil,
+                dueEpochMs: nil,
+                rrule: nil,
+                listId: nil,
+                pinned: nil,
+                completed: nil,
+                instanceDateEpochMs: nil,
+                name: list.name,
+                color: list.color,
+                iconKey: list.iconKey,
+                defaultPriority: list.defaultPriority,
+                defaultPriorityChanged: true
+            )
+            if !existingKeys.contains(mutationKey(for: mutation)) {
+                generated.append(mutation)
+            }
+        }
+
+        for list in localState.floaterLists where !list.id.hasPrefix(LOCAL_FLOATER_LIST_PREFIX) && !pendingFloaterListTargets.contains(list.id) {
+            guard let remoteUpdatedAt = remoteFloaterListUpdatedAt[list.id], list.updatedAtEpochMs > remoteUpdatedAt else {
+                continue
+            }
+            let mutation = PendingMutationRecord(
+                mutationId: UUID().uuidString,
+                kind: .updateFloaterList,
+                targetId: list.id,
+                timestampEpochMs: list.updatedAtEpochMs,
+                title: nil,
+                description: nil,
+                priority: nil,
+                dueEpochMs: nil,
+                rrule: nil,
+                listId: nil,
+                pinned: nil,
+                completed: nil,
+                instanceDateEpochMs: nil,
+                name: list.name,
+                color: list.color,
+                iconKey: list.iconKey,
+                reusable: list.reusable,
+                defaultPriority: list.defaultPriority,
+                defaultPriorityChanged: true
+            )
+            if !existingKeys.contains(mutationKey(for: mutation)) {
+                generated.append(mutation)
+            }
+        }
+
+        return generated
+    }
+
+    /// Replays the queue and reports whether it stopped on a 429, so the caller can
+    /// keep the rest of the cycle out of the same closed rate-limit window.
+    private func applyPendingMutations(
+        initialState: OfflineSyncState,
+        remoteSnapshot: RemoteSnapshot
+    ) async -> (state: OfflineSyncState, stoppedOnRateLimit: Bool) {
+        var state = initialState
+        var resolvedTodoIDs: [String: String] = [:]
+        var resolvedFloaterIDs: [String: String] = [:]
+        var resolvedListIDs: [String: String] = [:]
+        var resolvedFloaterListIDs: [String: String] = [:]
+        let orderedMutations = initialState.pendingMutations.sorted { $0.timestampEpochMs < $1.timestampEpochMs }
+
+        let replay = await runPendingMutationReplay(orderedMutations) { _, mutation in
+            try await self.applyPendingMutation(
+                mutation,
+                state: &state,
+                remoteSnapshot: remoteSnapshot,
+                resolvedTodoIDs: &resolvedTodoIDs,
+                resolvedFloaterIDs: &resolvedFloaterIDs,
+                resolvedListIDs: &resolvedListIDs,
+                resolvedFloaterListIDs: &resolvedFloaterListIDs
+            )
+        }
+
+        state.pendingMutations = dedupePendingMutations(replay.remaining)
+        if replay.stoppedOnRateLimit {
+            // The real post-replay queue length, i.e. what is about to be persisted —
+            // the failed mutation and everything after it PLUS anything the earlier
+            // part of the pass already kept (staged markers, recoverable failures).
+            TdayTelemetry.addBreadcrumb(
+                "sync.replay_rate_limited",
+                data: ["remainingMutationCount": state.pendingMutations.count]
+            )
+        }
+        return (state, replay.stoppedOnRateLimit)
+    }
+
+    private func applyPendingMutation(
+        _ mutation: PendingMutationRecord,
+        state: inout OfflineSyncState,
+        remoteSnapshot: RemoteSnapshot,
+        resolvedTodoIDs: inout [String: String],
+        resolvedFloaterIDs: inout [String: String],
+        resolvedListIDs: inout [String: String],
+        resolvedFloaterListIDs: inout [String: String]
+    ) async throws {
+        let targetID = resolveTargetID(
+            mutation.targetId,
+            todoMap: resolvedTodoIDs,
+            floaterMap: resolvedFloaterIDs,
+            listMap: resolvedListIDs.merging(resolvedFloaterListIDs) { current, _ in current }
+        )
+        switch mutation.kind {
+        case .createList:
+            guard let localListID = mutation.targetId else { return }
+            if !localListID.hasPrefix(LOCAL_LIST_PREFIX) {
+                return
+            }
+            let response = try await api.createList(
+                payload: CreateListRequest(name: mutation.name ?? "Untitled", color: mutation.color, iconKey: mutation.iconKey, defaultPriority: mutation.defaultPriority)
+            )
+            guard let createdList = response.list else { return }
+            resolvedListIDs[localListID] = createdList.id
+            state = replaceLocalListID(state, localListID: localListID, serverListID: createdList.id)
+
+        case .updateList:
+            guard let targetID else { return }
+            let remoteUpdatedAt = remoteSnapshot.listUpdatedAtByID[targetID] ?? 0
+            guard remoteUpdatedAt <= mutation.timestampEpochMs else { return }
+            _ = try await api.patchListByBody(
+                payload: UpdateListRequest(
+                    id: targetID,
+                    name: mutation.name,
+                    color: mutation.color,
+                    iconKey: mutation.iconKey,
+                    defaultPriority: mutation.defaultPriority,
+                    defaultPriorityChanged: mutation.defaultPriorityChanged
+                )
+            )
+
+        case .deleteList:
+            guard let targetID else { return }
+            if targetID.hasPrefix(LOCAL_LIST_PREFIX) {
+                return
+            }
+            _ = try await api.deleteListByBody(payload: DeleteListRequest(id: targetID))
+
+        case .createFloaterList:
+            guard let localListID = mutation.targetId else { return }
+            if !localListID.hasPrefix(LOCAL_FLOATER_LIST_PREFIX) {
+                return
+            }
+            let response = try await api.createFloaterList(
+                payload: CreateFloaterListRequest(name: mutation.name ?? "Untitled", color: mutation.color, iconKey: mutation.iconKey, reusable: mutation.reusable ?? false, defaultPriority: mutation.defaultPriority)
+            )
+            guard let createdList = response.list else { return }
+            resolvedFloaterListIDs[localListID] = createdList.id
+            state = replaceLocalFloaterListID(state, localListID: localListID, serverListID: createdList.id)
+
+        case .updateFloaterList:
+            guard let targetID else { return }
+            let remoteUpdatedAt = remoteSnapshot.floaterListUpdatedAtByID[targetID] ?? 0
+            guard remoteUpdatedAt <= mutation.timestampEpochMs else { return }
+            _ = try await api.patchFloaterListByBody(
+                payload: UpdateFloaterListRequest(
+                    id: targetID,
+                    name: mutation.name,
+                    color: mutation.color,
+                    iconKey: mutation.iconKey,
+                    reusable: mutation.reusable,
+                    defaultPriority: mutation.defaultPriority,
+                    defaultPriorityChanged: mutation.defaultPriorityChanged
+                )
+            )
+
+        case .deleteFloaterList:
+            guard let targetID else { return }
+            if targetID.hasPrefix(LOCAL_FLOATER_LIST_PREFIX) {
+                return
+            }
+            _ = try await api.deleteFloaterListByBody(payload: DeleteFloaterListRequest(id: targetID))
+
+        case .resetFloaterList:
+            guard let targetID else { return }
+            if targetID.hasPrefix(LOCAL_FLOATER_LIST_PREFIX) {
+                return
+            }
+            _ = try await api.resetFloaterList(id: targetID)
+
+        case .createTodo:
+            guard let localTodoID = mutation.targetId else { return }
+            if !localTodoID.hasPrefix(LOCAL_TODO_PREFIX) {
+                return
+            }
+            guard let dueEpochMs = mutation.dueEpochMs else { return }
+            let resolvedListID = mutation.listId.flatMap { resolvedListIDs[$0] ?? $0 }
+            let response = try await api.createTodo(
+                payload: CreateTodoRequest(
+                    title: mutation.title ?? "Untitled",
+                    description: mutation.description,
+                    priority: mutation.priority ?? "Low",
+                    due: Date(epochMilliseconds: dueEpochMs).ISO8601Format(),
+                    rrule: mutation.rrule,
+                    listID: resolvedListID
+                )
+            )
+            guard let createdTodo = response.todo else { return }
+            resolvedTodoIDs[localTodoID] = createdTodo.id
+            state = replaceLocalTodoID(state, localTodoID: localTodoID, serverTodoID: createdTodo.id)
+
+        case .createFloater:
+            guard let localFloaterID = mutation.targetId else { return }
+            if !localFloaterID.hasPrefix(LOCAL_FLOATER_PREFIX) {
+                return
+            }
+            let resolvedListID = mutation.listId.flatMap { resolvedFloaterListIDs[$0] ?? $0 }
+            let response = try await api.createFloater(
+                payload: CreateFloaterRequest(
+                    title: mutation.title ?? "Untitled",
+                    description: mutation.description,
+                    priority: mutation.priority ?? "Low",
+                    listID: resolvedListID
+                )
+            )
+            guard let createdFloater = response.floater else { return }
+            resolvedFloaterIDs[localFloaterID] = createdFloater.id
+            state = replaceLocalFloaterID(state, localFloaterID: localFloaterID, serverFloaterID: createdFloater.id)
+
+        case .updateTodo:
+            guard let targetID else { return }
+            let remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetID] ?? 0
+            guard remoteUpdatedAt <= mutation.timestampEpochMs else { return }
+            let resolvedListID = mutation.listId.flatMap { resolvedListIDs[$0] ?? $0 }
+            let isDueOnlyMove = mutation.dueEpochMs != nil &&
+                mutation.title == nil &&
+                mutation.description == nil &&
+                mutation.priority == nil &&
+                mutation.pinned == nil &&
+                mutation.completed == nil &&
+                mutation.rrule == nil &&
+                mutation.listId == nil
+            if let instanceDateEpochMs = mutation.instanceDateEpochMs {
+                _ = try await api.patchTodoInstanceByBody(
+                    payload: TodoInstancePatchRequest(
+                        todoId: targetID,
+                        instanceDate: Date(epochMilliseconds: instanceDateEpochMs).ISO8601Format(),
+                        title: mutation.title,
+                        description: mutation.description,
+                        priority: mutation.priority,
+                        due: mutation.dueEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() }
+                    )
+                )
+            } else {
+                _ = try await api.patchTodoByBody(
+                    payload: UpdateTodoRequest(
+                        id: targetID,
+                        title: mutation.title,
+                        description: mutation.description,
+                        pinned: mutation.pinned,
+                        priority: mutation.priority,
+                        completed: mutation.completed,
+                        due: mutation.dueEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() },
+                        rrule: isDueOnlyMove ? nil : mutation.rrule,
+                        listID: isDueOnlyMove ? nil : resolvedListID,
+                        dateChanged: true,
+                        rruleChanged: isDueOnlyMove ? nil : true,
+                        instanceDate: nil
+                    )
+                )
+            }
+
+        case .updateFloater:
+            guard let targetID else { return }
+            let remoteUpdatedAt = remoteSnapshot.floaterUpdatedAtByCanonical[targetID] ?? 0
+            guard remoteUpdatedAt <= mutation.timestampEpochMs else { return }
+            let resolvedListID = mutation.listId.flatMap { resolvedFloaterListIDs[$0] ?? $0 }
+            _ = try await api.patchFloaterByBody(
+                payload: UpdateFloaterRequest(
+                    id: targetID,
+                    title: mutation.title,
+                    description: mutation.description,
+                    pinned: mutation.pinned,
+                    priority: mutation.priority,
+                    completed: mutation.completed,
+                    listID: resolvedListID
+                )
+            )
+
+        case .deleteTodo:
+            guard let targetID else { return }
+            if let instanceDateEpochMs = mutation.instanceDateEpochMs {
+                _ = try await api.deleteTodoInstanceByBody(
+                    payload: TodoInstanceDeleteRequest(
+                        todoId: targetID,
+                        instanceDate: Date(epochMilliseconds: instanceDateEpochMs).ISO8601Format()
+                    )
+                )
+            } else {
+                _ = try await api.deleteTodoByBody(payload: DeleteTodoRequest(id: targetID))
+            }
+
+        case .deleteFloater:
+            guard let targetID else { return }
+            if targetID.hasPrefix(LOCAL_FLOATER_PREFIX) {
+                return
+            }
+            _ = try await api.deleteFloaterByBody(payload: DeleteFloaterRequest(id: targetID))
+
+        case .setPinned:
+            guard let targetID else { return }
+            if targetID.hasPrefix(LOCAL_FLOATER_PREFIX) || remoteSnapshot.floaterUpdatedAtByCanonical[targetID] != nil {
+                _ = try await api.patchFloaterByBody(
+                    payload: UpdateFloaterRequest(id: targetID, title: nil, description: nil, pinned: mutation.pinned, priority: nil, completed: nil, listID: nil)
+                )
+            } else {
+                _ = try await api.patchTodoByBody(
+                    payload: UpdateTodoRequest(
+                        id: targetID,
+                        title: nil,
+                        description: nil,
+                        pinned: mutation.pinned,
+                        priority: nil,
+                        completed: nil,
+                        due: nil,
+                        rrule: nil,
+                        listID: nil,
+                        dateChanged: nil,
+                        rruleChanged: nil,
+                        instanceDate: mutation.instanceDateEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() }
+                    )
+                )
+            }
+
+        case .setPriority:
+            guard let targetID else { return }
+            if targetID.hasPrefix(LOCAL_FLOATER_PREFIX) || remoteSnapshot.floaterUpdatedAtByCanonical[targetID] != nil {
+                _ = try await api.prioritizeFloaterByBody(
+                    payload: FloaterPrioritizeRequest(id: targetID, priority: mutation.priority ?? "Low")
+                )
+            } else {
+                _ = try await api.prioritizeTodoByBody(
+                    payload: TodoPrioritizeRequest(
+                        id: targetID,
+                        priority: mutation.priority ?? "Low",
+                        instanceDate: mutation.instanceDateEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() }
+                    )
+                )
+            }
+
+        case .completeTodo, .completeTodoInstance:
+            guard let targetID else { return }
+            _ = try await api.completeTodoByBody(
+                payload: TodoCompleteRequest(
+                    id: targetID,
+                    instanceDate: mutation.instanceDateEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() }
+                )
+            )
+
+        case .uncompleteTodo:
+            guard let targetID else { return }
+            _ = try await api.uncompleteTodoByBody(
+                payload: TodoUncompleteRequest(
+                    id: targetID,
+                    instanceDate: mutation.instanceDateEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() }
+                )
+            )
+
+        case .completeFloater:
+            guard let targetID else { return }
+            _ = try await api.completeFloaterByBody(payload: FloaterCompleteRequest(id: targetID))
+
+        case .uncompleteFloater:
+            guard let targetID else { return }
+            _ = try await api.uncompleteFloaterByBody(payload: FloaterUncompleteRequest(id: targetID))
+
+        case .promoteFloater:
+            guard let targetID else { return }
+            // A floater that never reached the server has nothing to promote yet;
+            // its CREATE_FLOATER replays first and resolveTargetID remaps us.
+            if targetID.hasPrefix(LOCAL_FLOATER_PREFIX) { return }
+            guard let dueEpochMs = mutation.dueEpochMs else { return }
+            let response = try await api.promoteFloater(
+                id: targetID,
+                payload: PromoteFloaterRequest(
+                    due: Date(epochMilliseconds: dueEpochMs).ISO8601Format(),
+                    rrule: mutation.rrule
+                )
+            )
+            // Remap the optimistic local todo (minted at enqueue time, carried
+            // in `name`) to the server row — CREATE_TODO-style reconciliation.
+            if let promotedTodo = response.todo,
+               let localTodoID = mutation.name,
+               localTodoID.hasPrefix(LOCAL_TODO_PREFIX) {
+                resolvedTodoIDs[localTodoID] = promotedTodo.id
+                state = replaceLocalTodoID(state, localTodoID: localTodoID, serverTodoID: promotedTodo.id)
+            }
+
+        case .demoteTodo:
+            guard let targetID else { return }
+            if targetID.hasPrefix(LOCAL_TODO_PREFIX) { return }
+            let response = try await api.demoteTodo(id: targetID)
+            if let demotedFloater = response.floater,
+               let localFloaterID = mutation.name,
+               localFloaterID.hasPrefix(LOCAL_FLOATER_PREFIX) {
+                resolvedFloaterIDs[localFloaterID] = demotedFloater.id
+                state = replaceLocalFloaterID(state, localFloaterID: localFloaterID, serverFloaterID: demotedFloater.id)
+            }
+
+        case .createStep:
+            guard let targetID else { return }
+            // The parent todo must exist server-side before a step attaches.
+            if targetID.hasPrefix(LOCAL_TODO_PREFIX) { return }
+            let response = try await api.createTaskStep(
+                payload: CreateTaskStepRequest(todoId: targetID, title: mutation.title ?? "")
+            )
+            // Remap the optimistic local step id (carried in `name`) so a later
+            // TOGGLE/DELETE in this same batch resolves correctly.
+            if let createdStep = response.step,
+               let localStepID = mutation.name,
+               localStepID.hasPrefix(LOCAL_STEP_PREFIX) {
+                resolvedTodoIDs[localStepID] = createdStep.id
+            }
+
+        case .toggleStep:
+            guard let targetID else { return }
+            if targetID.hasPrefix(LOCAL_STEP_PREFIX) { return }
+            _ = try await api.toggleTaskStep(
+                payload: ToggleTaskStepRequest(id: targetID, completed: mutation.completed ?? false)
+            )
+
+        case .deleteStep:
+            guard let targetID else { return }
+            // A step that never synced has nothing to delete server-side.
+            if targetID.hasPrefix(LOCAL_STEP_PREFIX) { return }
+            _ = try await api.deleteTaskStep(payload: DeleteTaskStepRequest(id: targetID))
+
+        case .reorderSteps:
+            guard let targetID else { return }
+            if targetID.hasPrefix(LOCAL_TODO_PREFIX) { return }
+            let orderedIDs = (mutation.orderedIds ?? [])
+                .map { resolvedTodoIDs[$0] ?? $0 }
+                .filter { !$0.hasPrefix(LOCAL_STEP_PREFIX) }
+            if orderedIDs.isEmpty { return }
+            _ = try await api.reorderTaskSteps(
+                payload: ReorderTaskStepsRequest(todoId: targetID, orderedIds: orderedIDs)
+            )
+        }
+    }
+
+    private func replaceLocalTodoID(_ state: OfflineSyncState, localTodoID: String, serverTodoID: String) -> OfflineSyncState {
+        OfflineSyncState(
+            lastSuccessfulSyncEpochMs: state.lastSuccessfulSyncEpochMs,
+            lastSyncAttemptEpochMs: state.lastSyncAttemptEpochMs,
+            todos: state.todos.map { todo in
+                if todo.canonicalId == localTodoID || todo.id == localTodoID {
+                    return CachedTodoRecord(
+                        id: todo.instanceDateEpochMs == nil ? serverTodoID : todo.id,
+                        canonicalId: serverTodoID,
+                        title: todo.title,
+                        description: todo.description,
+                        priority: todo.priority,
+                        dueEpochMs: todo.dueEpochMs,
+                        rrule: todo.rrule,
+                        instanceDateEpochMs: todo.instanceDateEpochMs,
+                        pinned: todo.pinned,
+                        completed: todo.completed,
+                        listId: todo.listId,
+                        updatedAtEpochMs: todo.updatedAtEpochMs
+                    )
+                }
+                return todo
+            },
+            floaters: state.floaters,
+            completedItems: state.completedItems.map { item in
+                if item.originalTodoId == localTodoID {
+                    return CachedCompletedRecord(
+                        id: item.id,
+                        originalTodoId: serverTodoID,
+                        title: item.title,
+                        description: item.description,
+                        priority: item.priority,
+                        dueEpochMs: item.dueEpochMs,
+                        completedAtEpochMs: item.completedAtEpochMs,
+                        rrule: item.rrule,
+                        instanceDateEpochMs: item.instanceDateEpochMs,
+                        listId: item.listId,
+                        listName: item.listName,
+                        listColor: item.listColor
+                    )
+                }
+                return item
+            },
+            completedFloaters: state.completedFloaters,
+            lists: state.lists,
+            floaterLists: state.floaterLists,
+            pendingMutations: state.pendingMutations.map { mutation in
+                PendingMutationRecord(
+                    mutationId: mutation.mutationId,
+                    kind: mutation.kind,
+                    targetId: mutation.targetId == localTodoID ? serverTodoID : mutation.targetId,
+                    timestampEpochMs: mutation.timestampEpochMs,
+                    title: mutation.title,
+                    description: mutation.description,
+                    priority: mutation.priority,
+                    dueEpochMs: mutation.dueEpochMs,
+                    rrule: mutation.rrule,
+                    listId: mutation.listId,
+                    pinned: mutation.pinned,
+                    completed: mutation.completed,
+                    instanceDateEpochMs: mutation.instanceDateEpochMs,
+                    name: mutation.name,
+                    color: mutation.color,
+                    iconKey: mutation.iconKey
+                )
+            },
+            aiSummaryEnabled: state.aiSummaryEnabled
+        )
+    }
+
+    private func replaceLocalFloaterID(_ state: OfflineSyncState, localFloaterID: String, serverFloaterID: String) -> OfflineSyncState {
+        OfflineSyncState(
+            lastSuccessfulSyncEpochMs: state.lastSuccessfulSyncEpochMs,
+            lastSyncAttemptEpochMs: state.lastSyncAttemptEpochMs,
+            todos: state.todos,
+            floaters: state.floaters.map { floater in
+                if floater.canonicalId == localFloaterID || floater.id == localFloaterID {
+                    return CachedFloaterRecord(
+                        id: serverFloaterID,
+                        canonicalId: serverFloaterID,
+                        title: floater.title,
+                        description: floater.description,
+                        priority: floater.priority,
+                        pinned: floater.pinned,
+                        completed: floater.completed,
+                        listId: floater.listId,
+                        updatedAtEpochMs: floater.updatedAtEpochMs
+                    )
+                }
+                return floater
+            },
+            completedItems: state.completedItems,
+            completedFloaters: state.completedFloaters.map { item in
+                if item.originalFloaterId == localFloaterID {
+                    return CachedCompletedFloaterRecord(
+                        id: item.id,
+                        originalFloaterId: serverFloaterID,
+                        title: item.title,
+                        description: item.description,
+                        priority: item.priority,
+                        completedAtEpochMs: item.completedAtEpochMs,
+                        listId: item.listId,
+                        listName: item.listName,
+                        listColor: item.listColor
+                    )
+                }
+                return item
+            },
+            lists: state.lists,
+            floaterLists: state.floaterLists,
+            pendingMutations: state.pendingMutations.map { mutation in
+                PendingMutationRecord(
+                    mutationId: mutation.mutationId,
+                    kind: mutation.kind,
+                    targetId: mutation.targetId == localFloaterID ? serverFloaterID : mutation.targetId,
+                    timestampEpochMs: mutation.timestampEpochMs,
+                    title: mutation.title,
+                    description: mutation.description,
+                    priority: mutation.priority,
+                    dueEpochMs: mutation.dueEpochMs,
+                    rrule: mutation.rrule,
+                    listId: mutation.listId,
+                    pinned: mutation.pinned,
+                    completed: mutation.completed,
+                    instanceDateEpochMs: mutation.instanceDateEpochMs,
+                    name: mutation.name,
+                    color: mutation.color,
+                    iconKey: mutation.iconKey
+                )
+            },
+            aiSummaryEnabled: state.aiSummaryEnabled
+        )
+    }
+
+    private func replaceLocalListID(_ state: OfflineSyncState, localListID: String, serverListID: String) -> OfflineSyncState {
+        OfflineSyncState(
+            lastSuccessfulSyncEpochMs: state.lastSuccessfulSyncEpochMs,
+            lastSyncAttemptEpochMs: state.lastSyncAttemptEpochMs,
+            todos: state.todos.map { todo in
+                if todo.listId == localListID {
+                    return CachedTodoRecord(
+                        id: todo.id,
+                        canonicalId: todo.canonicalId,
+                        title: todo.title,
+                        description: todo.description,
+                        priority: todo.priority,
+                        dueEpochMs: todo.dueEpochMs,
+                        rrule: todo.rrule,
+                        instanceDateEpochMs: todo.instanceDateEpochMs,
+                        pinned: todo.pinned,
+                        completed: todo.completed,
+                        listId: serverListID,
+                        updatedAtEpochMs: todo.updatedAtEpochMs
+                    )
+                }
+                return todo
+            },
+            floaters: state.floaters,
+            completedItems: state.completedItems.map { completed in
+                guard completed.listId == localListID else {
+                    return completed
+                }
+                return CachedCompletedRecord(
+                    id: completed.id,
+                    originalTodoId: completed.originalTodoId,
+                    title: completed.title,
+                    description: completed.description,
+                    priority: completed.priority,
+                    dueEpochMs: completed.dueEpochMs,
+                    completedAtEpochMs: completed.completedAtEpochMs,
+                    rrule: completed.rrule,
+                    instanceDateEpochMs: completed.instanceDateEpochMs,
+                    listId: serverListID,
+                    listName: completed.listName,
+                    listColor: completed.listColor
+                )
+            },
+            completedFloaters: state.completedFloaters,
+            lists: state.lists.map { list in
+                if list.id == localListID {
+                    return CachedListRecord(
+                        id: serverListID,
+                        name: list.name,
+                        color: list.color,
+                        iconKey: list.iconKey,
+                        todoCount: list.todoCount,
+                        updatedAtEpochMs: list.updatedAtEpochMs,
+                        createdAtEpochMs: list.createdAtEpochMs,
+                        defaultPriority: list.defaultPriority
+                    )
+                }
+                return list
+            }.dedupedByID(),
+            floaterLists: state.floaterLists,
+            pendingMutations: state.pendingMutations.map { mutation in
+                PendingMutationRecord(
+                    mutationId: mutation.mutationId,
+                    kind: mutation.kind,
+                    targetId: mutation.targetId == localListID ? serverListID : mutation.targetId,
+                    timestampEpochMs: mutation.timestampEpochMs,
+                    title: mutation.title,
+                    description: mutation.description,
+                    priority: mutation.priority,
+                    dueEpochMs: mutation.dueEpochMs,
+                    rrule: mutation.rrule,
+                    listId: mutation.listId == localListID ? serverListID : mutation.listId,
+                    pinned: mutation.pinned,
+                    completed: mutation.completed,
+                    instanceDateEpochMs: mutation.instanceDateEpochMs,
+                    name: mutation.name,
+                    color: mutation.color,
+                    iconKey: mutation.iconKey,
+                    defaultPriority: mutation.defaultPriority,
+                    defaultPriorityChanged: mutation.defaultPriorityChanged
+                )
+            },
+            aiSummaryEnabled: state.aiSummaryEnabled
+        )
+    }
+
+    private func replaceLocalFloaterListID(_ state: OfflineSyncState, localListID: String, serverListID: String) -> OfflineSyncState {
+        OfflineSyncState(
+            lastSuccessfulSyncEpochMs: state.lastSuccessfulSyncEpochMs,
+            lastSyncAttemptEpochMs: state.lastSyncAttemptEpochMs,
+            todos: state.todos,
+            floaters: state.floaters.map { floater in
+                guard floater.listId == localListID else {
+                    return floater
+                }
+                return CachedFloaterRecord(
+                    id: floater.id,
+                    canonicalId: floater.canonicalId,
+                    title: floater.title,
+                    description: floater.description,
+                    priority: floater.priority,
+                    pinned: floater.pinned,
+                    completed: floater.completed,
+                    listId: serverListID,
+                    updatedAtEpochMs: floater.updatedAtEpochMs
+                )
+            },
+            completedItems: state.completedItems,
+            completedFloaters: state.completedFloaters.map { completed in
+                guard completed.listId == localListID else {
+                    return completed
+                }
+                return CachedCompletedFloaterRecord(
+                    id: completed.id,
+                    originalFloaterId: completed.originalFloaterId,
+                    title: completed.title,
+                    description: completed.description,
+                    priority: completed.priority,
+                    completedAtEpochMs: completed.completedAtEpochMs,
+                    listId: serverListID,
+                    listName: completed.listName,
+                    listColor: completed.listColor
+                )
+            },
+            lists: state.lists,
+            floaterLists: state.floaterLists.map { list in
+                guard list.id == localListID else {
+                    return list
+                }
+                return CachedFloaterListRecord(
+                    id: serverListID,
+                    name: list.name,
+                    color: list.color,
+                    iconKey: list.iconKey,
+                    todoCount: list.todoCount,
+                    updatedAtEpochMs: list.updatedAtEpochMs,
+                    createdAtEpochMs: list.createdAtEpochMs,
+                    reusable: list.reusable,
+                    defaultPriority: list.defaultPriority
+                )
+            }.dedupedByID(),
+            pendingMutations: state.pendingMutations.map { mutation in
+                PendingMutationRecord(
+                    mutationId: mutation.mutationId,
+                    kind: mutation.kind,
+                    targetId: mutation.targetId == localListID ? serverListID : mutation.targetId,
+                    timestampEpochMs: mutation.timestampEpochMs,
+                    title: mutation.title,
+                    description: mutation.description,
+                    priority: mutation.priority,
+                    dueEpochMs: mutation.dueEpochMs,
+                    rrule: mutation.rrule,
+                    listId: mutation.listId == localListID ? serverListID : mutation.listId,
+                    pinned: mutation.pinned,
+                    completed: mutation.completed,
+                    instanceDateEpochMs: mutation.instanceDateEpochMs,
+                    name: mutation.name,
+                    color: mutation.color,
+                    iconKey: mutation.iconKey,
+                    defaultPriority: mutation.defaultPriority,
+                    defaultPriorityChanged: mutation.defaultPriorityChanged
+                )
+            },
+            aiSummaryEnabled: state.aiSummaryEnabled
+        )
+    }
+
+    private func resolveTargetID(_ original: String?, todoMap: [String: String], floaterMap: [String: String], listMap: [String: String]) -> String? {
+        guard let original else {
+            return nil
+        }
+        if let todoID = todoMap[original] {
+            return todoID
+        }
+        if let floaterID = floaterMap[original] {
+            return floaterID
+        }
+        if let listID = listMap[original] {
+            return listID
+        }
+        return original
+    }
+
+    private func dedupePendingMutations(_ mutations: [PendingMutationRecord]) -> [PendingMutationRecord] {
+        var seen = Set<String>()
+        var deduped: [PendingMutationRecord] = []
+        for mutation in mutations.sorted(by: { $0.timestampEpochMs < $1.timestampEpochMs }) {
+            let key = mutationKey(for: mutation)
+            if seen.contains(key) {
+                continue
+            }
+            seen.insert(key)
+            deduped.append(mutation)
+        }
+        return deduped
+    }
+
+    private func mutationKey(for mutation: PendingMutationRecord) -> String {
+        [
+            mutation.kind.rawValue,
+            mutation.targetId ?? "",
+            String(mutation.instanceDateEpochMs ?? -1),
+            mutation.listId ?? "",
+            mutation.name ?? "",
+            mutation.title ?? "",
+        ].joined(separator: "::")
+    }
+}
+
+private extension MutationKind {
+    var affectsTodo: Bool {
+        switch self {
+        case .createTodo,
+             .updateTodo,
+             .deleteTodo,
+             .setPinned,
+             .setPriority,
+             .completeTodo,
+             .completeTodoInstance,
+             .uncompleteTodo,
+             // Consumes a todo (its optimistic floater is local-prefixed and
+             // therefore already merge-protected).
+             .demoteTodo:
+            return true
+        case .createList,
+             .updateList,
+             .deleteList,
+             .createFloaterList,
+             .updateFloaterList,
+             .deleteFloaterList,
+             .resetFloaterList,
+             .createFloater,
+             .updateFloater,
+             .deleteFloater,
+             .completeFloater,
+             .uncompleteFloater,
+             .promoteFloater,
+             // Steps live on their own table, not the todo row.
+             .createStep,
+             .toggleStep,
+             .deleteStep,
+             .reorderSteps:
+            return false
+        }
+    }
+
+    var affectsFloater: Bool {
+        switch self {
+        case .createFloater,
+             .updateFloater,
+             .deleteFloater,
+             .completeFloater,
+             .uncompleteFloater,
+             // Un-completes every floater in the list.
+             .resetFloaterList,
+             // Consumes a floater (its optimistic todo is local-prefixed and
+             // therefore already merge-protected).
+             .promoteFloater:
+            return true
+        case .createList,
+             .updateList,
+             .deleteList,
+             .createFloaterList,
+             .updateFloaterList,
+             .deleteFloaterList,
+             .createTodo,
+             .updateTodo,
+             .deleteTodo,
+             .setPinned,
+             .setPriority,
+             .completeTodo,
+             .completeTodoInstance,
+             .uncompleteTodo,
+             .demoteTodo,
+             .createStep,
+             .toggleStep,
+             .deleteStep,
+             .reorderSteps:
+            return false
+        }
+    }
+}

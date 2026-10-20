@@ -1,0 +1,1630 @@
+package com.ohmz.tday.compose.feature.todos
+
+import android.content.Context
+import android.os.SystemClock
+import android.util.Log
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.data.cache.FirstAnswerSignal
+import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.list.FloaterListRepository
+import com.ohmz.tday.compose.core.data.list.ListRepository
+import com.ohmz.tday.compose.core.data.settings.SettingsRepository
+import com.ohmz.tday.compose.core.data.sync.SyncManager
+import com.ohmz.tday.compose.core.data.todo.BulkTaskRepository
+import com.ohmz.tday.compose.core.data.todo.TodoRepository
+import com.ohmz.tday.compose.core.model.CreateTaskPayload
+import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.TaskRescheduleScope
+import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.core.model.TodoListMode
+import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
+import com.ohmz.tday.compose.core.model.movedDuePreservingTime
+import com.ohmz.tday.compose.core.model.movedDueToTimeOfDay
+import com.ohmz.tday.compose.core.model.repositoryTargetForReschedule
+import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
+import com.ohmz.tday.compose.core.observability.TdayTelemetry
+import com.ohmz.tday.compose.core.ui.SnackbarManager
+import com.ohmz.tday.compose.core.ui.UndoableDeleteCoordinator
+import com.ohmz.tday.compose.core.ui.userFacingMessage
+import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import java.time.LocalDate
+import javax.inject.Inject
+
+data class TodoListUiState(
+    val isLoading: Boolean = false,
+    val title: String = "",
+    val mode: TodoListMode = TodoListMode.TODAY,
+    val listId: String? = null,
+    val hasHydratedSnapshot: Boolean = false,
+    // "Has this install ever had an answer from its workspace at all", the
+    // half of the first-load/refresh distinction that [hasHydratedSnapshot]
+    // cannot supply on its own. A fresh install's cache read lands
+    // immediately and lands EMPTY, so `hasHydratedSnapshot` alone would let
+    // the screen say "no tasks" while the very first sync is still in
+    // flight -- the worse of the two bugs, and the obvious way to overshoot
+    // the one this was added for. `isLocalMode || lastSuccessfulSync > 0`;
+    // see [FirstAnswerSignal] for why the local-mode half is not optional.
+    val firstAnswerLanded: Boolean = false,
+    val lists: List<ListSummary> = emptyList(),
+    val items: List<TodoItem> = emptyList(),
+    // Today mode only: overdue tasks tucked into the collapsible "Earlier"
+    // section. Deliberately NOT folded into [items] -- [items] stays exactly
+    // "today, pending" so every existing reader (search, share-as-text,
+    // select-all, the empty-state/celebration gate) keeps its current
+    // meaning. See TodoListScreen's `buildTodaySections`/`celebrateEmptyState`
+    // for how this is consumed.
+    val earlierItems: List<TodoItem> = emptyList(),
+    // Feeds the Day Done state: completed-today count from the local cache,
+    // bumped optimistically on complete so the payoff shows immediately.
+    val completedTodayCount: Int = 0,
+    // Remote sibling of the screen's own tap-time completion signal: when a
+    // cache-version bump this ViewModel did not itself cause last emptied the
+    // viewed list. See `hydrateFromExternalCacheChange` for how it is set.
+    val remoteEmptiedAtMs: Long = 0L,
+    // "A pending row arrived on this screen" -- NOT "an undo happened". An undo
+    // of a completion is only the commonest writer of it; a task created while
+    // the paper is still in the air, and a collaborator's task landing through
+    // [OfflineCacheManager], write it too, because all three make the same
+    // sentence false. A celebration says "this scope is finished", and it has
+    // to end the moment that stops being true rather than only when the
+    // four-second window runs out.
+    //
+    // Monotonic (`SystemClock.uptimeMillis`), never cleared, and compared
+    // against the two OPENING stamps rather than mutating them -- see
+    // `TodoListScreen.shouldCelebrateEmptyState`. A completion landing after a
+    // cancel re-opens the window for free by simply being the newer stamp,
+    // which is an ordering a unit test can state.
+    //
+    // Counted across ALL buckets, Earlier included, and that is the whole
+    // point: the bug this exists for is an undone OVERDUE task, which arrives
+    // back into a scope whose own emptiness predicate deliberately excludes
+    // Earlier and therefore does not move at all. Count, not emptiness.
+    val celebrationCancelledAtMs: Long = 0L,
+    val errorMessage: String? = null,
+    val aiSummaryEnabled: Boolean = true,
+    val aiSummaryConfigured: Boolean = false,
+    val summaryText: String? = null,
+    val summarySource: String? = null,
+    val summaryError: String? = null,
+    val summaryConnectivityError: Boolean = false,
+    val isSummarizing: Boolean = false,
+)
+
+/**
+ * "Did a pending row land on this screen", answered by counting rather than by
+ * looking at whether the screen is empty.
+ *
+ * The one decision behind [TodoListUiState.celebrationCancelledAtMs], pulled out
+ * as a pure function for the same reason `TodoListScreen.shouldCelebrateEmptyState`
+ * is one: it is a rule about a transition, nothing here can be proven by running
+ * the app in this environment, and the shape it must NOT have is easier to write by
+ * accident than the shape it must.
+ *
+ * That shape is the emptiness mirror -- "this screen was non-empty and is empty
+ * now" read backwards. It is the obvious implementation, it passes a hand test on
+ * the plain path, and it misses the bug this exists for outright. An undone
+ * overdue task comes back into the Earlier bucket, which every client's
+ * "is this scope finished" predicate excludes on purpose (finishing today's work
+ * while overdue tasks wait still earns the payoff), so on that path the screen is
+ * non-empty on BOTH sides of the arrival by the count this function uses and
+ * empty on both sides by the predicate the celebration uses. Nothing transitions.
+ * Only the count moves, and only because [previousEarlierItems] is in it.
+ *
+ * Deliberately not interested in WHICH row arrived or why. An undo, a
+ * collaborator, a sync and the user's own new task are one event here, because
+ * all four make "this scope is finished" false; a cancel can only ever end a
+ * burst early and never start one, so a count rise that turns out to be a stale
+ * refetch settling costs a celebration a second or two of its four and nothing
+ * else.
+ */
+internal fun pendingRowArrived(
+    previousItems: Int,
+    previousEarlierItems: Int,
+    nextItems: Int,
+    nextEarlierItems: Int,
+): Boolean = nextItems + nextEarlierItems > previousItems + previousEarlierItems
+
+private data class HydrateSnapshot(
+    val todos: List<TodoItem>,
+    val earlierTodos: List<TodoItem>,
+    val lists: List<ListSummary>,
+    val aiSummaryEnabled: Boolean,
+    val aiSummaryConfigured: Boolean,
+)
+
+@HiltViewModel
+class TodoListViewModel @Inject constructor(
+    private val todoRepository: TodoRepository,
+    private val bulkTaskRepository: BulkTaskRepository,
+    private val listRepository: ListRepository,
+    private val floaterListRepository: FloaterListRepository,
+    private val settingsRepository: SettingsRepository,
+    private val syncManager: SyncManager,
+    private val cacheManager: OfflineCacheManager,
+    private val firstAnswerSignal: FirstAnswerSignal,
+    private val reminderScheduler: TaskReminderScheduler,
+    private val snackbarManager: SnackbarManager,
+    private val undoableDeleteCoordinator: UndoableDeleteCoordinator,
+    @ApplicationContext private val appContext: Context,
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(
+        TodoListUiState(title = appContext.getString(R.string.todos_title_tasks)),
+    )
+    val uiState: StateFlow<TodoListUiState> = _uiState.asStateFlow()
+    private var hasLoadedMode = false
+
+    init {
+        observeCacheChanges()
+        observeFirstAnswer()
+    }
+
+    /**
+     * The only path by which [TodoListUiState.firstAnswerLanded] can turn true
+     * without anything else on this screen moving, and the case that makes it
+     * necessary is the exact one the flag exists for: a fresh install signing
+     * in to an EMPTY account. That first sync writes a sync stamp and no tasks,
+     * so `cacheDataVersion` -- which only advances on `hasUiDataChanges` --
+     * never bumps, no hydrate is triggered, and without this collector the feed
+     * would sit in its row skeleton for as long as the app stayed open. The
+     * stamp is metadata, so the counter that carries it is the metadata one.
+     *
+     * Unguarded by `hasLoadedMode`, unlike [observeCacheChanges]: this writes a
+     * single boolean rather than re-reading the feed, and a screen that has not
+     * loaded a mode yet has nothing to be disturbed.
+     */
+    private fun observeFirstAnswer() {
+        viewModelScope.launch {
+            firstAnswerSignal.version.collect {
+                val landed = firstAnswerSignal.hasLanded()
+                _uiState.update { current ->
+                    if (current.firstAnswerLanded == landed) current
+                    else current.copy(firstAnswerLanded = landed)
+                }
+            }
+        }
+    }
+
+    private fun observeCacheChanges() {
+        viewModelScope.launch {
+            cacheManager.cacheDataVersion
+                .collect {
+                    if (!hasLoadedMode) return@collect
+                    hydrateFromExternalCacheChange(
+                        mode = _uiState.value.mode,
+                        listId = _uiState.value.listId,
+                    )
+                }
+        }
+    }
+
+    /**
+     * Reacts to a cache-version bump this ViewModel did not itself just cause
+     * — most often a remote sync (another device, or a collaborator on a
+     * shared list) landing through [OfflineCacheManager], but sometimes just
+     * this device's own write echoing back through the same version counter
+     * a local mutation already re-hydrated from directly.
+     *
+     * [OfflineCacheManager.cacheDataVersion] carries no reason a write
+     * happened — a version bump, not "task N was completed" — so unlike the
+     * screen's own tap-time `lastCompletionAtMs` (set only when its own
+     * complete action runs), this collector cannot tell a remote completion
+     * from a remote delete of the last task; it treats any observed
+     * non-empty-to-empty transition on this path as a payoff. That
+     * imprecision is scoped to exactly this collector — every local
+     * mutation's own direct `hydrateFromCache` call (delete included) never
+     * touches [TodoListUiState.remoteEmptiedAtMs], so a local delete of the
+     * last task still gets the plain arrival, exactly as today.
+     */
+    private fun hydrateFromExternalCacheChange(mode: TodoListMode, listId: String?) {
+        val before = _uiState.value
+        val wasNonEmpty = before.items.isNotEmpty()
+        hydrateFromCache(mode = mode, listId = listId)
+        val after = _uiState.value
+        if (wasNonEmpty && after.items.isEmpty()) {
+            _uiState.update { it.copy(remoteEmptiedAtMs = SystemClock.uptimeMillis()) }
+        }
+        // The backstop half of the cancel signal, and the only half a REMOTE
+        // arrival has: this path cannot tell an undo from an add from a sync,
+        // and under the rule above it does not need to -- both are arrivals and
+        // both end a celebration. Every local mutation that puts a row back
+        // stamps for itself (see `toggleComplete`/`completeSelected`'s `onUndo`)
+        // so the cancel is instant rather than waiting on a refetch; this
+        // catches everything else, including any future arrival path whose
+        // author forgets to.
+        //
+        // A COUNT and not an emptiness test, and not the obvious-looking
+        // "was empty, is not any more" mirror of the arming line above it. An
+        // undone overdue task arrives into `earlierItems` (Today) or into the
+        // Earlier bucket carved out of `items` (the other modes), and the
+        // screen's "is this scope finished" predicate excludes Earlier by
+        // design -- so on the exact case this was reported for, emptiness does
+        // not change on either side and a transition test sees nothing happen.
+        // Both buckets, counted.
+        if (pendingRowArrived(
+                previousItems = before.items.size,
+                previousEarlierItems = before.earlierItems.size,
+                nextItems = after.items.size,
+                nextEarlierItems = after.earlierItems.size,
+            )
+        ) {
+            _uiState.update {
+                it.copy(
+                    celebrationCancelledAtMs = SystemClock.uptimeMillis(),
+                    // Belt to the gate's braces. The `>=` comparison there
+                    // already loses the remote branch to a same-tick cancel, but
+                    // an armed `remoteEmptiedAtMs` left standing inside its own
+                    // four seconds is a loaded gun for the next reader, and the
+                    // two stamps should not disagree about what the list is.
+                    remoteEmptiedAtMs = 0L,
+                )
+            }
+        }
+    }
+
+    fun load(mode: TodoListMode, listId: String? = null, listName: String? = null) {
+        hasLoadedMode = true
+        TdayTelemetry.addBreadcrumb(
+            "todo_list.load",
+            data = modeTelemetryData(mode = mode, scopedList = !listId.isNullOrBlank()),
+        )
+        _uiState.update { current ->
+            val isSameTimeline = current.mode == mode && current.listId == listId
+            current.copy(
+                mode = mode,
+                listId = listId,
+                hasHydratedSnapshot = if (isSameTimeline) {
+                    current.hasHydratedSnapshot
+                } else {
+                    false
+                },
+                title = when (mode) {
+                    TodoListMode.TODAY -> appContext.getString(R.string.todos_title_today)
+                    TodoListMode.OVERDUE -> appContext.getString(R.string.todos_title_overdue)
+                    TodoListMode.SCHEDULED -> appContext.getString(R.string.todos_title_scheduled)
+                    TodoListMode.ALL -> appContext.getString(R.string.todos_title_all_tasks)
+                    TodoListMode.PRIORITY -> appContext.getString(R.string.todos_title_priority)
+                    TodoListMode.FLOATER -> listName ?: appContext.getString(R.string.todos_title_floater)
+                    TodoListMode.LIST -> listName ?: appContext.getString(R.string.todos_title_list)
+                },
+                aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot(),
+                aiSummaryConfigured = settingsRepository.aiSummaryConfiguredSnapshot(),
+                summaryText = null,
+                summarySource = null,
+                summaryError = null,
+                summaryConnectivityError = false,
+                isSummarizing = false,
+            )
+        }
+        hydrateFromCache(mode = mode, listId = listId)
+        refreshAiSummaryAvailability()
+    }
+
+    fun summarizeCurrentMode() {
+        val current = _uiState.value
+        if (current.isSummarizing) return
+        if (!current.aiSummaryEnabled) {
+            _uiState.update {
+                it.copy(summaryError = appContext.getString(R.string.todos_summary_admin_disabled))
+            }
+            return
+        }
+        _uiState.update {
+            it.copy(
+                isSummarizing = true,
+                summaryText = null,
+                summarySource = null,
+                summaryError = null,
+                summaryConnectivityError = false,
+            )
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                todoRepository.summarizeTodos(mode = current.mode, listId = current.listId)
+            }.onSuccess { response ->
+                _uiState.update {
+                    it.copy(
+                        isSummarizing = false,
+                        summaryText = response.summary,
+                        summarySource = response.source,
+                        summaryError = null,
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isSummarizing = false,
+                        summaryError = error.userFacingMessage(
+                            appContext,
+                            R.string.error_summarize_tasks_failed,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    fun dismissSummaryConnectivityError() {
+        _uiState.update { it.copy(summaryConnectivityError = false) }
+    }
+
+    fun refresh(userInitiated: Boolean = false) {
+        TdayTelemetry.addBreadcrumb(
+            "todo_list.refresh",
+            data = modeTelemetryData(),
+        )
+        refreshInternal(forceSync = true, showLoading = true, userInitiated = userInitiated)
+    }
+
+    /** Schedules a floater into a real Todo at the picked due instant. */
+    fun promoteFloater(todo: TodoItem, dueEpochMs: Long) {
+        val mode = _uiState.value.mode
+        val listId = _uiState.value.listId
+        TdayTelemetry.addBreadcrumb("task.promote", data = taskTelemetryData(mode = mode))
+        viewModelScope.launch {
+            runCatching { todoRepository.promoteFloater(todo, dueEpochMs) }
+                .onFailure {
+                    _uiState.update { current ->
+                        current.copy(errorMessage = appContext.getString(R.string.task_promote_failed))
+                    }
+                }
+            hydrateFromCache(mode, listId)
+        }
+    }
+
+    /** "Let it float": demotes an overdue todo into an Anytime floater. */
+    fun demoteTodo(todo: TodoItem) {
+        val mode = _uiState.value.mode
+        val listId = _uiState.value.listId
+        TdayTelemetry.addBreadcrumb("task.demote", data = taskTelemetryData(mode = mode))
+        viewModelScope.launch {
+            runCatching { todoRepository.demoteTodo(todo) }
+                .onFailure {
+                    _uiState.update { current ->
+                        current.copy(errorMessage = appContext.getString(R.string.task_float_failed))
+                    }
+                }
+            hydrateFromCache(mode, listId)
+        }
+    }
+
+    suspend fun parseTaskTitleNlp(
+        text: String,
+        referenceDueEpochMs: Long,
+    ): TodoTitleNlpResponse? {
+        return todoRepository.parseTodoTitleNlp(
+            text = text,
+            referenceDueEpochMs = referenceDueEpochMs,
+        )
+    }
+
+    private fun completedTodayCountFor(mode: TodoListMode): Int =
+        if (mode == TodoListMode.TODAY) {
+            runCatching { todoRepository.completedTodayCount() }.getOrDefault(0)
+        } else {
+            0
+        }
+
+    // Today's collapsible "Earlier" section. Sourced from the repository's
+    // day-boundary clip of the overdue set rather than the overdue set itself:
+    // `due < now` overlaps Today's own calendar-day `items` for anything due
+    // earlier today, which rendered the same task in its time-of-day bucket and
+    // under Earlier at the same time. See `todayEarlierItems`. The read is
+    // synchronous, so this is cheap to recompute alongside every `items` refresh
+    // below. Every other mode has no Earlier bucket of its own (ALL/PRIORITY/LIST
+    // carve theirs out of their own flat `items` instead), so this stays empty
+    // everywhere but Today.
+    private fun earlierItemsFor(mode: TodoListMode): List<TodoItem> =
+        if (mode == TodoListMode.TODAY) {
+            runCatching {
+                todoRepository.fetchTodayEarlierSnapshot()
+            }.getOrDefault(emptyList())
+        } else {
+            emptyList()
+        }
+
+    private fun hydrateFromCache(mode: TodoListMode, listId: String?) {
+        runCatching {
+            val todos = todoRepository.fetchTodosSnapshot(mode = mode, listId = listId)
+            val earlierTodos = earlierItemsFor(mode)
+            val lists = fetchListsSnapshotForMode(mode)
+            val aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot()
+            val aiSummaryConfigured = settingsRepository.aiSummaryConfiguredSnapshot()
+            HydrateSnapshot(todos, earlierTodos, lists, aiSummaryEnabled, aiSummaryConfigured)
+        }.onSuccess { snapshot ->
+            _uiState.update { current ->
+                current.copy(
+                    hasHydratedSnapshot = true,
+                    firstAnswerLanded = firstAnswerSignal.hasLanded(),
+                    lists = if (current.lists == snapshot.lists) current.lists else snapshot.lists,
+                    items = if (current.items == snapshot.todos) current.items else snapshot.todos,
+                    earlierItems = if (current.earlierItems == snapshot.earlierTodos) {
+                        current.earlierItems
+                    } else {
+                        snapshot.earlierTodos
+                    },
+                    completedTodayCount = completedTodayCountFor(mode),
+                    aiSummaryEnabled = snapshot.aiSummaryEnabled,
+                    aiSummaryConfigured = snapshot.aiSummaryConfigured,
+                    errorMessage = null,
+                )
+            }
+        }.onFailure {
+            // Both terms on the failure path, beside the `hasHydratedSnapshot`
+            // that has always been written here: a cache read that threw still
+            // ENDED, and the screen may not wait on it twice.
+            //
+            // `firstAnswerLanded` is read from the same store, so on a device
+            // whose Room read is genuinely broken it comes back false (Local Mode
+            // excepted -- that half is a prefs read) and the feed holds its row
+            // placeholder. Stated rather than discovered: that is a placeholder
+            // with nothing coming, and it is still the better of the two wrong
+            // answers available, because the alternative is telling someone they
+            // have no tasks on the strength of a read that failed.
+            _uiState.update { current ->
+                current.copy(
+                    hasHydratedSnapshot = true,
+                    firstAnswerLanded = firstAnswerSignal.hasLanded(),
+                )
+            }
+        }
+    }
+
+    private fun refreshInternal(
+        forceSync: Boolean,
+        showLoading: Boolean,
+        userInitiated: Boolean = false,
+    ) {
+        val mode = _uiState.value.mode
+        val listId = _uiState.value.listId
+
+        viewModelScope.launch {
+            if (showLoading) {
+                _uiState.update { current ->
+                    if (current.isLoading && current.errorMessage == null) current
+                    else current.copy(isLoading = true, errorMessage = null)
+                }
+            } else {
+                _uiState.update { current ->
+                    if (current.errorMessage == null) current else current.copy(errorMessage = null)
+                }
+            }
+
+            runCatching {
+                if (forceSync) {
+                    syncManager.syncCachedData(
+                        force = true,
+                        replayPendingMutations = true,
+                        userInitiated = userInitiated,
+                        connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+                    )
+                        .onFailure { /* fall back to local cache */ }
+                }
+                val todos = todoRepository.fetchTodos(mode = mode, listId = listId)
+                val earlierTodos = earlierItemsFor(mode)
+                val lists = fetchListsForMode(mode)
+                Triple(todos, earlierTodos, lists)
+            }.onSuccess { (todos, earlierTodos, lists) ->
+                _uiState.update { current ->
+                    current.copy(
+                        isLoading = false,
+                        // Re-read here as well as in `hydrateFromCache`, and this
+                        // is the path that matters for a fresh install signing in
+                        // to an EMPTY account: that sync writes a sync stamp and
+                        // no rows, so `cacheDataVersion` never bumps and no
+                        // hydrate follows it. Same source of truth rather than a
+                        // bare `true` -- a `fetchTodos` that quietly fell back to
+                        // the local cache offline has not heard from a server, and
+                        // must not be allowed to claim it has.
+                        firstAnswerLanded = firstAnswerSignal.hasLanded(),
+                        lists = if (current.lists == lists) current.lists else lists,
+                        items = if (current.items == todos) current.items else todos,
+                        earlierItems = if (current.earlierItems == earlierTodos) {
+                            current.earlierItems
+                        } else {
+                            earlierTodos
+                        },
+                            completedTodayCount = completedTodayCountFor(mode),
+                        errorMessage = null,
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update { current ->
+                    current.copy(
+                        isLoading = false,
+                        errorMessage = error.userFacingMessage(appContext, R.string.error_load_tasks_failed),
+                    )
+                }
+            }
+            refreshAiSummaryAvailability()
+        }
+    }
+
+    private fun refreshAiSummaryAvailability() {
+        viewModelScope.launch {
+            val enabled = settingsRepository.refreshAiSummaryPreference()
+            settingsRepository.refreshAiCapability()
+            val configured = settingsRepository.aiSummaryConfiguredSnapshot()
+            _uiState.update { current ->
+                if (current.aiSummaryEnabled == enabled && current.aiSummaryConfigured == configured) {
+                    current
+                } else {
+                    current.copy(aiSummaryEnabled = enabled, aiSummaryConfigured = configured)
+                }
+            }
+        }
+    }
+
+    fun addTask(payload: CreateTaskPayload) {
+        if (payload.title.isBlank()) return
+        val mode = _uiState.value.mode
+        val currentListId = _uiState.value.listId
+        TdayTelemetry.addBreadcrumb(
+            "task.create",
+            data = taskTelemetryData(mode = mode, payload = payload),
+        )
+
+        viewModelScope.launch {
+            runCatching {
+                if (mode == TodoListMode.FLOATER) {
+                    todoRepository.createFloater(payload)
+                } else if (payload.due == null) {
+                    // Schedule OFF on a dated feed asks for an unscheduled task, and a todo
+                    // cannot be undated: this is a Floater. Routing on the screen's mode
+                    // alone used to mint a todo and let the repository fill in a due an hour
+                    // out. The list picker on a dated feed offers *scheduled* lists, and the
+                    // two list types are separate, so membership stays behind — the same as
+                    // a demote, and the server would refuse the id as a floater list.
+                    todoRepository.createFloater(payload.copy(listId = null))
+                } else {
+                    todoRepository.createTodo(payload)
+                }
+            }.onSuccess {
+                if (mode != TodoListMode.FLOATER) rescheduleReminders()
+                runCatching {
+                    val todos = todoRepository.fetchTodosCached(mode = mode, listId = currentListId)
+                    val lists = fetchListsForMode(mode)
+                    todos to lists
+                }.onSuccess { (todos, lists) ->
+                    _uiState.update { current ->
+                        current.copy(
+                            lists = if (current.lists == lists) current.lists else lists,
+                            items = if (current.items == todos) current.items else todos,
+                            completedTodayCount = completedTodayCountFor(mode),
+                            // The third arrival path, and the one nobody thinks
+                            // of: a task typed in while the paper from the last
+                            // one is still in the air. The scope is genuinely no
+                            // longer finished, so the burst leaves -- over the
+                            // envelope, not cut. Guarded on the count rather
+                            // than stamped unconditionally because a create can
+                            // land somewhere this screen does not show it (a
+                            // task dated tomorrow, filed from Today), and a
+                            // celebration should not be cancelled by a row that
+                            // never arrived.
+                            celebrationCancelledAtMs = if (
+                                pendingRowArrived(
+                                    previousItems = current.items.size,
+                                    previousEarlierItems = current.earlierItems.size,
+                                    nextItems = todos.size,
+                                    nextEarlierItems = current.earlierItems.size,
+                                )
+                            ) {
+                                SystemClock.uptimeMillis()
+                            } else {
+                                current.celebrationCancelledAtMs
+                            },
+                            errorMessage = null,
+                        )
+                    }
+                }.onFailure { refreshInternal(forceSync = false, showLoading = false) }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        errorMessage = mutationFailureMessage(
+                            error,
+                            R.string.error_create_task_failed
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    fun updateTask(todo: TodoItem, payload: CreateTaskPayload) {
+        TdayTelemetry.addBreadcrumb(
+            "task.update",
+            data = taskTelemetryData(mode = _uiState.value.mode, payload = payload),
+        )
+        updateTaskInternal(
+            visibleTodo = todo,
+            repositoryTodo = todo,
+            payload = payload,
+        )
+    }
+
+    // Today screen: set a task's time of day (Morning / Afternoon / Tonight)
+    // without changing its date. Sibling of [moveTask].
+    fun moveTaskToTimeOfDay(todo: TodoItem, hour: Int, scope: TaskRescheduleScope) {
+        val due = todo.due ?: return
+        val movedDue = movedDueToTimeOfDay(due, hour)
+        if (movedDue == due) return
+        applyMovedDue(todo, movedDue, scope)
+    }
+
+    fun moveTask(todo: TodoItem, targetDate: LocalDate, scope: TaskRescheduleScope) {
+        val due = todo.due ?: return
+        val movedDue = movedDuePreservingTime(due, targetDate)
+        applyMovedDue(todo, movedDue, scope)
+    }
+
+    /** Quick Defer: one tap moves the task to a locally computed instant. */
+    fun deferTask(todo: TodoItem, dueEpochMs: Long) {
+        // Hidden for recurring todos in the UI; SERIES scope is a plain update.
+        applyMovedDue(todo, java.time.Instant.ofEpochMilli(dueEpochMs), TaskRescheduleScope.SERIES)
+    }
+
+    private fun applyMovedDue(
+        todo: TodoItem,
+        movedDue: java.time.Instant,
+        scope: TaskRescheduleScope
+    ) {
+        val previousState = _uiState.value
+        val mode = previousState.mode
+        val currentListId = previousState.listId
+        val updatedTodo = todo.copy(due = movedDue)
+        TdayTelemetry.addBreadcrumb(
+            "task.reschedule",
+            data = taskTelemetryData(mode = mode, scope = scope) + mapOf("source" to "todo_list"),
+        )
+
+        _uiState.update { current ->
+            current.copy(
+                items = current.items.map { item ->
+                    if (item.id == todo.id) updatedTodo else item
+                },
+                errorMessage = null,
+            )
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                todoRepository.moveTodo(
+                    todo = todo.repositoryTargetForReschedule(scope),
+                    due = movedDue,
+                )
+            }.onSuccess {
+                rescheduleReminders()
+                runCatching {
+                    val todos = todoRepository.fetchTodosCached(mode = mode, listId = currentListId)
+                    val lists = fetchListsForMode(mode)
+                    todos to lists
+                }.onSuccess { (todos, lists) ->
+                    _uiState.update { current ->
+                        current.copy(
+                            lists = if (current.lists == lists) current.lists else lists,
+                            items = if (current.items == todos) current.items else todos,
+                            completedTodayCount = completedTodayCountFor(mode),
+                            errorMessage = null,
+                        )
+                    }
+                }.onFailure { refreshInternal(forceSync = false, showLoading = false) }
+            }.onFailure { error ->
+                _uiState.value = previousState.copy(
+                    errorMessage = mutationFailureMessage(error, R.string.error_update_task_failed),
+                )
+            }
+        }
+    }
+
+    private fun updateTaskInternal(
+        visibleTodo: TodoItem,
+        repositoryTodo: TodoItem,
+        payload: CreateTaskPayload,
+    ) {
+        val normalizedTitle = payload.title.trim()
+        if (normalizedTitle.isBlank()) return
+
+        val normalizedPriority = canonicalPriorityValue(payload.priority)
+        val normalizedDescription = payload.description?.trim()?.ifBlank { null }
+        val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
+
+        val previousState = _uiState.value
+        val mode = previousState.mode
+        val normalizedDue = if (mode == TodoListMode.FLOATER) null else payload.due
+        val currentListId = previousState.listId
+        val updatedTodo = visibleTodo.copy(
+            title = normalizedTitle,
+            description = normalizedDescription,
+            priority = normalizedPriority,
+            due = normalizedDue,
+            rrule = payload.rrule,
+            listId = normalizedListId,
+        )
+
+        _uiState.update { current ->
+            val optimisticItems = current.items
+                .map { item -> if (item.id == visibleTodo.id) updatedTodo else item }
+                .filterNot { item ->
+                    (current.mode == TodoListMode.LIST || current.mode == TodoListMode.FLOATER) &&
+                        !current.listId.isNullOrBlank() &&
+                            item.id == visibleTodo.id &&
+                        item.listId != current.listId
+                }
+            current.copy(items = optimisticItems, errorMessage = null)
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                val normalizedPayload = CreateTaskPayload(
+                    title = normalizedTitle,
+                    description = normalizedDescription,
+                    priority = normalizedPriority,
+                    due = normalizedDue,
+                    rrule = if (mode == TodoListMode.FLOATER) null else payload.rrule,
+                    listId = normalizedListId,
+                )
+                if (mode == TodoListMode.FLOATER) {
+                    todoRepository.updateFloater(repositoryTodo, normalizedPayload)
+                } else {
+                    todoRepository.updateTodo(repositoryTodo, normalizedPayload)
+                }
+            }.onSuccess {
+                if (mode != TodoListMode.FLOATER) rescheduleReminders()
+                runCatching {
+                    val todos = todoRepository.fetchTodosCached(mode = mode, listId = currentListId)
+                    val lists = fetchListsForMode(mode)
+                    todos to lists
+                }.onSuccess { (todos, lists) ->
+                    _uiState.update { current ->
+                        current.copy(
+                            lists = if (current.lists == lists) current.lists else lists,
+                            items = if (current.items == todos) current.items else todos,
+                            completedTodayCount = completedTodayCountFor(mode),
+                            errorMessage = null,
+                        )
+                    }
+                }.onFailure { refreshInternal(forceSync = false, showLoading = false) }
+            }.onFailure { error ->
+                _uiState.value = previousState.copy(
+                    errorMessage = mutationFailureMessage(error, R.string.error_update_task_failed),
+                )
+            }
+        }
+    }
+
+    fun toggleComplete(todo: TodoItem) {
+        val previousItems = _uiState.value.items
+        val mode = _uiState.value.mode
+        TdayTelemetry.addBreadcrumb(
+            "task.complete",
+            data = taskTelemetryData(mode = mode),
+        )
+        _uiState.update { current ->
+            current.copy(
+                items = current.items.filterNot { it.id == todo.id },
+                // Optimistic Day Done: count the completion immediately so the
+                // payoff state can appear as the last row leaves the screen.
+                completedTodayCount = if (mode == TodoListMode.TODAY) {
+                    current.completedTodayCount + 1
+                } else {
+                    current.completedTodayCount
+                },
+                errorMessage = null,
+            )
+        }
+        // Delayed-commit complete: stage the completion into the CACHE now, show
+        // the undoable toast, and let the coordinator release it after the toast
+        // window — or reverse the whole staged write on Undo. Staging here and
+        // not just in `items` is what keeps the row gone: the read path hides a
+        // task by its cached `completed` flag, so a UI-only removal comes
+        // straight back on the next hydrate (every sync bump re-hydrates).
+        viewModelScope.launch {
+            val onCommit: suspend () -> Unit = {
+                if (mode == TodoListMode.FLOATER) {
+                    todoRepository.commitStagedFloaterCompletions(listOf(todo))
+                } else {
+                    todoRepository.commitStagedTodoCompletions(listOf(todo))
+                    runCatching { reminderScheduler.rescheduleAllOffMain() }
+                }
+            }
+            val restoreRow: () -> Unit = {
+                _uiState.update {
+                    it.copy(
+                        items = previousItems,
+                        // The optimistic bump at the top of this method, taken
+                        // back. Without this a complete-then-undo leaves TODAY's
+                        // Day Done gate armed for the rest of the day, and the
+                        // next emptying of the list fires the completion haptic
+                        // for a day nobody actually finished. Floored at zero
+                        // because a refetch can land between the bump and this
+                        // undo and replace the count outright: being one behind
+                        // the cache for a moment is recoverable, a negative
+                        // count is not.
+                        completedTodayCount = if (mode == TodoListMode.TODAY) {
+                            (it.completedTodayCount - 1).coerceAtLeast(0)
+                        } else {
+                            it.completedTodayCount
+                        },
+                        // A row is back on this screen: whatever celebration the
+                        // completion opened is over, four-second window or not.
+                        celebrationCancelledAtMs = SystemClock.uptimeMillis(),
+                        errorMessage = null,
+                    )
+                }
+            }
+            runCatching {
+                if (mode == TodoListMode.FLOATER) {
+                    val staged = todoRepository.stageFloaterCompletions(listOf(todo))
+                    undoableDeleteCoordinator.showUndoableComplete(
+                        message = appContext.getString(R.string.task_completed_toast),
+                        onCommit = onCommit,
+                        onUndo = {
+                            todoRepository.undoStagedFloaterCompletion(staged)
+                            restoreRow()
+                        },
+                    )
+                } else {
+                    val staged = todoRepository.stageTodoCompletions(listOf(todo))
+                    undoableDeleteCoordinator.showUndoableComplete(
+                        message = appContext.getString(R.string.task_completed_toast),
+                        onCommit = onCommit,
+                        onUndo = {
+                            todoRepository.undoStagedTodoCompletion(staged)
+                            // Runs on the coordinator scope: this ViewModel may be
+                            // gone by the time Undo restores a reminder-bearing task.
+                            runCatching { reminderScheduler.rescheduleAllOffMain() }
+                            restoreRow()
+                        },
+                    )
+                }
+            }.onFailure { error ->
+                restoreRow()
+                _uiState.update {
+                    it.copy(
+                        errorMessage = mutationFailureMessage(
+                            error,
+                            R.string.error_update_task_failed,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    fun delete(todo: TodoItem) {
+        val previousItems = _uiState.value.items
+        val mode = _uiState.value.mode
+        val listId = _uiState.value.listId
+        TdayTelemetry.addBreadcrumb(
+            "task.delete",
+            data = taskTelemetryData(mode = mode),
+        )
+        _uiState.update { current ->
+            current.copy(
+                items = current.items.filterNot { it.id == todo.id },
+                errorMessage = null,
+            )
+        }
+        viewModelScope.launch {
+            // Delayed-commit delete: stage now (local-only removal), show the
+            // undoable toast, and let the coordinator run the real delete after
+            // the toast window — or restore the staged state on Undo.
+            runCatching {
+                if (mode == TodoListMode.FLOATER) {
+                    val staged = todoRepository.stageDeleteFloater(todo)
+                    undoableDeleteCoordinator.showUndoableDelete(
+                        message = appContext.getString(R.string.task_deleted_toast),
+                        onCommit = { todoRepository.deleteFloater(todo) },
+                        onUndo = { todoRepository.undoStagedFloaterDeletion(staged) },
+                    )
+                } else {
+                    val staged = todoRepository.stageDeleteTodo(todo)
+                    undoableDeleteCoordinator.showUndoableDelete(
+                        message = appContext.getString(R.string.task_deleted_toast),
+                        onCommit = { todoRepository.deleteTodo(todo) },
+                        onUndo = {
+                            todoRepository.undoStagedTodoDeletion(staged)
+                            // Runs on the coordinator scope: this ViewModel may be
+                            // gone by the time Undo restores a reminder-bearing task.
+                            runCatching { reminderScheduler.rescheduleAllOffMain() }
+                        },
+                    )
+                }
+            }.onSuccess {
+                if (mode != TodoListMode.FLOATER) rescheduleReminders()
+                runCatching {
+                    val todos = todoRepository.fetchTodosCached(mode = mode, listId = listId)
+                    val lists = fetchListsForMode(mode)
+                    todos to lists
+                }.onSuccess { (todos, lists) ->
+                    _uiState.update { current ->
+                        current.copy(
+                            lists = if (current.lists == lists) current.lists else lists,
+                            items = if (current.items == todos) current.items else todos,
+                            completedTodayCount = completedTodayCountFor(mode),
+                            errorMessage = null,
+                        )
+                    }
+                }.onFailure { refreshInternal(forceSync = false, showLoading = false) }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        items = previousItems,
+                        errorMessage = mutationFailureMessage(
+                            error,
+                            R.string.error_delete_task_failed
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    // --- Bulk actions -----------------------------------------------------
+    //
+    // The four actions a multi-select can apply, one method each, every one
+    // taking the whole selection and making exactly ONE coordinator call for
+    // the batch — the shape MorningSweepViewModel.sweepAllToToday() already
+    // uses, because TdayApp shows a single toast at a time and N calls would
+    // leave the user able to undo only the last of N independent timers.
+    // The screen owns the selection and hands over resolved rows; recurring
+    // occurrences are filtered out upstream for everything but complete (see
+    // docs/design/bulk-selection.md §4.1).
+
+    /**
+     * Delayed-commit bulk complete: stage the whole batch into the CACHE now
+     * (one write: every row flipped, every history row filed, every mutation
+     * queued staged and held out of the server), show one undoable toast for the
+     * batch, and let the coordinator release the marker after the window — or
+     * reverse the staged write on Undo.
+     *
+     * Staging into the cache rather than only into `items` is the whole fix, and
+     * it is the same discipline [deleteSelected] already uses: with N rows
+     * staged the hydrator re-runs on every `cacheDataVersion` bump, so a
+     * memory-only removal has N rows' worth of chances to be undone by a sync
+     * that still reads them as pending.
+     */
+    fun completeSelected(todos: List<TodoItem>) {
+        if (todos.isEmpty()) return
+        val previousItems = _uiState.value.items
+        val mode = _uiState.value.mode
+        val listId = _uiState.value.listId
+        val selectedIds = todos.mapTo(mutableSetOf()) { it.id }
+        TdayTelemetry.addBreadcrumb(
+            "task.bulk_complete",
+            data = taskTelemetryData(mode = mode) + mapOf(TELEMETRY_KEY_COUNT to todos.size),
+        )
+        _uiState.update { current ->
+            current.copy(
+                items = current.items.filterNot { it.id in selectedIds },
+                completedTodayCount = if (mode == TodoListMode.TODAY) {
+                    current.completedTodayCount + todos.size
+                } else {
+                    current.completedTodayCount
+                },
+                errorMessage = null,
+            )
+        }
+        val message = appContext.resources.getQuantityString(
+            R.plurals.bulk_tasks_completed,
+            todos.size,
+            todos.size,
+        )
+        // Same two writes as the single-task undo, for the same two reasons --
+        // the bulk bar is every bit as able to empty a list and raise a burst as
+        // one tick is.
+        val restoreRows: () -> Unit = {
+            _uiState.update {
+                it.copy(
+                    items = previousItems,
+                    completedTodayCount = if (mode == TodoListMode.TODAY) {
+                        (it.completedTodayCount - todos.size).coerceAtLeast(0)
+                    } else {
+                        it.completedTodayCount
+                    },
+                    celebrationCancelledAtMs = SystemClock.uptimeMillis(),
+                    errorMessage = null,
+                )
+            }
+        }
+        viewModelScope.launch {
+            runCatching {
+                if (mode == TodoListMode.FLOATER) {
+                    val staged = todoRepository.stageFloaterCompletions(todos)
+                    undoableDeleteCoordinator.showUndoableComplete(
+                        message = message,
+                        onCommit = { todoRepository.commitStagedFloaterCompletions(todos) },
+                        onUndo = {
+                            todoRepository.undoStagedFloaterCompletion(staged)
+                            restoreRows()
+                        },
+                    )
+                } else {
+                    val staged = todoRepository.stageTodoCompletions(todos)
+                    undoableDeleteCoordinator.showUndoableComplete(
+                        message = message,
+                        onCommit = {
+                            todoRepository.commitStagedTodoCompletions(todos)
+                            // Runs on the coordinator scope: this ViewModel may be
+                            // gone by the time the batch's reminders reschedule.
+                            runCatching { reminderScheduler.rescheduleAllOffMain() }
+                        },
+                        onUndo = {
+                            todoRepository.undoStagedTodoCompletion(staged)
+                            runCatching { reminderScheduler.rescheduleAllOffMain() }
+                            restoreRows()
+                        },
+                    )
+                }
+            }.onSuccess {
+                resyncItemsFromCache(mode = mode, listId = listId)
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        items = previousItems,
+                        completedTodayCount = if (mode == TodoListMode.TODAY) {
+                            (it.completedTodayCount - todos.size).coerceAtLeast(0)
+                        } else {
+                            it.completedTodayCount
+                        },
+                        errorMessage = bulkFailureToast(error, todos.size, deleting = false),
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Delayed-commit bulk delete. The screen has already asked for
+     * confirmation — that dialog is layer one and this undo window is layer
+     * two, and neither replaces the other. Staging prunes the whole batch from
+     * the local cache in one write and sends nothing, so Undo is lossless.
+     */
+    fun deleteSelected(todos: List<TodoItem>) {
+        if (todos.isEmpty()) return
+        val previousItems = _uiState.value.items
+        val mode = _uiState.value.mode
+        val listId = _uiState.value.listId
+        val selectedIds = todos.mapTo(mutableSetOf()) { it.id }
+        TdayTelemetry.addBreadcrumb(
+            "task.bulk_delete",
+            data = taskTelemetryData(mode = mode) + mapOf(TELEMETRY_KEY_COUNT to todos.size),
+        )
+        _uiState.update { current ->
+            current.copy(
+                items = current.items.filterNot { it.id in selectedIds },
+                errorMessage = null,
+            )
+        }
+        val message = appContext.resources.getQuantityString(
+            R.plurals.bulk_tasks_deleted,
+            todos.size,
+            todos.size,
+        )
+        viewModelScope.launch {
+            runCatching {
+                if (mode == TodoListMode.FLOATER) {
+                    val staged = bulkTaskRepository.stageDeleteFloaters(todos)
+                    undoableDeleteCoordinator.showUndoableDelete(
+                        message = message,
+                        onCommit = { bulkTaskRepository.deleteFloaters(todos) },
+                        onUndo = { todoRepository.undoStagedFloaterDeletion(staged) },
+                    )
+                } else {
+                    val staged = bulkTaskRepository.stageDeleteTodos(todos)
+                    undoableDeleteCoordinator.showUndoableDelete(
+                        message = message,
+                        onCommit = { bulkTaskRepository.deleteTodos(todos) },
+                        onUndo = {
+                            todoRepository.undoStagedTodoDeletion(staged)
+                            // Runs on the coordinator scope: this ViewModel may
+                            // be gone by the time Undo restores reminder-bearing
+                            // tasks.
+                            runCatching { reminderScheduler.rescheduleAllOffMain() }
+                        },
+                    )
+                }
+            }.onSuccess {
+                if (mode != TodoListMode.FLOATER) rescheduleReminders()
+                resyncItemsFromCache(mode = mode, listId = listId)
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        items = previousItems,
+                        errorMessage = bulkFailureToast(error, todos.size, deleting = true),
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Bulk priority. An edit, so it succeeds silently per the unified toast
+     * policy — the rows change in place and selection mode closes, and that is
+     * the feedback.
+     */
+    fun setPriorityForSelected(todos: List<TodoItem>, priority: String) {
+        if (todos.isEmpty()) return
+        val previousState = _uiState.value
+        val mode = previousState.mode
+        val normalizedPriority = canonicalPriorityValue(priority)
+        val selectedIds = todos.mapTo(mutableSetOf()) { it.id }
+        TdayTelemetry.addBreadcrumb(
+            "task.bulk_priority",
+            data = taskTelemetryData(mode = mode) + mapOf(TELEMETRY_KEY_COUNT to todos.size),
+        )
+        _uiState.update { current ->
+            current.copy(
+                items = current.items.map { item ->
+                    if (item.id in selectedIds) item.copy(priority = normalizedPriority) else item
+                },
+                errorMessage = null,
+            )
+        }
+        viewModelScope.launch {
+            runCatching {
+                if (mode == TodoListMode.FLOATER) {
+                    bulkTaskRepository.setFloaterPriority(todos, normalizedPriority)
+                } else {
+                    bulkTaskRepository.setTodoPriority(todos, normalizedPriority)
+                }
+            }.onSuccess {
+                resyncItemsFromCache(mode = mode, listId = previousState.listId)
+            }.onFailure { error ->
+                _uiState.value = previousState.copy(
+                    errorMessage = bulkFailureToast(error, todos.size, deleting = false),
+                )
+            }
+        }
+    }
+
+    /**
+     * Bulk move between lists of the same kind — scheduled tasks between
+     * scheduled lists, floaters between floater lists. A null [listId] clears
+     * the list. Also an edit, so also silent on success.
+     */
+    fun moveSelectedToList(todos: List<TodoItem>, listId: String?) {
+        if (todos.isEmpty()) return
+        val previousState = _uiState.value
+        val mode = previousState.mode
+        val normalizedListId = listId?.takeIf { it.isNotBlank() }
+        val selectedIds = todos.mapTo(mutableSetOf()) { it.id }
+        TdayTelemetry.addBreadcrumb(
+            "task.bulk_move",
+            data = taskTelemetryData(mode = mode) + mapOf(
+                TELEMETRY_KEY_COUNT to todos.size,
+                "has_list" to (normalizedListId != null),
+            ),
+        )
+        _uiState.update { current ->
+            // A scoped list screen drops the rows that just left it, the same
+            // way a single edit that changes a task's list already does.
+            val optimisticItems = current.items
+                .map { item ->
+                    if (item.id in selectedIds) item.copy(listId = normalizedListId) else item
+                }
+                .filterNot { item ->
+                    (current.mode == TodoListMode.LIST || current.mode == TodoListMode.FLOATER) &&
+                        !current.listId.isNullOrBlank() &&
+                        item.id in selectedIds &&
+                        item.listId != current.listId
+                }
+            current.copy(items = optimisticItems, errorMessage = null)
+        }
+        viewModelScope.launch {
+            runCatching {
+                if (mode == TodoListMode.FLOATER) {
+                    bulkTaskRepository.moveFloatersToList(todos, normalizedListId)
+                } else {
+                    bulkTaskRepository.moveTodosToList(todos, normalizedListId)
+                }
+            }.onSuccess {
+                resyncItemsFromCache(mode = mode, listId = previousState.listId)
+            }.onFailure { error ->
+                _uiState.value = previousState.copy(
+                    errorMessage = bulkFailureToast(error, todos.size, deleting = false),
+                )
+            }
+        }
+    }
+
+    /**
+     * One error toast for the whole batch, never one per row, and never a
+     * claim of partial success: `update`, `prioritize` and `completeTodo` all
+     * report success even when they matched nothing, so a count reconstructed
+     * from responses would be fiction. Returns null so callers clear the inline
+     * error, exactly like [mutationFailureMessage].
+     */
+    private fun bulkFailureToast(error: Throwable, count: Int, deleting: Boolean): String? {
+        val plural = if (deleting) R.plurals.bulk_delete_failed else R.plurals.bulk_update_failed
+        Log.w(TAG, "bulk action failed reason=${error.javaClass.simpleName}")
+        snackbarManager.showError(appContext.resources.getQuantityString(plural, count, count))
+        return null
+    }
+
+    /** Re-reads the screen's slice of the cache after a batch has landed. */
+    private suspend fun resyncItemsFromCache(mode: TodoListMode, listId: String?) {
+        runCatching {
+            val todos = todoRepository.fetchTodosCached(mode = mode, listId = listId)
+            val lists = fetchListsForMode(mode)
+            todos to lists
+        }.onSuccess { (todos, lists) ->
+            _uiState.update { current ->
+                current.copy(
+                    lists = if (current.lists == lists) current.lists else lists,
+                    items = if (current.items == todos) current.items else todos,
+                    completedTodayCount = completedTodayCountFor(mode),
+                    errorMessage = null,
+                )
+            }
+        }.onFailure { refreshInternal(forceSync = false, showLoading = false) }
+    }
+
+    fun updateListSettings(
+        listId: String,
+        name: String,
+        color: String? = null,
+        iconKey: String? = null,
+        reusable: Boolean? = null,
+        defaultPriority: String? = null,
+        defaultPriorityChanged: Boolean = false,
+    ) {
+        val trimmedName = capitalizeFirstListLetter(name).trim()
+        if (trimmedName.isBlank()) return
+
+        val currentState = _uiState.value
+        val resolvedListId = when {
+            listId.isNotBlank() && currentState.lists.any { it.id == listId } -> listId
+            !currentState.listId.isNullOrBlank() &&
+                currentState.lists.any { it.id == currentState.listId } -> currentState.listId
+            listId.isNotBlank() -> listId
+            else -> return
+        }
+        Log.d(
+            TAG,
+            "updateListSettings requested hasColor=${color != null} hasIcon=${iconKey != null}",
+        )
+        TdayTelemetry.addBreadcrumb(
+            "list.update",
+            data = listTelemetryData(currentState.mode, color, iconKey),
+        )
+
+        val previousState = currentState
+        _uiState.update { current ->
+            current.copy(
+                title = if (
+                    current.mode == TodoListMode.LIST ||
+                    (current.mode == TodoListMode.FLOATER && !current.listId.isNullOrBlank())
+                ) {
+                    trimmedName
+                } else {
+                    current.title
+                },
+                lists = current.lists.map { list ->
+                    if (list.id == resolvedListId) {
+                        list.copy(
+                            name = trimmedName,
+                            color = color ?: list.color,
+                            iconKey = iconKey ?: list.iconKey,
+                            reusable = reusable ?: list.reusable,
+                            defaultPriority = if (defaultPriorityChanged) defaultPriority else list.defaultPriority,
+                        )
+                    } else {
+                        list
+                    }
+                },
+                errorMessage = null,
+            )
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                if (currentState.mode == TodoListMode.FLOATER) {
+                    floaterListRepository.updateList(
+                        listId = resolvedListId,
+                        name = trimmedName,
+                        color = color,
+                        iconKey = iconKey,
+                        reusable = reusable,
+                        defaultPriority = defaultPriority,
+                        defaultPriorityChanged = defaultPriorityChanged,
+                    )
+                } else {
+                    listRepository.updateList(
+                        listId = resolvedListId,
+                        name = trimmedName,
+                        color = color,
+                        iconKey = iconKey,
+                        defaultPriority = defaultPriority,
+                        defaultPriorityChanged = defaultPriorityChanged,
+                    )
+            }
+            }.onSuccess {
+                Log.d(TAG, "updateListSettings persisted")
+            }.onFailure { error ->
+                Log.e(TAG, "updateListSettings failed", error)
+                _uiState.value = previousState.copy(
+                    errorMessage = mutationFailureMessage(error, R.string.error_update_list_failed),
+                )
+            }
+        }
+    }
+
+    /**
+     * Reset a reusable floater list: un-check every floater so the same checklist
+     * can be run again. The web twin is `useResetFloaterList` plus the toast in
+     * FloaterListContainer — the route returns only a message/count, never the
+     * list, so the screen is re-read from the cache afterwards.
+     *
+     * Local Mode is honest rather than a no-op: FloaterListRepository writes the
+     * un-complete to the cache and queues RESET_FLOATER_LIST, exactly as web's
+     * localLists.resetFloaterList un-checks locally before returning.
+     */
+    fun resetFloaterList(listId: String) {
+        if (listId.isBlank()) return
+        viewModelScope.launch {
+            runCatching {
+                floaterListRepository.resetFloaterList(listId)
+            }.onSuccess {
+                hydrateFromCache(
+                    mode = _uiState.value.mode,
+                    listId = _uiState.value.listId,
+                )
+                snackbarManager.showInfo(appContext.getString(R.string.floater_list_reset))
+            }.onFailure { error ->
+                Log.e(TAG, "resetFloaterList failed", error)
+                _uiState.update {
+                    it.copy(
+                        errorMessage = mutationFailureMessage(
+                            error,
+                            R.string.error_reset_list_failed,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    fun createList(
+        name: String,
+        color: String? = null,
+        iconKey: String? = null,
+        reusable: Boolean = false,
+        defaultPriority: String? = null,
+    ) {
+        val trimmedName = capitalizeFirstListLetter(name).trim()
+        if (trimmedName.isBlank()) return
+
+        val currentMode = _uiState.value.mode
+        TdayTelemetry.addBreadcrumb(
+            "list.create",
+            data = listTelemetryData(currentMode, color, iconKey),
+        )
+        viewModelScope.launch {
+            runCatching {
+                if (currentMode == TodoListMode.FLOATER) {
+                    floaterListRepository.createList(
+                        name = trimmedName,
+                        color = color,
+                        iconKey = iconKey,
+                        reusable = reusable,
+                        defaultPriority = defaultPriority,
+                    )
+                } else {
+                    listRepository.createList(
+                        name = trimmedName,
+                        color = color,
+                        iconKey = iconKey,
+                        defaultPriority = defaultPriority,
+                    )
+                }
+            }.onSuccess {
+                hydrateFromCache(
+                    mode = _uiState.value.mode,
+                    listId = _uiState.value.listId,
+                )
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        errorMessage = mutationFailureMessage(
+                            error,
+                            R.string.error_create_list_failed
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    fun deleteList(
+        listId: String,
+        onDeleted: () -> Unit,
+    ) {
+        val currentState = _uiState.value
+        val resolvedListId = when {
+            listId.isNotBlank() -> listId
+            !currentState.listId.isNullOrBlank() -> currentState.listId
+            else -> return
+        }
+        TdayTelemetry.addBreadcrumb(
+            "list.delete",
+            data = listTelemetryData(currentState.mode, color = null, iconKey = null),
+        )
+
+        viewModelScope.launch {
+            // Delayed-commit delete: stage now (local-only removal of the list and
+            // its tasks), show the undoable toast, and let the coordinator run the
+            // real delete after the toast window — or restore the staged state on
+            // Undo. Undo still works after onDeleted() navigates away because the
+            // coordinator outlives this ViewModel.
+            runCatching {
+                if (currentState.mode == TodoListMode.FLOATER) {
+                    val staged = floaterListRepository.stageDeleteList(resolvedListId)
+                    undoableDeleteCoordinator.showUndoableDelete(
+                        message = appContext.getString(R.string.list_deleted_toast),
+                        onCommit = {
+                            // Unlike task deletes, the list commit can throw on a
+                            // hard server rejection; surface it as an error toast
+                            // (the next sync pull restores the list).
+                            runCatching {
+                                floaterListRepository.deleteList(resolvedListId)
+                            }.onFailure { error ->
+                                snackbarManager.showError(
+                                    error.userFacingMessage(
+                                        appContext,
+                                        R.string.error_delete_list_failed,
+                                    ),
+                                )
+                            }
+                        },
+                        onUndo = { floaterListRepository.undoStagedListDeletion(staged) },
+                    )
+                } else {
+                    val staged = listRepository.stageDeleteList(resolvedListId)
+                    undoableDeleteCoordinator.showUndoableDelete(
+                        message = appContext.getString(R.string.list_deleted_toast),
+                        onCommit = {
+                            runCatching {
+                                listRepository.deleteList(resolvedListId)
+                            }.onFailure { error ->
+                                snackbarManager.showError(
+                                    error.userFacingMessage(
+                                        appContext,
+                                        R.string.error_delete_list_failed,
+                                    ),
+                                )
+                            }
+                        },
+                        onUndo = {
+                            listRepository.undoStagedListDeletion(staged)
+                            runCatching { reminderScheduler.rescheduleAllOffMain() }
+                        },
+                    )
+                }
+                _uiState.update { current ->
+                    current.copy(
+                        lists = current.lists.filterNot { it.id == resolvedListId },
+                        items = current.items.filterNot { it.listId == resolvedListId },
+                        errorMessage = null,
+                    )
+                }
+            }.onSuccess {
+                // Navigate exactly once, as soon as staging succeeds: the visible
+                // delete already happened locally, the commit runs later from the
+                // coordinator, and Undo restores the list even though the user has
+                // navigated away. On a staging failure the user stays on-screen.
+                onDeleted()
+                if (currentState.mode != TodoListMode.FLOATER) rescheduleReminders()
+            }.onFailure { error ->
+                Log.e(TAG, "deleteList failed", error)
+                _uiState.update {
+                    it.copy(
+                        errorMessage = mutationFailureMessage(
+                            error,
+                            R.string.error_delete_list_failed
+                        )
+                    )
+                }
+                hydrateFromCache(
+                    mode = _uiState.value.mode,
+                    listId = _uiState.value.listId,
+                )
+            }
+        }
+    }
+
+    private fun rescheduleReminders() {
+        viewModelScope.launch(Dispatchers.Default) {
+            runCatching { reminderScheduler.rescheduleAll() }
+        }
+    }
+
+    /// Resolves the user-facing message for a failed mutation and surfaces it as
+    /// an error toast (in addition to the inline error state callers still set).
+    /**
+     * Surfaces a failed user action as an error toast only — matching the unified
+     * toast policy (and the iOS app). Returns null so callers clear the inline
+     * error card; the toast is the single surface for action failures, while the
+     * inline ErrorRetryCard stays reserved for initial-load failures.
+     */
+    private fun mutationFailureMessage(
+        error: Throwable,
+        @androidx.annotation.StringRes fallbackRes: Int,
+    ): String? {
+        snackbarManager.showError(error.userFacingMessage(appContext, fallbackRes))
+        return null
+    }
+
+    private suspend fun fetchListsForMode(mode: TodoListMode): List<ListSummary> {
+        return if (mode == TodoListMode.FLOATER) {
+            floaterListRepository.fetchLists()
+        } else {
+            listRepository.fetchLists()
+        }
+    }
+
+    private fun fetchListsSnapshotForMode(mode: TodoListMode): List<ListSummary> {
+        return if (mode == TodoListMode.FLOATER) {
+            floaterListRepository.fetchListsSnapshot()
+        } else {
+            listRepository.fetchListsSnapshot()
+        }
+    }
+
+    private fun modeTelemetryData(
+        mode: TodoListMode = _uiState.value.mode,
+        scopedList: Boolean = !_uiState.value.listId.isNullOrBlank(),
+    ): Map<String, Any?> = mapOf(
+        "mode" to mode.name.lowercase(),
+        "scoped_list" to scopedList,
+    )
+
+    private fun taskTelemetryData(
+        mode: TodoListMode,
+        payload: CreateTaskPayload? = null,
+        scope: TaskRescheduleScope? = null,
+    ): Map<String, Any?> {
+        val data = mutableMapOf<String, Any?>()
+        data.putAll(modeTelemetryData(mode = mode))
+        if (payload != null) {
+            data["has_due"] = payload.due != null
+            data["has_repeat"] = !payload.rrule.isNullOrBlank()
+            data["has_list"] = !payload.listId.isNullOrBlank()
+            data["has_description"] = !payload.description.isNullOrBlank()
+        }
+        if (scope != null) {
+            data["scope"] = scope.name.lowercase()
+        }
+        return data
+    }
+
+    private fun listTelemetryData(
+        mode: TodoListMode,
+        color: String?,
+        iconKey: String?,
+    ): Map<String, Any?> = mapOf(
+        "kind" to if (mode == TodoListMode.FLOATER) "floater" else "scheduled",
+        "scoped_list" to !_uiState.value.listId.isNullOrBlank(),
+        "has_color" to !color.isNullOrBlank(),
+        "has_icon" to !iconKey.isNullOrBlank(),
+    )
+
+    private companion object {
+        const val TAG = "TodoListViewModel"
+
+        /** Breadcrumb payload key for a batch size. Stable across every bulk action. */
+        const val TELEMETRY_KEY_COUNT = "count"
+    }
+}

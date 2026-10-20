@@ -1,0 +1,235 @@
+package com.ohmz.tday.compose.feature.widget
+
+import android.content.Intent
+import android.os.Bundle
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.annotation.AnimRes
+import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ohmz.tday.compose.MainActivity
+import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.data.applyScreenshotProtection
+import com.ohmz.tday.compose.feature.app.AppViewModel
+import com.ohmz.tday.compose.feature.todos.TodoListViewModel
+import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.theme.TdayTheme
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+
+@AndroidEntryPoint
+class WidgetCreateTaskActivity : AppCompatActivity() {
+
+    @Inject
+    lateinit var widgetCreateTaskSubmitter: WidgetCreateTaskSubmitter
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(R.style.Theme_Tday_WidgetCreate)
+        super.onCreate(savedInstanceState)
+        applyTransition(
+            enter = R.anim.widget_create_enter,
+            exit = R.anim.widget_create_hold,
+        )
+        enableEdgeToEdge()
+        renderFor(intent)
+    }
+
+    /**
+     * This activity is `singleTop`, so a second tap on a widget's "+" while it is already showing
+     * is delivered here instead of running [onCreate] again. Without this override `getIntent()`
+     * kept returning the FIRST intent and the sheet stayed bound to the first widget's feed — tap
+     * the Floater widget's "+", dismiss, then tap the Today widget's "+", and the sheet was still
+     * the floater one. Re-resolving from the new intent is the whole fix.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        renderFor(intent)
+    }
+
+    private fun renderFor(intent: Intent?) {
+        // The instance that was tapped is authoritative; the `target` parameter is only a fallback
+        // for the entry points that have no widget (see WidgetCreateTarget.resolve).
+        val appWidgetId = WidgetCreateRoute.appWidgetIdFrom(intent)
+        val instanceFeed = appWidgetId?.let { WidgetInstanceResolver(this).feedOf(it) }
+        val createTarget = WidgetCreateTarget.resolve(
+            instanceFeed = instanceFeed,
+            targetParam = WidgetCreateRoute.targetParamFrom(intent),
+        )
+        // Set only by ListTasksWidget's add button, so the sheet's list picker preselects the
+        // instance's own list instead of whatever the user picked last. Today/Floater's add
+        // button never sends this, so their behavior is unchanged.
+        val defaultListId = WidgetCreateRoute.listIdFrom(intent)
+        setContent {
+            WidgetCreateTaskSurface(
+                createTarget = createTarget,
+                widgetCreateTaskSubmitter = widgetCreateTaskSubmitter,
+                onExit = ::exitToLauncher,
+                onOpenMainApp = ::openMainApp,
+                defaultListId = defaultListId,
+                appWidgetId = appWidgetId,
+            )
+        }
+    }
+
+    // This sheet is where a task title is typed, so it needs the same FLAG_SECURE treatment as
+    // MainActivity; without it the recents thumbnail and any screenshot show what was being typed.
+    override fun onStart() {
+        super.onStart()
+        applyScreenshotProtection()
+    }
+
+    private fun exitToLauncher() {
+        moveTaskToBack(true)
+        finish()
+        applyTransition(
+            enter = R.anim.widget_create_hold,
+            exit = R.anim.widget_create_exit,
+        )
+    }
+
+    private fun openMainApp() {
+        startActivity(
+            Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            },
+        )
+        finish()
+        applyTransition(
+            enter = R.anim.widget_create_hold,
+            exit = R.anim.widget_create_exit,
+        )
+    }
+
+    @Suppress("DEPRECATION")
+    private fun applyTransition(
+        @AnimRes enter: Int,
+        @AnimRes exit: Int,
+    ) {
+        overridePendingTransition(enter, exit)
+    }
+}
+
+// Internal so ShareReceiverActivity presents the exact same frameless create
+// sheet (theme, workspace guard, submit path) the widgets use.
+@Composable
+internal fun WidgetCreateTaskSurface(
+    createTarget: WidgetCreateTarget,
+    widgetCreateTaskSubmitter: WidgetCreateTaskSubmitter,
+    onExit: () -> Unit,
+    onOpenMainApp: () -> Unit,
+    initialTitle: String? = null,
+    initialNotes: String? = null,
+    defaultListId: String? = null,
+    appWidgetId: Int? = null,
+) {
+    val appViewModel: AppViewModel = hiltViewModel()
+    val appUiState by appViewModel.uiState.collectAsStateWithLifecycle()
+    val todoViewModel: TodoListViewModel = hiltViewModel()
+    val todoUiState by todoViewModel.uiState.collectAsStateWithLifecycle()
+    var submitting by remember { mutableStateOf(false) }
+
+    val mode = createTarget.mode
+
+    LaunchedEffect(mode) {
+        todoViewModel.load(mode = mode)
+    }
+    OnWidgetRouteResume {
+        todoViewModel.load(mode = mode)
+        appViewModel.reconnectAfterForeground()
+    }
+    LaunchedEffect(appUiState.loading, appUiState.isWorkspaceAvailable) {
+        if (!appUiState.loading && !appUiState.isWorkspaceAvailable) {
+            onOpenMainApp()
+        }
+    }
+    BackHandler(enabled = !submitting) {
+        onExit()
+    }
+
+    TdayTheme(themeMode = appUiState.themeMode) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            CreateTaskBottomSheet(
+                lists = todoUiState.lists,
+                defaultListId = defaultListId,
+                defaultScheduled = createTarget.showScheduleControls,
+                showScheduleControls = createTarget.showScheduleControls,
+                initialTitle = initialTitle,
+                initialNotes = initialNotes,
+                presentImmediately = true,
+                onParseTaskTitleNlp = if (createTarget.showScheduleControls) {
+                    todoViewModel::parseTaskTitleNlp
+                } else {
+                    null
+                },
+                // One clock ends this activity, and it is the card's. Confirming plays the
+                // sheet's exit now, like every other way out of it, and this activity is
+                // the window that exit is drawn in — the submit used to `finish()` in a
+                // `finally`, which cuts the slide off part-way, and waiting for the submit
+                // instead left the window standing invisible and touch-swallowing over the
+                // user's own home screen for as long as a forced sync takes. The write does
+                // not need this window: `submitDetached` runs it on the submitter's own
+                // process-lifetime scope, which is what the sheet's exit is now free to
+                // outrun.
+                onDismiss = onExit,
+                onCreateTask = { payload ->
+                    // The sheet refuses a repeat confirm of its own accord now — `start()`
+                    // latches and the confirm is dropped if it is not the tap that claimed
+                    // the exit — so this flag is belt and braces against a second payload.
+                    // It still has a job of its own: the back handler below is off while a
+                    // submit is in flight.
+                    if (!submitting) {
+                        submitting = true
+                        widgetCreateTaskSubmitter.submitDetached(createTarget, payload, appWidgetId)
+                    }
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun OnWidgetRouteResume(action: () -> Unit) {
+    val currentAction by rememberUpdatedState(action)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        var hasPaused = false
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE,
+                Lifecycle.Event.ON_STOP -> {
+                    hasPaused = true
+                }
+
+                Lifecycle.Event.ON_RESUME -> {
+                    if (hasPaused) {
+                        hasPaused = false
+                        currentAction()
+                    }
+                }
+
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+}

@@ -1,0 +1,262 @@
+package com.ohmz.tday.compose.core.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.input.pointer.PointerEvent
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.ui.theme.TdayDimens
+import kotlin.math.abs
+
+/**
+ * The app's search field, in its open state.
+ *
+ * The root feeds fold theirs down into a round button and so own its width and
+ * placement themselves ([RootFeedHeroHeader]). Everywhere else takes it at full
+ * width: the guide in ordinary flow, a list's detail screen in its pinned
+ * toolbar row. The chrome is the same in all three, and the numbers come from
+ * [RootFeedHeroHeaderMetrics] so they cannot drift apart.
+ */
+@Composable
+fun TdaySearchCapsule(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    /**
+     * Accessible name for the trailing X — "Cancel search", since [onClose]
+     * dismisses the field.
+     */
+    trailingContentDescription: String? = null,
+    /**
+     * Set by a bar the field has taken over, where the X is the only way back
+     * out: it is always on screen and leaves the search altogether, as the
+     * root feeds' capsule does. Left null, the field draws no X.
+     */
+    onClose: (() -> Unit)? = null,
+) {
+    val m = RootFeedHeroHeaderMetrics
+    val colorScheme = MaterialTheme.colorScheme
+    val capsuleShape = RoundedCornerShape(m.BarButtonSize / 2)
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(m.BarButtonSize),
+        shape = capsuleShape,
+        // The same fill and lift as every other bar control — a dynamic light
+        // scheme makes `surface` and `background` the same value, which left
+        // this field showing as nothing but its own hairline.
+        colors = CardDefaults.cardColors(containerColor = tdayBarButtonContainerColor()),
+        elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.BarButtonElevation),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(capsuleShape)
+                .padding(horizontal = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_lucide_search),
+                contentDescription = null,
+                tint = colorScheme.onSurface,
+                modifier = Modifier.size(24.dp),
+            )
+            BasicTextField(
+                modifier = Modifier.weight(1f),
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                    color = colorScheme.onSurface,
+                    fontWeight = FontWeight.ExtraBold,
+                ),
+                cursorBrush = SolidColor(colorScheme.primary),
+                decorationBox = { innerTextField ->
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        if (value.isBlank()) {
+                            Text(
+                                text = placeholder,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        innerTextField()
+                    }
+                },
+            )
+            if (onClose != null) {
+                // The root feeds' trailing control down to the numbers — 30 box,
+                // 18 glyph, the same dimmed tint. It sat at 32/20 and full
+                // strength, which beside the other field read as a heavier X in
+                // a field that is otherwise the same chrome.
+                IconButton(
+                    onClick = onClose,
+                    modifier = Modifier.size(30.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_lucide_x),
+                        contentDescription = trailingContentDescription,
+                        tint = colorScheme.onSurfaceVariant.copy(alpha = 0.82f),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Closes an open scoped search when the user taps the content behind it.
+ *
+ * The root feeds have done this since they got their field; every screen with a
+ * pinned toolbar now does it too. The toolbar is an overlay drawn on top of the
+ * same box, not a sibling above it, so "outside" has to be measured — hence
+ * [barHeightPx], the toolbar row's own fixed height. Reading a reported rect
+ * instead would let the very tap that opened the field register as an outside
+ * tap on the frame before the bar has moved.
+ *
+ * Never consumes anything: a row still has to take its own tap and the feed
+ * still has to scroll. Both happen, and the field goes away behind them.
+ */
+fun Modifier.tdayClosesSearchOnOutsideTap(
+    isSearchOpen: Boolean,
+    barHeightPx: Float,
+    close: () -> Unit,
+): Modifier = if (!isSearchOpen) {
+    this
+} else {
+    this.pointerInput(barHeightPx) {
+        awaitEachGesture {
+            // INITIAL pass, and `requireUnconsumed = false`. A row's own `clickable`
+            // consumes the down on the Main pass, so by Final there is nothing left to
+            // see — which is every tap this is here to catch. Watching the Initial pass
+            // gets us the down before any child has had it.
+            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            val startY = down.position.y
+            // Drained on FINAL and never consumed: the row still takes its tap, the page
+            // still scrolls, and the field goes away behind whichever of those happened.
+            var travel = 0f
+            var event: PointerEvent
+            do {
+                event = awaitPointerEvent(PointerEventPass.Final)
+                travel += event.changes.fold(0f) { sum, change ->
+                    sum + abs(change.positionChange().y) + abs(change.positionChange().x)
+                }
+            } while (event.changes.any { it.pressed })
+            // A scroll is not a tap. Same 8dp slop iOS tests its drag translation
+            // against, so a flick down the page leaves the field where it is.
+            val wasTap = travel < TAP_SLOP_DP.toPx()
+            if (wasTap && startY > barHeightPx) {
+                close()
+            }
+        }
+    }
+}
+
+/**
+ * Closes an open swipe-reveal row when the user touches anything else.
+ *
+ * The same problem as [tdayClosesSearchOnOutsideTap] and deliberately the same
+ * shape, down to the slop: one observer at the root of the screen rather than an
+ * enumeration of the widgets a dismissing tap might land on. The header, the
+ * search capsule, a section header, the FAB, the gap between two rows and any
+ * other row's body are all "outside", and none of them has to know this feature
+ * exists.
+ *
+ * Two differences from its sibling, both deliberate:
+ *
+ * No `barHeightPx`. The search field excluded its own toolbar because tapping a
+ * field is not outside it; there is no equivalent here, and tapping the header
+ * *should* shut the row.
+ *
+ * The slot is read here rather than passed in as a `Boolean`. A caller computing
+ * `slot.openId != null` would have to read it in composition, which is the one
+ * thing [TaskSwipeSlot] exists to prevent — the read happens inside the gesture
+ * coroutine instead, where it costs nothing and invalidates nobody.
+ *
+ * What it keeps is the 8 dp travel test, and that is the guard that makes the
+ * whole feature safe rather than a nicety: it is what makes a drag of the open
+ * row — further open, or back toward home — invisible to this modifier. The
+ * finger owns the row it has hold of, and no interceptor may take it away
+ * mid-gesture.
+ *
+ * Never consumes anything, for the reason its sibling gives and for one more.
+ * The tap that dismisses also does its own job: a row still takes its own tap,
+ * the FAB still opens the sheet, the feed still scrolls, and the row goes away
+ * behind whichever of those happened. That is not a nicety either — with
+ * TalkBack on, a consumed first tap means the first double-tap anywhere on the
+ * screen silently does nothing, with no announcement to explain it.
+ *
+ * The Initial pass is load-bearing: a row's own `clickable` consumes the down on
+ * the Main pass, so a Main- or Final-pass observer would miss every tap that
+ * landed on a row, which is most of them.
+ *
+ * Fires no haptic, and could not: it ends at [TaskSwipeRevealState.close], whose
+ * silence [TaskSwipeRevealState.settle] already argues — "a close is frequently
+ * not even something the user did to this row".
+ */
+fun Modifier.tdayClosesSwipeRowOnOutsideTap(
+    slot: TaskSwipeSlot,
+    close: () -> Unit,
+): Modifier = this.pointerInput(slot) {
+    awaitEachGesture {
+        awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        // Cheapest possible no-op when nothing is open, which is nearly always:
+        // one snapshot read and then back to waiting for the next down. Leaving
+        // the gesture here cannot swallow the rest of it -- `awaitFirstDown`
+        // waits for a change that went down, and the moves and the up of a
+        // gesture already in flight are not that.
+        if (slot.openId == null) return@awaitEachGesture
+        var travel = 0f
+        var event: PointerEvent
+        do {
+            event = awaitPointerEvent(PointerEventPass.Final)
+            travel += event.changes.fold(0f) { sum, change ->
+                sum + abs(change.positionChange().y) + abs(change.positionChange().x)
+            }
+        } while (event.changes.any { it.pressed })
+        if (travel < TAP_SLOP_DP.toPx()) {
+            close()
+        }
+    }
+}
+
+/**
+ * iOS tests its outside tap against 8pt of translation; this is the same number.
+ * Shared by both outside-tap modifiers above, which is most of the reason they
+ * sit in the same file: two of these would be two numbers, and the second one
+ * would drift.
+ */
+private val TAP_SLOP_DP = 8.dp

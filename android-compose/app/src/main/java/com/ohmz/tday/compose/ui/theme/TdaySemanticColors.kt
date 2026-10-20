@@ -1,0 +1,137 @@
+package com.ohmz.tday.compose.ui.theme
+
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import com.ohmz.tday.compose.ui.priority.isImportantPriority
+import com.ohmz.tday.compose.ui.priority.isLowestPriority
+import com.ohmz.tday.compose.ui.priority.isUrgentPriority
+import java.util.Locale
+
+data class TdayListColorOption(
+    val key: String,
+    val color: Color,
+)
+
+/**
+ * The colour a NEW list starts with, and the one a list or task with no stored colour is drawn in,
+ * per feed. Each default is a soft cousin of its feed's own identity colour, close enough to
+ * belong to it and different enough not to be mistaken for the built-in tiles:
+ *
+ *  - Scheduled: BLUE, a lighter sibling of the Today tile's blue ([TdayTodoModeTodayAccent]).
+ *  - Floater: TEAL, the aqua-green nearest [TdayFloaterAccent]'s sage/teal.
+ *
+ * Both come out pastel where it matters: a list row is the key blended 66 % into the surface, so
+ * BLUE reads as a pale sky and TEAL as a pale mint rather than as the saturated key itself.
+ *
+ * Existing palette keys, not new ones: the colour is the Postgres `ProjectColor` enum, so a new
+ * key is a server migration. Keys, not hexes, so a list is the same colour on every client; iOS
+ * (`tdayDefaultListAccentColorKey`) and web (`DEFAULT_*_LIST_COLOR`) carry the same pair.
+ */
+const val TDAY_DEFAULT_SCHEDULED_LIST_COLOR_KEY = "BLUE"
+const val TDAY_DEFAULT_FLOATER_LIST_COLOR_KEY = "TEAL"
+
+fun tdayDefaultListColorKey(isFloater: Boolean): String =
+    if (isFloater) TDAY_DEFAULT_FLOATER_LIST_COLOR_KEY else TDAY_DEFAULT_SCHEDULED_LIST_COLOR_KEY
+
+val TdayPriorityHigh = Color(0xFFFF3B30)
+val TdayPriorityMedium = Color(0xFFFF9500)
+val TdayPriorityLow = Color(0xFF6FBF86) // green for normal priority (matches iOS)
+
+// #8E8E93 light / #98989D dark — the exact values already shipped on iOS
+// (`tdayPriorityLowest`/`tdayPriorityLowestDark`) and in this app's own widget
+// colors.xml/values-night addition, for cross-platform numeric parity. Unlike
+// High/Medium/Low above, the Lowest tier needs an explicit dark-mode swap (see
+// [tdayPriorityColor]) rather than a single value shared by both themes.
+val TdayPriorityLowest = Color(0xFF8E8E93)
+val TdayPriorityLowestDark = Color(0xFF98989D)
+val TdayFloaterAccent = Color(0xFF4D8F83)
+val TdayTodoModeTodayAccent = Color(0xFF5C9FE7)
+val TdayTodoModeOverdueAccent = Color(0xFFDA7661)
+val TdayTodoModeScheduledAccent = Color(0xFFF29F38)
+val TdayTodoModeAllAccent = Color(0xFF5E6878)
+val TdayTodoModePriorityAccent = Color(0xFFE65E52)
+val TdayCompletedTitleAccent = TdayTodoModeAllAccent
+// The scheduled-task home's "Completed" tile fill — a distinct token from
+// TdayCompletedTitleAccent (the Completed screen's own title/hero accent) so
+// the two can diverge later; reused as-is for the Floater tab's matching entry
+// point (see TodoListScreen's floater-completed-entry).
+val TdayCompletedTileAccent = Color(0xFF719F84)
+val TdayTitleIconDayAccent = Color(0xFFF4C542)
+val TdayTitleIconNightAccent = Color(0xFFA8B8E8)
+val TdayTaskCompleteAccent = Color(0xFF6FBF86)
+val TdaySwipeEditBackground = Color(0xFF4C7DDE)
+val TdaySwipeDeleteBackground = Color(0xFFFF453A)
+val TdaySwipeScheduleBackground = Color(0xFF339988)
+val TdaySwipeFloatBackground = Color(0xFF7A9C6C)
+val TdaySwipeCopyBackground = Color(0xFFAF52DE)
+val TdayStatusSuccess = Color(0xFF4CAF50)
+
+val TdayListColorOptions = listOf(
+    TdayListColorOption("PINK", Color(0xFFE05299)),
+    TdayListColorOption("GOLD", Color(0xFFE8A530)),
+    TdayListColorOption("DEEP_BLUE", Color(0xFF3C9ADD)),
+    TdayListColorOption("CORAL", Color(0xFFE6664C)),
+    TdayListColorOption("TEAL", Color(0xFF2EB8AC)),
+    TdayListColorOption("SLATE", Color(0xFF3E4774)),
+    TdayListColorOption("BLUE", Color(0xFF6EA8E1)),
+    TdayListColorOption("PURPLE", Color(0xFF7D67B6)),
+    TdayListColorOption("ROSE", Color(0xFFD1617D)),
+    TdayListColorOption("LIGHT_RED", Color(0xFFE06C6C)),
+    TdayListColorOption("BRICK", Color(0xFFC64C39)),
+    TdayListColorOption("YELLOW", Color(0xFFE8BA30)),
+    TdayListColorOption("LIME", Color(0xFF46B963)),
+    TdayListColorOption("ORANGE", Color(0xFFE28736)),
+    TdayListColorOption("RED", Color(0xFFDF3A3A)),
+)
+
+private val TdayListColorMap = TdayListColorOptions.associate { it.key to it.color }
+
+@Composable
+fun tdayPriorityColor(priority: String): Color {
+    return when {
+        isUrgentPriority(priority) -> TdayPriorityHigh
+        isImportantPriority(priority) -> TdayPriorityMedium
+        isLowestPriority(priority) -> {
+            val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+            if (isDarkTheme) TdayPriorityLowestDark else TdayPriorityLowest
+        }
+        else -> TdayPriorityLow
+    }
+}
+
+fun tdayListAccentColor(
+    colorKey: String?,
+    defaultKey: String = TDAY_DEFAULT_SCHEDULED_LIST_COLOR_KEY,
+): Color {
+    return tdayListAccentColorOrNull(colorKey)
+        ?: TdayListColorMap.getValue(defaultKey)
+}
+
+fun tdayListAccentColorOrNull(colorKey: String?): Color? {
+    val normalizedKey = normalizeTdayListColorKeyOrNull(colorKey) ?: return null
+    return TdayListColorMap[normalizedKey]
+}
+
+fun normalizeTdayListColorKey(
+    colorKey: String?,
+    defaultKey: String = TDAY_DEFAULT_SCHEDULED_LIST_COLOR_KEY,
+): String {
+    return normalizeTdayListColorKeyOrNull(colorKey) ?: defaultKey
+}
+
+private fun normalizeTdayListColorKeyOrNull(colorKey: String?): String? {
+    val candidate = colorKey
+        ?.trim()
+        ?.uppercase(Locale.getDefault())
+        ?: return null
+
+    val normalized = when (candidate) {
+        "GREEN" -> "LIME"
+        "GRAY" -> "SLATE"
+        else -> candidate
+    }
+
+    return normalized.takeIf { it in TdayListColorMap }
+}

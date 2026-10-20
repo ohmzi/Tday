@@ -1,0 +1,539 @@
+import SwiftUI
+import UIKit
+
+struct TdayColors {
+    let isDark: Bool
+    let background: Color
+    let surface: Color
+    let surfaceVariant: Color
+    let primary: Color
+    let secondary: Color
+    let tertiary: Color
+    let error: Color
+    let onPrimary: Color
+    let onSurface: Color
+    let onSurfaceVariant: Color
+
+    static let light = TdayColors(
+        isDark: false,
+        background: .tdayLightBackground,
+        surface: .tdayLightSurface,
+        surfaceVariant: .tdayLightSurfaceVariant,
+        primary: .tdayLightAccent,
+        secondary: .tdayLightSecondary,
+        tertiary: .tdayLightWarm,
+        error: .tdayLightError,
+        onPrimary: .tdayLightOnPrimary,
+        onSurface: .tdayLightForeground,
+        onSurfaceVariant: .tdayLightMuted
+    )
+
+    static let dark = TdayColors(
+        isDark: true,
+        background: .tdayDarkBackground,
+        surface: .tdayDarkSurface,
+        surfaceVariant: .tdayDarkSurfaceVariant,
+        primary: .tdayDarkAccent,
+        secondary: .tdayDarkSecondary,
+        tertiary: .tdayDarkWarm,
+        error: .tdayDarkError,
+        onPrimary: .tdayDarkOnPrimary,
+        onSurface: .tdayDarkForeground,
+        onSurfaceVariant: .tdayDarkMuted
+    )
+
+    static let `default` = TdayColors.light
+
+    static func palette(for colorScheme: ColorScheme) -> TdayColors {
+        colorScheme == .dark ? .dark : .light
+    }
+
+    var backgroundGradient: LinearGradient {
+        LinearGradient(
+            colors: [background, background, background],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    var cardStroke: Color {
+        isDark ? Color.white.opacity(0.10) : Color.white.opacity(0.45)
+    }
+
+    var bottomSheetBackground: Color {
+        isDark ? background.tdayBlended(with: surfaceVariant, amount: 0.34) : background
+    }
+
+    var bottomSheetSurface: Color {
+        isDark ? surface.tdayBlended(with: surfaceVariant, amount: 0.18) : surface
+    }
+
+    var bottomSheetControlSurface: Color {
+        surfaceVariant
+    }
+
+    var bottomSheetScrim: Color {
+        Color.black.opacity(isDark ? 0.68 : 0.40)
+    }
+}
+
+private struct TdayColorsKey: EnvironmentKey {
+    static let defaultValue = TdayColors.default
+}
+
+extension EnvironmentValues {
+    var tdayColors: TdayColors {
+        get { self[TdayColorsKey.self] }
+        set { self[TdayColorsKey.self] = newValue }
+    }
+}
+
+private extension Color {
+    func tdayBlended(with other: Color, amount: CGFloat) -> Color {
+        let lhs = UIColor(self)
+        let rhs = UIColor(other)
+        var lhsRed: CGFloat = 0
+        var lhsGreen: CGFloat = 0
+        var lhsBlue: CGFloat = 0
+        var lhsAlpha: CGFloat = 0
+        var rhsRed: CGFloat = 0
+        var rhsGreen: CGFloat = 0
+        var rhsBlue: CGFloat = 0
+        var rhsAlpha: CGFloat = 0
+
+        lhs.getRed(&lhsRed, green: &lhsGreen, blue: &lhsBlue, alpha: &lhsAlpha)
+        rhs.getRed(&rhsRed, green: &rhsGreen, blue: &rhsBlue, alpha: &rhsAlpha)
+
+        let mix = Swift.min(Swift.max(amount, 0), 1)
+        return Color(
+            uiColor: UIColor(
+                red: lhsRed + ((rhsRed - lhsRed) * mix),
+                green: lhsGreen + ((rhsGreen - lhsGreen) * mix),
+                blue: lhsBlue + ((rhsBlue - lhsBlue) * mix),
+                alpha: lhsAlpha + ((rhsAlpha - lhsAlpha) * mix)
+            )
+        )
+    }
+}
+
+/// The corner radii this UI draws with, named once.
+///
+/// The rung is the same one the other two clients draw — Android's
+/// `TdayDimens.RadiusCard` (26.dp), which its own wizard's tiles wear too, and
+/// web's `rounded-[26px]`, written out at each of its tile sites rather than named
+/// and the same value on its board's tiles and its wizard's alike — so the three
+/// clients draw one corner from one number. This client is the only one where the
+/// rung and the drawing sites have been made to agree in one place; web's is a
+/// value its sites share by hand, which is the drift this enum exists to stop
+/// here. It lives here rather than at a
+/// call site because a corner more than one shape has to agree on is a token: the
+/// home board's tiles, the Today card, the scheduled board's list rows, the
+/// Anytime feed's two cards, the onboarding wizard's two tiles, the auth flow's
+/// hero tile and the shape `ZoomNavigation` grows a pushed screen out of are all
+/// this corner, and before this enum six sites across four files spelled it
+/// themselves with nothing binding them together.
+enum TdayRadius {
+    /// The card a section is drawn on — the tiles that group rows, and the hero tiles
+    /// the wizard and the reset flow open with, never the rows themselves.
+    static let card: CGFloat = 26
+}
+
+enum TdayFont {
+    static func font(size: CGFloat, weight: Font.Weight) -> Font {
+        .custom(postScriptName(for: weight), size: size)
+    }
+
+    static func font(_ textStyle: Font.TextStyle, weight: Font.Weight) -> Font {
+        .custom(postScriptName(for: weight), size: pointSize(for: textStyle), relativeTo: textStyle)
+    }
+
+    static func uiFont(size: CGFloat, weight: UIFont.Weight) -> UIFont {
+        UIFont(name: postScriptName(for: weight), size: size)
+            ?? UIFont.systemFont(ofSize: size, weight: weight)
+    }
+
+    static func applyGlobalAppearances() {
+        let defaultFont = uiFont(size: 17, weight: .bold)
+        UILabel.appearance().font = defaultFont
+        UITextField.appearance().font = defaultFont
+        UITextView.appearance().font = defaultFont
+
+        UINavigationBar.appearance().titleTextAttributes = [
+            .font: uiFont(size: 17, weight: .bold)
+        ]
+        UINavigationBar.appearance().largeTitleTextAttributes = [
+            .font: uiFont(size: 32, weight: .heavy)
+        ]
+        UIBarButtonItem.appearance().setTitleTextAttributes([
+            .font: uiFont(size: 17, weight: .bold)
+        ], for: .normal)
+        UIBarButtonItem.appearance().setTitleTextAttributes([
+            .font: uiFont(size: 17, weight: .bold)
+        ], for: .highlighted)
+        UISegmentedControl.appearance().setTitleTextAttributes([
+            .font: uiFont(size: 13, weight: .bold)
+        ], for: .normal)
+        UISegmentedControl.appearance().setTitleTextAttributes([
+            .font: uiFont(size: 13, weight: .bold)
+        ], for: .selected)
+    }
+
+    private static func pointSize(for textStyle: Font.TextStyle) -> CGFloat {
+        switch textStyle {
+        case .largeTitle:
+            return 34
+        case .title:
+            return 28
+        case .title2:
+            return 22
+        case .title3:
+            return 20
+        case .headline, .body:
+            return 17
+        case .callout:
+            return 16
+        case .subheadline:
+            return 15
+        case .footnote:
+            return 13
+        case .caption:
+            return 12
+        case .caption2:
+            return 11
+        @unknown default:
+            return 17
+        }
+    }
+
+    private static func postScriptName(for weight: Font.Weight) -> String {
+        switch weight {
+        case .black:
+            return "Nunito-Black"
+        case .heavy, .bold:
+            return "Nunito-ExtraBold"
+        case .semibold:
+            return "Nunito-Bold"
+        case .medium:
+            return "Nunito-SemiBold"
+        default:
+            return "Nunito-Bold"
+        }
+    }
+
+    private static func postScriptName(for weight: UIFont.Weight) -> String {
+        if weight.rawValue >= UIFont.Weight.black.rawValue {
+            return "Nunito-Black"
+        }
+        if weight.rawValue >= UIFont.Weight.heavy.rawValue {
+            return "Nunito-ExtraBold"
+        }
+        if weight.rawValue >= UIFont.Weight.bold.rawValue {
+            return "Nunito-ExtraBold"
+        }
+        if weight.rawValue >= UIFont.Weight.semibold.rawValue {
+            return "Nunito-Bold"
+        }
+        if weight.rawValue >= UIFont.Weight.medium.rawValue {
+            return "Nunito-SemiBold"
+        }
+        return "Nunito-Bold"
+    }
+}
+
+extension Font {
+    static func tdayRounded(size: CGFloat, weight: Font.Weight = .bold) -> Font {
+        TdayFont.font(size: size, weight: weight)
+    }
+
+    static func tdayRounded(_ textStyle: Font.TextStyle, weight: Font.Weight = .bold) -> Font {
+        TdayFont.font(textStyle, weight: weight)
+    }
+}
+
+struct TdayBackground<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        ZStack {
+            colors.backgroundGradient
+                .ignoresSafeArea()
+            content
+        }
+    }
+}
+
+// `tdayLucideListAsset` and its iconKey→Lucide table moved to `TdayListAccent.swift` — not
+// for tidiness, but because the TdayWidget extension has to resolve a list's glyph too, and
+// this file is unshareable with it (SwiftUI environments, a UIViewRepresentable, global
+// UIKit appearance proxies). The function below is the same one, not a copy.
+
+/// Renders a list icon as a tintable template image (replaces SF Symbol list icons).
+///
+/// `listName` is how a list that was never given a glyph gets one anyway: pass it and the
+/// icon falls back to `tdayInferredListIconKey` before it falls back to the inbox. Pass it
+/// at every site that is drawing a LIST — a row's trailing mark, a list card, the header —
+/// and omit it at sites drawing a picker OPTION, where the key under the finger is the whole
+/// subject and there is no list yet to have a name.
+///
+/// Defaulted to nil rather than made required so that the omission is the safe direction:
+/// forgetting it costs one list its guess, whereas a required parameter tempts the next
+/// caller to hand over whatever string is nearest.
+struct TdayListIcon: View {
+    let iconKey: String?
+    var listName: String? = nil
+    var size: CGFloat = 24
+
+    var body: some View {
+        Image(tdayLucideListAsset(tdayResolvedListIconKey(iconKey, listName: listName)))
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: size, height: size)
+    }
+}
+
+struct EmptyTaskWatermark: View {
+    let systemName: String
+    let accentColor: Color
+    /// Optional asset-catalog name of a lucide template glyph; when set it is used
+    /// instead of the SF Symbol so screens match the web tile icons.
+    var assetName: String? = nil
+    /// The watermark's mark as a drawing rather than a glyph, for a screen whose
+    /// mark is more than one glyph — the Completion history's is three stacked.
+    /// Drawn exactly where and at exactly the size `assetName` would have been,
+    /// so the two paths cannot drift.
+    ///
+    /// A composite leaves its own layers untinted and is drawn in the
+    /// environment's foreground style, which is the `watermarkColor` below. The
+    /// alternative is a call site re-deriving `onSurfaceVariant` blended 36%
+    /// toward the accent in order to say what colour it is standing in.
+    var markContent: AnyView? = nil
+
+    @Environment(\.tdayColors) private var colors
+    /// The box the watermark's glyph is drawn in — 194pt, the native twin of
+    /// Android's `WatermarkGlyphSize` (212dp). Public because a caller handing in
+    /// a drawing through `markContent` has to draw it in this box: the slot
+    /// centres whatever it is given, so a mark built at any other size lands at
+    /// the wrong scale inside the same rotation and offset.
+    static let markGlyphSize: CGFloat = 194
+    private var iconSize: CGFloat { Self.markGlyphSize }
+    private let trailingOffset: CGFloat = 26
+
+    private var watermarkColor: Color {
+        colors.onSurfaceVariant.tdayBlended(with: accentColor, amount: 0.36).opacity(0.10)
+    }
+
+    @ViewBuilder
+    private var watermarkContent: some View {
+        if let markContent {
+            markContent
+        } else {
+            watermarkImage
+        }
+    }
+
+    @ViewBuilder
+    private var watermarkImage: some View {
+        if let assetName {
+            Image(assetName)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+        } else {
+            Image(systemName: systemName)
+                .font(.system(size: iconSize, weight: .regular))
+                .scaleEffect(x: systemName == "leaf" ? -1 : 1, y: 1)
+        }
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            let screenBounds = UIScreen.main.bounds
+            let frame = proxy.frame(in: .global)
+            let targetX = screenBounds.width - (iconSize / 2) + trailingOffset - frame.minX
+            let targetY = (screenBounds.height * (2.0 / 3.0)) - frame.minY
+
+            watermarkContent
+                .foregroundStyle(watermarkColor)
+                .rotationEffect(.degrees(-7))
+                .frame(width: iconSize, height: iconSize)
+                .position(
+                    x: targetX,
+                    y: targetY
+                )
+        }
+        .ignoresSafeArea(.keyboard)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct TdayAppThemeModifier: ViewModifier {
+    let themeMode: AppThemeMode
+
+    /// The in-app Reduce Motion preference, passed down beside the theme mode and for the same
+    /// reason: both are root decisions a `UIViewRepresentable`'s separate window cannot inherit.
+    let reduceMotion: Bool
+
+    @Environment(\.colorScheme) private var systemColorScheme
+
+    private var resolvedColorScheme: ColorScheme {
+        themeMode.colorScheme ?? systemColorScheme
+    }
+
+    private var colors: TdayColors {
+        TdayColors.palette(for: resolvedColorScheme)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .environment(\.tdayColors, colors)
+            // The motion gate rides with the palette because it answers the same shape of
+            // question — one root decision every surface below reads — and because this
+            // modifier is already the one wrapper both window roots go through.
+            .tdayResolvedMotion(reduceMotion: reduceMotion)
+            .tint(colors.primary)
+            .background(colors.backgroundGradient.ignoresSafeArea())
+            .preferredColorScheme(themeMode.colorScheme)
+    }
+}
+
+extension View {
+    func tdayAppTheme(themeMode: AppThemeMode, reduceMotion: Bool) -> some View {
+        modifier(TdayAppThemeModifier(themeMode: themeMode, reduceMotion: reduceMotion))
+    }
+
+    func tdayAppTypography() -> some View {
+        font(.tdayRounded(.body, weight: .bold))
+    }
+}
+
+enum TdayNativeSegmentedControlMetrics {
+    static let height: CGFloat = 52
+
+    /// How far the selected capsule sits inside the track, below iOS 26.
+    ///
+    /// Matched by eye against iOS 26's own drawing of the same control rather than derived: the
+    /// system publishes no metric for it, and the only honest source is the thing being matched.
+    /// Not a motion token — it is a static inset, not a duration, curve or spring.
+    static let selectionInset: CGFloat = 2
+}
+
+struct TdayNativeSegmentedControl: UIViewRepresentable {
+    let labels: [String]
+    let selectedIndex: Int
+    let accentColor: Color
+    var controlHeight = TdayNativeSegmentedControlMetrics.height
+    var fontSize: CGFloat = 13
+    let onSelect: (Int) -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onSelect: onSelect)
+    }
+
+    func makeUIView(context: Context) -> ThickSegmentedControl {
+        let control = ThickSegmentedControl(items: labels)
+        control.selectedSegmentIndex = boundedSelectedIndex
+        control.apportionsSegmentWidthsByContent = false
+        control.addTarget(context.coordinator, action: #selector(Coordinator.didChange(_:)), for: .valueChanged)
+        applySizingAndTint(to: control)
+        return control
+    }
+
+    func updateUIView(_ control: ThickSegmentedControl, context: Context) {
+        context.coordinator.onSelect = onSelect
+        updateLabels(on: control)
+        if control.selectedSegmentIndex != boundedSelectedIndex {
+            control.selectedSegmentIndex = boundedSelectedIndex
+        }
+        applySizingAndTint(to: control)
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: ThickSegmentedControl, context: Context) -> CGSize? {
+        CGSize(
+            width: proposal.width ?? uiView.intrinsicContentSize.width,
+            height: controlHeight
+        )
+    }
+
+    private var boundedSelectedIndex: Int {
+        guard labels.indices.contains(selectedIndex) else {
+            return UISegmentedControl.noSegment
+        }
+        return selectedIndex
+    }
+
+    private func updateLabels(on control: ThickSegmentedControl) {
+        guard control.numberOfSegments == labels.count else {
+            control.removeAllSegments()
+            for (index, label) in labels.enumerated() {
+                control.insertSegment(withTitle: label, at: index, animated: false)
+            }
+            return
+        }
+
+        for (index, label) in labels.enumerated() where control.titleForSegment(at: index) != label {
+            control.setTitle(label, forSegmentAt: index)
+        }
+    }
+
+    private func applySizingAndTint(to control: ThickSegmentedControl) {
+        control.preferredHeight = controlHeight
+        control.overrideUserInterfaceStyle = colors.isDark ? .dark : .light
+        control.backgroundColor = UIColor(colors.surfaceVariant.opacity(0.76))
+        control.selectedSegmentTintColor = UIColor(colors.surface)
+        control.tintColor = UIColor(accentColor)
+        control.setTitleTextAttributes(
+            [
+                .foregroundColor: UIColor(colors.onSurfaceVariant),
+                .font: TdayFont.uiFont(size: fontSize, weight: .bold)
+            ],
+            for: .normal
+        )
+        control.setTitleTextAttributes(
+            [
+                .foregroundColor: UIColor(accentColor),
+                .font: TdayFont.uiFont(size: fontSize, weight: .bold)
+            ],
+            for: .selected
+        )
+        control.invalidateIntrinsicContentSize()
+    }
+
+    final class Coordinator: NSObject {
+        var onSelect: (Int) -> Void
+
+        init(onSelect: @escaping (Int) -> Void) {
+            self.onSelect = onSelect
+        }
+
+        @objc func didChange(_ sender: UISegmentedControl) {
+            onSelect(sender.selectedSegmentIndex)
+        }
+    }
+
+    final class ThickSegmentedControl: UISegmentedControl {
+        var preferredHeight = TdayNativeSegmentedControlMetrics.height {
+            didSet {
+                if preferredHeight != oldValue {
+                    invalidateIntrinsicContentSize()
+                }
+            }
+        }
+
+        override var intrinsicContentSize: CGSize {
+            let baseSize = super.intrinsicContentSize
+            return CGSize(width: baseSize.width, height: preferredHeight)
+        }
+
+        override func sizeThatFits(_ size: CGSize) -> CGSize {
+            var fittingSize = super.sizeThatFits(size)
+            fittingSize.height = preferredHeight
+            return fittingSize
+        }
+    }
+}

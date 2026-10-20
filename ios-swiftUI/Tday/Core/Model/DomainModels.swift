@@ -1,0 +1,566 @@
+import Foundation
+import SwiftUI
+
+/// The app's one day/night boundary: `[06:00, 18:00)` is day, everything else is
+/// night. Local hours, local calendar — the user's own clock, never UTC.
+///
+/// It lived as five identical copies of `(6..<18).contains(hour)`, one per screen
+/// that draws the sun/moon glyph, and that was survivable only while the boundary
+/// had no words attached to it. It does now: Today's hero reads "Tonight" after
+/// dark off exactly this predicate. A second copy is a second boundary waiting to
+/// drift, and the one bug this feature cannot be allowed to have is a title that
+/// disagrees with the glyph sitting next to it.
+///
+/// `TdayWidget/TodayTasksWidget.swift` necessarily keeps a copy of its own: the
+/// widget extension does not compile this file, and the handful of sources both
+/// targets share are Foundation-only by design (see `TodayWidgetDayWindow`). If
+/// this boundary ever moves, that copy has to move with it.
+enum TdayTimeOfDay {
+    /// The hour the day starts, and the hour it ends. Named rather than inlined so
+    /// the one place that can move the boundary is a place a reader can find.
+    static let dayStartHour = 6
+    static let dayEndHour = 18
+
+    static func isDaytime(_ date: Date = Date()) -> Bool {
+        (dayStartHour..<dayEndHour).contains(Calendar.current.component(.hour, from: date))
+    }
+}
+
+enum TodoListMode: String, Codable, CaseIterable, Hashable {
+    case today = "TODAY"
+    case overdue = "OVERDUE"
+    case scheduled = "SCHEDULED"
+    case all = "ALL"
+    case priority = "PRIORITY"
+    case floater = "FLOATER"
+    case list = "LIST"
+
+    var title: String {
+        switch self {
+        case .today:
+            return L("Today")
+        case .overdue:
+            return L("Overdue")
+        case .scheduled:
+            return L("Scheduled")
+        case .all:
+            return L("All Tasks")
+        case .priority:
+            return L("Priority")
+        case .floater:
+            return L("Floater")
+        case .list:
+            return L("List")
+        }
+    }
+
+    /// The name this mode wears after dark, or nil for a mode whose name does not
+    /// follow the clock — which is every mode but Today.
+    ///
+    /// Today's hero already swaps a sun for a moon at `TdayTimeOfDay`'s boundary,
+    /// and "Today" under a moon at 9pm reads as a screen that has gone stale
+    /// rather than one that meant it.
+    ///
+    /// Deliberately a SECOND value rather than a branch inside `title`: `title` is
+    /// read once and stored (`TodoListViewModel.title`, assigned at init and on a
+    /// list rename) while the hour keeps moving, so resolving it there would pin
+    /// the word to whenever the screen happened to be opened. Handing both names
+    /// to the view lets the view pick between them inside the same `TimelineView`
+    /// that redraws the glyph — so the word and the glyph can only flip together.
+    var nightTitle: String? {
+        switch self {
+        case .today:
+            return L("Tonight")
+        case .overdue, .scheduled, .all, .priority, .floater, .list:
+            return nil
+        }
+    }
+
+    var summaryMode: String {
+        switch self {
+        case .today:
+            return "today"
+        case .overdue:
+            return "overdue"
+        case .scheduled:
+            return "scheduled"
+        case .all:
+            return "all"
+        case .priority:
+            return "priority"
+        case .floater:
+            return "floater"
+        case .list:
+            return "list"
+        }
+    }
+}
+
+enum TaskRescheduleScope: String, Codable, Hashable {
+    case occurrence
+    case series
+}
+
+struct CreateTaskPayload: Equatable, Hashable, Codable {
+    let title: String
+    let description: String?
+    let priority: String
+    let due: Date?
+    let rrule: String?
+    let listId: String?
+}
+
+enum TaskPriorityDisplay {
+    /// The new bottom tier. Wire value "Lowest" is a genuinely new enum case (not a
+    /// rename of anything existing); its UI label is "Low" — "Normal" (wire "Low")
+    /// keeps its own label and stays the default. See `TaskSortEngine` for the
+    /// matching rank split.
+    static let lowestValue = "Lowest"
+    static let normalValue = "Low"
+    static let importantValue = "Medium"
+    static let urgentValue = "High"
+
+    static var lowestLabel: String { L("Low") }
+    static var normalLabel: String { L("Normal") }
+    static var importantLabel: String { L("Important") }
+    static var urgentLabel: String { L("Urgent") }
+
+    /// High-to-low urgency — the display order every picker renders in, with the most
+    /// urgent tier leading and the newest tier trailing.
+    ///
+    /// This was originally low-to-high (the newest tier leading). It is inverted so the
+    /// most urgent tier sits at the top of every picker and the least urgent at the
+    /// bottom, mirroring Android's `PRIORITY_OPTIONS_HIGH_TO_LOW` and web's picker order.
+    /// The task *sort* order is a separate concern and is unaffected.
+    static var options: [(label: String, value: String)] {
+        [
+            (urgentLabel, urgentValue),
+            (importantLabel, importantValue),
+            (normalLabel, normalValue),
+            (lowestLabel, lowestValue),
+        ]
+    }
+
+    static func canonicalValue(_ priority: String?) -> String {
+        switch priority?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "lowest":
+            return lowestValue
+        case "normal", "low":
+            return normalValue
+        case "important", "medium":
+            return importantValue
+        case "urgent", "high":
+            return urgentValue
+        default:
+            return normalValue
+        }
+    }
+
+    static func label(for priority: String?) -> String {
+        switch canonicalValue(priority) {
+        case lowestValue:
+            return lowestLabel
+        case importantValue:
+            return importantLabel
+        case urgentValue:
+            return urgentLabel
+        default:
+            return normalLabel
+        }
+    }
+
+    static func isUrgent(_ priority: String?) -> Bool {
+        canonicalValue(priority) == urgentValue
+    }
+
+    static func isImportant(_ priority: String?) -> Bool {
+        canonicalValue(priority) == importantValue
+    }
+
+    static func isLowest(_ priority: String?) -> Bool {
+        canonicalValue(priority) == lowestValue
+    }
+}
+
+struct TodoItem: Identifiable, Equatable, Hashable, Codable {
+    let id: String
+    let canonicalId: String
+    let title: String
+    let description: String?
+    let priority: String
+    let due: Date?
+    let rrule: String?
+    let instanceDate: Date?
+    let pinned: Bool
+    let completed: Bool
+    let listId: String?
+    let updatedAt: Date?
+
+    var isRecurring: Bool {
+        !(rrule ?? "").isEmpty
+    }
+
+    var instanceDateEpochMilliseconds: Int64? {
+        instanceDate.map { Int64($0.timeIntervalSince1970 * 1_000) }
+    }
+
+    var instanceDateEpochMillis: Int64? {
+        instanceDateEpochMilliseconds
+    }
+}
+
+extension TodoListMode {
+    var supportsTaskReschedule: Bool {
+        switch self {
+        case .today, .scheduled, .all, .priority, .list:
+            return true
+        case .overdue, .floater:
+            return false
+        }
+    }
+}
+
+extension TodoItem {
+    func repositoryTargetForReschedule(scope: TaskRescheduleScope) -> TodoItem {
+        switch scope {
+        case .occurrence:
+            return self
+        case .series:
+            return TodoItem(
+                id: canonicalId,
+                canonicalId: canonicalId,
+                title: title,
+                description: description,
+                priority: priority,
+                due: due,
+                rrule: rrule,
+                instanceDate: nil,
+                pinned: pinned,
+                completed: completed,
+                listId: listId,
+                updatedAt: updatedAt
+            )
+        }
+    }
+}
+
+func movedDuePreservingTime(
+    due: Date,
+    targetDay: Date,
+    calendar: Calendar = .current
+) -> Date? {
+    let dueComponents = calendar.dateComponents([.hour, .minute, .second, .nanosecond], from: due)
+    var targetComponents = calendar.dateComponents([.year, .month, .day], from: targetDay)
+    targetComponents.timeZone = calendar.timeZone
+    targetComponents.hour = dueComponents.hour
+    targetComponents.minute = dueComponents.minute
+    targetComponents.second = dueComponents.second
+    targetComponents.nanosecond = dueComponents.nanosecond
+    return calendar.date(from: targetComponents)
+}
+
+// Keep the task's date, set its time-of-day to `hour`:00. The inverse of
+// `movedDuePreservingTime`; used by the Today screen's drag-between-time-buckets
+// interaction (Morning / Afternoon / Tonight).
+func movedDueToTimeOfDay(
+    due: Date,
+    hour: Int,
+    calendar: Calendar = .current
+) -> Date? {
+    var components = calendar.dateComponents([.year, .month, .day], from: due)
+    components.timeZone = calendar.timeZone
+    components.hour = hour
+    components.minute = 0
+    components.second = 0
+    components.nanosecond = 0
+    return calendar.date(from: components)
+}
+
+func timelineRescheduleTargetDate(
+    sectionId: String,
+    today: Date = Date(),
+    calendar: Calendar = .current
+) -> Date? {
+    let startOfToday = calendar.startOfDay(for: today)
+    let currentMonthStart = rescheduleMonthStart(for: startOfToday, calendar: calendar)
+
+    if sectionId == "earlier" {
+        return calendar.date(byAdding: .day, value: -1, to: startOfToday)
+    }
+
+    if sectionId.hasPrefix("scheduled-") || sectionId.hasPrefix("priority-") {
+        guard let suffix = sectionId.split(separator: "-").last,
+              let interval = TimeInterval(String(suffix)) else {
+            return nil
+        }
+        let date = calendar.startOfDay(for: Date(timeIntervalSince1970: interval))
+        return rescheduleMonthStart(for: date, calendar: calendar) >= currentMonthStart ? date : nil
+    }
+
+    if sectionId.hasPrefix("rest-") {
+        guard let monthIndexValue = Int(sectionId.replacingOccurrences(of: "rest-", with: "")) else {
+            return nil
+        }
+        let horizonStart = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 7, to: startOfToday) ?? startOfToday)
+        return rescheduleMonthIndex(for: horizonStart, calendar: calendar) == monthIndexValue &&
+            rescheduleMonthStart(for: horizonStart, calendar: calendar) == currentMonthStart ? horizonStart : nil
+    }
+
+    if sectionId.hasPrefix("month-") {
+        guard let monthIndexValue = Int(sectionId.replacingOccurrences(of: "month-", with: "")) else {
+            return nil
+        }
+        let currentMonthIndex = rescheduleMonthIndex(for: startOfToday, calendar: calendar)
+        guard monthIndexValue >= currentMonthIndex else {
+            return nil
+        }
+        let year = (monthIndexValue - 1) / 12
+        let month = ((monthIndexValue - 1) % 12) + 1
+        return calendar.date(from: DateComponents(year: year, month: month, day: 1))
+    }
+
+    return nil
+}
+
+private func rescheduleMonthStart(for date: Date, calendar: Calendar) -> Date {
+    let components = calendar.dateComponents([.year, .month], from: date)
+    return calendar.date(from: components).map(calendar.startOfDay) ?? calendar.startOfDay(for: date)
+}
+
+private func rescheduleMonthIndex(for date: Date, calendar: Calendar) -> Int {
+    let year = calendar.component(.year, from: date)
+    let month = calendar.component(.month, from: date)
+    return year * 12 + month
+}
+
+struct ListSummary: Identifiable, Equatable, Hashable, Codable {
+    let id: String
+    let name: String
+    let color: String?
+    let iconKey: String?
+    let todoCount: Int
+    let updatedAt: Date?
+    let createdAt: Date?
+    // Sharing metadata; defaults describe an unshared, self-owned list.
+    var myRole: String = "OWNER"
+    var isShared: Bool = false
+    var memberCount: Int = 0
+    var ownerUsername: String?
+    /// A reusable list can be Reset (all its floaters un-completed) to run again.
+    /// Drives both the settings toggle and the header's Reset, exactly as
+    /// `listMeta.reusable` does on web. False for scheduled lists.
+    var reusable: Bool = false
+    /// Pre-fills a new task's priority when created in this list. Nil means no default.
+    var defaultPriority: String? = nil
+
+    var isViewer: Bool { myRole.caseInsensitiveCompare("VIEWER") == .orderedSame }
+    var isOwner: Bool { myRole.caseInsensitiveCompare("OWNER") == .orderedSame }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, color, iconKey, todoCount, updatedAt, createdAt
+        case myRole, isShared, memberCount, ownerUsername, reusable, defaultPriority
+    }
+
+    init(
+        id: String,
+        name: String,
+        color: String?,
+        iconKey: String?,
+        todoCount: Int,
+        updatedAt: Date?,
+        createdAt: Date?,
+        myRole: String = "OWNER",
+        isShared: Bool = false,
+        memberCount: Int = 0,
+        ownerUsername: String? = nil,
+        reusable: Bool = false,
+        defaultPriority: String? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.color = color
+        self.iconKey = iconKey
+        self.todoCount = todoCount
+        self.updatedAt = updatedAt
+        self.createdAt = createdAt
+        self.myRole = myRole
+        self.isShared = isShared
+        self.memberCount = memberCount
+        self.ownerUsername = ownerUsername
+        self.reusable = reusable
+        self.defaultPriority = defaultPriority
+    }
+
+    // Tolerates payloads persisted before sharing existed (widget snapshots).
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        color = try container.decodeIfPresent(String.self, forKey: .color)
+        iconKey = try container.decodeIfPresent(String.self, forKey: .iconKey)
+        todoCount = try container.decode(Int.self, forKey: .todoCount)
+        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt)
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
+        myRole = try container.decodeIfPresent(String.self, forKey: .myRole) ?? "OWNER"
+        isShared = try container.decodeIfPresent(Bool.self, forKey: .isShared) ?? false
+        memberCount = try container.decodeIfPresent(Int.self, forKey: .memberCount) ?? 0
+        ownerUsername = try container.decodeIfPresent(String.self, forKey: .ownerUsername)
+        reusable = try container.decodeIfPresent(Bool.self, forKey: .reusable) ?? false
+        defaultPriority = try container.decodeIfPresent(String.self, forKey: .defaultPriority)
+    }
+}
+
+struct DashboardSummary: Equatable, Hashable, Codable {
+    let todayCount: Int
+    let scheduledCount: Int
+    let allCount: Int
+    let priorityCount: Int
+    let floaterCount: Int
+    let completedCount: Int
+    let lists: [ListSummary]
+}
+
+struct CompletedItem: Identifiable, Equatable, Hashable, Codable {
+    let id: String
+    let originalTodoId: String?
+    let title: String
+    let description: String?
+    let priority: String
+    let due: Date?
+    let completedAt: Date?
+    let rrule: String?
+    let instanceDate: Date?
+    let listId: String?
+    let listName: String?
+    let listColor: String?
+    /// Distinguishes a completed Floater from a completed (scheduled) Todo —
+    /// the two share this one model and this one Completed screen, but need
+    /// different repository calls for uncomplete/edit/delete (different
+    /// backend routes, different cache tables). A Floater never has a due
+    /// date, but that's an implementation detail of the domain, not something
+    /// call sites should have to infer; this field is the explicit source of
+    /// truth. See `CompletedViewModel`.
+    let isFloater: Bool
+}
+
+struct RegisterOutcome: Equatable, Hashable {
+    let success: Bool
+    let requiresApproval: Bool
+    let message: String
+}
+
+enum AuthResult: Equatable, Hashable {
+    case success
+    case pendingApproval
+    case error(String)
+}
+
+enum PasswordResetResult: Equatable, Hashable {
+    case success
+    /// Answers did not match (server reason "reset_failed").
+    case failed(String)
+    /// Too many failed attempts (server reason "reset_locked").
+    case locked(String)
+    /// Any other failure (validation, connectivity, etc.).
+    case error(String)
+}
+
+/// Result of looking up a username's security questions for the reset wizard.
+enum LookupQuestionsOutcome: Equatable {
+    case found([SecurityQuestion])
+    case notFound
+    case error(String)
+}
+
+/// Result of verifying security answers without resetting (the staged wizard's gate).
+enum VerifyAnswersOutcome: Equatable {
+    case valid
+    case invalid([SecurityAnswerResult])
+    case locked
+    case error(String)
+}
+
+enum AppThemeMode: String, CaseIterable, Codable, Hashable {
+    case system
+    case light
+    case dark
+
+    var label: String {
+        switch self {
+        case .system:
+            return L("System")
+        case .light:
+            return L("Light")
+        case .dark:
+            return L("Dark")
+        }
+    }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system:
+            return nil
+        case .light:
+            return .light
+        case .dark:
+            return .dark
+        }
+    }
+}
+
+enum CalendarDisplayMode: String, CaseIterable, Codable, Hashable {
+    case month
+    case week
+    case day
+}
+
+struct TimelineSection<Item: Identifiable & Hashable>: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let items: [Item]
+    let isCollapsible: Bool
+}
+
+extension Date {
+    var epochMilliseconds: Int64 {
+        Int64((timeIntervalSince1970 * 1_000).rounded())
+    }
+
+    init(epochMilliseconds: Int64) {
+        self = Date(timeIntervalSince1970: TimeInterval(epochMilliseconds) / 1_000)
+    }
+
+    /// Floors this instant to the start of its minute (seconds & nanoseconds = 0).
+    /// Task due/deadline times are minute-precision app-wide; the backend floors
+    /// server-side, and this keeps the optimistic cache + outgoing mutations on-minute.
+    func flooredToMinute() -> Date {
+        Date(timeIntervalSince1970: (timeIntervalSince1970 / 60).rounded(.down) * 60)
+    }
+}
+
+// MARK: - Resting floaters (client-only aging)
+
+/// On/off toggle for the "resting floaters" display cue (dim Anytime tasks untouched
+/// for 30d+). Default on. UserDefaults-backed, mirroring ThemeStore's style.
+struct RestingFloatersStore {
+    private let defaults = UserDefaults.standard
+    private static let key = "floater.resting.enabled"
+
+    var isEnabled: Bool {
+        get { defaults.object(forKey: Self.key) as? Bool ?? true }
+        nonmutating set { defaults.set(newValue, forKey: Self.key) }
+    }
+}
+
+enum FloaterRestingTier {
+    case active, fading, resting
+}
+
+/// Swift twin of the shared Kotlin FloaterResting.tierFor. updatedAt is READ-ONLY input.
+func floaterRestingTier(updatedAt: Date?, now: Date) -> FloaterRestingTier {
+    guard let updatedAt, updatedAt.timeIntervalSince1970 > 0 else { return .active }
+    let ageDays = now.timeIntervalSince(updatedAt) / 86_400
+    if ageDays >= 90 { return .resting }
+    if ageDays >= 30 { return .fading }
+    return .active
+}

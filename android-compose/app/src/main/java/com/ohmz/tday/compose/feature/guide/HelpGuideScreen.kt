@@ -1,0 +1,668 @@
+package com.ohmz.tday.compose.feature.guide
+
+import androidx.activity.compose.BackHandler
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import com.ohmz.tday.compose.core.ui.TdayHaptics
+import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
+import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
+import com.ohmz.tday.compose.core.ui.rememberScrollHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
+import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
+import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
+import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.tdayPressable
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.ohmz.tday.compose.BuildConfig
+import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.data.GuidePreferenceStore
+import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.shared.guide.GuideBadge
+import com.ohmz.tday.shared.guide.GuideBlockType
+import com.ohmz.tday.shared.guide.GuideCatalog
+import com.ohmz.tday.shared.guide.GuidePlatform
+import com.ohmz.tday.shared.guide.GuideSearch
+import com.ohmz.tday.shared.guide.GuideSectionId
+import com.ohmz.tday.shared.guide.GuideStringsGenerated
+import com.ohmz.tday.shared.guide.GuideTopic
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
+
+// What the guide draws that the scale has no rung for, named here rather than snapped onto a
+// neighbouring step. The page margin is the reason the list is worth reading: this screen has always
+// inset 16 where every other page insets ContentPaddingHorizontal's 18, and pulling it across would
+// redraw every card edge on the screen rather than migrate one.
+
+/** The guide's own page margin, two dp inside the app's. */
+private val PageHorizontalPadding = 16.dp
+
+/** Subtitle to first section. Falls between SpacingXl and SpacingXxl, where the scale has no step. */
+private val HeaderBottomSpacing = 16.dp
+
+/** Topic card to topic card. 10 falls between SpacingMd and SpacingLg. */
+private val TopicCardSpacing = 10.dp
+
+/** The glyph inside the toolbar's circular button, sized against that button rather than the icon scale. */
+private val BarButtonIconSize = 22.dp
+
+// The tinted square a topic's glyph sits in. One shape's proportions: the tile, its corner and the
+// glyph move together or not at all.
+private val TopicIconTileSize = 36.dp
+private val TopicIconTileRadius = 10.dp
+private val TopicIconSize = 18.dp
+
+/** The row's trailing chevron. The same 18 as the tile glyph, named apart because nothing moves both. */
+private val TopicChevronSize = 18.dp
+
+/** Divider, body blocks and the Try it button, stacked inside an expanded card. */
+private val BodyBlockSpacing = 10.dp
+
+/** Try it. Corners at 12, between RadiusSm and RadiusMd and not either of them. */
+private val TryItButtonRadius = 12.dp
+
+/** NEW / HIDDEN GEM / SERVER. Under RadiusSm, because a badge this small reads square at 8. */
+private val PillRadius = 6.dp
+
+// A numbered step: the circle carrying the digit, and the gap to the text beside it. The circle is
+// 20 and is not IconSm — it holds a number, not a glyph.
+private val StepNumberSize = 20.dp
+private val StepNumberGap = 10.dp
+
+/** The tip callout's corner, rounder than the code block's RadiusSm so the two read as different blocks. */
+private val TipBlockRadius = 10.dp
+
+/** Inline code pads wider than tall, so a monospace run clears its own box. */
+private val CodeBlockHorizontalPadding = 10.dp
+
+/**
+ * Which card is open is tracked by this key. A topic that is new in this release is on the page
+ * twice, in What's New and in its own section, and the copy in What's New gets a key of its own so
+ * opening one never opens the other. The section card keeps the plain topic id, which is also what
+ * a deep link and the search results carry.
+ */
+internal fun guideCardKey(topicId: String, inWhatsNew: Boolean): String =
+    if (inWhatsNew) "whats-new:$topicId" else topicId
+
+/**
+ * The in-app How-To / feature guide. Reads the shared [GuideCatalog] natively via
+ * the :shared dependency, resolves localized strings from the generated
+ * [GuideStringsGenerated], and searches with the shared [GuideSearch] — so its
+ * content and ranking are identical to web and iOS. Fully offline / Local-Mode
+ * safe: nothing here needs the network.
+ */
+@Composable
+fun HelpGuideScreen(
+    isLocalMode: Boolean,
+    onBack: () -> Unit,
+    onOpenDeepLink: (String) -> Unit,
+    initialTopic: String? = null,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val locale = LocalConfiguration.current.locales[0].language
+    fun res(key: String): String = GuideStringsGenerated.resolve(locale, key)
+
+    val topics = remember { GuideCatalog.topicsFor(GuidePlatform.ANDROID) }
+    val byId = remember { topics.associateBy { it.id } }
+    val docs = remember(locale) {
+        topics.map { topic ->
+            GuideSearch.buildDoc(
+                topic.id,
+                res(topic.titleKey),
+                res(topic.keywordsKey),
+                (listOf(res(topic.summaryKey)) + topic.body.flatMap { it.keys.map(::res) }).joinToString(" "),
+            )
+        }
+    }
+
+    // Scoped search: this screen's own topics, and nothing else. The field
+    // takes the toolbar row the way every other screen hands its bar over, so
+    // there is no second field standing in the page's own flow.
+    var searchExpanded by rememberSaveable { mutableStateOf(false) }
+    // TdayHeroToolbar's row height, for the outside-tap guard: the bar is an
+    // overlay on the same box as the content, so "below the bar" has to be
+    // measured rather than inferred from the hierarchy.
+    val pinnedToolbarHeightPx = with(LocalDensity.current) {
+        TdayHeroTitleMetrics.ToolbarHeight.toPx()
+    }
+    var query by rememberSaveable { mutableStateOf("") }
+    var searchNeedsFocus by remember { mutableStateOf(false) }
+    val closeSearch = {
+        searchExpanded = false
+        query = ""
+        searchNeedsFocus = false
+    }
+    var expandedId by remember { mutableStateOf(initialTopic) }
+    val trimmed = query.trim()
+    val rankedIds = remember(query, docs) {
+        if (trimmed.isEmpty()) emptyList() else GuideSearch.rank(query, docs)
+    }
+    val whatsNew = remember { topics.filter { it.sinceVersion == BuildConfig.VERSION_NAME } }
+
+    // NEW badges show until the guide has been opened in this release: read the
+    // persisted last-seen version once, then mark the running release as seen.
+    val context = LocalContext.current
+    val guidePrefs = remember { GuidePreferenceStore(context) }
+    val showNewBadges = remember { guidePrefs.lastSeenGuideVersion() != BuildConfig.VERSION_NAME }
+    LaunchedEffect(Unit) { guidePrefs.setLastSeenGuideVersion(BuildConfig.VERSION_NAME) }
+
+    BackHandler(enabled = searchExpanded) {
+        closeSearch()
+    }
+
+    val guideScrollState = rememberScrollState()
+    val heroCollapse = rememberScrollHeroTitleCollapse(scrollState = guideScrollState)
+
+    // A "?" link lands here with its topic already expanded, which is not the same as on screen:
+    // the page is a long list and the topic may sit well below the fold. Once the card has been
+    // laid out, scroll it to just under the toolbar, once. Remembered across a rotation so the
+    // jump never fights a scroll the reader has made since.
+    val landingScope = rememberCoroutineScope()
+    var landedOnInitialTopic by rememberSaveable { mutableStateOf(false) }
+    // Only a section card is a landing target, so a topic that is also in What's New lands (and
+    // opens) in its section rather than in the copy above it.
+    fun Modifier.landingTarget(id: String): Modifier =
+        if (landedOnInitialTopic || id != initialTopic) {
+            this
+        } else {
+            onGloballyPositioned { coordinates ->
+                if (landedOnInitialTopic) return@onGloballyPositioned
+                landedOnInitialTopic = true
+                val top = (coordinates.positionInParent().y - pinnedToolbarHeightPx).roundToInt().coerceAtLeast(0)
+                landingScope.launch { guideScrollState.scrollTo(top) }
+            }
+        }
+
+    Scaffold(
+        containerColor = colorScheme.background,
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                // Tap the guide and the field goes away, as on the root feeds.
+                // The toolbar is an overlay on this same box, so the guard is its
+                // row height rather than a reported rect.
+                .tdayClosesSearchOnOutsideTap(
+                    isSearchOpen = searchExpanded,
+                    barHeightPx = pinnedToolbarHeightPx,
+                    close = closeSearch,
+                ),
+        ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(guideScrollState)
+                .padding(horizontal = PageHorizontalPadding)
+                .padding(bottom = TdayDimens.Spacing4xl),
+        ) {
+            TdayHeroTitleBlock(
+                title = res("guide.title"),
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_circle_help),
+                accentColor = colorScheme.primary,
+                collapseProgress = heroCollapse.progress,
+                modifier = Modifier.padding(horizontal = TdayDimens.SpacingXxs),
+            )
+            Text(
+                text = res("guide.subtitle"),
+                style = MaterialTheme.typography.bodyMedium,
+                color = colorScheme.onSurface.copy(alpha = 0.6f),
+            )
+
+            Spacer(Modifier.height(HeaderBottomSpacing))
+
+            if (trimmed.isNotEmpty()) {
+                Text(
+                    text = res("guide.results").replace("{{count}}", rankedIds.size.toString()),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colorScheme.onSurface.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(bottom = TdayDimens.SpacingMd, start = TdayDimens.SpacingXs),
+                )
+                if (rankedIds.isEmpty()) {
+                    Text(
+                        text = res("guide.noResults"),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(vertical = TdayDimens.Spacing3xl),
+                    )
+                } else {
+                    rankedIds.forEach { id ->
+                        byId[id]?.let { topic ->
+                            TopicCard(topic, expandedId == id, ::res, isLocalMode, showNewBadges, onOpenDeepLink) {
+                                expandedId = if (expandedId == id) null else id
+                            }
+                            Spacer(Modifier.height(TopicCardSpacing))
+                        }
+                    }
+                }
+            } else {
+                if (whatsNew.isNotEmpty()) {
+                    SectionLabel(res("guide.whatsNew"))
+                    whatsNew.forEach { topic ->
+                        val key = guideCardKey(topic.id, inWhatsNew = true)
+                        TopicCard(topic, expandedId == key, ::res, isLocalMode, showNewBadges, onOpenDeepLink) {
+                            expandedId = if (expandedId == key) null else key
+                        }
+                        Spacer(Modifier.height(TopicCardSpacing))
+                    }
+                    Spacer(Modifier.height(TdayDimens.SpacingLg))
+                }
+                GuideSectionId.entries.sortedBy { it.order }.forEach { section ->
+                    val sectionTopics = topics.filter { it.section == section }
+                    if (sectionTopics.isNotEmpty()) {
+                        SectionLabel(res(section.titleKey))
+                        sectionTopics.forEach { topic ->
+                            val key = guideCardKey(topic.id, inWhatsNew = false)
+                            TopicCard(
+                                topic, expandedId == key, ::res, isLocalMode, showNewBadges, onOpenDeepLink,
+                                modifier = Modifier.landingTarget(topic.id),
+                            ) {
+                                expandedId = if (expandedId == key) null else key
+                            }
+                            Spacer(Modifier.height(TopicCardSpacing))
+                        }
+                        Spacer(Modifier.height(TdayDimens.SpacingLg))
+                    }
+                }
+            }
+        }
+
+        // Last, so it draws over the content passing behind it.
+        TdayHeroToolbar(
+            title = res("guide.title"),
+            collapseProgress = heroCollapse.progress,
+            // Gone while the field is up: a back chevron beside an open search
+            // is a second way out that leaves the screen rather than the query,
+            // and it costs the field the width that makes a placeholder
+            // readable.
+            onBack = if (searchExpanded) null else onBack,
+            backContentDescription = stringResource(R.string.action_back),
+            modifier = Modifier.align(Alignment.TopStart),
+            titleSuppressed = searchExpanded,
+        ) {
+            if (searchExpanded) {
+                // The field takes the WHOLE bar — back chevron, title and action
+                // cluster all give way to it, as they do on the root feeds and
+                // on iOS's TimelineTopBar.
+                val focusRequester = remember { FocusRequester() }
+                LaunchedEffect(searchNeedsFocus) {
+                    if (!searchNeedsFocus) return@LaunchedEffect
+                    // Consumed on the way in, so returning to a screen that
+                    // still has the field open does not re-open the keyboard
+                    // with it.
+                    searchNeedsFocus = false
+                    focusRequester.requestFocus()
+                }
+                TdaySearchCapsule(
+                    value = query,
+                    onValueChange = { query = it },
+                    // The catalog's own placeholder, not `action_search_in`:
+                    // this screen's copy is localized by the guide's generated
+                    // strings rather than by the app's resources.
+                    placeholder = res("guide.searchPlaceholder"),
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(focusRequester),
+                    // The one control in the row, so its X leaves the search —
+                    // and leaving clears the query on the way out.
+                    onClose = closeSearch,
+                    trailingContentDescription = stringResource(R.string.action_close_search),
+                )
+            } else {
+                GuideBarButton(
+                    // Only opens: the bar hands its row over to the field, so
+                    // this button is not on screen to be tapped again.
+                    onClick = {
+                        searchExpanded = true
+                        searchNeedsFocus = true
+                    },
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_search),
+                    contentDescription = stringResource(R.string.action_search),
+                )
+            }
+        }
+        }
+    }
+}
+
+/**
+ * The circle this screen's toolbar actions sit in.
+ *
+ * A local copy of the timeline screen's `TodayHeaderButton`, which is private to
+ * `TodoListScreen` and has no shared home yet — the same copy the completed and
+ * settings screens keep. The fill, the size and the lift come from the same
+ * tokens as the back button beside it, so the two match whatever the scheme
+ * does with them.
+ */
+@Composable
+private fun GuideBarButton(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    contentDescription: String,
+) {
+    val view = LocalView.current
+    val interactionSource = remember { MutableInteractionSource() }
+
+    Card(
+        modifier = Modifier
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar),
+        onClick = {
+            TdayHaptics.buttonPress(view)
+            onClick()
+        },
+        interactionSource = interactionSource,
+        shape = CircleShape,
+        colors = CardDefaults.cardColors(containerColor = tdayBarButtonContainerColor()),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = TdayDimens.BarButtonElevation,
+            pressedElevation = TdayDimens.CardElevationDefault,
+        ),
+    ) {
+        Box(
+            modifier = Modifier.size(TdayDimens.FabSize),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(BarButtonIconSize),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text = text.uppercase(),
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+        modifier = Modifier.padding(bottom = TdayDimens.SpacingMd, start = TdayDimens.SpacingXs),
+    )
+}
+
+@Composable
+private fun TopicCard(
+    topic: GuideTopic,
+    expanded: Boolean,
+    res: (String) -> String,
+    isLocalMode: Boolean,
+    showNewBadge: Boolean,
+    onOpenDeepLink: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    onToggle: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Surface(
+        shape = RoundedCornerShape(TdayDimens.RadiusLg),
+        color = colorScheme.surface,
+        border = BorderStroke(TdayDimens.BorderWidth, colorScheme.onSurface.copy(alpha = 0.06f)),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onToggle)
+                    .padding(TdayDimens.SpacingXl),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(TopicIconTileSize)
+                        .clip(RoundedCornerShape(TopicIconTileRadius))
+                        .background(colorScheme.primary.copy(alpha = 0.10f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = ImageVector.vectorResource(guideIconRes(topic.icon)),
+                        contentDescription = null,
+                        tint = colorScheme.primary,
+                        modifier = Modifier.size(TopicIconSize),
+                    )
+                }
+                Spacer(Modifier.width(TdayDimens.SpacingLg))
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = res(topic.titleKey),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = colorScheme.onSurface,
+                        )
+                        Badges(topic, res, showNewBadge)
+                    }
+                    Text(
+                        text = res(topic.summaryKey),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colorScheme.onSurface.copy(alpha = 0.6f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = TdayDimens.SpacingXxs),
+                    )
+                }
+                Spacer(Modifier.width(TdayDimens.SpacingMd))
+                Icon(
+                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_right),
+                    contentDescription = null,
+                    tint = colorScheme.onSurface.copy(alpha = 0.4f),
+                    modifier = Modifier.size(TopicChevronSize),
+                )
+            }
+
+            if (expanded) {
+                Column(
+                    modifier = Modifier.padding(
+                        start = TdayDimens.SpacingXl,
+                        end = TdayDimens.SpacingXl,
+                        bottom = TdayDimens.SpacingXl,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(BodyBlockSpacing),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(TdayDimens.BorderWidth)
+                            .background(colorScheme.onSurface.copy(alpha = 0.06f)),
+                    )
+                    topic.body.forEach { block ->
+                        BodyBlock(block.type, block.keys.map(res))
+                    }
+                    val deepLink = topic.deepLink?.android
+                    if (deepLink != null && !(isLocalMode && topic.serverOnly)) {
+                        Surface(
+                            shape = RoundedCornerShape(TryItButtonRadius),
+                            color = colorScheme.primary,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(TryItButtonRadius))
+                                .clickable { onOpenDeepLink(deepLink) },
+                        ) {
+                            Text(
+                                text = res("guide.tryIt"),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = colorScheme.onPrimary,
+                                modifier = Modifier.padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingMd),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Badges(topic: GuideTopic, res: (String) -> String, showNewBadge: Boolean) {
+    val isNew = showNewBadge && topic.sinceVersion == BuildConfig.VERSION_NAME
+    if (isNew) Pill(res("guide.badges.new"))
+    when (topic.badge) {
+        GuideBadge.HIDDEN_GEM -> Pill(res("guide.badges.hiddenGem"))
+        GuideBadge.PRO_TIP -> Pill(res("guide.badges.proTip"))
+        null -> Unit
+    }
+    if (topic.serverOnly) Pill(res("guide.badges.server"))
+}
+
+@Composable
+private fun Pill(text: String) {
+    Text(
+        text = text.uppercase(),
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.Bold,
+        fontSize = 9.sp,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier
+            .padding(start = TdayDimens.SpacingSm)
+            .clip(RoundedCornerShape(PillRadius))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+            .padding(horizontal = TdayDimens.SpacingSm, vertical = TdayDimens.SpacingXxs),
+    )
+}
+
+@Composable
+private fun BodyBlock(type: GuideBlockType, texts: List<String>) {
+    val colorScheme = MaterialTheme.colorScheme
+    val text = texts.firstOrNull().orEmpty()
+    when (type) {
+        GuideBlockType.STEPS -> Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingSm)) {
+            texts.forEachIndexed { i, step ->
+                Row {
+                    Box(
+                        modifier = Modifier
+                            .size(StepNumberSize)
+                            .clip(CircleShape)
+                            .background(colorScheme.primary.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "${i + 1}",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = colorScheme.primary,
+                        )
+                    }
+                    Spacer(Modifier.width(StepNumberGap))
+                    Text(step, style = MaterialTheme.typography.bodyMedium, color = colorScheme.onSurface)
+                }
+            }
+        }
+
+        GuideBlockType.TIP -> Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = colorScheme.onSurface.copy(alpha = 0.75f),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(TipBlockRadius))
+                .background(colorScheme.primary.copy(alpha = 0.06f))
+                .padding(TdayDimens.SpacingLg),
+        )
+
+        GuideBlockType.KBD, GuideBlockType.EXAMPLE -> Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+            color = colorScheme.onSurface,
+            modifier = Modifier
+                .clip(RoundedCornerShape(TdayDimens.RadiusSm))
+                .background(colorScheme.onSurface.copy(alpha = 0.06f))
+                .padding(horizontal = CodeBlockHorizontalPadding, vertical = TdayDimens.SpacingSm),
+        )
+
+        GuideBlockType.PARAGRAPH -> Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = colorScheme.onSurface.copy(alpha = 0.85f),
+        )
+    }
+}
+
+// Per-topic Lucide drawable. Every catalog glyph has an ic_lucide_* vector
+// (guarded by the guide-icons coverage test); book is a defensive fallback.
+@DrawableRes
+private fun guideIconRes(name: String): Int = when (name) {
+    "activity" -> R.drawable.ic_lucide_activity
+    "alarm-clock" -> R.drawable.ic_lucide_alarm_clock
+    "bell" -> R.drawable.ic_lucide_bell
+    "bell-ring" -> R.drawable.ic_lucide_bell_ring
+    "calendar" -> R.drawable.ic_lucide_calendar
+    "car" -> R.drawable.ic_lucide_car
+    "car-front" -> R.drawable.ic_lucide_car_front
+    "check-check" -> R.drawable.ic_lucide_check_check
+    "cloud" -> R.drawable.ic_lucide_cloud
+    "download" -> R.drawable.ic_lucide_download
+    "flag" -> R.drawable.ic_lucide_flag
+    "grip-vertical" -> R.drawable.ic_lucide_grip_vertical
+    "hand" -> R.drawable.ic_lucide_hand
+    "key-round" -> R.drawable.ic_lucide_key_round
+    "keyboard" -> R.drawable.ic_lucide_keyboard
+    "layout-dashboard" -> R.drawable.ic_lucide_layout_dashboard
+    "layout-grid" -> R.drawable.ic_lucide_layout_grid
+    "list" -> R.drawable.ic_lucide_list
+    "list-todo" -> R.drawable.ic_lucide_list_todo
+    "pin" -> R.drawable.ic_lucide_pin
+    "plus" -> R.drawable.ic_lucide_plus
+    "pointer" -> R.drawable.ic_lucide_pointer
+    "refresh-cw" -> R.drawable.ic_lucide_refresh_cw
+    "repeat" -> R.drawable.ic_lucide_repeat
+    "search" -> R.drawable.ic_lucide_search
+    "sparkles" -> R.drawable.ic_lucide_sparkles
+    "square-plus" -> R.drawable.ic_lucide_square_plus
+    "wand-sparkles" -> R.drawable.ic_lucide_wand_sparkles
+    "waves" -> R.drawable.ic_lucide_waves
+    "wifi-off" -> R.drawable.ic_lucide_wifi_off
+    else -> R.drawable.ic_lucide_book
+}

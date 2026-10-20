@@ -1,0 +1,878 @@
+package com.ohmz.tday.compose.feature.app
+
+import android.content.Context
+import app.cash.turbine.test
+import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.data.ApiCallException
+import com.ohmz.tday.compose.core.data.AppDataMode
+import com.ohmz.tday.compose.core.data.ConnectionFailureKind
+import com.ohmz.tday.compose.core.data.MutationKind
+import com.ohmz.tday.compose.core.data.OfflineSyncState
+import com.ohmz.tday.compose.core.data.PendingMutationRecord
+import com.ohmz.tday.compose.core.data.ThemePreferenceStore
+import com.ohmz.tday.compose.core.data.auth.AuthRepository
+import com.ohmz.tday.compose.core.data.auth.SystemCredentialServicing
+import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.server.AppVersionManager
+import com.ohmz.tday.compose.core.data.server.ServerConfigRepository
+import com.ohmz.tday.compose.core.data.settings.SettingsRepository
+import com.ohmz.tday.compose.core.data.sync.SyncManager
+import com.ohmz.tday.compose.core.model.SessionUser
+import com.ohmz.tday.compose.core.network.ConnectivityObserver
+import com.ohmz.tday.compose.core.network.RealtimeClient
+import com.ohmz.tday.compose.core.network.RealtimeEvent
+import com.ohmz.tday.compose.core.notification.DayAheadOption
+import com.ohmz.tday.compose.core.notification.DayAheadPreferenceStore
+import com.ohmz.tday.compose.core.notification.ReminderOption
+import com.ohmz.tday.compose.core.notification.ReminderPreferenceStore
+import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
+import com.ohmz.tday.compose.core.push.UnifiedPushAutoRegistrar
+import com.ohmz.tday.compose.core.push.UnifiedPushSession
+import com.ohmz.tday.compose.core.ui.SnackbarKind
+import com.ohmz.tday.compose.core.ui.SnackbarManager
+import com.ohmz.tday.compose.feature.auth.MainDispatcherRule
+import com.ohmz.tday.compose.ui.theme.AppThemeMode
+import io.mockk.clearMocks
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.coVerifyOrder
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import java.net.UnknownHostException
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class AppViewModelTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
+    private val authRepository = mockk<AuthRepository>()
+    private val serverConfigRepository = mockk<ServerConfigRepository>()
+    private val syncManager = mockk<SyncManager>()
+    private val settingsRepository = mockk<SettingsRepository>()
+    private val cacheManager = mockk<OfflineCacheManager>()
+    private val themePreferenceStore = mockk<ThemePreferenceStore>()
+    private val reminderScheduler = mockk<TaskReminderScheduler>()
+    private val reminderPreferenceStore = mockk<ReminderPreferenceStore>()
+    private val dayAheadPreferenceStore = mockk<DayAheadPreferenceStore>()
+    private val realtimeClient = mockk<RealtimeClient>()
+    private val connectivityObserver = mockk<ConnectivityObserver>()
+    private val appVersionManager = mockk<AppVersionManager>()
+    private val systemCredentialService = mockk<SystemCredentialServicing>()
+    // Relaxed because the decision it makes is not this file's subject — the table is pinned
+    // branch by branch in UnifiedPushRegistrationTest. What IS this file's subject is that the
+    // ViewModel still CALLS it, from both triggers and in the right order at sign-out: the
+    // wiring is the part that, if it were quietly dropped, would take server push away from
+    // everyone while every other test in this class stayed green. Hence the coVerify blocks
+    // below rather than a mock nobody looks at.
+    private val unifiedPushAutoRegistrar = mockk<UnifiedPushAutoRegistrar>(relaxed = true)
+    private val appContext = mockk<Context>(relaxed = true)
+    private val snackbarManager = SnackbarManager(appContext)
+
+    private val versionState = MutableStateFlow(
+        AppVersionManager.VersionState(isLoadingReleases = false),
+    )
+    private val realtimeEvents = MutableSharedFlow<RealtimeEvent>()
+    private val offlineSyncFailures = MutableSharedFlow<Unit>()
+    private val userInitiatedSyncFailures = MutableSharedFlow<ConnectionFailureKind>()
+    private val offlineSyncSuccesses = MutableSharedFlow<Unit>()
+    private val syncMetadataVersion = MutableStateFlow(0L)
+    private val restoredUser = SessionUser(
+        id = "user-1",
+        name = "Taylor",
+        username = "user@example.com",
+        role = "USER",
+    )
+
+    @Before
+    fun setUp() {
+        every { appContext.getString(any()) } answers { "res-${firstArg<Int>()}" }
+        every { themePreferenceStore.getThemeMode() } returns AppThemeMode.SYSTEM
+        every { reminderPreferenceStore.getDefaultReminder() } returns ReminderOption.DEFAULT
+        every { dayAheadPreferenceStore.getOption() } returns DayAheadOption.OFF
+        every { appVersionManager.state } returns versionState
+        coEvery { appVersionManager.refreshServerCompatibility() } returns Unit
+        every { serverConfigRepository.getAppDataMode() } returns AppDataMode.SERVER
+        every { serverConfigRepository.hasServerConfigured() } returns true
+        every { serverConfigRepository.getServerUrl() } returns "https://tday.example.com"
+        every { cacheManager.loadOfflineStateBlocking() } returns OfflineSyncState()
+        every { cacheManager.syncMetadataVersion } returns syncMetadataVersion
+        every { syncManager.offlineSyncFailures } returns offlineSyncFailures
+        every { syncManager.userInitiatedSyncFailures } returns userInitiatedSyncFailures
+        every { syncManager.offlineSyncSuccesses } returns offlineSyncSuccesses
+        every { syncManager.hasPendingMutations() } returns false
+        every { realtimeClient.events } returns realtimeEvents
+        every { realtimeClient.isConnected } returns false
+        every { realtimeClient.connect() } returns Unit
+        every { realtimeClient.disconnect() } returns Unit
+        every { connectivityObserver.connectivityChanges } returns emptyFlow()
+        every { settingsRepository.isAiSummaryEnabledSnapshot() } returns true
+        every { settingsRepository.defaultHomeScreenSnapshot() } returns "scheduled"
+        coEvery { authRepository.syncTimezone() } returns Unit
+        every { reminderScheduler.rescheduleAll() } returns Unit
+        every { reminderScheduler.cancelAll() } returns Unit
+    }
+
+    @Test
+    fun `local bootstrap opens workspace without server session or sync`() = runTest {
+        every { serverConfigRepository.getAppDataMode() } returns AppDataMode.LOCAL
+        coEvery { cacheManager.updateOfflineState(any()) } answers {
+            firstArg<(OfflineSyncState) -> OfflineSyncState>().invoke(
+                OfflineSyncState(
+                    pendingMutations = listOf(
+                        com.ohmz.tday.compose.core.data.PendingMutationRecord(
+                            mutationId = "mutation-1",
+                            kind = com.ohmz.tday.compose.core.data.MutationKind.CREATE_TODO,
+                            targetId = "local-todo-1",
+                            timestampEpochMs = 1L,
+                        ),
+                    ),
+                ),
+            )
+        }
+
+        val viewModel = makeViewModel()
+        runCurrent()
+
+        assertTrue(viewModel.uiState.value.isLocalMode)
+        assertTrue(viewModel.uiState.value.isWorkspaceAvailable)
+        assertFalse(viewModel.uiState.value.authenticated)
+        assertEquals(0, viewModel.uiState.value.pendingMutationCount)
+        assertTrue(viewModel.uiState.value.syncStatus.isLocalMode)
+        assertEquals(0L, viewModel.uiState.value.syncStatus.lastSuccessfulSyncEpochMs)
+        assertEquals(0L, viewModel.uiState.value.syncStatus.lastSyncAttemptEpochMs)
+
+        coVerify(exactly = 0) { authRepository.restoreSessionForBootstrap() }
+        coVerify(exactly = 0) { appVersionManager.refreshServerCompatibility() }
+        coVerify(exactly = 0) { syncManager.syncCachedData(any(), any(), any(), any()) }
+        verify(exactly = 0) { realtimeClient.connect() }
+    }
+
+    @Test
+    fun `server bootstrap exposes sync metadata from cache`() = runTest {
+        val restoredSession = AuthRepository.RestoredSession(
+            user = restoredUser,
+            usedCachedSession = false,
+        )
+        val cachedState = OfflineSyncState(
+            lastSuccessfulSyncEpochMs = 1_000L,
+            lastSyncAttemptEpochMs = 2_000L,
+            pendingMutations = listOf(pendingMutation("mutation-1")),
+        )
+        every { cacheManager.loadOfflineStateBlocking() } returns cachedState
+        coEvery { authRepository.restoreSessionForBootstrap() } returns restoredSession
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        } returns Result.success(Unit)
+
+        val viewModel = makeViewModel()
+        runCurrent()
+
+        val syncStatus = viewModel.uiState.value.syncStatus
+        assertFalse(syncStatus.isLocalMode)
+        assertEquals(1, syncStatus.pendingMutationCount)
+        assertEquals(1_000L, syncStatus.lastSuccessfulSyncEpochMs)
+        assertEquals(2_000L, syncStatus.lastSyncAttemptEpochMs)
+
+        viewModel.logout()
+        runCurrent()
+    }
+
+    @Test
+    fun `manual sync sets syncing state and ignores duplicate taps`() = runTest {
+        val restoredSession = AuthRepository.RestoredSession(
+            user = restoredUser,
+            usedCachedSession = false,
+        )
+        var cachedState = OfflineSyncState(
+            lastSuccessfulSyncEpochMs = 1_000L,
+            lastSyncAttemptEpochMs = 1_000L,
+        )
+        every { cacheManager.loadOfflineStateBlocking() } answers { cachedState }
+        coEvery { authRepository.restoreSessionForBootstrap() } returns restoredSession
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        } returns Result.success(Unit)
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+            )
+        } coAnswers {
+            kotlinx.coroutines.delay(100)
+            cachedState = OfflineSyncState(
+                lastSuccessfulSyncEpochMs = 3_000L,
+                lastSyncAttemptEpochMs = 3_000L,
+            )
+            Result.success(Unit)
+        }
+
+        val viewModel = makeViewModel()
+        runCurrent()
+
+        viewModel.syncNow()
+        runCurrent()
+        assertTrue(viewModel.uiState.value.isManualSyncing)
+
+        viewModel.syncNow()
+        runCurrent()
+        coVerify(exactly = 1) {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+            )
+        }
+
+        advanceTimeBy(100)
+        runCurrent()
+
+        assertFalse(viewModel.uiState.value.isManualSyncing)
+        assertEquals(3_000L, viewModel.uiState.value.syncStatus.lastSuccessfulSyncEpochMs)
+        assertEquals(3_000L, viewModel.uiState.value.syncStatus.lastSyncAttemptEpochMs)
+
+        viewModel.logout()
+        runCurrent()
+    }
+
+    @Test
+    fun `foreground reconnect retries sync after restoring session`() = runTest {
+        val restoredSession = AuthRepository.RestoredSession(
+            user = restoredUser,
+            usedCachedSession = false,
+        )
+        coEvery { authRepository.restoreSessionForBootstrap() } returnsMany listOf(
+            restoredSession,
+            restoredSession,
+        )
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        } returns Result.success(Unit)
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+            )
+        } returnsMany listOf(
+            Result.failure(ApiCallException(statusCode = 401, message = "Unauthorized")),
+            Result.success(Unit),
+        )
+
+        val viewModel = makeViewModel()
+        runCurrent()
+
+        snackbarManager.events.test {
+            viewModel.reconnectAfterForeground()
+            runCurrent()
+            runCurrent()
+            expectNoEvents()
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        assertTrue(viewModel.uiState.value.authenticated)
+        assertFalse(viewModel.uiState.value.isOffline)
+        assertEquals(restoredUser, viewModel.uiState.value.user)
+
+        viewModel.logout()
+        runCurrent()
+    }
+
+    /**
+     * The registration table is pure and walked branch by branch in `UnifiedPushRegistrationTest`,
+     * but none of it runs unless the ViewModel calls it, and losing either trigger is silent:
+     * the app builds, every other test here passes, and server push just stops — task-due
+     * reminders, "a list was shared with you", admin alerts, and the `data-changed` ping that is
+     * the widget's only realtime path.
+     *
+     * The second `reconnectAfterForeground` is the load-bearing half. It returns early at the
+     * in-flight sync guard, so the push call has to sit ABOVE that guard: a distributor is
+     * installed in another app with T'Day in the background, and a foreground that happens to
+     * land on a sync already running is not a foreground the app may skip looking at.
+     */
+    @Test
+    fun `registers server push on bootstrap and on every foreground`() = runTest {
+        val restoredSession = AuthRepository.RestoredSession(
+            user = restoredUser,
+            usedCachedSession = false,
+        )
+        coEvery { authRepository.restoreSessionForBootstrap() } returns restoredSession
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        } returns Result.success(Unit)
+        // Slow on purpose: the second foreground below has to find a sync still in flight.
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+            )
+        } coAnswers {
+            delay(100)
+            Result.success(Unit)
+        }
+        coEvery { authRepository.logout() } returns Unit
+        coEvery { systemCredentialService.clearCredentialState() } returns Unit
+
+        val signedIn = UnifiedPushSession(
+            authenticated = true,
+            isLocalMode = false,
+            userId = restoredUser.id,
+        )
+
+        val viewModel = makeViewModel()
+        runCurrent()
+        // Trigger one: the state collector. Watching the state is what makes every route into a
+        // session — bootstrap, a fresh sign-in, leaving Local Mode — register without its own
+        // call site, so this asserts the collector exists at all.
+        coVerify(exactly = 1) { unifiedPushAutoRegistrar.ensureRegistered(signedIn) }
+
+        // Trigger two, and not a duplicate of one: `distinctUntilChanged` means the collector has
+        // nothing to say about a foreground that did not change who is signed in, so the count
+        // only moves if `reconnectAfterForeground` asks for itself.
+        viewModel.reconnectAfterForeground()
+        runCurrent()
+        coVerify(exactly = 2) { unifiedPushAutoRegistrar.ensureRegistered(signedIn) }
+
+        viewModel.reconnectAfterForeground()
+        runCurrent()
+        coVerify(exactly = 3) { unifiedPushAutoRegistrar.ensureRegistered(signedIn) }
+
+        advanceTimeBy(100)
+        runCurrent()
+
+        viewModel.logout()
+        runCurrent()
+    }
+
+    /**
+     * A 401 that silent session recovery could NOT heal means the session is truly gone:
+     * [AppViewModel] expires it, signs the user out and explains why. `suppressAuthenticationExpired`
+     * only silences the generic sync-error toast — it does not keep a dead session alive.
+     */
+    @Test
+    fun `foreground reconnect expires the session when it cannot be restored`() = runTest {
+        val restoredSession = AuthRepository.RestoredSession(
+            user = restoredUser,
+            usedCachedSession = false,
+        )
+        coEvery { authRepository.restoreSessionForBootstrap() } returnsMany listOf(
+            restoredSession,
+            null,
+        )
+        coEvery { authRepository.logout() } returns Unit
+        coEvery { systemCredentialService.clearCredentialState() } returns Unit
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        } returns Result.success(Unit)
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+            )
+        } returns Result.failure(ApiCallException(statusCode = 401, message = "Unauthorized"))
+
+        val viewModel = makeViewModel()
+        runCurrent()
+
+        snackbarManager.events.test {
+            viewModel.reconnectAfterForeground()
+            // expireSession() finishes in a coroutine of its own, several suspension points deep
+            // (logout, credential clear, ensureResyncLoop) before it emits, so drain rather than
+            // count runCurrent() pumps. Every step of that chain is on the test scheduler — see
+            // backgroundDispatcher in makeViewModel() — so the drain is a real barrier. It cannot
+            // run away into the resync loop either: that loop only wakes after RESYNC_INTERVAL_MS
+            // of virtual time, and expireSession cancels it via ensureResyncLoop(false) first,
+            // with no delay anywhere ahead of that.
+            advanceUntilIdle()
+            val event = awaitItem()
+            assertEquals(SnackbarKind.ERROR, event.kind)
+            assertEquals("res-${R.string.error_auth_expired}", event.message)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        val state = viewModel.uiState.value
+        assertFalse(state.authenticated)
+        assertFalse(state.isOffline)
+        assertEquals(null, state.user)
+        coVerify { authRepository.logout() }
+        verify { reminderScheduler.cancelAll() }
+    }
+
+    /**
+     * The other half of that branch: an unrestorable session whose failure is a mere
+     * connectivity blip keeps the user signed in and only marks the app offline — silently,
+     * after the foreground grace period, with no session-expired toast.
+     */
+    @Test
+    fun `foreground reconnect marks app offline when the server is unreachable`() = runTest {
+        val restoredSession = AuthRepository.RestoredSession(
+            user = restoredUser,
+            usedCachedSession = false,
+        )
+        coEvery { authRepository.restoreSessionForBootstrap() } returnsMany listOf(
+            restoredSession,
+            null,
+        )
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        } returns Result.success(Unit)
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+            )
+        } returns Result.failure(
+            // A 401 the app never got an answer for: the request failed to reach the server.
+            ApiCallException(statusCode = 401, message = "Failed to connect to tday.example.com"),
+        )
+
+        val viewModel = makeViewModel()
+        runCurrent()
+
+        snackbarManager.events.test {
+            viewModel.reconnectAfterForeground()
+            runCurrent()
+            // Connectivity failures defer the offline flag past the foreground grace period
+            // (3s, private to AppViewModel) so a quick reconnect never flashes offline state.
+            assertFalse(viewModel.uiState.value.isOffline)
+            advanceTimeBy(3_000)
+            runCurrent()
+            expectNoEvents()
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        assertTrue(viewModel.uiState.value.authenticated)
+        assertTrue(viewModel.uiState.value.isOffline)
+        assertEquals(restoredUser, viewModel.uiState.value.user)
+
+        viewModel.logout()
+        runCurrent()
+    }
+
+    /**
+     * The cold-launch contract, at the ViewModel: from construction until the persisted session
+     * has been resolved, the root destination is the splash — not the sign-in wizard, which is
+     * what a signed-out-looking `authenticated = false` used to be read as. A real session
+     * restore is a network round-trip, so it is parked on the test scheduler to make the window
+     * between "bootstrap started" and "bootstrap answered" observable.
+     */
+    @Test
+    fun `should hold the splash until the server session resolves when signed in`() = runTest {
+        val restoredSession = AuthRepository.RestoredSession(
+            user = restoredUser,
+            usedCachedSession = false,
+        )
+        coEvery { authRepository.restoreSessionForBootstrap() } coAnswers {
+            delay(1)
+            restoredSession
+        }
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        } returns Result.success(Unit)
+
+        val viewModel = makeViewModel()
+        runCurrent()
+
+        val unresolved = viewModel.uiState.value
+        assertTrue(unresolved.loading)
+        assertFalse(unresolved.isWorkspaceAvailable)
+        assertEquals(SessionResolution.UNKNOWN, unresolved.sessionResolution)
+        assertEquals(RootDestination.SPLASH, unresolved.rootDestination)
+
+        advanceTimeBy(1)
+        runCurrent()
+
+        val resolved = viewModel.uiState.value
+        assertFalse(resolved.loading)
+        assertTrue(resolved.authenticated)
+        assertEquals(SessionResolution.RESOLVED, resolved.sessionResolution)
+        assertEquals(RootDestination.WORKSPACE, resolved.rootDestination)
+
+        viewModel.logout()
+        runCurrent()
+    }
+
+    @Test
+    fun `should hold the splash until Local Mode resolves and then open the workspace`() = runTest {
+        every { serverConfigRepository.getAppDataMode() } returns AppDataMode.LOCAL
+        coEvery { cacheManager.updateOfflineState(any()) } coAnswers {
+            delay(1)
+            firstArg<(OfflineSyncState) -> OfflineSyncState>().invoke(OfflineSyncState())
+        }
+
+        val viewModel = makeViewModel()
+        runCurrent()
+
+        assertEquals(SessionResolution.UNKNOWN, viewModel.uiState.value.sessionResolution)
+        assertEquals(RootDestination.SPLASH, viewModel.uiState.value.rootDestination)
+        // SPLASH and an available workspace must never be true together. The nav graph does not
+        // exist while the root is SPLASH — TdayApp holds the branded splash in the NavHost's
+        // place — but the pending-deep-link effect keys off isWorkspaceAvailable and calls
+        // NavController.handleDeepLink, which dereferences the graph unconditionally. Because
+        // enterLocalWorkspace() writes the mode and RESOLVED in one update, that effect can only
+        // ever outrun the graph while the user is holding the splash (guarded separately in
+        // TdayApp); a branch that opened the workspace without resolving would make it a crash
+        // on every cold launch instead.
+        assertFalse(viewModel.uiState.value.isWorkspaceAvailable)
+
+        advanceTimeBy(1)
+        runCurrent()
+
+        val resolved = viewModel.uiState.value
+        assertTrue(resolved.isLocalMode)
+        assertEquals(SessionResolution.RESOLVED, resolved.sessionResolution)
+        assertEquals(RootDestination.WORKSPACE, resolved.rootDestination)
+        coVerify(exactly = 0) { authRepository.restoreSessionForBootstrap() }
+    }
+
+    /** A signed-out user still reaches onboarding promptly: no server means no session lookup. */
+    @Test
+    fun `should resolve to onboarding without a session lookup when no server is configured`() = runTest {
+        every { serverConfigRepository.hasServerConfigured() } returns false
+        every { serverConfigRepository.hasRetainedLocalWorkspace() } returns false
+        every { authRepository.clearAllLocalUserDataForUnauthenticatedState() } returns Unit
+
+        val viewModel = makeViewModel()
+        runCurrent()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.loading)
+        assertEquals(SessionResolution.RESOLVED, state.sessionResolution)
+        assertEquals(RootDestination.ONBOARDING, state.rootDestination)
+        coVerify(exactly = 0) { authRepository.restoreSessionForBootstrap() }
+    }
+
+    @Test
+    fun `should resolve to onboarding when the server session cannot be restored`() = runTest {
+        coEvery { authRepository.restoreSessionForBootstrap() } returns null
+        every { authRepository.clearSessionOnly() } returns Unit
+        every { authRepository.loadPendingApproval() } returns null
+
+        val viewModel = makeViewModel()
+        runCurrent()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.loading)
+        assertEquals(SessionResolution.RESOLVED, state.sessionResolution)
+        assertEquals(RootDestination.ONBOARDING, state.rootDestination)
+    }
+
+    @Test
+    fun `should stay resolved after sign-out so the splash never returns`() = runTest {
+        val restoredSession = AuthRepository.RestoredSession(
+            user = restoredUser,
+            usedCachedSession = false,
+        )
+        coEvery { authRepository.restoreSessionForBootstrap() } returns restoredSession
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        } returns Result.success(Unit)
+        coEvery { authRepository.logout() } returns Unit
+        coEvery { systemCredentialService.clearCredentialState() } returns Unit
+
+        val viewModel = makeViewModel()
+        runCurrent()
+        assertEquals(RootDestination.WORKSPACE, viewModel.uiState.value.rootDestination)
+
+        viewModel.logout()
+        runCurrent()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.authenticated)
+        assertEquals(SessionResolution.RESOLVED, state.sessionResolution)
+        assertEquals(RootDestination.ONBOARDING, state.rootDestination)
+
+        // The order is the assertion, not an incidental. Unsubscribing this device's endpoint
+        // needs the session cookie `authRepository.logout()` is about to drop; swap the two lines
+        // in the ViewModel and the endpoint stays filed against the account that left — its task
+        // titles keep arriving on this device while the next account to sign in gets no push at
+        // all, because the connector is still acknowledged and so nothing re-registers.
+        coVerifyOrder {
+            unifiedPushAutoRegistrar.onSignedOut()
+            authRepository.logout()
+        }
+    }
+
+    @Test
+    fun `should back off resync attempts when the server stays unreachable`() = runTest {
+        bootstrapAuthenticatedWithUnreachableResync()
+        withSignedInViewModel {
+            // Healthy cadence first: the loop's first attempt lands 5 minutes after bootstrap.
+            advanceTimeBy(5 * MINUTE_MS)
+            runCurrent()
+            assertLoopSyncAttempts(1)
+
+            // It failed, so the next one waits twice as long, not another 5 minutes...
+            advanceTimeBy(10 * MINUTE_MS - 1)
+            runCurrent()
+            assertLoopSyncAttempts(1)
+            advanceTimeBy(1)
+            runCurrent()
+            assertLoopSyncAttempts(2)
+
+            // ...and the wait stops growing at 15 minutes.
+            advanceTimeBy(15 * MINUTE_MS - 1)
+            runCurrent()
+            assertLoopSyncAttempts(2)
+            advanceTimeBy(1)
+            runCurrent()
+            assertLoopSyncAttempts(3)
+        }
+    }
+
+    @Test
+    fun `should stop retrying an unreachable server when backgrounded`() = runTest {
+        bootstrapAuthenticatedWithUnreachableResync()
+        withSignedInViewModel { viewModel ->
+            viewModel.onAppBackgrounded()
+
+            // The healthy loop still makes its scheduled attempt in the background; it fails...
+            advanceTimeBy(5 * MINUTE_MS)
+            runCurrent()
+            assertLoopSyncAttempts(1)
+
+            // ...and from then on nothing is retried until the app comes back.
+            advanceTimeBy(6 * 60 * MINUTE_MS)
+            runCurrent()
+            assertLoopSyncAttempts(1)
+
+            // Coming back restarts the backoff: the normal 5-minute cadence, not the 10 it was on.
+            viewModel.onAppForegrounded()
+            advanceTimeBy(5 * MINUTE_MS - 1)
+            runCurrent()
+            assertLoopSyncAttempts(1)
+            advanceTimeBy(1)
+            runCurrent()
+            assertLoopSyncAttempts(2)
+        }
+    }
+
+    @Test
+    fun `should reset the backoff when any sync reaches the server`() = runTest {
+        bootstrapAuthenticatedWithUnreachableResync()
+        withSignedInViewModel {
+            advanceTimeBy(5 * MINUTE_MS)
+            runCurrent()
+            assertLoopSyncAttempts(1)
+
+            // A manual refresh (which goes around the loop) got through during the 10-minute wait.
+            offlineSyncSuccesses.emit(Unit)
+            runCurrent()
+
+            // The wait already under way runs out as scheduled...
+            advanceTimeBy(10 * MINUTE_MS)
+            runCurrent()
+            assertLoopSyncAttempts(2)
+
+            // ...but that failure is the first in a row again: 10 minutes to the next attempt,
+            // not the 15-minute cap a third consecutive failure would have earned.
+            advanceTimeBy(10 * MINUTE_MS - 1)
+            runCurrent()
+            assertLoopSyncAttempts(2)
+            advanceTimeBy(1)
+            runCurrent()
+            assertLoopSyncAttempts(3)
+        }
+    }
+
+    @Test
+    fun `should resume background resync when a sync gets through while parked`() = runTest {
+        bootstrapAuthenticatedWithUnreachableResync()
+        withSignedInViewModel { viewModel ->
+            viewModel.onAppBackgrounded()
+            advanceTimeBy(15 * MINUTE_MS)
+            runCurrent()
+            assertLoopSyncAttempts(1)
+
+            // Parked; then a network change let a sync through, so the server is back.
+            offlineSyncSuccesses.emit(Unit)
+            runCurrent()
+
+            advanceTimeBy(5 * MINUTE_MS)
+            runCurrent()
+            assertLoopSyncAttempts(2)
+        }
+    }
+
+    @Test
+    fun `should reconnect a dropped realtime socket when in the foreground`() = runTest {
+        bootstrapAuthenticatedWithUnreachableResync()
+        withSignedInViewModel {
+            clearMocks(realtimeClient, answers = false)
+
+            realtimeEvents.emit(RealtimeEvent.Disconnected)
+            advanceTimeBy(5_000)
+            runCurrent()
+
+            verify(exactly = 1) { realtimeClient.connect() }
+        }
+    }
+
+    @Test
+    fun `should not reconnect a dropped realtime socket when backgrounded`() = runTest {
+        bootstrapAuthenticatedWithUnreachableResync()
+        withSignedInViewModel { viewModel ->
+            viewModel.onAppBackgrounded()
+            clearMocks(realtimeClient, answers = false)
+
+            realtimeEvents.emit(RealtimeEvent.Disconnected)
+            advanceTimeBy(5_000)
+            runCurrent()
+
+            verify(exactly = 0) { realtimeClient.connect() }
+        }
+    }
+
+    /**
+     * Signs out in `finally`: the resync loop never ends on its own, and a failed assertion that
+     * skipped the sign-out left runTest's end-of-test drain advancing it forever in virtual time.
+     */
+    private suspend fun TestScope.withSignedInViewModel(block: suspend (AppViewModel) -> Unit) {
+        val viewModel = makeViewModel()
+        runCurrent()
+        try {
+            block(viewModel)
+        } finally {
+            viewModel.logout()
+            runCurrent()
+        }
+    }
+
+    /** Bootstrap succeeds; every later resync-loop attempt (no pending mutations) cannot reach it. */
+    private fun bootstrapAuthenticatedWithUnreachableResync() {
+        coEvery { authRepository.restoreSessionForBootstrap() } returns AuthRepository.RestoredSession(
+            user = restoredUser,
+            usedCachedSession = false,
+        )
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        } returns Result.success(Unit)
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = false,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        } returns Result.failure(UnknownHostException("Unable to resolve host \"tday.example.com\""))
+    }
+
+    private fun assertLoopSyncAttempts(expected: Int) {
+        coVerify(exactly = expected) {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = false,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        }
+    }
+
+    private fun pendingMutation(id: String): PendingMutationRecord =
+        PendingMutationRecord(
+            mutationId = id,
+            kind = MutationKind.CREATE_TODO,
+            targetId = "local-todo-1",
+            timestampEpochMs = 1L,
+        )
+
+    private fun makeViewModel(): AppViewModel =
+        AppViewModel(
+            authRepository = authRepository,
+            serverConfigRepository = serverConfigRepository,
+            syncManager = syncManager,
+            settingsRepository = settingsRepository,
+            cacheManager = cacheManager,
+            themePreferenceStore = themePreferenceStore,
+            reminderScheduler = reminderScheduler,
+            reminderPreferenceStore = reminderPreferenceStore,
+            dayAheadPreferenceStore = dayAheadPreferenceStore,
+            snackbarManager = snackbarManager,
+            realtimeClient = realtimeClient,
+            connectivityObserver = connectivityObserver,
+            appVersionManager = appVersionManager,
+            systemCredentialService = systemCredentialService,
+            unifiedPushAutoRegistrar = unifiedPushAutoRegistrar,
+            appContext = appContext,
+            // Background work has to share the test scheduler. On Dispatchers.Default it runs on
+            // a real thread the scheduler cannot see, so runCurrent()/advanceUntilIdle() return
+            // while bootstrap is still parked on it and the ViewModel resumes on a pool thread,
+            // racing the assertions here.
+            backgroundDispatcher = mainDispatcherRule.dispatcher,
+        )
+
+    private companion object {
+        const val MINUTE_MS = 60_000L
+    }
+}

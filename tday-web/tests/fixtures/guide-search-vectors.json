@@ -1,0 +1,90 @@
+{
+  "vectors": {
+    "repeat": [
+      "recurrence-presets",
+      "repeat-suggestions",
+      "reusable-lists",
+      "nlp-date-syntax",
+      "bulk-actions"
+    ],
+    "swipe": [
+      "copy-task-text",
+      "calendar-views"
+    ],
+    "widget": [
+      "api-key-homarr"
+    ],
+    "offline": [
+      "local-mode"
+    ],
+    "date": [
+      "nlp-date-syntax",
+      "floaters-vs-todos",
+      "calendar-views",
+      "root-feeds",
+      "create-task",
+      "brain-dump",
+      "task-steps",
+      "copy-task-text",
+      "promote-and-float",
+      "quick-defer",
+      "day-done",
+      "scheduled-lists",
+      "morning-sweep",
+      "share-into-tday",
+      "crash-reports"
+    ],
+    "reminder": [
+      "push-notifications"
+    ],
+    "api key": [
+      "api-key-homarr"
+    ],
+    "floater": [
+      "floaters-vs-todos",
+      "resting-floaters",
+      "floater-lists",
+      "default-home-screen",
+      "promote-and-float",
+      "reusable-lists",
+      "root-feeds",
+      "create-task",
+      "brain-dump",
+      "morning-sweep"
+    ],
+    "car": [
+      "morning-sweep",
+      "overdue-view",
+      "scheduled-lists",
+      "list-icons",
+      "completed-history",
+      "crash-reports",
+      "api-key-homarr"
+    ],
+    "search": [
+      "search-tasks"
+    ],
+    "priority": [
+      "priorities",
+      "bulk-actions",
+      "nlp-date-syntax",
+      "copy-task-text",
+      "promote-and-float"
+    ],
+    "pin": [
+      "pin-task",
+      "create-task",
+      "copy-task-text",
+      "promote-and-float",
+      "list-icons",
+      "keyboard-shortcuts"
+    ],
+    "keyboard": [
+      "keyboard-submit",
+      "keyboard-shortcuts"
+    ],
+    "push": [
+      "push-notifications"
+    ]
+  }
+}
