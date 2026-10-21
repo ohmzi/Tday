@@ -574,7 +574,11 @@ jobs:
       # no release — with `exact` compatibility on the backend that combination
       # locks every client out with no way to update. The reverse gap (release
       # published, image missing) leaves the running server on the previous
-      # version and is fixed by re-running this workflow.
+      # version. Do NOT re-run this workflow to close it: "Resolve release version"
+      # sees the tag already exists, bumps the patch, and cuts a second release with a
+      # new build number. Build and push the image for the existing tag instead — a
+      # one-off, tag-triggered workflow on a throwaway branch that checks out that tag
+      # and runs this same build-push step with the same build args and secrets.
       #
       # Same DSN build arg and token secret as the build step above, on purpose — see
       # the note there for why dropping either here would change what gets shipped.
