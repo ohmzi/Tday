@@ -286,7 +286,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
-    implementation("io.sentry:sentry-okhttp:8.59.0")
+    implementation("io.sentry:sentry-okhttp:8.61.0")
 
     implementation("androidx.security:security-crypto:1.1.0")
 
