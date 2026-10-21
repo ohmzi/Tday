@@ -57,27 +57,33 @@ team projects or Kanban boards, T'Day isn't built for that.
 
 ### Web
 
+**Desktop**
+
 <div align="center">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/desktop-home-dark.png">
-  <img src="docs/assets/readme/desktop-home-light.png" alt="The T'Day home screen on the web: today's tasks with lists and priorities, and tiles for Scheduled, Priority, Overdue, All, Completed, and Calendar" width="900">
-</picture>
+<p>
+  <img src="docs/assets/readme/web-desktop-today.png" alt="The T'Day Today feed in the web app on desktop: today's tasks with lists and priority flags" width="420">
+  <img src="docs/assets/readme/web-desktop-dashboard.png" alt="The T'Day web dashboard on desktop: counts for Scheduled, Priority, Overdue, All, Completed, and Calendar, with My Lists below" width="420">
+</p>
+<p>
+  <img src="docs/assets/readme/web-desktop-calendar.png" alt="The T'Day month calendar in the web app on desktop, with task counts under each day and the selected day's tasks below" width="420">
+  <img src="docs/assets/readme/web-desktop-floater.png" alt="The Floater feed in the web app on desktop: undated Anytime tasks and floater lists" width="420">
+</p>
 
 </div>
 
-<details>
-<summary><b>The calendar on desktop</b></summary>
-<br/>
+**Mobile web**
+
 <div align="center">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/desktop-calendar-dark.png">
-  <img src="docs/assets/readme/desktop-calendar-light.png" alt="The T'Day month calendar on the web, with task counts and the selected day's tasks below" width="900">
-</picture>
+<p>
+  <img src="docs/assets/readme/web-mobile-today.png" alt="The T'Day Today feed in the web app on a phone: today's tasks with lists and priority flags" width="205">
+  <img src="docs/assets/readme/web-mobile-dashboard.png" alt="The T'Day web dashboard on a phone: counts for Scheduled, Priority, Overdue, All, Completed, and Calendar, with My Lists below" width="205">
+  <img src="docs/assets/readme/web-mobile-calendar.png" alt="The T'Day month calendar in the web app on a phone, with task counts under each day" width="205">
+  <img src="docs/assets/readme/web-mobile-floater.png" alt="The Floater feed in the web app on a phone: undated Anytime tasks and floater lists" width="205">
+</p>
 
 </div>
-</details>
 
 ### Android
 
@@ -111,7 +117,7 @@ team projects or Kanban boards, T'Day isn't built for that.
 
 </div>
 
-<sub>Shown with demo data. The web screenshots follow your GitHub light or dark theme; the app screenshots are light mode.</sub>
+<sub>Shown with demo data. The app screens are shown in light mode.</sub>
 
 ---
 
