@@ -66,6 +66,18 @@ function withoutComments(source: string): string {
     .replace(/(^|[^:"'\\])\/\/.*$/gm, "$1");
 }
 
+// XML comments stripped to a fixed point. A single pass over a multi-character pattern can splice
+// the halves of two comments into a fresh `<!--`, so repeat until the text stops changing.
+function withoutXmlComments(xml: string): string {
+  let result = xml;
+  let previous: string;
+  do {
+    previous = result;
+    result = result.replace(/<!--[\s\S]*?-->/g, "");
+  } while (result !== previous);
+  return result;
+}
+
 function repoPath(file: string): string {
   return path.relative(MONO, file).split(path.sep).join("/");
 }
@@ -432,7 +444,7 @@ describe("sentry starts from exactly one consent-gated file per platform", () =>
     it("keeps the log appender from starting a second, ungated client", () => {
       // Left to its own devices SentryAppender calls Sentry.init from SENTRY_DSN while logging
       // starts, before main() builds the gated options. The sentinel is its own "skip" signal.
-      const logback = readSource(backendLogback).replace(/<!--[\s\S]*?-->/g, "");
+      const logback = withoutXmlComments(readSource(backendLogback));
       expect(logback).toMatch(/<dsn>\s*SENTRY_DSN_IS_UNDEFINED\s*<\/dsn>/);
       expect(logback).toMatch(/<minimumBreadcrumbLevel>\s*ERROR\s*<\/minimumBreadcrumbLevel>/);
     });
@@ -757,14 +769,17 @@ describe("sentry reports are failures only", () => {
     it("keeps Sentry's content providers out of the merged manifest", () => {
       // They would run in every process before Application.onCreate, consent or not.
       const manifest = readSource(androidManifest);
+      const providerTags = manifest.match(/<provider\b[^>]*>/g) ?? [];
       for (const provider of [
         "io.sentry.android.core.SentryInitProvider",
         "io.sentry.android.core.SentryPerformanceProvider",
         "io.sentry.ndk.SentryNdkPreloadProvider",
       ]) {
-        expect(manifest).toMatch(
-          new RegExp(`<provider\\s+android:name="${provider.replace(/\./g, "\\.")}"[^>]*tools:node="remove"`),
+        const tag = providerTags.find((candidate) =>
+          candidate.includes(`android:name="${provider}"`),
         );
+        expect(tag, `${provider} must be declared in the manifest`).toBeDefined();
+        expect(tag ?? "").toContain('tools:node="remove"');
       }
     });
 
