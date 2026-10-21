@@ -1,11 +1,11 @@
 {
-  "version": "0.8.5",
-  "publishedAt": "2026-10-04T18:44:59-04:00",
+  "version": "0.8.6",
+  "publishedAt": "2026-10-21T13:04:39-04:00",
   "notes": [
-    "Fix the app-issues backlog across web, Android and iOS",
-    "Split the widget's Scheduled and Overdue views the way the app does",
-    "Give a plain Anytime pile something to start with"
+    "Fix APK signing digest parsing for apksigner 37",
+    "Add Android and iOS screenshot sections to README",
+    "Match dashboard tile colours to iOS"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.5",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.4..v0.8.5"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.6",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.5..v0.8.6"
 }
