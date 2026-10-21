@@ -103,6 +103,27 @@ describe("dependency and configuration hygiene", () => {
       expect(existsSync(path.join(MONO, "Dockerfile.backend"))).toBe(true);
     });
 
+    // The image is built from docker/build.gradle.kts, a standalone copy of the root plugin
+    // block. Dependabot bumps the root and module build files but cannot see this one, and the
+    // normal CI build never reads it, so a stale pin only fails at release time — as the backend
+    // requesting a newer plugin than the one this file already put on the classpath.
+    it("docker build files should pin the same plugin versions as the root build", () => {
+      const plugins = (source: string): Map<string, string> => {
+        const versions = new Map<string, string>();
+        for (const match of source.matchAll(/id\("([^"]+)"\)\s+version\s+"([^"]+)"/g)) {
+          versions.set(match[1], match[2]);
+        }
+        return versions;
+      };
+      const root = plugins(readSource(path.join(MONO, "build.gradle.kts")));
+      const docker = plugins(readSource(path.join(MONO, "docker", "build.gradle.kts")));
+      expect(docker.size).toBeGreaterThan(0);
+      for (const [id, version] of docker) {
+        expect(root.get(id), `${id} is not pinned in build.gradle.kts`).toBeDefined();
+        expect(version, `${id} differs from build.gradle.kts`).toBe(root.get(id));
+      }
+    });
+
     it("Docker compose should define required services", () => {
       const compose = readSource(path.join(MONO, "docker-compose.yaml"));
       expect(compose).toContain("database:");
