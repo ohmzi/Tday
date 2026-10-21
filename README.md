@@ -55,24 +55,13 @@ team projects or Kanban boards, T'Day isn't built for that.
 
 ## Screenshots
 
+### Web
+
 <div align="center">
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/desktop-home-dark.png">
   <img src="docs/assets/readme/desktop-home-light.png" alt="The T'Day home screen on the web: today's tasks with lists and priorities, and tiles for Scheduled, Priority, Overdue, All, Completed, and Calendar" width="900">
-</picture>
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/mobile-today-dark.png">
-  <img src="docs/assets/readme/mobile-today-light.png" alt="The Today view on a phone, grouped into Morning, Afternoon, and Tonight" width="250">
-</picture>
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/mobile-calendar-dark.png">
-  <img src="docs/assets/readme/mobile-calendar-light.png" alt="The month calendar on a phone, with a task count under each day" width="250">
-</picture>
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/mobile-floater-dark.png">
-  <img src="docs/assets/readme/mobile-floater-light.png" alt="The Floater feed on a phone: Anytime tasks with no due date" width="250">
 </picture>
 
 </div>
@@ -90,7 +79,39 @@ team projects or Kanban boards, T'Day isn't built for that.
 </div>
 </details>
 
-<sub>Shown with demo data. Screenshots follow your GitHub light or dark theme.</sub>
+### Android
+
+<div align="center">
+
+<p>
+  <img src="docs/assets/readme/android-today.png" alt="T'Day on Android: the Today feed with today's scheduled tasks, lists, and priority flags" width="230">
+  <img src="docs/assets/readme/android-dashboard.png" alt="T'Day on Android: counts for Scheduled, Priority, Overdue, All, Completed, and Calendar, with the user's lists below" width="230">
+  <img src="docs/assets/readme/android-calendar.png" alt="T'Day on Android: the month calendar with task counts under each day" width="230">
+</p>
+<p>
+  <img src="docs/assets/readme/android-floater.png" alt="T'Day on Android: the Floater feed with undated Anytime tasks" width="230">
+  <img src="docs/assets/readme/android-widgets.png" alt="T'Day home-screen widgets on Android showing Today, Floater Tasks, and a list" width="230">
+</p>
+
+</div>
+
+### iOS
+
+<div align="center">
+
+<p>
+  <img src="docs/assets/readme/ios-today.png" alt="T'Day on iOS: the Today feed with today's scheduled tasks, lists, and priority flags" width="230">
+  <img src="docs/assets/readme/ios-dashboard.png" alt="T'Day on iOS: counts for Scheduled, Priority, Overdue, All, Completed, and Calendar, with the user's lists below" width="230">
+  <img src="docs/assets/readme/ios-calendar.png" alt="T'Day on iOS: the month calendar with task counts under each day" width="230">
+</p>
+<p>
+  <img src="docs/assets/readme/ios-floater.png" alt="T'Day on iOS: the Floater feed with undated Anytime tasks" width="230">
+  <img src="docs/assets/readme/ios-widgets.jpg" alt="T'Day home-screen widgets on iOS showing Today, Floater Tasks, and a list" width="230">
+</p>
+
+</div>
+
+<sub>Shown with demo data. The web screenshots follow your GitHub light or dark theme; the app screenshots are light mode.</sub>
 
 ---
 
