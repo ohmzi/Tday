@@ -1625,12 +1625,7 @@ private fun ScheduledTaskHomeTodayCard(
                             center = Offset(size.width * 0.22f, size.height * 0.2f),
                             radius = size.width * 0.72f,
                         )
-                        val pearl = Brush.radialGradient(
-                            colors = listOf(Color.White.copy(alpha = 0.10f), Color.Transparent),
-                            center = Offset(size.width * 0.9f, size.height * 0.75f),
-                            radius = size.width * 0.55f,
-                        )
-                        onDrawWithContent { drawRect(glow); drawRect(pearl); drawContent() }
+                        onDrawWithContent { drawRect(glow); drawContent() }
                     },
             ) {
                 Row(
@@ -2316,8 +2311,8 @@ private fun ListRow(
                     .drawWithCache {
                         val iconSideGlow = Brush.radialGradient(
                             colors = listOf(
-                                Color.White.copy(alpha = 0.22f),
-                                Color.White.copy(alpha = 0.08f),
+                                Color.White.copy(alpha = 0.10f),
+                                Color.White.copy(alpha = 0.03f),
                                 Color.Transparent,
                             ),
                             center = Offset(
