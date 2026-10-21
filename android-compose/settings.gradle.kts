@@ -7,13 +7,13 @@ pluginManagement {
     plugins {
         id("com.android.application") version "9.4.1"
         id("com.android.library") version "9.4.1"
-        id("org.jetbrains.kotlin.android") version "2.4.20"
-        id("org.jetbrains.kotlin.multiplatform") version "2.4.20"
-        id("org.jetbrains.kotlin.plugin.serialization") version "2.4.20"
-        id("org.jetbrains.kotlin.plugin.compose") version "2.4.20"
+        id("org.jetbrains.kotlin.android") version "2.4.21"
+        id("org.jetbrains.kotlin.multiplatform") version "2.4.21"
+        id("org.jetbrains.kotlin.plugin.serialization") version "2.4.21"
+        id("org.jetbrains.kotlin.plugin.compose") version "2.4.21"
         id("com.google.devtools.ksp") version "2.3.12"
         id("com.google.dagger.hilt.android") version "2.60.1"
-        id("io.sentry.android.gradle") version "6.23.0"
+        id("io.sentry.android.gradle") version "6.24.0"
     }
 }
 plugins {
