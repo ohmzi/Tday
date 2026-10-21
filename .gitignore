@@ -26,6 +26,18 @@ tday-web/dist/
 .DS_Store
 *.pem
 
+# signing material — these live in GitHub Actions secrets (docs/DEPLOYMENT.md), never in the repo:
+# AuthKey_*.p8 is the App Store Connect API key, *.p12 the Apple Development certificate export,
+# *.jks / *.keystore the Android release keystore, tday-ci-development.* the leftovers of the
+# OpenSSL CSR-and-bundle procedure.
+*.p8
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.mobileprovision
+tday-ci-development.*
+
 # debug
 npm-debug.log*
 yarn-debug.log*

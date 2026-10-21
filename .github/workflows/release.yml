@@ -451,7 +451,10 @@ jobs:
             exit 1
           fi
 
-          FINGERPRINT=$(awk -F': ' '/SHA-256 digest:/ {print $2; exit}' /tmp/apk-certs.txt | tr -d '[:space:]' | tr 'A-F' 'a-f')
+          # The digest is the last field on the line. apksigner 37 renamed the label from
+          # "Signer #1 certificate SHA-256 digest: <hex>" to "V2 Signer: certificate SHA-256 digest:
+          # <hex>", which a split on ": " reads as the label itself and turns into a bogus mismatch.
+          FINGERPRINT=$(awk '/SHA-256 digest:/ {print $NF; exit}' /tmp/apk-certs.txt | tr -d '[:space:]' | tr 'A-F' 'a-f')
 
           if [ -z "$FINGERPRINT" ]; then
             echo "::warning::Could not parse a certificate digest out of apksigner's output:"
