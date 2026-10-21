@@ -83,9 +83,15 @@ const listColorCss: Record<ListColor, string> = {  RED: "hsl(var(--accent-red))"
 function renderTileOverlay() {
   return (
     <>
-      <div className="pointer-events-none absolute -left-14 -top-20 h-44 w-52 rounded-full bg-white/20 blur-2xl" />
+      <div className="pointer-events-none absolute -left-14 -top-20 h-44 w-52 rounded-full bg-white/10 blur-2xl" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.12),rgba(231,243,255,0.10)_45%,rgba(255,242,250,0.08)_68%,transparent)]" />
     </>
+  );
+}
+
+function renderTodayOverlay() {
+  return (
+    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_130%_180%_at_22%_20%,rgba(255,255,255,0.10),rgba(255,255,255,0.03)_55%,transparent_78%)]" />
   );
 }
 
@@ -234,10 +240,10 @@ export default function NativeScheduledTaskHomeDashboard() {
 
         <Link
           href="/app/today"
-          className="relative flex h-[70px] items-center justify-between overflow-hidden rounded-[26px] px-5 text-foreground shadow-[0_14px_30px_-18px_rgba(50,90,130,0.62)] transition-transform duration-enter hover:-translate-y-0.5 active:translate-y-0.5"
-          style={{ background: tileSurface(todayTileColor) }}
+          className="relative flex h-[70px] items-center justify-between overflow-hidden rounded-[26px] px-5 text-white shadow-[0_14px_30px_-18px_rgba(50,90,130,0.62)] transition-transform duration-enter hover:-translate-y-0.5 active:translate-y-0.5"
+          style={{ background: todayTileColor }}
         >
-          {renderTileOverlay()}
+          {renderTodayOverlay()}
           <span className="relative truncate text-[1.38rem] font-black leading-none tracking-tight">
             {titleDate}
           </span>
@@ -287,18 +293,18 @@ export default function NativeScheduledTaskHomeDashboard() {
                 key={route.id}
                 href={route.path}
                 className={cn(
-                  "group relative min-h-[94px] overflow-hidden rounded-[26px] p-3 text-foreground",
+                  "group relative min-h-[94px] overflow-hidden rounded-[26px] p-3 text-white",
                   "shadow-[0_14px_30px_-18px_rgba(60,70,90,0.55)] transition-transform duration-enter",
                   "hover:-translate-y-0.5 active:translate-y-0.5",
-                  active && "ring-2 ring-foreground/25",
+                  active && "ring-2 ring-white/40",
                 )}
-                style={{ background: tileSurface(tile?.color) }}
+                style={{ background: tile?.color ?? scheduledTaskHomeTileConfig.all?.color }}
               >
                 {renderTileOverlay()}
-                <Icon className="pointer-events-none absolute -bottom-6 -right-5 h-24 w-24 text-foreground/15 stroke-[1.8]" />
+                <Icon className="pointer-events-none absolute -bottom-6 -right-5 h-24 w-24 text-white/20 stroke-[1.8]" />
                 <div className="relative flex h-full flex-col justify-between">
                   <div className="flex items-start justify-between gap-3">
-                    <Icon className="h-6 w-6 text-foreground stroke-[2.5]" />
+                    <Icon className="h-6 w-6 text-white stroke-[2.5]" />
                     {count != null && (
                       <span className="text-[1.72rem] font-black leading-none">
                         {count}
@@ -331,14 +337,14 @@ export default function NativeScheduledTaskHomeDashboard() {
                     key={list.id}
                     href={`/app/list/${list.id}`}
                     aria-label={scheduledTaskHomeDict("openList", { name: formatListName(list.name) })}
-                    className="relative flex h-[70px] items-center gap-3 overflow-hidden rounded-[26px] px-5 text-foreground shadow-[0_14px_30px_-18px_rgba(60,70,90,0.45)] transition-transform duration-enter hover:-translate-y-0.5 active:translate-y-0.5"
+                    className="relative flex h-[70px] items-center gap-3 overflow-hidden rounded-[26px] px-5 text-white shadow-[0_14px_30px_-18px_rgba(60,70,90,0.45)] transition-transform duration-enter hover:-translate-y-0.5 active:translate-y-0.5"
                     style={{
                       background: tileSurface(accent),
                     }}
                   >
                     {renderTileOverlay()}
-                    <ListIcon className="pointer-events-none absolute -bottom-9 -right-7 h-28 w-28 text-foreground/15 stroke-[1.75]" />
-                    <ListIcon className="relative h-6 w-6 shrink-0 text-foreground stroke-[2.5]" />
+                    <ListIcon className="pointer-events-none absolute -bottom-9 -right-7 h-28 w-28 text-white/20 stroke-[1.75]" />
+                    <ListIcon className="relative h-6 w-6 shrink-0 text-white stroke-[2.5]" />
                     <span className="relative min-w-0 flex-1 truncate text-[1.38rem] font-black leading-none tracking-tight">
                       {formatListName(list.name)}
                     </span>
