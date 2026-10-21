@@ -268,11 +268,11 @@ export default function NativeFloaterTaskHomeDashboard() {
         <Link
           href="/app/completed?scope=floater"
           className={cn(
-            "relative flex h-[70px] items-center gap-3 overflow-hidden rounded-[26px] px-5 text-foreground",
+            "relative flex h-[70px] items-center gap-3 overflow-hidden rounded-[26px] px-5 text-white",
             "shadow-[0_14px_30px_-20px_rgba(60,70,90,0.55)] transition-transform duration-enter",
             "hover:-translate-y-0.5 active:translate-y-0.5",
           )}
-          style={{ background: tileSurface(nativeScreenAccentColors.completed) }}
+          style={{ background: nativeScreenAccentColors.completed }}
         >
           {renderTileOverlay()}
           <CheckCircle className="relative h-6 w-6 shrink-0 stroke-[2.5]" />
@@ -300,7 +300,7 @@ export default function NativeFloaterTaskHomeDashboard() {
                     key={list.id}
                     href={`/app/floater-list/${list.id}`}
                     className={cn(
-                      "relative flex min-h-[66px] items-center gap-3 overflow-hidden rounded-[24px] px-4 text-foreground",
+                      "relative flex min-h-[66px] items-center gap-3 overflow-hidden rounded-[24px] px-4 text-white",
                       "shadow-[0_14px_30px_-20px_rgba(60,70,90,0.55)] transition-transform duration-enter",
                       "hover:-translate-y-0.5 active:translate-y-0.5",
                     )}

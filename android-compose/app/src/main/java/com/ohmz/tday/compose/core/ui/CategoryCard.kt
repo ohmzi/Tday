@@ -54,6 +54,10 @@ import androidx.compose.ui.unit.dp
  * [inlineIcon] is the full-width form a single-column feed uses: a 70dp row with the glyph
  * beside the title on one line, as iOS's `FloaterTaskHomeCompletedCard` and web's tile draw
  * it. The default is the 2-up grid tile, glyph over title with room for a [count].
+ *
+ * [strongGlow] selects the heavier top-left wash iOS uses on the Floater feed's full-width
+ * cards (0.22 → 0.08) rather than the Scheduled board's lighter one (0.10 → 0.03). The two
+ * native feeds genuinely draw different strengths, so the shared tile has to match both.
  */
 @Composable
 fun CategoryCard(
@@ -65,6 +69,7 @@ fun CategoryCard(
     count: Int? = null,
     tileTransitionKey: String? = null,
     inlineIcon: Boolean = false,
+    strongGlow: Boolean = false,
     onClick: () -> Unit,
 ) {
     val view = LocalView.current
@@ -102,10 +107,12 @@ fun CategoryCard(
                     .fillMaxWidth()
                     .then(if (inlineIcon) Modifier.height(InlineCardHeight) else Modifier)
                     .drawWithCache {
+                        val glowTopAlpha = if (strongGlow) 0.22f else 0.10f
+                        val glowMidAlpha = if (strongGlow) 0.08f else 0.03f
                         val iconSideGlow = Brush.radialGradient(
                             colors = listOf(
-                                Color.White.copy(alpha = 0.22f),
-                                Color.White.copy(alpha = 0.08f),
+                                Color.White.copy(alpha = glowTopAlpha),
+                                Color.White.copy(alpha = glowMidAlpha),
                                 Color.Transparent,
                             ),
                             center = Offset(

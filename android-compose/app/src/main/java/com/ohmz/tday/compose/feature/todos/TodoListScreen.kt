@@ -4043,6 +4043,9 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
                 // One row, glyph beside the word, as iOS draws this tile — the
                 // stacked form is the 2-up grid's, and this one is full width.
                 inlineIcon = true,
+                // The Floater feed's cards wear iOS's heavier wash (0.22 → 0.08),
+                // not the Scheduled board's lighter one.
+                strongGlow = true,
                 onClick = onOpenCompleted,
             )
         }
