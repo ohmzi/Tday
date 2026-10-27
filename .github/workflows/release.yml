@@ -485,7 +485,7 @@ jobs:
       # that has no tag, no release and no downloadable APK. The push step below
       # replays this build from the layer cache, so it is a push, not a rebuild.
       - name: Log in to GHCR
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
