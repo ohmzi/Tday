@@ -40,14 +40,14 @@ dependencies {
     implementation("org.bouncycastle:bcprov-jdk18on:1.86")
     implementation("org.dmfs:lib-recur:0.17.1")
     implementation("com.joestelmach:natty:0.13")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
     implementation("ch.qos.logback:logback-classic:1.6.5")
 
-    implementation("io.sentry:sentry:8.61.0")
-    implementation("io.sentry:sentry-logback:8.61.0")
+    implementation("io.sentry:sentry:8.61.1")
+    implementation("io.sentry:sentry-logback:8.61.1")
     // SentryContext gives each request its own scope. The Sentry Gradle plugin also installs it
     // at build time, but a dependency the code compiles against should not hinge on that.
-    implementation("io.sentry:sentry-kotlin-extensions:8.61.0")
+    implementation("io.sentry:sentry-kotlin-extensions:8.61.1")
 
     implementation("io.insert-koin:koin-ktor:4.2.2")
     implementation("io.insert-koin:koin-logger-slf4j:4.2.2")
@@ -58,8 +58,8 @@ dependencies {
 
     implementation("io.ktor:ktor-server-websockets-jvm")
 
-    implementation("org.flywaydb:flyway-core:13.10.3")
-    implementation("org.flywaydb:flyway-database-postgresql:13.10.3")
+    implementation("org.flywaydb:flyway-core:13.11.1")
+    implementation("org.flywaydb:flyway-database-postgresql:13.11.1")
 
     implementation("nl.martijndwars:web-push:5.1.2")
     // web-push 5.1.2 demotes its Apache HTTP client to a runtime dependency, but
