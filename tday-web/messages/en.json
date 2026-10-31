@@ -835,9 +835,9 @@
       },
       "copy-task-text": {
         "title": "Copy task details",
-        "summary": "Copy a task's title, notes, due date, and priority as text.",
+        "summary": "Copy a task's title, notes, and due date as text.",
         "keywords": "copy, clipboard, share, text, swipe",
-        "body": "Swipe a task and tap Copy — or use the Copy button on desktop — to copy its title, notes, due date, and priority as plain text, ready to paste anywhere.",
+        "body": "Swipe a task and tap Copy — or use the Copy button on desktop — to copy its title, notes, and due date as plain text, ready to paste anywhere.",
         "tip": "Handy for pasting a task into a message, email, or another app without retyping it."
       },
       "long-press-actions": {

@@ -212,7 +212,7 @@ final class ScheduledTaskHomeViewModel {
         )
     }
 
-    /// Swipe-to-copy: writes the task's title/notes/due/priority as plain text
+    /// Swipe-to-copy: writes the task's title/notes/due as plain text (no priority)
     /// to the system pasteboard. See TodoListViewModel.copyToClipboard.
     func copyToClipboard(_ todo: TodoItem) {
         UIPasteboard.general.string = ShareSheet.taskShareText(todo)

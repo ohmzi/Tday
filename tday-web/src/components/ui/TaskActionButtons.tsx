@@ -70,7 +70,7 @@ export function DeleteTaskButton({ onActivate, label, className }: ActionButtonP
   );
 }
 
-/** Copies a task's title/notes/due/priority to the clipboard as plain text. */
+/** Copies a task's title/notes/due (not priority) to the clipboard as plain text. */
 export function CopyTaskButton({ onActivate, label, className }: ActionButtonProps) {
   return (
     <button

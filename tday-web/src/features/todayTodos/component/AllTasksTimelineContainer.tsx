@@ -35,6 +35,7 @@ import { DELAY_MS, DURATION_MS } from "@/lib/motion";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
 import TaskSelectionProvider from "@/providers/TaskSelectionProvider";
 import BulkSelectButton from "@/components/todo/bulk/BulkSelectButton";
+import BulkSelectAllButton from "@/components/todo/bulk/BulkSelectAllButton";
 import { TodoItemType } from "@/types";
 import { useTodoTimeline } from "../query/get-todo-timeline";
 import { useCompleteTodo } from "../query/complete-todo";
@@ -341,6 +342,7 @@ const AllTasksTimelineContainer = ({
                     drag-to-reschedule on the native clients, and the three
                     surfaces enter selection the same way. */}
                 <BulkSelectButton />
+                <BulkSelectAllButton />
                 <SummaryButton mode={scope} />
               </div>
             }
