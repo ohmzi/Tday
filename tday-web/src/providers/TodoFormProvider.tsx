@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { Options, RRule } from "rrule";
 import deriveRepeatType from "@/lib/deriveRepeatType";
+import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 
 type FormDateRange = { from: Date; to: Date };
 
@@ -66,9 +67,16 @@ const TodoFormProvider = ({ children, todoItem, overrideFields }: TodoFormProvid
       todoItem?.listID ??
       null,
   );
+  const { listMetaData } = useListMetaData();
+  // A new task opens on its list's default priority from the first render, so the field
+  // never shows "Low" for a frame before TodoForm's list-default effect corrects it.
   const [priority, setPriority] = useState<
     "Lowest" | "Low" | "Medium" | "High"
-  >(todoItem?.priority || "Low");
+  >(
+    todoItem?.priority ||
+      (listID ? listMetaData[listID]?.defaultPriority : undefined) ||
+      "Low",
+  );
   const [priorityTouchedByUser, setPriorityTouchedByUser] = useState<boolean>(
     Boolean(todoItem),
   );

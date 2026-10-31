@@ -172,7 +172,7 @@ const TodoForm = ({
             setTitle={setTitle}
             titleRef={titleRef}
             setDateRange={setDateRange}
-            setPriority={setPriority}
+            setPriority={handlePrioritySelect}
             setRruleOptions={setRruleOptions}
             rruleOptions={rruleOptions}
             onSubmit={() => handleForm()}
