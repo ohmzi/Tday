@@ -540,24 +540,20 @@ fun CalendarScreen( // skipcq: KT-R1006
     )
     val showsEmptyScene = dayListAnswer == FeedAnswer.Empty
     fun canNavigateTo(date: LocalDate): Boolean = YearMonth.from(date) >= minNavigableMonth
-    // What a pager settle or a Today jump does: move the selection and the
-    // visible month, and nothing else. Paging is not a request to leave the
-    // search. Pagers settle on their own, when a card is recomposed or
-    // scrolled back into view as well as when the user swipes, so routing them
-    // through [selectDate] threw the query away with no tap to explain it.
-    fun settleToDate(date: LocalDate) {
+    fun applyDateSelection(date: LocalDate, source: DateSelectionSource) {
         if (!canNavigateTo(date)) return
         visibleMonthIso = YearMonth.from(date).toString()
         selectedDateIso = date.toString()
+        // Paging and Today keep the query: search is scoped to the visible range,
+        // so the results re-scope to the new month, week or day. Only a day tap
+        // closes it, because a live query would otherwise override that day and
+        // the tap would look ignored. See [closesSearchOn].
+        if (searchActive && closesSearchOn(source)) closeSearch()
     }
-    // A tap on a day cell is a request to see that day, which a live query would
-    // otherwise override — the list below would keep showing the results and
-    // the tap would look ignored. Only this path closes the search.
-    fun selectDate(date: LocalDate) {
-        if (!canNavigateTo(date)) return
-        settleToDate(date)
-        if (searchActive) closeSearch()
-    }
+    // Pager settles, and Today jumps (which run through the same callback).
+    fun settleToDate(date: LocalDate) = applyDateSelection(date, DateSelectionSource.PagerSettle)
+    // A tap on a day cell.
+    fun selectDate(date: LocalDate) = applyDateSelection(date, DateSelectionSource.DayTap)
     fun clearTodayJumpRequest(requestId: Int) {
         if (todayJumpRequest?.id == requestId) {
             todayJumpRequest = null

@@ -211,3 +211,27 @@ internal fun weekPageSettleSelection(
         .filter(canSelectDate)
         .minByOrNull { abs(ChronoUnit.DAYS.between(preferred, it)) }
 }
+
+/** What selected a calendar date, which decides whether an open search stays open. */
+internal enum class DateSelectionSource {
+    /** A tap on a day cell: the user asked to see that day. */
+    DayTap,
+
+    /** A pager settled on a new page, by a swipe or by being recomposed into view. */
+    PagerSettle,
+
+    /**
+     * A Today jump. It runs through the pager settle callbacks, and keeping
+     * search open here is intentional: the Today control is reachable while
+     * searching, and the results re-scope to the new range instead of closing.
+     */
+    TodayJump,
+}
+
+/**
+ * Whether selecting a date from [source] closes an open search. Only a tap on a
+ * day does. Paging and Today keep the query and re-run it over the range now on
+ * screen, because search is scoped to the visible month, week or day.
+ */
+internal fun closesSearchOn(source: DateSelectionSource): Boolean =
+    source == DateSelectionSource.DayTap
