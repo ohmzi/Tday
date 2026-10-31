@@ -68,7 +68,7 @@ class CompletedRepository @Inject constructor(
 
     suspend fun uncomplete(item: CompletedItem) {
         val originalTodoId = item.originalTodoId
-            ?: throw IllegalStateException("Completed todo is missing original todo id")
+            ?: throw IllegalStateException("Completed task is missing original task id")
         val timestampMs = System.currentTimeMillis()
         val instanceDateEpochMs = item.instanceDate?.toEpochMilli()
         val mutationId = UUID.randomUUID().toString()

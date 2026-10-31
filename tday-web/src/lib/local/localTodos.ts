@@ -121,7 +121,7 @@ export function createTodo(body: Record<string, unknown>) {
     workspace.todos.push(row);
   });
 
-  return { message: "todo created", todo: toTodoDto(row) };
+  return { message: "task created", todo: toTodoDto(row) };
 }
 
 /**
@@ -160,7 +160,7 @@ export function listTodos(params: URLSearchParams) {
 
 export function updateTodo(body: Record<string, unknown>) {
   const id = normalizeId(body.id);
-  if (!id) throw localBadRequest("todo id is required", "id");
+  if (!id) throw localBadRequest("task id is required", "id");
 
   updateWorkspace((workspace) => {
     const todo = findTodo(workspace, id);
@@ -199,7 +199,7 @@ export function updateTodo(body: Record<string, unknown>) {
 
 export function deleteTodo(body: Record<string, unknown>) {
   const id = normalizeId(body.id);
-  if (!id) throw localBadRequest("todo id is required", "id");
+  if (!id) throw localBadRequest("task id is required", "id");
 
   const removed = updateWorkspace((workspace) => {
     const index = workspace.todos.findIndex((todo) => todo.id === id);
@@ -212,7 +212,7 @@ export function deleteTodo(body: Record<string, unknown>) {
     return true;
   });
 
-  return { message: removed ? "todo deleted" : "todo already deleted" };
+  return { message: removed ? "task deleted" : "task already deleted" };
 }
 
 /**
@@ -234,7 +234,7 @@ function completionInstanceDate(
 
 export function completeTodo(body: Record<string, unknown>) {
   const id = normalizeId(body.id);
-  if (!id) throw localBadRequest("todo id is required", "id");
+  if (!id) throw localBadRequest("task id is required", "id");
   const requestedInstanceDate = parseInstanceDate(body.instanceDate);
 
   updateWorkspace((workspace) => {
@@ -308,12 +308,12 @@ export function completeTodo(body: Record<string, unknown>) {
     }
   });
 
-  return { message: "todo completed" };
+  return { message: "task completed" };
 }
 
 export function uncompleteTodo(body: Record<string, unknown>) {
   const id = normalizeId(body.id);
-  if (!id) throw localBadRequest("todo id is required", "id");
+  if (!id) throw localBadRequest("task id is required", "id");
   const requestedInstanceDate = parseInstanceDate(body.instanceDate);
 
   updateWorkspace((workspace) => {
@@ -345,12 +345,12 @@ export function uncompleteTodo(body: Record<string, unknown>) {
     );
   });
 
-  return { message: "todo uncompleted" };
+  return { message: "task uncompleted" };
 }
 
 export function prioritizeTodo(body: Record<string, unknown>) {
   const id = normalizeId(body.id);
-  if (!id) throw localBadRequest("todo id is required", "id");
+  if (!id) throw localBadRequest("task id is required", "id");
   const priority = requirePriority(body.priority);
 
   updateWorkspace((workspace) => {
@@ -365,7 +365,7 @@ export function prioritizeTodo(body: Record<string, unknown>) {
 
 export function reorderTodo(body: Record<string, unknown>) {
   const id = normalizeId(body.id);
-  if (!id) throw localBadRequest("todo id is required", "id");
+  if (!id) throw localBadRequest("task id is required", "id");
   const order = Number(body.order);
   if (!Number.isFinite(order)) throw localBadRequest("order is required", "order");
 
@@ -381,7 +381,7 @@ export function reorderTodo(body: Record<string, unknown>) {
 
 export function patchTodoInstance(body: Record<string, unknown>) {
   const todoId = normalizeId(body.todoId);
-  if (!todoId) throw localBadRequest("todo id is required", "todoId");
+  if (!todoId) throw localBadRequest("task id is required", "todoId");
   const instanceDate = parseInstanceDate(body.instanceDate);
   if (!instanceDate) {
     throw localBadRequest("instanceDate must be a valid ISO-8601 datetime", "instanceDate");
@@ -427,7 +427,7 @@ export function patchTodoInstance(body: Record<string, unknown>) {
 
 export function deleteTodoInstance(body: Record<string, unknown>) {
   const todoId = normalizeId(body.todoId);
-  if (!todoId) throw localBadRequest("todo id is required", "todoId");
+  if (!todoId) throw localBadRequest("task id is required", "todoId");
   const instanceDate = parseInstanceDate(body.instanceDate);
   if (!instanceDate) {
     throw localBadRequest("instanceDate must be a valid ISO-8601 datetime", "instanceDate");
@@ -451,11 +451,11 @@ export function deleteTodoInstance(body: Record<string, unknown>) {
 /** Lets a stale todo float: the todo row is consumed and a floater takes its place. */
 export function demoteTodo(todoId: string) {
   const id = normalizeId(todoId);
-  if (!id) throw localBadRequest("todo id is required", "id");
+  if (!id) throw localBadRequest("task id is required", "id");
 
   const floater = updateWorkspace((workspace) => {
     const todo = findTodo(workspace, id);
-    if (!todo) throw localNotFound("todo not found");
+    if (!todo) throw localNotFound("task not found");
     if (todo.rrule != null) {
       throw localBadRequest("recurring tasks cannot be demoted to floaters", "id");
     }
@@ -481,7 +481,7 @@ export function demoteTodo(todoId: string) {
   });
 
   return {
-    message: "todo demoted",
+    message: "task demoted",
     floater: { ...floater, userID: LOCAL_USER_ID },
   };
 }

@@ -872,7 +872,7 @@
       "floaters-vs-todos": {
         "title": "Floater vs. geplante Aufgaben",
         "summary": "Aufgaben ohne Datum leben in Jederzeit; Aufgaben mit Datum in Geplant.",
-        "keywords": "floater, jederzeit, ungeplant, ohne datum, todo, geplant, unterschied",
+        "keywords": "floater, jederzeit, ungeplant, ohne datum, aufgabe, todo, geplant, unterschied",
         "body": "Eine terminierte Aufgabe hat ein Fälligkeitsdatum und erscheint in Geplant und im Kalender. Ein Floater hat kein Datum — er wartet still in deinem Jederzeit-Feed, bis du bereit bist. Nutze Floater für „irgendwann“-Vorhaben, die den heutigen Tag nicht überladen sollen.",
         "tip": "Floater erscheinen nie im Kalender — dieser Platz ist nur für datierte Vorhaben."
       },

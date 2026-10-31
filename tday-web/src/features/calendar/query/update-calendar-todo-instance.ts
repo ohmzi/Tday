@@ -8,7 +8,7 @@ import z from "zod";
 
 async function patchTodo({ ghostTodo }: { ghostTodo: TodoItemType }) {
   if (!ghostTodo.id) {
-    throw new Error("this todo is missing");
+    throw new Error("this task is missing");
   }
   //validate input
   const parsedObj = todoSchema.extend({ instanceDate: z.date() }).safeParse({

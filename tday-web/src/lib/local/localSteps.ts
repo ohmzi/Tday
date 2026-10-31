@@ -25,7 +25,7 @@ function orderedSteps(steps: LocalTaskStepRow[], todoId: string): LocalTaskStepR
 export function listTaskSteps(todoId: string) {
   const workspace = loadWorkspace();
   if (!workspace.todos.some((todo) => todo.id === todoId)) {
-    throw localNotFound("todo not found");
+    throw localNotFound("task not found");
   }
   return { steps: orderedSteps(workspace.taskSteps, todoId) };
 }
@@ -37,7 +37,7 @@ export function createTaskStep(body: Record<string, unknown>) {
 
   const step = updateWorkspace((workspace) => {
     if (!workspace.todos.some((todo) => todo.id === todoId)) {
-      throw localNotFound("todo not found");
+      throw localNotFound("task not found");
     }
     const nextPosition =
       workspace.taskSteps
@@ -92,7 +92,7 @@ export function reorderTaskSteps(body: Record<string, unknown>) {
 
   updateWorkspace((workspace) => {
     if (!workspace.todos.some((todo) => todo.id === todoId)) {
-      throw localNotFound("todo not found");
+      throw localNotFound("task not found");
     }
     // Only reorder steps that actually belong to this todo; ignore stragglers.
     orderedIds

@@ -11,7 +11,7 @@ const getTodo = async () => {
   const { todos }: { todos: TodoApiItemType[] } = data;
   if (!todos) {
     throw new Error(
-      data.message || `bad server response: Did not recieve todo`,
+      data.message || `bad server response: Did not receive task`,
     );
   }
   const todoWithFormattedDates = todos.filter((todo) => todo.due != null).map((todo) => {

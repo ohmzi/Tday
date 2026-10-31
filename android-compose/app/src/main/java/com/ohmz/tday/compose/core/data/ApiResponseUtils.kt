@@ -227,5 +227,6 @@ internal fun isLikelyUnrecoverableMutationError(
         message.contains("http 405") ||
         message.contains("record to delete does not exist") ||
         message.contains("record to update not found") ||
+        message.contains("task id is required") ||
         message.contains("todo id is required")
 }
