@@ -19,6 +19,10 @@ import { useFloater } from "@/features/floater/query/get-floater";
 import { useFloaterListMetaData } from "@/features/floaterList/query/get-floater-list-meta";
 import { useCompletedFloater } from "@/features/completed/query/get-completedFloater";
 import FloaterGroup from "./FloaterGroup";
+import { useSearchParams } from "react-router-dom";
+import { TODO_FOCUS_TASK_QUERY_PARAM } from "@/lib/todoToastNavigation";
+import { buildFloaterSearchResultHref } from "@/lib/todo/searchResultHref";
+import { useFocusParamHandoff } from "@/lib/todo/focusHandoff";
 import { TaskRowSkeletonGroup } from "@/components/ui/TaskRowSkeleton";
 import { useSkeletonCrossfade } from "@/hooks/useSkeletonCrossfade";
 import FloaterListFormSheet from "@/features/floaterList/component/FloaterListFormSheet";
@@ -48,6 +52,10 @@ export default function NativeFloaterTaskHomeDashboard() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [createListOpen, setCreateListOpen] = useState(false);
+  const [searchParams] = useSearchParams();
+  // A search result or deep link from elsewhere in the app names the Anytime task to focus.
+  const focusedFloaterId = searchParams.get(TODO_FOCUS_TASK_QUERY_PARAM);
+  useFocusParamHandoff(focusedFloaterId);
   const placementRef = useRowPlacement<HTMLDivElement>();
   const floaterAccent = nativeScreenAccentColors.floater;
 
@@ -149,7 +157,7 @@ export default function NativeFloaterTaskHomeDashboard() {
                       type="button"
                       key={floater.id}
                       className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-muted/65"
-                      onClick={() => router.push(`/app/todo?todo=${encodeURIComponent(floater.id)}`)}
+                      onClick={() => router.push(buildFloaterSearchResultHref(floater))}
                     >
                       <span
                         className="h-2.5 w-2.5 shrink-0 rounded-full"
@@ -250,6 +258,7 @@ export default function NativeFloaterTaskHomeDashboard() {
               <FloaterGroup
                 floaters={sortedFloaters}
                 className="tday-content-enter"
+                highlightedFloaterId={focusedFloaterId}
               />
             ) : null}
           </div>

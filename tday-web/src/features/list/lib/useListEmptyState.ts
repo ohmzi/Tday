@@ -67,6 +67,7 @@ export function useListEmptyState({
     handoff: earlierHandoff,
     toggle: toggleEarlierExpanded,
     beginSceneExit,
+    setExpandedImmediately: setEarlierExpandedImmediately,
   } = useEarlierExpandHandoff(TODAY_EARLIER_EXIT_MS, OVERDUE_ROWS_FADE_MS);
 
   // Remote sibling of `taskJustCompleted()` below — fires for a completion on
@@ -144,6 +145,7 @@ export function useListEmptyState({
     earlierHandoff,
     earlierSlotChangesHands: slotChangesHands,
     toggleEarlierExpanded,
+    setEarlierExpandedImmediately,
     celebrate,
     showEmptyIllustration,
   };
