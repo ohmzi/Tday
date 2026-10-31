@@ -254,6 +254,37 @@ class TodoRoutesTest {
     }
 
     @Test
+    fun `patch todo ignores due when dateChanged is false so a series keeps its anchor`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.patch("/api/todo") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                json.encodeToString(
+                    UpdateTodoRequest(
+                        id = "todo_123",
+                        title = "Standup (renamed)",
+                        due = "2026-08-20T09:00:00",
+                        dateChanged = false,
+                        rrule = "RRULE:FREQ=DAILY",
+                        rruleChanged = true,
+                    ),
+                ),
+            )
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val fields = assertNotNull(todoService.lastUpdateFields)
+        assertEquals("Standup (renamed)", fields["title"])
+        assertEquals("RRULE:FREQ=DAILY", fields["rrule"])
+        assertFalse(fields.containsKey("due"))
+    }
+
+    @Test
     fun `patch todo rejects repeat rule when due is cleared`() = testApplication {
         val todoService = RecordingTodoService()
 

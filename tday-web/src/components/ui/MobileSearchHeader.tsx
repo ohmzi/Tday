@@ -149,7 +149,12 @@ export default function MobileSearchHeader({
     const onDocumentClick = (event: MouseEvent) => {
       const bar = headerRef.current;
       if (!bar) return;
-      if (event.target instanceof Node && bar.contains(event.target)) return;
+      // Judged by the path the click was dispatched along, not by `contains`:
+      // the bar's own button unmounts on the press that opens the field, so by
+      // the time this runs its target is detached and `bar.contains` says the
+      // press was outside. `composedPath()` is fixed at dispatch, so it still
+      // names the bar.
+      if (event.composedPath().includes(bar)) return;
       closeSearch();
     };
     document.addEventListener("click", onDocumentClick);

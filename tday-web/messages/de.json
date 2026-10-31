@@ -405,6 +405,7 @@
       "title": "Alle Wiederholungen bearbeiten?",
       "subtitle": "Dies ist eine wiederkehrende Aufgabe. Soll die Bearbeitung für alle anderen Wiederholungen übernommen werden?",
       "editInstance": "Nur dieses Vorkommen bearbeiten",
+      "repeatSeriesNote": "Änderungen an der Wiederholung gelten für alle Termine der Serie.",
       "editAll": "Alle Wiederholungen bearbeiten"
     }
   },
@@ -700,9 +701,9 @@
     "clearForNow": "Im Moment haben Sie alles im Griff. In dieser Ansicht gibt es keine Aufgaben, die Aufmerksamkeit erfordern.",
     "floaterClear": "Hier wartet noch nichts.",
     "floaterPileOne": "Hier wartet eine einzige Sache, ganz ohne Datum.",
-    "floaterPileFew": "Hier warten ein paar Dinge ohne Datum.",
-    "floaterPileSome": "Hier haben sich einige Dinge ohne Datum angesammelt.",
-    "floaterPileMany": "Hier hat sich eine lange Liste von Dingen ohne Datum angesammelt.",
+    "floaterPileFew": "{{count}} Dinge ohne Datum warten hier.",
+    "floaterPileSome": "Hier haben sich {{count}} Dinge ohne Datum angesammelt.",
+    "floaterPileMany": "Ein Rückstau von {{count}} Dingen ohne Datum hat sich hier aufgebaut.",
     "floaterStartWith": "Beginnen Sie mit {{title}}.",
     "floaterPinnedOne": "Nur {{title}} ist angeheftet.",
     "floaterPinnedMany": "{{title}} ist angeheftet, und nicht nur das.",
@@ -710,6 +711,9 @@
     "floaterPriorityMany": "{{title}} hat hohe Priorität, und nicht nur das.",
     "floaterMediumOne": "Nur {{title}} hat mittlere Priorität.",
     "floaterMediumMany": "{{title}} hat mittlere Priorität, und nicht nur das.",
+    "floaterFadingOne": "{{title}} wurde seit mindestens einem Monat nicht angefasst.",
+    "floaterFadingMany": "Einige davon wurden seit mindestens einem Monat nicht angefasst.",
+    "floaterFadingSole": "Es wurde seit mindestens einem Monat nicht angefasst.",
     "floaterRestingOne": "Eines davon ist seit Monaten unberührt.",
     "floaterRestingMany": "Einiges davon ist seit Monaten unberührt.",
     "floaterRestingAll": "Hier ist seit Monaten nichts angerührt worden.",
@@ -872,7 +876,7 @@
       "floaters-vs-todos": {
         "title": "Floater vs. geplante Aufgaben",
         "summary": "Aufgaben ohne Datum leben in Jederzeit; Aufgaben mit Datum in Geplant.",
-        "keywords": "floater, jederzeit, ungeplant, ohne datum, todo, geplant, unterschied",
+        "keywords": "floater, jederzeit, ungeplant, ohne datum, aufgabe, todo, geplant, unterschied",
         "body": "Eine terminierte Aufgabe hat ein Fälligkeitsdatum und erscheint in Geplant und im Kalender. Ein Floater hat kein Datum — er wartet still in deinem Jederzeit-Feed, bis du bereit bist. Nutze Floater für „irgendwann“-Vorhaben, die den heutigen Tag nicht überladen sollen.",
         "tip": "Floater erscheinen nie im Kalender — dieser Platz ist nur für datierte Vorhaben."
       },

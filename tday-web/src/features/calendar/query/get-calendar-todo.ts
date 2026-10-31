@@ -23,7 +23,7 @@ export const useCalendarTodo = (calendarRange: { start: Date; end: Date }) => {
       const { todos }: { todos: TodoApiItemType[] } = data;
       if (!todos) {
         throw new Error(
-          data.message || `bad server response: Did not recieve todo`,
+          data.message || `bad server response: Did not receive task`,
         );
       }
 

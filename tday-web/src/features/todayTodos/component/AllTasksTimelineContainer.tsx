@@ -48,9 +48,12 @@ import { useLocale } from "@/lib/navigation";
 import { useSearchParams } from "react-router-dom";
 import {
   TODO_FOCUS_DATE_QUERY_PARAM,
+  TODO_FOCUS_INSTANCE_QUERY_PARAM,
   TODO_FOCUS_TASK_QUERY_PARAM,
   isTodoFocusDateKey,
 } from "@/lib/todoToastNavigation";
+import { resolveFocusedRowId } from "@/lib/todo/todo-id";
+import { useFocusParamHandoff } from "@/lib/todo/focusHandoff";
 
 export type TimelineItem = {
   todo: TodoItemType;
@@ -161,7 +164,14 @@ const AllTasksTimelineContainer = ({
     scope === "today" ? todayCopy : SCOPE_CONFIG[scope];
   const pageHeading = getPageHeading(scope, scopeHeading, appDict);
   const barSlots = useNativePageBarSlots();
-  const focusedTaskId = searchParams.get(TODO_FOCUS_TASK_QUERY_PARAM);
+  const focusTaskParam = searchParams.get(TODO_FOCUS_TASK_QUERY_PARAM);
+  const focusInstanceParam = searchParams.get(TODO_FOCUS_INSTANCE_QUERY_PARAM);
+  // The exact row to highlight: one occurrence, never every occurrence of a series.
+  const focusedTaskId = useMemo(
+    () => resolveFocusedRowId(todos.map((todo) => todo.id), focusTaskParam, focusInstanceParam),
+    [focusInstanceParam, focusTaskParam, todos],
+  );
+  useFocusParamHandoff(focusTaskParam);
   const focusedDateKey = useMemo(() => {
     const value = searchParams.get(TODO_FOCUS_DATE_QUERY_PARAM);
     return isTodoFocusDateKey(value) ? value : null;

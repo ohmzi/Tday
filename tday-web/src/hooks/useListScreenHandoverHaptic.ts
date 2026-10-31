@@ -28,13 +28,36 @@ const LIST_SCREEN_ROUTE = /(?:^|\/)app\/(?:list|floater-list)\//;
 const IN_APP_ROUTE = /(?:^|\/)app\//;
 
 /** Whether the current route is one of the app's list screens (scheduled or floater). */
-function isListScreenRoute(pathname: string): boolean {
+export function isListScreenRoute(pathname: string): boolean {
   return LIST_SCREEN_ROUTE.test(pathname);
 }
 
 /** Whether the current route is anywhere inside the signed-in app, `/app/...` included. */
 function isInAppRoute(pathname: string): boolean {
   return IN_APP_ROUTE.test(pathname);
+}
+
+/**
+ * Set by {@link announceListScreenExit} for the route change it is about to cause,
+ * and cleared by the next route change however it lands, so the hook does not
+ * buzz the same exit a second time.
+ */
+let exitAnnounced = false;
+
+/**
+ * Buzzes the list handover for an exit the caller is about to make itself — the
+ * back chevron, called from inside its click.
+ *
+ * The hook below can only see the route after it has changed, one commit later and
+ * in an effect, by which point the tap that caused it is further away. The app's
+ * other back and primary-action haptics fire inside their click handlers, and this
+ * one does too. Browser back and the edge swipe never reach a click, so they still
+ * go through the hook; that is why both paths exist.
+ */
+export function announceListScreenExit(fromPathname: string): void {
+  if (!isListScreenRoute(fromPathname)) return;
+  exitAnnounced = true;
+  hapticScreenChange();
 }
 
 /**
@@ -48,6 +71,8 @@ export function useListScreenHandoverHaptic(): void {
   const wasListScreen = useRef<boolean | null>(null);
 
   useEffect(() => {
+    const announced = exitAnnounced;
+    exitAnnounced = false;
     const isListScreen = isListScreenRoute(pathname);
     if (wasListScreen.current === null) {
       wasListScreen.current = isListScreen;
@@ -58,7 +83,7 @@ export function useListScreenHandoverHaptic(): void {
     // left the app (the session ending) is still remembered, so the next real
     // open/close is measured from where the user actually is.
     wasListScreen.current = isListScreen;
-    if (!isInAppRoute(pathname)) return;
+    if (announced || !isInAppRoute(pathname)) return;
     hapticScreenChange();
   }, [pathname]);
 }

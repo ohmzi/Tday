@@ -540,15 +540,20 @@ fun CalendarScreen( // skipcq: KT-R1006
     )
     val showsEmptyScene = dayListAnswer == FeedAnswer.Empty
     fun canNavigateTo(date: LocalDate): Boolean = YearMonth.from(date) >= minNavigableMonth
-    fun selectDate(date: LocalDate) {
+    fun applyDateSelection(date: LocalDate, source: DateSelectionSource) {
         if (!canNavigateTo(date)) return
         visibleMonthIso = YearMonth.from(date).toString()
         selectedDateIso = date.toString()
-        // Picking a day is a request to see that day, which a live query would
-        // otherwise override — the list below would keep showing the results
-        // and the tap would look ignored.
-        if (searchActive) closeSearch()
+        // Paging and Today keep the query: search is scoped to the visible range,
+        // so the results re-scope to the new month, week or day. Only a day tap
+        // closes it, because a live query would otherwise override that day and
+        // the tap would look ignored. See [closesSearchOn].
+        if (searchExpanded && closesSearchOn(source)) closeSearch()
     }
+    // Pager settles, and Today jumps (which run through the same callback).
+    fun settleToDate(date: LocalDate) = applyDateSelection(date, DateSelectionSource.PagerSettle)
+    // A tap on a day cell.
+    fun selectDate(date: LocalDate) = applyDateSelection(date, DateSelectionSource.DayTap)
     fun clearTodayJumpRequest(requestId: Int) {
         if (todayJumpRequest?.id == requestId) {
             todayJumpRequest = null
@@ -876,6 +881,7 @@ fun CalendarScreen( // skipcq: KT-R1006
                                             visibleMonthIso = targetMonth.toString()
                                         }
                                     },
+                                    onPageSettled = ::settleToDate,
                                     onSelectDate = ::selectDate,
                                     onDropDateChanged = { date ->
                                         activeDropDateIso = date?.toString()
@@ -896,6 +902,7 @@ fun CalendarScreen( // skipcq: KT-R1006
                                     canSelectDate = ::canNavigateTo,
                                     todayJumpRequest = todayJumpRequest,
                                     onTodayJumpHandled = ::clearTodayJumpRequest,
+                                    onPageSettled = ::settleToDate,
                                     onSelectDate = ::selectDate,
                                     onDropDateChanged = { date ->
                                         activeDropDateIso = date?.toString()
@@ -912,7 +919,7 @@ fun CalendarScreen( // skipcq: KT-R1006
                                     canGoPrevDay = canNavigateTo(selectedDate.minusDays(1)),
                                     todayJumpRequest = todayJumpRequest,
                                     onTodayJumpHandled = ::clearTodayJumpRequest,
-                                    onSelectDate = ::selectDate,
+                                    onPageSettled = ::settleToDate,
                                 )
                             }
                         }
@@ -1362,6 +1369,7 @@ private fun CalendarWeekCard(
     todayJumpRequest: CalendarTodayJumpRequest?,
     onTodayJumpHandled: (Int) -> Unit,
     onSelectDate: (LocalDate) -> Unit,
+    onPageSettled: (LocalDate) -> Unit,
     onDropDateChanged: (LocalDate?) -> Unit,
     onMoveTaskToDate: (TodoItem, LocalDate) -> Unit,
     resolveTodo: (String) -> TodoItem?,
@@ -1433,7 +1441,7 @@ private fun CalendarWeekCard(
                 "direction" to if (page >= currentPage) "next" else "previous",
             ),
         )
-        onSelectDate(targetDate)
+        onPageSettled(targetDate)
     }
 
     LaunchedEffect(todayJumpRequest) {
@@ -1447,7 +1455,7 @@ private fun CalendarWeekCard(
         ) {
             is CalendarTodayJump.SelectNow -> {
                 pendingTodayJumpDate = null
-                onSelectDate(jump.date)
+                onPageSettled(jump.date)
             }
 
             is CalendarTodayJump.PageThenSelect -> {
@@ -1781,7 +1789,7 @@ private fun CalendarDayCard(
     canGoPrevDay: Boolean,
     todayJumpRequest: CalendarTodayJumpRequest?,
     onTodayJumpHandled: (Int) -> Unit,
-    onSelectDate: (LocalDate) -> Unit,
+    onPageSettled: (LocalDate) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val minDate = remember(minNavigableMonth) { minNavigableMonth.atDay(1) }
@@ -1815,7 +1823,7 @@ private fun CalendarDayCard(
                 "direction" to if (page >= currentPage) "next" else "previous",
             ),
         )
-        onSelectDate(dateForPage(page))
+        onPageSettled(dateForPage(page))
     }
 
     LaunchedEffect(todayJumpRequest) {
@@ -1827,7 +1835,7 @@ private fun CalendarDayCard(
                 targetDate = request.targetDate,
             )
         ) {
-            is CalendarTodayJump.SelectNow -> onSelectDate(jump.date)
+            is CalendarTodayJump.SelectNow -> onPageSettled(jump.date)
 
             // Alone of the three, this pager's page *is* its date, so the settle
             // below re-derives exactly the day the jump asked for and nothing
@@ -2362,6 +2370,7 @@ private fun CalendarMonthCard(
     onTodayJumpHandled: (Int) -> Unit,
     onVisibleMonthChanged: (YearMonth) -> Unit,
     onSelectDate: (LocalDate) -> Unit,
+    onPageSettled: (LocalDate) -> Unit,
     onDropDateChanged: (LocalDate?) -> Unit,
     onMoveTaskToDate: (TodoItem, LocalDate) -> Unit,
     resolveTodo: (String) -> TodoItem?,
@@ -2416,7 +2425,7 @@ private fun CalendarMonthCard(
             // is the whole settle — and it is the only thing that moves the
             // "Tasks due …" heading, the day list and the `+` prefill onto the
             // month the sweep just landed on.
-            onSelectDate(jumpSelection)
+            onPageSettled(jumpSelection)
         } else {
             onVisibleMonthChanged(monthForPage(page))
         }
@@ -2433,7 +2442,7 @@ private fun CalendarMonthCard(
         ) {
             is CalendarTodayJump.SelectNow -> {
                 pendingTodayJumpDate = null
-                onSelectDate(jump.date)
+                onPageSettled(jump.date)
             }
 
             is CalendarTodayJump.PageThenSelect -> {

@@ -242,7 +242,7 @@ object SummaryEngine {
      * task as "expiring at any moment" in half the locales — can be reached from here.
      */
     private fun renderFloaterSummary(plan: FloaterSummaryPlan, s: SummaryStrings): String {
-        val pile = s.t(pileKeyFor(plan.band))
+        val pile = s.t(pileKeyFor(plan.band), mapOf("count" to plan.count.toString()))
         val note = noteKeyFor(plan)?.let { key ->
             s.t(key, mapOf("title" to compactTitle(plan.noteTitle, s)))
         } ?: return pile
@@ -281,6 +281,9 @@ object SummaryEngine {
         FloaterNote.PRIORITY_MANY -> "floaterPriorityMany"
         FloaterNote.MEDIUM_ONE -> "floaterMediumOne"
         FloaterNote.MEDIUM_MANY -> "floaterMediumMany"
+        FloaterNote.FADING_ONE -> "floaterFadingOne"
+        FloaterNote.FADING_MANY -> "floaterFadingMany"
+        FloaterNote.FADING_SOLE -> "floaterFadingSole"
     }
 
     private fun taskPhrase(task: Candidate, s: SummaryStrings): String {

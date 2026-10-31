@@ -548,12 +548,6 @@ struct CalendarScreen: View {
             }
             .allowsHitTesting(false)
         }
-        // Tapping the content puts the field away, as it does on the root feeds.
-        // Sits above the bar's own safe-area inset, so the gesture only ever
-        // sees taps below the bar and never one on it.
-        .tdayClosesSearchOnOutsideTap(isSearchOpen: searchExpanded) {
-            closeSearch()
-        }
         .navigationBackButtonBehavior()
         .navigationTitleTypography(
             largeTitleColor: calendarAccentColor,
@@ -975,6 +969,7 @@ struct CalendarScreen: View {
                 onPreviousMonth: { navigateMonth(by: -1) },
                 onNextMonth: { navigateMonth(by: 1) },
                 onSelectDate: { selectDate($0) },
+                onPageSelect: { settleDate($0) },
                 onDropDateChange: { activeDropDate = $0 },
                 onMoveTaskToDate: { todo, date in requestReschedule(todo, to: date) },
                 resolveTodo: resolveTodoForDrop,
@@ -994,6 +989,7 @@ struct CalendarScreen: View {
                 onPreviousWeek: { navigateDay(by: -7) },
                 onNextWeek: { navigateDay(by: 7) },
                 onSelectDate: { selectDate($0) },
+                onPageSelect: { settleDate($0) },
                 onDropDateChange: { activeDropDate = $0 },
                 onMoveTaskToDate: { todo, date in requestReschedule(todo, to: date) },
                 resolveTodo: resolveTodoForDrop,
@@ -1010,7 +1006,7 @@ struct CalendarScreen: View {
                 todayJumpRequest: todayJumpRequest,
                 onPreviousDay: { navigateDay(by: -1) },
                 onNextDay: { navigateDay(by: 1) },
-                onSelectDate: { selectDate($0) }
+                onPageSelect: { settleDate($0) }
             )
         }
     }
@@ -1019,10 +1015,19 @@ struct CalendarScreen: View {
         calendarMonthStart(for: date) >= minimumNavigableMonth
     }
 
-    private func selectDate(_ date: Date) {
+    /// Paging and Today move the selection and keep the query: search is scoped to the
+    /// visible range, so the results re-scope to it. Intentionally not closing on Today.
+    private func settleDate(_ date: Date) {
         guard canNavigate(to: date) else { return }
         selectedDate = date
         visibleMonth = calendarMonthStart(for: date)
+    }
+
+    /// A tap on a day cell is the one gesture that closes an open search.
+    private func selectDate(_ date: Date) {
+        guard canNavigate(to: date) else { return }
+        settleDate(date)
+        if searchExpanded { closeSearch() }
     }
 
     private func navigateMonth(by value: Int) {
@@ -1037,7 +1042,7 @@ struct CalendarScreen: View {
         guard let targetDate = Calendar.current.date(byAdding: .day, value: value, to: selectedDate) else {
             return
         }
-        selectDate(targetDate)
+        settleDate(targetDate)
     }
 
     private func jumpToToday() {
@@ -1190,6 +1195,7 @@ private struct CalendarMonthGrid: View {
     let onPreviousMonth: () -> Void
     let onNextMonth: () -> Void
     let onSelectDate: (Date) -> Void
+    let onPageSelect: (Date) -> Void
     let onDropDateChange: (Date?) -> Void
     let onMoveTaskToDate: (TodoItem, Date) -> Void
     let resolveTodo: (String) -> TodoItem?
@@ -1360,7 +1366,7 @@ private struct CalendarMonthGrid: View {
         guard selection != calendarNativePagerCenterIndex else { return }
         if let pendingTodayJump {
             self.pendingTodayJump = nil
-            onSelectDate(pendingTodayJump.targetDate)
+            onPageSelect(pendingTodayJump.targetDate)
             resetPageSelection()
             return
         }
@@ -1387,7 +1393,7 @@ private struct CalendarMonthGrid: View {
 
         let targetMonth = calendarMonthStart(for: request.targetDate)
         guard targetMonth != displayMonth else {
-            onSelectDate(request.targetDate)
+            onPageSelect(request.targetDate)
             resetPageSelection()
             return
         }
@@ -1441,6 +1447,7 @@ private struct CalendarWeekCard: View {
     let onPreviousWeek: () -> Void
     let onNextWeek: () -> Void
     let onSelectDate: (Date) -> Void
+    let onPageSelect: (Date) -> Void
     let onDropDateChange: (Date?) -> Void
     let onMoveTaskToDate: (TodoItem, Date) -> Void
     let resolveTodo: (String) -> TodoItem?
@@ -1587,7 +1594,7 @@ private struct CalendarWeekCard: View {
         guard selection != calendarNativePagerCenterIndex else { return }
         if let pendingTodayJump {
             self.pendingTodayJump = nil
-            onSelectDate(pendingTodayJump.targetDate)
+            onPageSelect(pendingTodayJump.targetDate)
             resetPageSelection()
             return
         }
@@ -1615,7 +1622,7 @@ private struct CalendarWeekCard: View {
         let currentWeek = calendarStartOfWeek(for: displaySelectedDate)
         let targetWeek = calendarStartOfWeek(for: request.targetDate)
         guard targetWeek != currentWeek else {
-            onSelectDate(request.targetDate)
+            onPageSelect(request.targetDate)
             resetPageSelection()
             return
         }
@@ -2039,7 +2046,7 @@ private struct CalendarDayCard: View {
     let todayJumpRequest: CalendarTodayJumpRequest?
     let onPreviousDay: () -> Void
     let onNextDay: () -> Void
-    let onSelectDate: (Date) -> Void
+    let onPageSelect: (Date) -> Void
 
     @Environment(\.tdayColors) private var colors
     @State private var pageSelection = calendarNativePagerCenterIndex
@@ -2160,7 +2167,7 @@ private struct CalendarDayCard: View {
         guard selection != calendarNativePagerCenterIndex else { return }
         if let pendingTodayJump {
             self.pendingTodayJump = nil
-            onSelectDate(pendingTodayJump.targetDate)
+            onPageSelect(pendingTodayJump.targetDate)
             resetPageSelection()
             return
         }
@@ -2187,7 +2194,7 @@ private struct CalendarDayCard: View {
 
         let targetDate = Calendar.current.startOfDay(for: request.targetDate)
         guard targetDate != displayDate else {
-            onSelectDate(request.targetDate)
+            onPageSelect(request.targetDate)
             resetPageSelection()
             return
         }

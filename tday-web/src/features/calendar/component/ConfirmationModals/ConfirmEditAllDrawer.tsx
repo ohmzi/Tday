@@ -20,6 +20,8 @@ type ConfirmEditAllProp = {
     setDisplayForm: React.Dispatch<React.SetStateAction<boolean>>;
     editAllDialogOpen: boolean;
     setEditAllDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    /** The repeat differs from the series'. Only "all" can apply it, so "this occurrence" is disabled. */
+    repeatChanged: boolean;
 };
 
 export default function ConfirmEditAllDrawer({
@@ -29,6 +31,7 @@ export default function ConfirmEditAllDrawer({
     setDisplayForm,
     editAllDialogOpen,
     setEditAllDialogOpen,
+    repeatChanged,
 }: ConfirmEditAllProp) {
     const { t: modalDict } = useTranslation("modal");
     const { editCalendarTodo } = useEditCalendarTodo();
@@ -40,6 +43,9 @@ export default function ConfirmEditAllDrawer({
                 <DrawerHeader>
                     <DrawerTitle>{modalDict("editAll.title")}</DrawerTitle>
                     <DrawerDescription>{modalDict("editAll.subtitle")}</DrawerDescription>
+                    {repeatChanged ? (
+                        <p className="text-sm text-muted-foreground">{modalDict("editAll.repeatSeriesNote")}</p>
+                    ) : null}
                 </DrawerHeader>
 
                 <DrawerFooter className="gap-2">
@@ -47,6 +53,7 @@ export default function ConfirmEditAllDrawer({
                         onMouseDown={(e) => e.stopPropagation()}
                         variant="outline"
                         className="w-full"
+                        disabled={repeatChanged}
                         onClick={() => {
                             editCalendarTodoInstance(todo);
                             setEditAllDialogOpen(false);

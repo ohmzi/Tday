@@ -447,4 +447,77 @@ class FloaterSummaryTest {
             FloaterSummaryPlanner.plan(tasks.filterNot { it.pinned }, nowMs).noteTitle,
         )
     }
+
+    // ---- count and staleness ----
+
+    @Test
+    fun theOpenCountIsStatedAndIsTheSizeOfTheInput() {
+        for (locale in locales) {
+            val out = summarize(plain(7), locale)
+            assertTrue("7" in Regex("\\d+").findAll(out).map { it.value }.toList(), "[$locale] count missing: $out")
+        }
+        assertEquals(7, FloaterSummaryPlanner.plan(plain(7), nowMs).count)
+    }
+
+    @Test
+    fun aMonthUntouchedNamesTheOnlyStaleFloater() {
+        val tasks = listOf(
+            floater("Stale one", untouchedDays = 45),
+            floater("Fresh", untouchedDays = 1),
+            floater("Other", untouchedDays = 2),
+        )
+        val plan = FloaterSummaryPlanner.plan(tasks, nowMs)
+        assertEquals(FloaterNote.FADING_ONE, plan.note)
+        assertEquals("Stale one", plan.noteTitle, "the only fading row is the one the note names")
+        assertTrue(summarize(tasks).contains("Stale one"))
+    }
+
+    @Test
+    fun theFadingBoundaryIsThirtyDaysLikeTheList() {
+        // The list fades a row at 30 days (FloaterResting.FADING_DAYS); the summary must agree,
+        // or the sentence and the faded row beneath it disagree about what has gone quiet.
+        val justUnder = listOf(floater("a", untouchedDays = 29), floater("b", untouchedDays = 1))
+        val atThirty = listOf(floater("a", untouchedDays = 30), floater("b", untouchedDays = 1))
+        assertEquals(FloaterNote.START_WITH, FloaterSummaryPlanner.plan(justUnder, nowMs).note)
+        assertEquals(FloaterNote.FADING_ONE, FloaterSummaryPlanner.plan(atThirty, nowMs).note)
+    }
+
+    @Test
+    fun severalStaleFloatersAreCountedNotNamed() {
+        val tasks = listOf(
+            floater("Stale A", untouchedDays = 40),
+            floater("Stale B", untouchedDays = 50),
+            floater("Fresh", untouchedDays = 1),
+        )
+        val plan = FloaterSummaryPlanner.plan(tasks, nowMs)
+        assertEquals(FloaterNote.FADING_MANY, plan.note)
+        assertEquals(null, plan.noteTitle, "two stale rows would need a ranking the clock cannot support")
+        for (locale in locales) {
+            val out = summarize(tasks, locale)
+            assertFalse(out.contains("Stale A") || out.contains("Stale B"), "[$locale] named a stale row: $out")
+        }
+    }
+
+    @Test
+    fun aLoneStaleFloaterIsNotNamedBackAtItself() {
+        for (locale in locales) {
+            val out = summarize(listOf(floater("Lonely idea", untouchedDays = 45)), locale)
+            assertFalse(out.contains("Lonely idea"), "[$locale] echoed the only row: $out")
+            assertTrue(out.isNotBlank(), "[$locale] empty summary")
+        }
+        assertEquals(
+            FloaterNote.FADING_SOLE,
+            FloaterSummaryPlanner.plan(listOf(floater("Lonely idea", untouchedDays = 45)), nowMs).note,
+        )
+    }
+
+    @Test
+    fun aPinOutranksAStaleRow() {
+        val tasks = listOf(
+            floater("Pinned one", pinned = true, untouchedDays = 2),
+            floater("Stale", untouchedDays = 45),
+            floater("Fresh", untouchedDays = 1),
+        )
+        assertEquals(FloaterNote.PINNED_ONE, FloaterSummaryPlanner.plan(tasks, nowMs).note)
+    }
 }

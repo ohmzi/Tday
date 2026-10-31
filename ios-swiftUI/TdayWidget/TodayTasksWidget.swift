@@ -342,8 +342,16 @@ private struct TdayWidgetListAccent {
     /// on the home screen is the glyph in the app. Display only, as that function's doc
     /// requires: nothing here is written back anywhere.
     init(list: TdayWidgetListEntity) {
-        glyphAsset = tdayLucideListAsset(tdayResolvedListIconKey(list.iconKey, listName: list.name))
-        color = tdayListAccentColorOrNil(colorKey: list.colorKey)
+        // The two pseudo views have no user-chosen glyph and their name is not a list name to infer
+        // from, so they wear the fixed glyphs the app uses for them: calendar-clock for Scheduled
+        // and alarm-clock for Overdue (the same pair Android's `pseudoIconRes` draws).
+        switch list.kind {
+        case .scheduled: glyphAsset = "LucideCalendarClock"
+        case .overdue: glyphAsset = "LucideAlarmClock"
+        case .todo, .floater:
+            glyphAsset = tdayLucideListAsset(tdayResolvedListIconKey(list.iconKey, listName: list.name))
+        }
+        color = tdayWidgetDayListAccentColorOrNil(colorKey: list.colorKey)
     }
 }
 
@@ -1878,6 +1886,15 @@ private struct TdayTasksWidgetContent: View {
             .frame(height: 26)
     }
 
+    /// The "+" pill's wash. A list's own colour carries more weight (0.20, the Android
+    /// `LIGHT_WASH_ALPHA`) so a light key does not read as a white button on a light host; a feed
+    /// keeps its 0.14 wash, which its hand-tuned accent was tuned for. The 0.20 must stay in step
+    /// with Android `WidgetListAccent.LIGHT_WASH_ALPHA`.
+    private var addButtonWashOpacity: Double {
+        guard renderingMode == .fullColor else { return 0.10 }
+        return listAccent?.color == nil ? 0.14 : 0.20
+    }
+
     private var addButton: some View {
         Link(destination: listChrome?.addURL ?? mode.createURL) {
             Image(systemName: "plus")
@@ -1886,7 +1903,7 @@ private struct TdayTasksWidgetContent: View {
                 .frame(width: metrics.addButtonSize, height: metrics.addButtonSize)
                 .background(
                     RoundedRectangle(cornerRadius: metrics.addButtonCornerRadius, style: .continuous)
-                        .fill(accentColor.opacity(renderingMode == .fullColor ? 0.14 : 0.10))
+                        .fill(accentColor.opacity(addButtonWashOpacity))
                 )
                 .contentShape(Rectangle())
                 .widgetAccentable()

@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { Options, RRule } from "rrule";
 import deriveRepeatType from "@/lib/deriveRepeatType";
+import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 
 type FormDateRange = { from: Date; to: Date };
 
@@ -32,6 +33,10 @@ interface TodoFormContextType {
   setDateRange: React.Dispatch<SetStateAction<FormDateRange>>;
   rruleOptions: Partial<Options> | null;
   setRruleOptions: React.Dispatch<SetStateAction<Partial<Options> | null>>;
+  // True once the user has picked a repeat from the Repeat sheet (including "No repeat").
+  // While true, a recurrence phrase still sitting in the title must not re-apply a repeat.
+  repeatTouchedByUser: boolean;
+  setRepeatTouchedByUser: React.Dispatch<SetStateAction<boolean>>;
   timeZone: string;
   derivedRepeatType:
     | "Daily"
@@ -66,9 +71,16 @@ const TodoFormProvider = ({ children, todoItem, overrideFields }: TodoFormProvid
       todoItem?.listID ??
       null,
   );
+  const { listMetaData } = useListMetaData();
+  // A new task opens on its list's default priority from the first render, so the field
+  // never shows "Low" for a frame before TodoForm's list-default effect corrects it.
   const [priority, setPriority] = useState<
     "Lowest" | "Low" | "Medium" | "High"
-  >(todoItem?.priority || "Low");
+  >(
+    todoItem?.priority ||
+      (listID ? listMetaData[listID]?.defaultPriority : undefined) ||
+      "Low",
+  );
   const [priorityTouchedByUser, setPriorityTouchedByUser] = useState<boolean>(
     Boolean(todoItem),
   );
@@ -84,6 +96,7 @@ const TodoFormProvider = ({ children, todoItem, overrideFields }: TodoFormProvid
   const [rruleOptions, setRruleOptions] = useState(
     todoItem?.rrule ? RRule.parseString(todoItem.rrule) : null,
   );
+  const [repeatTouchedByUser, setRepeatTouchedByUser] = useState(false);
   const dateRangeChecksum = todoItem
     ? todoItem.due.toISOString()
     : dateRange.to.toISOString();
@@ -113,6 +126,8 @@ const TodoFormProvider = ({ children, todoItem, overrideFields }: TodoFormProvid
     setDateRange,
     rruleOptions,
     setRruleOptions,
+    repeatTouchedByUser,
+    setRepeatTouchedByUser,
     timeZone,
     derivedRepeatType,
     dateRangeChecksum,

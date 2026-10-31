@@ -167,6 +167,68 @@ final class TdayListAccentTests: XCTestCase {
         XCTAssertNil(byId["todo-2"]?.colorKey)
     }
 
+    // MARK: - Widget day deepening
+
+    /// Mirrors Android's `WidgetColorMathTest`: GOLD and YELLOW are deepened under the ceiling and
+    /// keep their hue; the other floater keys, and the dark keys, come back as the palette has them.
+    func testWidgetDayDeepeningChangesOnlyTheBrightKeysAndKeepsTheirHue() throws {
+        for key in ["GOLD", "YELLOW"] {
+            let palette = try XCTUnwrap(tdayListAccentColorOrNil(colorKey: key), key)
+            let day = try XCTUnwrap(tdayWidgetDayListAccentColorOrNil(colorKey: key), key)
+            XCTAssertGreaterThan(
+                abs(rgbDistance(palette, day)), 0.01, "\(key) should be deepened for the day widget"
+            )
+            XCTAssertLessThanOrEqual(
+                relativeLuminance(day), 0.38 + 0.000_001, "\(key) day luminance above the ceiling"
+            )
+            XCTAssertLessThan(hueDistance(palette, day), 2.0 / 360, "\(key) hue moved")
+        }
+    }
+
+    func testWidgetDayDeepeningLeavesPinkCoralLimeRedBlueAndPurpleAsThePaletteHasThem() throws {
+        for key in ["PINK", "CORAL", "LIME", "RED", "BLUE", "PURPLE"] {
+            let palette = try XCTUnwrap(tdayListAccentColorOrNil(colorKey: key), key)
+            assertSameColor(tdayWidgetDayListAccentColorOrNil(colorKey: key), palette, key)
+        }
+    }
+
+    func testWidgetDayDeepeningReturnsNilForNoColor() {
+        XCTAssertNil(tdayWidgetDayListAccentColorOrNil(colorKey: nil))
+        XCTAssertNil(tdayWidgetDayListAccentColorOrNil(colorKey: "CHARTREUSE"))
+    }
+
+    private func rgbComponents(_ color: Color) -> [CGFloat] {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        UIColor(color).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        return [red, green, blue]
+    }
+
+    private func rgbDistance(_ lhs: Color, _ rhs: Color) -> CGFloat {
+        zip(rgbComponents(lhs), rgbComponents(rhs)).map { abs($0 - $1) }.reduce(0, +)
+    }
+
+    private func hueOf(_ color: Color) -> CGFloat {
+        var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0, alpha: CGFloat = 0
+        UIColor(color).getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+        return hue
+    }
+
+    /// Hue distance on the 0...1 circle, so a colour near red on either side compares correctly.
+    private func hueDistance(_ lhs: Color, _ rhs: Color) -> CGFloat {
+        let raw = abs(hueOf(lhs) - hueOf(rhs))
+        return min(raw, 1 - raw)
+    }
+
+    /// WCAG relative luminance, the same formula the Android side pins its ceiling with.
+    private func relativeLuminance(_ color: Color) -> Double {
+        func linear(_ channel: CGFloat) -> Double {
+            let s = Double(channel)
+            return s <= 0.03928 ? s / 12.92 : pow((s + 0.055) / 1.055, 2.4)
+        }
+        let c = rgbComponents(color)
+        return 0.2126 * linear(c[0]) + 0.7152 * linear(c[1]) + 0.0722 * linear(c[2])
+    }
+
     // MARK: -
 
     /// Compares what the two resolvers would actually paint. `Color` is `Equatable`, but its

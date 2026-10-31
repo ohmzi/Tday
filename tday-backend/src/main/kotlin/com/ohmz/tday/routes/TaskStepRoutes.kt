@@ -31,7 +31,7 @@ fun Route.taskStepRoutes() {
             call.withAuth { user ->
                 val todoId = call.parameters["todoId"].orEmpty()
                 if (todoId.isBlank()) {
-                    AppError.BadRequest("todo id is required").let { arrow.core.Either.Left(it) }
+                    AppError.BadRequest("task id is required").let { arrow.core.Either.Left(it) }
                 } else {
                     taskStepService.listForTodo(user.id, todoId)
                         .map { TaskStepsResponse(steps = it) }

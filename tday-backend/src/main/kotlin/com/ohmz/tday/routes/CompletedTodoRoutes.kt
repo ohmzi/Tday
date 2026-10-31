@@ -29,11 +29,11 @@ fun Route.completedTodoRoutes() {
                 if (body?.id?.isNotBlank() == true) {
                     completedTodoService.deleteById(user.id, body.id)
                         .map { count ->
-                            mapOf("message" to if (count > 0) "completed todo removed" else "completed todo already removed")
+                            mapOf("message" to if (count > 0) "completed task removed" else "completed task already removed")
                         }
                 } else {
                     completedTodoService.deleteAll(user.id)
-                        .map { mapOf("message" to "completed todos cleared") }
+                        .map { mapOf("message" to "completed tasks cleared") }
                 }
             }
         }
@@ -65,12 +65,12 @@ fun Route.completedTodoRoutes() {
                 if (fields.isEmpty()) {
                     return@withAuth completedTodoService.deleteById(user.id, body.id)
                         .map { count ->
-                            mapOf("message" to if (count > 0) "completed todo removed" else "completed todo already removed")
+                            mapOf("message" to if (count > 0) "completed task removed" else "completed task already removed")
                         }
                 }
                 completedTodoService.update(user.id, body.id, fields)
                     .map { count ->
-                        mapOf("message" to if (count > 0) "completed todo updated" else "completed todo already removed")
+                        mapOf("message" to if (count > 0) "completed task updated" else "completed task already removed")
                     }
             }
         }
