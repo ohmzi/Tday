@@ -12,6 +12,7 @@ import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TimelineSections from "@/components/todo/dnd/TimelineSections";
 import TodayEarlierSection from "./TodayEarlierSection";
 import TimelineEmptyState from "./TimelineEmptyState";
+import type { IllustrationId } from "@/components/illustrations/Illustration";
 import OverdueDaySections from "./OverdueDaySections";
 import TodayTimeBuckets from "./TodayTimeBuckets";
 import { useEarlierExpandHandoff } from "../lib/useEarlierExpandHandoff";
@@ -76,15 +77,15 @@ export type TimelineScope = "today" | "scheduled" | "all" | "priority" | "overdu
 // same thing here as it does on Android and iOS, in whichever language.
 const SCOPE_CONFIG: Record<
   TimelineScope,
-  { icon: React.ElementType; heading: string; emptyTitle: string; emptyBody: string }
+  { icon: React.ElementType; heading: string; emptyTitle: string; emptyBody: string; illustration: IllustrationId }
 > = {
   // Today's row is kept only so this map stays total over `TimelineScope`; the
   // scope actually reads `TODAY_SCOPE_COPY` below, which carries the night half.
-  today: { icon: Sun, heading: "today", emptyTitle: "todayEmpty", emptyBody: "todayEmptyBody" },
-  overdue: { icon: Clock3, heading: "Overdue", emptyTitle: "overdueEmpty", emptyBody: "overdueEmptyBody" },
-  scheduled: { icon: CalendarClock, heading: "Scheduled", emptyTitle: "scheduledEmpty", emptyBody: "scheduledEmptyBody" },
-  all: { icon: Layers, heading: "All Tasks", emptyTitle: "allTasksEmpty", emptyBody: "allTasksEmptyBody" },
-  priority: { icon: Flag, heading: "priority", emptyTitle: "priorityEmpty", emptyBody: "priorityEmptyBody" },
+  today: { icon: Sun, heading: "today", emptyTitle: "todayEmpty", emptyBody: "todayEmptyBody", illustration: "cal" },
+  overdue: { icon: Clock3, heading: "Overdue", emptyTitle: "overdueEmpty", emptyBody: "overdueEmptyBody", illustration: "overdue" },
+  scheduled: { icon: CalendarClock, heading: "Scheduled", emptyTitle: "scheduledEmpty", emptyBody: "scheduledEmptyBody", illustration: "cal" },
+  all: { icon: Layers, heading: "All Tasks", emptyTitle: "allTasksEmpty", emptyBody: "allTasksEmptyBody", illustration: "box" },
+  priority: { icon: Flag, heading: "priority", emptyTitle: "priorityEmpty", emptyBody: "priorityEmptyBody", illustration: "box" },
 };
 
 // Today is the one scope whose own name changes during the day: after 18:00 the
@@ -498,6 +499,7 @@ const AllTasksTimelineContainer = ({
               earlierHandoff={earlierHandoff}
               locale={locale}
               emptyTitle={emptyTitle}
+              illustration={SCOPE_CONFIG[scope].illustration}
               emptyBody={emptyBody}
               dayDoneTitle={todayCopy.dayDoneTitle}
               appDict={appDict}
@@ -511,6 +513,7 @@ const AllTasksTimelineContainer = ({
               icon={Search}
               accentColor={timelineScopeAccentColors[scope]}
               title={appDict("noMatchingTasks")}
+              illustration="search"
               description={appDict("searchEmptyBody")}
               action={
                 <button

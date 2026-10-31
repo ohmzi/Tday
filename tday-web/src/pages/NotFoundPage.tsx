@@ -1,5 +1,6 @@
 import { Link, useParams } from "react-router-dom";
-import { Home, FileQuestion } from "lucide-react";
+import { Home } from "lucide-react";
+import Illustration from "@/components/illustrations/Illustration";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_LOCALE } from "@/i18n";
 
@@ -17,9 +18,7 @@ export default function NotFoundPage() {
       </span>
 
       <div className="relative z-10 mx-auto flex max-w-md flex-col items-center text-center">
-        <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground ring-1 ring-border/60">
-          <FileQuestion className="h-7 w-7" />
-        </div>
+        <Illustration id="lost" className="mb-6 max-w-[320px]" />
 
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Page not found

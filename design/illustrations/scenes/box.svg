@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+<defs>
+</defs>
+<g><g class="rise">
+    <path d="M140 262 C146 150 222 54 352 40 V262 Z" fill="var(--arch)"/>
+    <ellipse cx="200" cy="287" rx="178" ry="6" fill="var(--floorS)"/>
+    <path d="M86 283 q108 -12 236 -4 q18 2 18 4z" fill="var(--rug)"/>
+    <path d="M110 281 h190" stroke="var(--rugD)" stroke-width="1.4" stroke-dasharray="3 4"/>
+
+    <!-- contact shadows -->
+    <ellipse cx="204" cy="284" rx="104" ry="4" fill="var(--shadowC)"/>
+    <ellipse cx="80" cy="283" rx="17" ry="3" fill="var(--shadowC)"/>
+    <ellipse cx="326" cy="284" rx="26" ry="2.4" fill="var(--shadowC)"/>
+
+    <!-- wall shelf with books and a small potted plant -->
+    <rect x="262" y="150" width="116" height="10" fill="var(--desk)"/>
+    <rect x="262" y="150" width="116" height="2" fill="var(--deskL)"/>
+    <rect x="262" y="158" width="116" height="2" fill="var(--deskD)"/>
+    <path d="M276 160 h12 l-12 12z M360 160 h12 l-12 12z" fill="var(--deskD)"/>
+    <rect x="302" y="140" width="20" height="10" fill="var(--book2)"/>
+    <rect x="304" y="132" width="16" height="8" fill="var(--book3)"/>
+    <path d="M305 145 h14 M306 136 h12" stroke="var(--book)" stroke-width=".8" opacity=".5"/>
+    <g class="sway">
+      <path d="M336 134 q-12 -12 -10 -30 q9 12 12 30z" fill="var(--leafD)"/>
+      <path d="M338 134 q4 -22 16 -32 q-2 18 -14 32z" fill="var(--leaf)"/>
+      <path d="M339 134 q-2 -16 3 -28 q4 14 -3 28z" fill="var(--leafL)"/>
+    </g>
+    <rect x="326" y="134" width="24" height="5" rx="1.5" fill="var(--potL)"/>
+    <path d="M328 139 h20 l-2.6 11 h-14.8z" fill="var(--pot)"/>
+    <path d="M331 143 h7" stroke="var(--potL)" stroke-width="1.2" stroke-linecap="round"/>
+
+    <!-- box: inner wall, folded back flap with tape -->
+    <path d="M118 196 L122 176 L278 176 L282 196Z" fill="var(--boxD)"/>
+    <path d="M122 176 L112 152 L288 152 L278 176Z" fill="var(--box)"/>
+    <path d="M112 152 L288 152" stroke="var(--boxL)" stroke-width="1.6"/>
+    <path d="M122 176 L278 176" stroke="var(--boxD)" stroke-width="1.2"/>
+    <path d="M122 166 L278 166 L278 176 L122 176Z" fill="var(--boxD)" opacity=".55"/>
+    <path d="M112 152 L122 176 L118 178 L108 156Z" fill="var(--boxD)" opacity=".4"/>
+    <path d="M194 151 L214 151 L216 177 L196 177Z" fill="var(--cup)" opacity=".75"/>
+    <path d="M196 158 h18" stroke="var(--boxD)" stroke-width=".6" opacity=".4"/>
+    <path d="M124 160 h150 M124 168 h150" stroke="var(--boxD)" stroke-width=".5" opacity=".35"/>
+
+    <!-- side flaps -->
+    <path d="M114 196 L100 182 L108 170 L122 186Z" fill="var(--boxD)"/>
+    <path d="M286 196 L300 182 L292 170 L278 186Z" fill="var(--boxL)"/>
+
+    <!-- front face, shade, side panel, rim and corrugation -->
+    <rect x="112" y="196" width="176" height="88" fill="var(--box)"/>
+    <rect x="112" y="196" width="10" height="88" fill="var(--boxD)" opacity=".35"/>
+    <path d="M288 196 L298 190 L298 278 L288 284Z" fill="var(--boxL)"/>
+    <rect x="112" y="196" width="176" height="4" fill="var(--boxL)"/>
+    <path d="M112 203 H288 M112 207 H288 M112 211 H288 M112 215 H288" stroke="var(--boxD)" stroke-width=".8" opacity=".4"/>
+    <path d="M112 201 H288" stroke="var(--boxL)" stroke-width=".6" opacity=".7"/>
+    <path d="M112 285 q88 2 176 0" stroke="var(--boxD)" stroke-width="1" opacity=".5" fill="none"/>
+    <!-- tape strip and shipping label -->
+    <rect x="260" y="203" width="14" height="36" fill="var(--cup)" opacity=".6"/>
+    <path d="M260 203 V239 M274 203 V239" stroke="var(--boxD)" stroke-width=".6" opacity=".4"/>
+    <rect x="230" y="226" width="22" height="14" rx="1.5" fill="var(--cup)"/>
+    <path d="M234 231 h14 M234 235 h10 M234 239 h12" stroke="var(--boxD)" stroke-width=".8" opacity=".6"/>
+    <!-- printed this-side-up arrows -->
+    <path d="M132 252 V232 M126 238 L132 232 L138 238 M152 252 V232 M146 238 L152 232 L158 238" stroke="var(--boxD)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M124 258 h36" stroke="var(--boxD)" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>
+
+    <!-- cat: head and both front paws resting on the front edge -->
+    <path d="M172 178 L166 146 L188 162Z" fill="var(--cat)"/>
+    <path d="M175 170 L172 154 L184 164Z" fill="var(--note2)" opacity=".8"/>
+    <path d="M228 178 L234 146 L212 162Z" fill="var(--cat)"/>
+    <path d="M225 170 L228 154 L216 164Z" fill="var(--note2)" opacity=".8"/>
+    <path d="M168 180 C166 164 178 156 200 156 C222 156 234 164 232 180 C232 190 226 198 214 198 L186 198 C174 198 168 190 168 180Z" fill="var(--cat)"/>
+    <path d="M168 180 C170 190 176 196 186 198 C178 194 173 188 172 180 C171 172 173 168 177 165 C171 168 168 173 168 180Z" fill="var(--catD)" opacity=".45"/>
+    <path d="M226 170 C230 174 231 178 231 182" stroke="var(--catL)" stroke-width="1.6" fill="none" opacity=".7" stroke-linecap="round"/>
+    <path d="M200 157 v8 M193 158 l2 7 M207 158 l-2 7" stroke="var(--catD)" stroke-width="2" stroke-linecap="round" fill="none"/>
+    <path d="M170 184 h6 M170 189 h5 M230 184 h-6 M230 189 h-5" stroke="var(--catD)" stroke-width="1.4" stroke-linecap="round" fill="none" opacity=".8"/>
+    <path d="M188 186 C190 181 210 181 212 186 C214 193 207 198 200 198 C193 198 186 193 188 186Z" fill="var(--catL)"/>
+    <ellipse cx="188" cy="177" rx="3.2" ry="3.6" fill="var(--book)"/>
+    <circle cx="189.2" cy="175.6" r="1" fill="var(--glare)"/>
+    <ellipse cx="212" cy="177" rx="3.2" ry="3.6" fill="var(--book)"/>
+    <circle cx="213.2" cy="175.6" r="1" fill="var(--glare)"/>
+    <path d="M168 184 l-5 1 l4 3z M232 184 l5 1 l-4 3z" fill="var(--cat)"/>
+    <path d="M190 190 q10 4 20 0" stroke="var(--catL)" stroke-width=".8" fill="none" opacity=".6"/>
+    <g class="lidq">
+      <rect x="184" y="172" width="8" height="9" fill="var(--cat)"/>
+      <path d="M184.5 177 q3.5 2.5 7 0" stroke="var(--catD)" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      <rect x="208" y="172" width="8" height="9" fill="var(--cat)"/>
+      <path d="M208.5 177 q3.5 2.5 7 0" stroke="var(--catD)" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    </g>
+    <path d="M198 183 h4 l-2 2.4z" fill="var(--note2)"/>
+    <path d="M200 185.4 v1.8 M200 187.2 q-2 1.6 -3.6 .6 M200 187.2 q2 1.6 3.6 .6" stroke="var(--catD)" stroke-width=".8" fill="none" stroke-linecap="round"/>
+    <path d="M186 186 h-10 M186 189 l-9 2 M214 186 h10 M214 189 l9 2" stroke="var(--catL)" stroke-width=".7" fill="none" stroke-linecap="round"/>
+    <path d="M158 200 C158 193 168 190 178 192 C186 194 190 198 188 203 C186 206 180 206 172 206 L162 206 C158 205 157 202 158 200Z" fill="var(--catL)"/>
+    <path d="M166 198 v6 M173 197 v7" stroke="var(--catD)" stroke-width=".8" stroke-linecap="round"/>
+    <path d="M242 200 C242 193 232 190 222 192 C214 194 210 198 212 203 C214 206 220 206 228 206 L238 206 C242 205 243 202 242 200Z" fill="var(--catL)"/>
+    <path d="M234 198 v6 M227 197 v7" stroke="var(--catD)" stroke-width=".8" stroke-linecap="round"/>
+
+    <!-- yarn ball with a loose thread -->
+    <circle cx="80" cy="268" r="15" fill="var(--mug)"/>
+    <path d="M66 262 q14 -8 28 0 M65 270 q15 8 30 -2 M70 278 q12 -2 20 -12" stroke="var(--mugD)" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    <ellipse cx="86" cy="276" rx="8" ry="4" fill="var(--mugD)" opacity=".4"/>
+    <circle cx="75" cy="260" r="3.5" fill="var(--glare)" opacity=".3"/>
+    <path d="M92 274 C102 284 110 278 116 284" stroke="var(--mug)" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+
+    <!-- clipboard with an empty checklist, leaning on the box -->
+    <g transform="rotate(-10 306 282)">
+      <rect x="306" y="202" width="44" height="80" rx="5" fill="var(--chair)"/>
+      <rect x="306" y="202" width="5" height="80" rx="2" fill="var(--chairD)" opacity=".5"/>
+      <rect x="311" y="212" width="34" height="62" rx="2" fill="var(--cup)"/>
+      <rect x="317" y="216" width="7" height="7" rx="1.2" fill="none" stroke="var(--boxD)" stroke-width="1.1"/>
+      <path d="M327 219.5 h12" stroke="var(--boxD)" stroke-width="1.2" opacity=".35" stroke-linecap="round"/>
+      <rect x="317" y="230" width="7" height="7" rx="1.2" fill="none" stroke="var(--boxD)" stroke-width="1.1"/>
+      <path d="M327 233.5 h12" stroke="var(--boxD)" stroke-width="1.2" opacity=".35" stroke-linecap="round"/>
+      <rect x="317" y="244" width="7" height="7" rx="1.2" fill="none" stroke="var(--boxD)" stroke-width="1.1"/>
+      <path d="M327 247.5 h12" stroke="var(--boxD)" stroke-width="1.2" opacity=".35" stroke-linecap="round"/>
+      <rect x="318" y="196" width="20" height="9" rx="2" fill="var(--glass)"/>
+      <rect x="320" y="197" width="16" height="1.4" fill="var(--glare)" opacity=".5"/>
+    </g>
+  </g></g>
+</svg>

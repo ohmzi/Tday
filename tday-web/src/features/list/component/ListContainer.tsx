@@ -277,6 +277,7 @@ const ListContainer = ({ id }: { id: string }) => {
                             icon={Search}
                             accentColor={listAccent}
                             title={appDict("noMatchingTasks")}
+                            illustration="search"
                             description={appDict("searchEmptyBody")}
                             action={
                                 <button
@@ -358,6 +359,7 @@ const ListContainer = ({ id }: { id: string }) => {
                             icon={getListIconForList(listMetaData[id])}
                             accentColor={listAccent}
                             isDayDone={false}
+                            illustration="box"
                             celebrate={celebrate}
                             // Drawn inline — a sibling in the flow, not an overlay — so
                             // mounting it still puts whatever follows it into a new slot

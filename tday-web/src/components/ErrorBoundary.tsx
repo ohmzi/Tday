@@ -1,5 +1,6 @@
 import React, { Component, ReactNode } from "react";
-import { RefreshCw, ShieldAlert, Home } from "lucide-react";
+import { RefreshCw, Home } from "lucide-react";
+import Illustration from "@/components/illustrations/Illustration";
 import { captureUiException } from "@/lib/observability/sentry";
 import { isStaleChunkError, reloadOnceForStaleChunk } from "@/lib/chunkError";
 
@@ -74,13 +75,10 @@ class ErrorBoundary extends Component<Props, State> {
           </span>
 
           <div className="relative z-10 mx-auto flex max-w-md flex-col items-center text-center">
-            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground ring-1 ring-border/60">
-              {isChunkError ? (
-                <RefreshCw className="h-7 w-7" />
-              ) : (
-                <ShieldAlert className="h-7 w-7" />
-              )}
-            </div>
+            <Illustration
+              id={isChunkError ? "update" : "oops"}
+              className="mb-6 max-w-[320px]"
+            />
 
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               {isChunkError ? "New version available" : "Something went wrong"}

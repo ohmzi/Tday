@@ -225,6 +225,7 @@ export default function FloaterListContainer({ id }: { id: string }) {
             icon={ListIcon}
             accentColor={listAccent}
             title={appDict("floaterListEmpty")}
+            illustration="box"
             description={appDict("floaterListEmptyBody")}
             // Finishing a list is a payoff, not an absence: the confetti is for
             // the tick that emptied it, not for a list that was already empty.
@@ -241,6 +242,7 @@ export default function FloaterListContainer({ id }: { id: string }) {
           icon={Search}
           accentColor={listAccent}
           title={appDict("noMatchingFloaters")}
+          illustration="search"
           description={appDict("searchEmptyBody")}
           action={
             <button

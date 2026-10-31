@@ -90,6 +90,7 @@ const CompletedTodoContainer = ({
           iconClassName="h-8 w-8"
           accentColor={nativeScreenAccentColors.completed}
           title={completedDict("empty")}
+          illustration="history"
           description={completedDict("emptyBody")}
         />
       )}
@@ -100,6 +101,7 @@ const CompletedTodoContainer = ({
           icon={Search}
           accentColor={nativeScreenAccentColors.completed}
           title={appDict("noMatchingTasks")}
+          illustration="search"
           description={appDict("searchEmptyBody")}
           action={
             <button

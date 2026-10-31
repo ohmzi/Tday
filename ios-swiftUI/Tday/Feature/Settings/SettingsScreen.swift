@@ -554,7 +554,8 @@ struct SettingsScreen: View {
                         .foregroundStyle(colors.primary)
                 }
                 .buttonStyle(.plain)
-            )
+            ),
+            illustration: .search
         )
         .padding(.vertical, 24)
     }

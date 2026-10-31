@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+<defs>
+  <clipPath id="update-arch"><path d="M10 284 V120 C10 40 90 8 200 8 C310 8 390 40 390 120 V284Z"/></clipPath>
+</defs>
+<g><g class="rise">
+    <path d="M10 284 V120 C10 40 90 8 200 8 C310 8 390 40 390 120 V284Z" fill="var(--arch)"/>
+    <g clip-path="url(#update-arch)"><path d="M300 0 L250 284 H290 L340 0Z" fill="var(--archL)" opacity=".5"/></g>
+    <ellipse cx="200" cy="284" rx="185" ry="7" fill="var(--floorS)"/>
+    <path d="M70 284 H330 L340 294 H60Z" fill="var(--rug)"/>
+    <path d="M70 288 H330" stroke="var(--rugD)" stroke-width="1" stroke-dasharray="3 4"/>
+    <!-- pegboard with hanging tools; holes halved and faint -->
+    <rect x="34" y="30" width="332" height="140" rx="4" fill="var(--panel)"/>
+    <rect x="34" y="30" width="332" height="140" rx="4" fill="url(#update-holes)" opacity=".45"/>
+    <rect x="34" y="30" width="332" height="2" rx="1" fill="var(--glare)" opacity=".5"/>
+    <!-- hammer -->
+    <path d="M80 40 V44" stroke="var(--glass)" stroke-width="1.4"/>
+    <rect x="78" y="62" width="4" height="46" rx="2" fill="var(--chair)"/>
+    <rect x="70" y="52" width="20" height="11" rx="2" fill="var(--glass)"/>
+    <rect x="71" y="53" width="18" height="2" fill="var(--glare)" opacity=".4"/>
+    <path d="M70 54 q-5 2 -4 8 h4z" fill="var(--glass)"/>
+    <!-- wrench with a hole in the head -->
+    <path d="M106 42 V46" stroke="var(--glass)" stroke-width="1.4"/>
+    <rect x="104" y="58" width="5" height="46" rx="2" fill="var(--shoe)"/>
+    <circle cx="106.5" cy="54" r="7" fill="var(--shoe)" stroke="var(--shoeD)" stroke-width=".8"/>
+    <rect x="103" y="47" width="7" height="6" fill="var(--panel)"/>
+    <circle cx="106.5" cy="54" r="2.2" fill="var(--panel)"/>
+    <!-- screwdriver -->
+    <rect x="132" y="56" width="3" height="40" fill="var(--glass)"/>
+    <rect x="129" y="94" width="9" height="20" rx="4" fill="var(--coral)"/>
+    <rect x="130" y="97" width="2" height="12" rx="1" fill="var(--glare)" opacity=".3"/>
+    <!-- pliers -->
+    <path d="M150 54 L156 96 M160 54 L154 96" stroke="var(--shoeD)" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="155" cy="60" r="3" fill="var(--shoeD)"/>
+    <rect x="151" y="84" width="4" height="12" rx="2" fill="var(--mon)"/>
+    <rect x="156" y="84" width="4" height="12" rx="2" fill="var(--mon)"/>
+    <!-- tape measure -->
+    <circle cx="186" cy="72" r="11" fill="var(--note)"/>
+    <circle cx="186" cy="72" r="5" fill="var(--panel)"/>
+    <rect x="195" y="74" width="10" height="5" rx="1" fill="var(--note)"/>
+    <!-- spirit level -->
+    <rect x="212" y="58" width="48" height="10" rx="2" fill="var(--coral)"/>
+    <rect x="228" y="60" width="14" height="6" rx="3" fill="var(--glass)" opacity=".5"/>
+    <circle cx="234" cy="63" r="1.6" fill="var(--glare)"/>
+    <!-- phone on a stand: kickstand with hinge, contact shadow, spinning progress ring -->
+    <ellipse cx="240" cy="199.5" rx="36" ry="2.2" fill="var(--shadowC)"/>
+    <rect x="208" y="192" width="64" height="6" rx="2.5" fill="var(--deskD)"/>
+    <rect x="208" y="192" width="64" height="1.6" rx=".8" fill="var(--desk)"/>
+    <path d="M264 192 L257 150" stroke="var(--deskD)" stroke-width="3" stroke-linecap="round"/>
+    <rect x="214" y="108" width="42" height="84" rx="7" fill="var(--phoneD)"/>
+    <rect x="217" y="112" width="36" height="76" rx="4" fill="var(--screen)"/>
+    <rect x="230" y="115" width="8" height="1.4" rx=".7" fill="var(--screenUI)"/>
+    <rect x="219" y="116" width="3" height="60" fill="var(--glare)" opacity=".06"/>
+    <g class="spin">
+      <circle cx="235" cy="146" r="13" fill="none" stroke="var(--screenUI)" stroke-width="3"/>
+      <circle cx="235" cy="146" r="13" fill="none" stroke="var(--bar)" stroke-width="3" stroke-linecap="round" stroke-dasharray="58 82" transform="rotate(-90 235 146)"/>
+    </g>
+    <path d="M235 138 L240 144 H237 V151 H233 V144 H230 Z" fill="var(--bar)"/>
+    <rect x="226" y="170" width="18" height="2.4" rx="1.2" fill="var(--screenL)"/>
+    <circle cx="257" cy="150" r="2.4" fill="var(--glass)"/>
+    <!-- workbench: top with edge, apron with drawers, legs -->
+    <rect x="40" y="210" width="8" height="74" fill="var(--deskD)"/>
+    <rect x="352" y="210" width="8" height="74" fill="var(--deskD)"/>
+    <rect x="48" y="210" width="304" height="20" fill="var(--panelD)"/>
+    <rect x="60" y="214" width="120" height="12" rx="1.5" fill="var(--panel)"/>
+    <rect x="190" y="214" width="120" height="12" rx="1.5" fill="var(--panel)"/>
+    <circle cx="120" cy="220" r="1.4" fill="var(--deskD)"/>
+    <circle cx="250" cy="220" r="1.4" fill="var(--deskD)"/>
+    <rect x="26" y="200" width="348" height="10" rx="2" fill="var(--desk)"/>
+    <rect x="26" y="200" width="348" height="2" fill="var(--deskL)"/>
+    <rect x="26" y="208" width="348" height="2" fill="var(--deskD)"/>
+    <path d="M60 204 H140 M180 205 H260 M300 204 H340" stroke="var(--deskD)" stroke-width=".7" opacity=".5"/>
+    <!-- terracotta pot with a seedling that has two fresh leaves -->
+    <ellipse cx="82" cy="200" rx="20" ry="2.6" fill="var(--shadowC)"/>
+    <path d="M68 176 H98 L94 200 H72Z" fill="var(--pot)"/>
+    <path d="M76 180 L80 198" stroke="var(--potL)" stroke-width="2" opacity=".7"/>
+    <rect x="66" y="170" width="34" height="7" rx="2" fill="var(--potL)"/>
+    <ellipse cx="83" cy="170.5" rx="14" ry="2" fill="var(--deskD)"/>
+    <g class="sway">
+      <path d="M83 170 V148" stroke="var(--leafD)" stroke-width="1.6" fill="none"/>
+      <path d="M83 158 C78 150 72 148 66 150 C70 158 76 162 83 158Z" fill="var(--leaf)"/>
+      <path d="M83 152 C88 142 94 138 100 138 C98 146 92 152 83 152Z" fill="var(--leafL)"/>
+      <path d="M83 158 q-7 -4 -14 -6 M83 152 q6 -6 13 -8" stroke="var(--leafD)" stroke-width=".7" fill="none"/>
+    </g>
+    <!-- open toolbox with a screwdriver lying across it -->
+    <ellipse cx="318" cy="200" rx="34" ry="2.6" fill="var(--shadowC)"/>
+    <path d="M290 184 L296 166 L352 164 L346 182Z" fill="var(--monD)"/>
+    <rect x="288" y="182" width="58" height="18" rx="2" fill="var(--mon)"/>
+    <rect x="288" y="194" width="58" height="6" rx="2" fill="var(--monD)"/>
+    <rect x="292" y="182" width="50" height="3" fill="var(--screen)" opacity=".5"/>
+    <path d="M300 182 q12 -10 26 0" stroke="var(--monD)" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <rect x="292" y="196" width="5" height="4" rx="1" fill="var(--monL)"/>
+    <rect x="339" y="196" width="5" height="4" rx="1" fill="var(--monL)"/>
+    <g transform="rotate(-10 320 176)">
+      <rect x="306" y="174" width="30" height="3" rx="1.5" fill="var(--glass)"/>
+      <rect x="296" y="172" width="12" height="8" rx="4" fill="var(--coral)"/>
+      <rect x="298" y="173.5" width="6" height="1.2" fill="var(--glare)" opacity=".4"/>
+    </g>
+    <!-- cat sits on the bench, facing the phone -->
+    <g transform="translate(36,-84)">
+      <ellipse cx="128" cy="284" rx="22" ry="3" fill="var(--shadowC)"/>
+      <path d="M116 284 C110 270 112 252 122 244 C128 240 138 240 144 246 C150 254 150 270 146 284Z" fill="var(--cat)"/>
+      <path d="M124 284 C124 274 130 268 140 270" stroke="var(--catD)" stroke-width="1" fill="none" opacity=".7"/>
+      <path d="M140 256 C146 260 148 270 146 284 H141 C142 274 140 264 138 258Z" fill="var(--catL)" opacity=".6"/>
+      <path d="M118 254 q4 6 2 14 M126 250 q3 6 1 12 M134 252 q3 5 1 10" stroke="var(--catD)" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".8"/>
+      <rect x="128" y="280" width="6" height="4" rx="2" fill="var(--catL)"/>
+      <rect x="137" y="280" width="6" height="4" rx="2" fill="var(--catL)"/>
+      <path d="M122 240 C118 232 120 226 126 224 L125 212 C129 214 132 218 134 220 C138 219 142 219 146 220 L149 212 L150 224 C154 226 156 232 154 240 C152 246 146 249 138 249 C130 249 124 246 122 240Z" fill="var(--cat)"/>
+      <path d="M125 222 L125 214 L130 220Z M148 222 L149 214 L144 220Z" fill="var(--note2)" opacity=".75"/>
+      <path d="M136 221 q1 3 0 5 M141 221 q1 3 0 5 M130 226 q1 2 0 4" stroke="var(--catD)" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+      <path d="M128 235 q3 -3 6 0 q-3 2 -6 0z" fill="var(--catD)"/>
+      <path d="M142 235 q3 -3 6 0 q-3 2 -6 0z" fill="var(--catD)"/>
+      <path d="M138 241 h2 l-1 1.6z" fill="var(--note2)"/>
+      <path d="M124 240 h-6 M124 242 l-6 1 M152 240 h6 M152 242 l6 1" stroke="var(--catL)" stroke-width=".6"/>
+      <path d="M118 284 C104 284 100 276 106 272 C110 270 112 274 110 278" stroke="var(--cat)" stroke-width="5" fill="none" stroke-linecap="round" class="tail"/>
+    </g>
+  </g></g>
+</svg>

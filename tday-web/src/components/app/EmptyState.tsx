@@ -3,6 +3,7 @@ import Confetti from "@/components/app/Confetti";
 import { useFadeUnmount } from "@/hooks/useFadeUnmount";
 import { DURATION_MS } from "@/lib/motion";
 import { cn } from "@/lib/utils";
+import Illustration, { type IllustrationId } from "@/components/illustrations/Illustration";
 
 /**
  * What a screen shows when it has nothing to show.
@@ -26,6 +27,9 @@ import { cn } from "@/lib/utils";
  *   which is the one form that accepts both a bare hex and an `hsl(var(--x))`,
  *   and both turn up here depending on whether the screen or the user's list
  *   picked the colour.
+ * @param illustration an illustrated scene from `design/illustrations` to show
+ *   instead of the card stack. The stack, its accent tint and its glyph badge
+ *   stay the fallback for any screen that has no scene of its own.
  * @param celebrate the list emptied because the user finished it, rather than
  *   because there was never anything in it: confetti flies first and the scene
  *   comes up through it a beat later. Going FALSE again while the paper is still
@@ -53,6 +57,7 @@ export default function EmptyState({
   iconClassName = "h-6 w-6",
   celebrate = false,
   celebrationStartDelayMs = 0,
+  illustration,
 }: {
   icon: ElementType;
   accentColor: string;
@@ -69,6 +74,7 @@ export default function EmptyState({
   iconClassName?: string;
   celebrate?: boolean;
   celebrationStartDelayMs?: number;
+  illustration?: IllustrationId;
 }) {
   const tint = (percent: number) =>
     `color-mix(in srgb, ${accentColor} ${percent}%, transparent)`;
@@ -106,88 +112,92 @@ export default function EmptyState({
             : undefined
         }
       >
-        <div aria-hidden className="tday-empty-scene relative mb-7 h-[136px] w-[172px]">
-          {/* Two cards behind, fanned out. Tinted rather than `bg-card`, so they
-              read as depth instead of as two more empty rows. */}
-          <div
-            className="absolute left-3 top-4 h-[86px] w-[128px] -rotate-[9deg] rounded-[18px]"
-            style={{ backgroundColor: tint(14) }}
-          />
-          <div
-            className="absolute left-10 top-3 h-[86px] w-[128px] rotate-[7deg] rounded-[18px]"
-            style={{ backgroundColor: tint(22) }}
-          />
+        {illustration ? (
+          <Illustration id={illustration} className="mb-6 max-w-[320px]" />
+        ) : (
+          <div aria-hidden className="tday-empty-scene relative mb-7 h-[136px] w-[172px]">
+            {/* Two cards behind, fanned out. Tinted rather than `bg-card`, so they
+                read as depth instead of as two more empty rows. */}
+            <div
+              className="absolute left-3 top-4 h-[86px] w-[128px] -rotate-[9deg] rounded-[18px]"
+              style={{ backgroundColor: tint(14) }}
+            />
+            <div
+              className="absolute left-10 top-3 h-[86px] w-[128px] rotate-[7deg] rounded-[18px]"
+              style={{ backgroundColor: tint(22) }}
+            />
 
-          {/* The card in front, holding three task rows. The first is ticked. */}
-          <div className="absolute left-6 top-6 flex h-[88px] w-[130px] flex-col justify-center gap-[9px] rounded-[18px] border border-border/60 bg-card px-4 shadow-[0_18px_34px_-24px_hsl(var(--shadow)/0.6)]">
-            {[0, 1, 2].map((row) => (
-              <div key={row} className="flex items-center gap-2.5">
-                <span
-                  className="flex h-3 w-3 shrink-0 items-center justify-center rounded-full"
-                  style={
-                    row === 0
-                      ? { backgroundColor: accentColor }
-                      : { border: `1.5px solid ${tint(45)}` }
-                  }
-                >
-                  {row === 0 ? (
-                    <svg viewBox="0 0 12 12" className="h-2 w-2">
-                      <path
-                        d="M3 6.2 5 8.2 9 3.9"
-                        fill="none"
-                        stroke="white"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  ) : null}
-                </span>
-                <span
-                  className="h-[5px] rounded-full"
-                  style={{
-                    width: row === 0 ? 44 : row === 1 ? 62 : 38,
-                    backgroundColor: tint(row === 0 ? 30 : 52),
-                  }}
+            {/* The card in front, holding three task rows. The first is ticked. */}
+            <div className="absolute left-6 top-6 flex h-[88px] w-[130px] flex-col justify-center gap-[9px] rounded-[18px] border border-border/60 bg-card px-4 shadow-[0_18px_34px_-24px_hsl(var(--shadow)/0.6)]">
+              {[0, 1, 2].map((row) => (
+                <div key={row} className="flex items-center gap-2.5">
+                  <span
+                    className="flex h-3 w-3 shrink-0 items-center justify-center rounded-full"
+                    style={
+                      row === 0
+                        ? { backgroundColor: accentColor }
+                        : { border: `1.5px solid ${tint(45)}` }
+                    }
+                  >
+                    {row === 0 ? (
+                      <svg viewBox="0 0 12 12" className="h-2 w-2">
+                        <path
+                          d="M3 6.2 5 8.2 9 3.9"
+                          fill="none"
+                          stroke="white"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ) : null}
+                  </span>
+                  <span
+                    className="h-[5px] rounded-full"
+                    style={{
+                      width: row === 0 ? 44 : row === 1 ? 62 : 38,
+                      backgroundColor: tint(row === 0 ? 30 : 52),
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* The screen's own glyph, sitting on the corner of the stack. */}
+            <div
+              className="absolute -right-1 bottom-1 flex h-[52px] w-[52px] items-center justify-center rounded-full text-white shadow-[0_14px_26px_-14px_hsl(var(--shadow)/0.7)] ring-4 ring-background"
+              style={{ backgroundColor: accentColor }}
+            >
+              <Icon className={iconClassName} strokeWidth={2.6} />
+            </div>
+
+            {/* Three sparkles on their own staggered twinkle. */}
+            {[
+              { top: 2, left: 6, size: 13, delay: "0s" },
+              { top: 96, left: 0, size: 9, delay: "0.7s" },
+              { top: 12, left: 150, size: 11, delay: "1.4s" },
+            ].map((spark) => (
+              <svg
+                key={`${spark.top}-${spark.left}`}
+                viewBox="0 0 24 24"
+                className="tday-empty-sparkle absolute"
+                style={{
+                  top: spark.top,
+                  left: spark.left,
+                  width: spark.size,
+                  height: spark.size,
+                  color: tint(70),
+                  animationDelay: spark.delay,
+                }}
+              >
+                <path
+                  d="M12 0c.6 6.2 5.2 10.8 12 12-6.8 1.2-11.4 5.8-12 12-.6-6.2-5.2-10.8-12-12C6.8 10.8 11.4 6.2 12 0Z"
+                  fill="currentColor"
                 />
-              </div>
+              </svg>
             ))}
           </div>
-
-          {/* The screen's own glyph, sitting on the corner of the stack. */}
-          <div
-            className="absolute -right-1 bottom-1 flex h-[52px] w-[52px] items-center justify-center rounded-full text-white shadow-[0_14px_26px_-14px_hsl(var(--shadow)/0.7)] ring-4 ring-background"
-            style={{ backgroundColor: accentColor }}
-          >
-            <Icon className={iconClassName} strokeWidth={2.6} />
-          </div>
-
-          {/* Three sparkles on their own staggered twinkle. */}
-          {[
-            { top: 2, left: 6, size: 13, delay: "0s" },
-            { top: 96, left: 0, size: 9, delay: "0.7s" },
-            { top: 12, left: 150, size: 11, delay: "1.4s" },
-          ].map((spark) => (
-            <svg
-              key={`${spark.top}-${spark.left}`}
-              viewBox="0 0 24 24"
-              className="tday-empty-sparkle absolute"
-              style={{
-                top: spark.top,
-                left: spark.left,
-                width: spark.size,
-                height: spark.size,
-                color: tint(70),
-                animationDelay: spark.delay,
-              }}
-            >
-              <path
-                d="M12 0c.6 6.2 5.2 10.8 12 12-6.8 1.2-11.4 5.8-12 12-.6-6.2-5.2-10.8-12-12C6.8 10.8 11.4 6.2 12 0Z"
-                fill="currentColor"
-              />
-            </svg>
-          ))}
-        </div>
+        )}
 
         <p className="text-2xl font-black leading-tight text-foreground">{title}</p>
         {description ? (

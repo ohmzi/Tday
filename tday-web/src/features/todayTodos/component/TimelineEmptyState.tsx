@@ -1,6 +1,7 @@
 import type { ElementType } from "react";
 import { CheckCheck } from "lucide-react";
 import EmptyState from "@/components/app/EmptyState";
+import type { IllustrationId } from "@/components/illustrations/Illustration";
 import EmptyStateSlot from "@/components/app/EmptyStateSlot";
 import { emptySceneIsLeaving } from "../lib/todayEarlierIllustration";
 import type { EarlierHandoff } from "../lib/useEarlierExpandHandoff";
@@ -31,6 +32,7 @@ export default function TimelineEmptyState({
   emptyBody,
   dayDoneTitle = "allDoneToday",
   appDict,
+  illustration,
 }: {
   icon: ElementType;
   accentColor: string;
@@ -76,6 +78,8 @@ export default function TimelineEmptyState({
    */
   dayDoneTitle?: string;
   appDict: (key: string) => string;
+  /** The scope's empty scene. Day Done always shows the "done" scene instead. */
+  illustration: IllustrationId;
 }) {
   return (
     <EmptyStateSlot
@@ -99,6 +103,7 @@ export default function TimelineEmptyState({
         }
         celebrate={celebrate}
         celebrationStartDelayMs={celebrationStartDelayMs}
+        illustration={isDayDone ? "done" : illustration}
       />
     </EmptyStateSlot>
   );
