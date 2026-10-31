@@ -52,7 +52,7 @@ class TaskStepServiceImpl(
                 .where { TaskSteps.todoID eq todoId }
                 .orderBy(TaskSteps.position to SortOrder.ASC, TaskSteps.createdAt to SortOrder.ASC)
                 .map { it.toDto() }
-        } ?: return AppError.NotFound("todo not found").left()
+        } ?: return AppError.NotFound("task not found").left()
         return steps.right()
     }
 
@@ -83,7 +83,7 @@ class TaskStepServiceImpl(
                 position = nextPosition,
                 createdAt = now.toString(),
             )
-        } ?: return AppError.NotFound("todo not found").left()
+        } ?: return AppError.NotFound("task not found").left()
         notifyChange(userId)
         return dto.right()
     }
@@ -124,7 +124,7 @@ class TaskStepServiceImpl(
             }
             true
         }
-        if (!ok) return AppError.NotFound("todo not found").left()
+        if (!ok) return AppError.NotFound("task not found").left()
         notifyChange(userId)
         return Unit.right()
     }

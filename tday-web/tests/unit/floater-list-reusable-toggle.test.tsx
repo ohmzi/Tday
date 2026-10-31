@@ -25,6 +25,7 @@
 import type { ReactNode } from "react";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const patchMock = vi.fn();
@@ -128,9 +129,11 @@ function renderContainer() {
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={queryClient}>
-      <FloaterListContainer id="list-1" />
-    </QueryClientProvider>,
+    <MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <FloaterListContainer id="list-1" />
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 }
 

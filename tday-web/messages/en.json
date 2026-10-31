@@ -405,6 +405,7 @@
       "title": "Edit all task recurrences?",
       "subtitle": "This is a recurring task, make the same edit for all other recurrences?",
       "editInstance": "Edit this occurrence only",
+      "repeatSeriesNote": "Repeat changes apply to every occurrence in the series.",
       "editAll": "Edit all recurrences"
     }
   },
@@ -700,9 +701,9 @@
     "clearForNow": "You're clear for now. No tasks need attention in this view.",
     "floaterClear": "Nothing is waiting here yet.",
     "floaterPileOne": "One thing is waiting here, with no date on it.",
-    "floaterPileFew": "A handful of undated things are waiting here.",
-    "floaterPileSome": "Quite a few undated things have gathered here.",
-    "floaterPileMany": "A long backlog of undated things has built up here.",
+    "floaterPileFew": "{{count}} undated things are waiting here.",
+    "floaterPileSome": "{{count}} undated things have gathered here.",
+    "floaterPileMany": "A backlog of {{count}} undated things has built up here.",
     "floaterStartWith": "Start with {{title}}.",
     "floaterPinnedOne": "Only {{title}} is pinned.",
     "floaterPinnedMany": "{{title}} is pinned, and it isn't the only one.",
@@ -710,6 +711,9 @@
     "floaterPriorityMany": "{{title}} is at high priority, and it isn't the only one.",
     "floaterMediumOne": "Only {{title}} is at medium priority.",
     "floaterMediumMany": "{{title}} is at medium priority, and it isn't the only one.",
+    "floaterFadingOne": "{{title}} hasn't been touched in a month or more.",
+    "floaterFadingMany": "Some of them haven't been touched in a month or more.",
+    "floaterFadingSole": "It hasn't been touched in a month or more.",
     "floaterRestingOne": "One of them hasn't been touched in months.",
     "floaterRestingMany": "Some of them haven't been touched in months.",
     "floaterRestingAll": "Nothing here has been touched in months.",
@@ -872,7 +876,7 @@
       "floaters-vs-todos": {
         "title": "Floaters vs dated tasks",
         "summary": "Dateless tasks live in Anytime; dated tasks live in Scheduled.",
-        "keywords": "floater, anytime, unscheduled, dateless, todo, scheduled, difference",
+        "keywords": "floater, anytime, unscheduled, dateless, task, todo, scheduled, difference",
         "body": "A task with a due date shows up in Scheduled and on the calendar. A Floater has no date — it waits quietly in your Anytime feed until you're ready. Use Floaters for “someday” work that shouldn't clutter today.",
         "tip": "Floaters never appear on the calendar — that space is only for dated work."
       },

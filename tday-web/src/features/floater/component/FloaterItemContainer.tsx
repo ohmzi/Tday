@@ -25,6 +25,7 @@ import { PromoteFloaterMenu } from "@/features/floater/component/PromoteFloaterM
 import type { FloaterItemType } from "@/types";
 import FloaterFormSheet from "./FloaterFormSheet";
 import { hapticButtonTap } from "@/lib/haptics";
+import { scrollIntoView } from "@/lib/scroll";
 import { SWIPE_COPY_COLOR, SWIPE_DELETE_COLOR, SWIPE_EDIT_COLOR } from "@/lib/swipeActionColors";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
@@ -147,6 +148,13 @@ export default function FloaterItemContainer({
     return () =>
       window.removeEventListener("tday-floater-swipe-open", onOpen as EventListener);
   }, [dismissSwipe, floater.id, swipeX]);
+
+  // A search result or deep link that names this row scrolls it into view, the way a
+  // scheduled row does when highlighted.
+  useEffect(() => {
+    if (!highlighted || !rowRef.current) return;
+    scrollIntoView(rowRef.current, { block: "center" });
+  }, [highlighted, rowRef]);
 
   return (
     <>

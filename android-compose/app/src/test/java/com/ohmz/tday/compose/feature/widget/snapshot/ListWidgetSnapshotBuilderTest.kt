@@ -239,6 +239,42 @@ class ListWidgetSnapshotBuilderTest {
     }
 
     @Test
+    fun `pseudo list counts split the dated tasks between Scheduled and Overdue with no overlap`() {
+        val state = OfflineSyncState(
+            todos = listOf(
+                todo(id = "c-ahead", title = "Ahead", listId = "list-1", dueEpochMs = now + 1L),
+                todo(id = "c-late", title = "Late", listId = "list-1", dueEpochMs = now - 1L),
+                todo(id = "c-undated", title = "Undated", listId = "list-1", dueEpochMs = null),
+                todo(id = "c-done", title = "Done", listId = "list-1", dueEpochMs = now + 2L, completed = true),
+            ),
+        )
+
+        // The picker reads these same helpers for its row counts, so they must agree with the
+        // widget's own snapshot for each pseudo type.
+        val scheduledPicker = pseudoListTasks(state, WidgetListType.SCHEDULED, now)
+        val overduePicker = pseudoListTasks(state, WidgetListType.OVERDUE, now)
+        val scheduledWidget = buildListWidgetSnapshot(
+            state = state,
+            listId = WidgetListType.SCHEDULED.pseudoSelectionId,
+            listType = WidgetListType.SCHEDULED,
+            workspaceConfigured = true,
+            nowEpochMs = now,
+        )
+        val overdueWidget = buildListWidgetSnapshot(
+            state = state,
+            listId = WidgetListType.OVERDUE.pseudoSelectionId,
+            listType = WidgetListType.OVERDUE,
+            workspaceConfigured = true,
+            nowEpochMs = now,
+        )
+
+        assertEquals(listOf("c-ahead"), scheduledPicker.map { it.id })
+        assertEquals(listOf("c-late"), overduePicker.map { it.id })
+        assertEquals(scheduledWidget.taskCount, scheduledPicker.size)
+        assertEquals(overdueWidget.taskCount, overduePicker.size)
+    }
+
+    @Test
     fun `overdue pseudo list holds only the dated tasks already past due`() {
         val snapshot = buildListWidgetSnapshot(
             state = OfflineSyncState(

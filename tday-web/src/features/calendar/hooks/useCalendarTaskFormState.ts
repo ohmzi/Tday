@@ -27,6 +27,9 @@ export type CalendarTaskFormState = {
   setDateRange: Dispatch<SetStateAction<CalendarFormDateRange>>;
   rruleOptions: Partial<Options> | null;
   setRruleOptions: Dispatch<SetStateAction<Partial<Options> | null>>;
+  // True once the user has picked a repeat from the Repeat sheet (including "No repeat").
+  repeatTouchedByUser: boolean;
+  setRepeatTouchedByUser: Dispatch<SetStateAction<boolean>>;
   listID: string | null;
   setListID: Dispatch<SetStateAction<string | null>>;
   derivedRepeatType: RepeatType;
@@ -71,6 +74,7 @@ export function useCalendarTaskFormState(seed: CalendarTaskFormSeed): CalendarTa
   const [rruleOptions, setRruleOptions] = useState<Partial<Options> | null>(() =>
     seed.rrule ? RRule.parseString(seed.rrule) : null,
   );
+  const [repeatTouchedByUser, setRepeatTouchedByUser] = useState(false);
   const [listID, setListID] = useState<string | null>(seed.listID ?? null);
   const { listMetaData } = useListMetaData();
 
@@ -95,6 +99,8 @@ export function useCalendarTaskFormState(seed: CalendarTaskFormSeed): CalendarTa
     setDateRange,
     rruleOptions,
     setRruleOptions,
+    repeatTouchedByUser,
+    setRepeatTouchedByUser,
     listID,
     setListID,
     derivedRepeatType: deriveRepeatType({ rruleOptions }),

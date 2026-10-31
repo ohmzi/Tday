@@ -3,16 +3,23 @@ import { api } from "@/lib/api-client";
 import type { FloaterItemType, FloaterListItemMetaType } from "@/types";
 import { normalizeFloaters } from "@/features/floater/query/floater-utils";
 
+/**
+ * The `["floaterList", id]` cache value. It is an object, not a bare array of
+ * floaters: writers that touch this root must update `.floaters` and leave `.list`
+ * alone, or they throw on `.map`/`.filter` of the object.
+ */
+export type FloaterListCache = {
+  list: FloaterListItemMetaType | null;
+  floaters: FloaterItemType[];
+};
+
 export const useFloaterList = ({ id }: { id: string }) => {
   const {
     data,
     isLoading: floaterListLoading,
     isFetching,
     isPending,
-  } = useQuery<{
-    list: FloaterListItemMetaType | null;
-    floaters: FloaterItemType[];
-  }>({
+  } = useQuery<FloaterListCache>({
     queryKey: ["floaterList", id],
     retry: 2,
     staleTime: 5 * 60 * 1000,

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TimelineSections from "@/components/todo/dnd/TimelineSections";
 import ListScopeProvider from "@/providers/ListScopeProvider";
@@ -40,6 +41,9 @@ import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/navigation";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { Pencil, Search, Users } from "lucide-react";
+import { resolveFocusedRowId } from "@/lib/todo/todo-id";
+import { useExpandEarlierForFocus, useFocusParamHandoff } from "@/lib/todo/focusHandoff";
+import { TODO_FOCUS_INSTANCE_QUERY_PARAM, TODO_FOCUS_TASK_QUERY_PARAM } from "@/lib/todoToastNavigation";
 
 const ListContainer = ({ id }: { id: string }) => {
     const locale = useLocale();
@@ -48,6 +52,17 @@ const ListContainer = ({ id }: { id: string }) => {
     const { t: appDict } = useTranslation("app");
     const { listMetaData } = useListMetaData();
     const { listTodos, listTodosLoading } = useList({ id });
+    const [searchParams] = useSearchParams();
+    // A search result or deep link that names a task in this list. Highlighted and
+    // scrolled to the same way the All and Today screens do it.
+    const focusTaskParam = searchParams.get(TODO_FOCUS_TASK_QUERY_PARAM);
+    const focusInstanceParam = searchParams.get(TODO_FOCUS_INSTANCE_QUERY_PARAM);
+    // The exact occurrence to highlight; a series never lights up more than one row.
+    const focusedTaskId = useMemo(
+        () => resolveFocusedRowId(listTodos.map((todo) => todo.id), focusTaskParam, focusInstanceParam),
+        [focusInstanceParam, focusTaskParam, listTodos],
+    );
+    useFocusParamHandoff(focusTaskParam);
     const [searchQuery, setSearchQuery] = useState("");
     const [editListOpen, setEditListOpen] = useState(false);
     const [membersOpen, setMembersOpen] = useState(false);
@@ -79,7 +94,7 @@ const ListContainer = ({ id }: { id: string }) => {
     // Today/All/Priority/Scheduled use — see `useListEmptyState`'s own doc
     // comment for why the two Earlier/current readings above must stay fed to
     // exactly the parameters they are here.
-    const { showEmpty, earlierExpanded, earlierHandoff, earlierSlotChangesHands, toggleEarlierExpanded, celebrate, showEmptyIllustration } =
+    const { showEmpty, earlierExpanded, earlierHandoff, earlierSlotChangesHands, toggleEarlierExpanded, setEarlierExpandedImmediately, celebrate, showEmptyIllustration } =
         useListEmptyState({
             listTodosLoading,
             isSearching,
@@ -111,6 +126,18 @@ const ListContainer = ({ id }: { id: string }) => {
     // renders only the block that scrolls away and docks its title into it —
     // the same split the floater list uses.
     const barSlots = useNativePageBarSlots();
+
+    // A focused task inside the collapsed Earlier bucket must not stay hidden behind
+    // its header. Immediate, like Today's own deep-link expand, and once per focus.
+    const earlierRowIds = useMemo(
+        () => timelineSections.find((section) => section.kind === "earlier")?.todos.map((todo) => todo.id) ?? [],
+        [timelineSections],
+    );
+    useExpandEarlierForFocus({
+        focusedRowId: focusedTaskId,
+        earlierRowIds,
+        setExpandedImmediately: setEarlierExpandedImmediately,
+    });
 
     const listName = listMetaData[id]?.name?.trim() || "";
     const listColor = listMetaData[id]?.color;
@@ -277,6 +304,7 @@ const ListContainer = ({ id }: { id: string }) => {
                             <TimelineSections
                                 sections={timelineSections}
                                 timeZone={userTZ?.timeZone}
+                                focusedTaskId={focusedTaskId}
                                 // A live query outranks a shut bucket: a list opens
                                 // with Earlier closed, and a task the search turns up in
                                 // there must not stay hidden behind its header. Native

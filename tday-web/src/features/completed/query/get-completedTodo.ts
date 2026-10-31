@@ -17,7 +17,7 @@ export const useCompletedTodo = () => {
         data;
       if (!completedTodos) {
         throw new Error(
-          data.message || `bad server response: Did not recieve todo`,
+          data.message || `bad server response: Did not receive task`,
         );
       }
 

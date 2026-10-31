@@ -312,6 +312,67 @@ describe("anytime summary copy", () => {
   });
 });
 
+describe("anytime summary count and staleness", () => {
+  it("states the open count, which is the size of the input", () => {
+    for (const locale of LOCALES) {
+      const out = summarize(plain(7), locale);
+      expect(out.match(/\d+/g), `[${locale}] no count: ${out}`).toContain("7");
+    }
+    expect(planFloaterSummary(plain(7), NOW).count).toBe(7);
+  });
+
+  it("names the only floater a month untouched", () => {
+    const tasks = [
+      task("Stale one", { updatedAtEpochMs: NOW - 45 * DAY }),
+      task("Fresh", { updatedAtEpochMs: NOW - DAY }),
+      task("Other", { updatedAtEpochMs: NOW - 2 * DAY }),
+    ];
+    const plan = planFloaterSummary(tasks, NOW);
+    expect(plan.note).toBe("fadingOne");
+    expect(plan.noteTitle).toBe("Stale one");
+    expect(summarize(tasks)).toContain("Stale one");
+  });
+
+  it("uses the list's thirty-day fading boundary", () => {
+    const under = [task("a", { updatedAtEpochMs: NOW - 29 * DAY }), task("b", { updatedAtEpochMs: NOW - DAY })];
+    const at = [task("a", { updatedAtEpochMs: NOW - 30 * DAY }), task("b", { updatedAtEpochMs: NOW - DAY })];
+    expect(planFloaterSummary(under, NOW).note).toBe("startWith");
+    expect(planFloaterSummary(at, NOW).note).toBe("fadingOne");
+  });
+
+  it("counts several stale floaters without naming any", () => {
+    const tasks = [
+      task("Stale A", { updatedAtEpochMs: NOW - 40 * DAY }),
+      task("Stale B", { updatedAtEpochMs: NOW - 50 * DAY }),
+      task("Fresh", { updatedAtEpochMs: NOW - DAY }),
+    ];
+    const plan = planFloaterSummary(tasks, NOW);
+    expect(plan.note).toBe("fadingMany");
+    expect(plan.noteTitle).toBeNull();
+    for (const locale of LOCALES) {
+      const out = summarize(tasks, locale);
+      expect(out.includes("Stale A") || out.includes("Stale B"), `[${locale}] ${out}`).toBe(false);
+    }
+  });
+
+  it("does not echo a lone stale floater back at itself", () => {
+    const lone = [task("Lonely idea", { updatedAtEpochMs: NOW - 45 * DAY })];
+    expect(planFloaterSummary(lone, NOW).note).toBe("fadingSole");
+    for (const locale of LOCALES) {
+      expect(summarize(lone, locale), `[${locale}]`).not.toContain("Lonely idea");
+    }
+  });
+
+  it("lets a pin outrank a stale row", () => {
+    const tasks = [
+      task("Pinned one", { pinned: true, updatedAtEpochMs: NOW - 2 * DAY }),
+      task("Stale", { updatedAtEpochMs: NOW - 45 * DAY }),
+      task("Fresh", { updatedAtEpochMs: NOW - DAY }),
+    ];
+    expect(planFloaterSummary(tasks, NOW).note).toBe("pinnedOne");
+  });
+});
+
 // ---- the wiring: local mode must actually reach the above ----
 
 const workspace = {

@@ -405,6 +405,7 @@
       "title": "编辑所有重复项？",
       "subtitle": "这是一个重复任务，是否对所有其他重复项进行相同的编辑？",
       "editInstance": "仅编辑此项",
+      "repeatSeriesNote": "重复设置的更改会应用于该系列的所有日程。",
       "editAll": "编辑所有项"
     }
   },
@@ -700,9 +701,9 @@
     "clearForNow": "目前一切就绪。此视图中没有需要处理的任务。",
     "floaterClear": "这里暂时没有等着的事情。",
     "floaterPileOne": "这里只等着一件事，没有日期。",
-    "floaterPileFew": "这里等着几件没有日期的事。",
-    "floaterPileSome": "这里攒下了不少没有日期的事。",
-    "floaterPileMany": "这里已经攒成一长串没有日期的事。",
+    "floaterPileFew": "这里有 {{count}} 件没有日期的事情在等待。",
+    "floaterPileSome": "这里已经积累了 {{count}} 件没有日期的事情。",
+    "floaterPileMany": "这里积压了 {{count}} 件没有日期的事情。",
     "floaterStartWith": "先从{{title}}开始。",
     "floaterPinnedOne": "你只置顶了 {{title}}。",
     "floaterPinnedMany": "你置顶了 {{title}}，而且不止这一件。",
@@ -710,6 +711,9 @@
     "floaterPriorityMany": "{{title}} 是高优先级，而且不止这一件。",
     "floaterMediumOne": "只有 {{title}} 是中优先级。",
     "floaterMediumMany": "{{title}} 是中优先级，而且不止这一件。",
+    "floaterFadingOne": "{{title}} 超过一个月没有被修改了。",
+    "floaterFadingMany": "其中一些超过一个月没有被修改了。",
+    "floaterFadingSole": "它超过一个月没有被修改了。",
     "floaterRestingOne": "其中一件已经好几个月没动过。",
     "floaterRestingMany": "其中有几件已经好几个月没动过。",
     "floaterRestingAll": "这里已经好几个月没动过了。",
@@ -872,7 +876,7 @@
       "floaters-vs-todos": {
         "title": "浮动任务与已安排任务",
         "summary": "无日期任务住在“随时”里；有日期任务住在“已安排”里。",
-        "keywords": "浮动任务, 随时, 未安排, 无日期, 待办, 已安排, 区别, floater, anytime, todo",
+        "keywords": "浮动任务, 随时, 未安排, 无日期, 待办, 已安排, 区别, floater, anytime, 任务",
         "body": "有截止日期的任务会出现在“已安排”和日历里。浮动任务没有日期——它安静地在你的随时信息流里等待，直到你准备好。用浮动任务来放那些“将来某天”要做、又不该扰乱今天的事。",
         "tip": "浮动任务从不出现在日历上——那片空间只留给有日期的事。"
       },

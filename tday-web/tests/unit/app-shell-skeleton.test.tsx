@@ -8,7 +8,8 @@
  * the most-seen surface in the app and was the last one still spelling a skeleton by hand.
  * Its three task-row bars were 62 px `rounded-2xl` cards; the row that lands on top of them
  * is flat, transparent and 5 px shorter, so the bars resized under the finger already
- * reaching for them. (The column around them still steps: see the file's own comment.)
+ * reaching for them. The column they sit in is the real page's column, so they also land
+ * where the real rows do.
  *
  * jsdom applies no stylesheet and measures nothing, so none of that is checked by pixels.
  * What is checked is the claim underneath it: that the rows here come from the same
@@ -28,6 +29,11 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import AppShellSkeleton from "@/components/app/AppShellSkeleton";
+import {
+  nativeAppContentClassName,
+  nativeAppHorizontalPaddingClassName,
+  nativeAppScrollClassName,
+} from "@/components/app/nativeAppLayout";
 
 afterEach(cleanup);
 
@@ -92,6 +98,34 @@ describe("AppShellSkeleton", () => {
     expect(occurrences[0]).toContain("h-16 w-44");
     expect(occurrences[0]).toContain("rounded-[25px]");
     expect(occurrences[0]).toContain("bg-muted/60");
+  });
+
+  it("sits in the same scroll container and column as NativeAppPageLayout", () => {
+    // The geometry the shimmer must match is the real page's, so the assertion is on the
+    // shared class constants rather than on literal values: the same scroller (gutters and
+    // top inset) wrapping the same `max-w-6xl` column that holds the placeholders.
+    const container = renderShell();
+    const scroller = [...container.querySelectorAll("div")].find(
+      (el) => el.className === nativeAppScrollClassName,
+    );
+
+    expect(scroller, "the shell is not in NativeAppPageLayout's scroll container").toBeDefined();
+    const column = scroller!.firstElementChild as HTMLElement | null;
+    expect(column?.className).toBe(nativeAppContentClassName);
+    expect(column!.querySelector(".h-\\[70px\\]"), "hero tile is outside the column").not.toBeNull();
+    expect(column!.querySelector('[aria-busy="true"]'), "task rows are outside the column").not.toBeNull();
+  });
+
+  it("lays the dock placeholder out like RootDock, not centred on its own", () => {
+    const container = renderShell();
+    const dock = container.querySelector(".h-16.w-44")!;
+    const column = dock.parentElement!;
+
+    expect(column.className).toContain(nativeAppContentClassName);
+    expect(column.className).toContain("justify-start");
+    expect(column.className).toContain("sm:justify-center");
+    expect(column.parentElement!.className).toContain("fixed");
+    expect(column.parentElement!.className).toContain(nativeAppHorizontalPaddingClassName);
   });
 
   it("says why it is the one loading surface that does not crossfade", () => {

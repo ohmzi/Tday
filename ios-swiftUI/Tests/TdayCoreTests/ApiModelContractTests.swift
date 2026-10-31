@@ -68,7 +68,7 @@ final class ApiModelContractTests: XCTestCase {
     func testDemoteTodoResponseAcceptsSharedContractShape() throws {
         let json = """
         {
-          "message": "todo demoted",
+          "message": "task demoted",
           "floater": {
             "id": "floater-7",
             "title": "Fix the bike",

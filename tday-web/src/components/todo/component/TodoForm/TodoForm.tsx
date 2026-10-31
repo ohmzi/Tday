@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Calendar as CalendarIcon, Flag, Leaf, List as ListIcon, Repeat } from "lucide-react";
-import { RRule } from "rrule";
+import { RRule, type Options } from "rrule";
 import { useToast } from "@/hooks/use-toast";
 import { useTodoForm } from "@/providers/TodoFormProvider";
 import { useTodoFormFocusAndAutosize } from "@/components/todo/hooks/useTodoFormFocusAndAutosize";
@@ -73,6 +73,8 @@ const TodoForm = ({
     setListID,
     rruleOptions,
     setRruleOptions,
+    repeatTouchedByUser,
+    setRepeatTouchedByUser,
     derivedRepeatType,
     dateRangeChecksum,
     rruleChecksum,
@@ -141,6 +143,15 @@ const TodoForm = ({
     setPriority,
   ]);
 
+  // The default of whichever list this form is filing into right now, for resetting
+  // the priority after a create: the same lookup the effect above uses.
+  const activeListDefaultPriority = (() => {
+    const activeListId = scheduled ? listID : floaterListID;
+    if (!activeListId) return null;
+    const meta = listMetaData[activeListId] ?? floaterListMetaData[activeListId];
+    return meta?.defaultPriority ?? null;
+  })();
+
   // Bridge submit + title-empty state up to the native sheet header.
   useEffect(() => {
     registerSubmit?.(handleForm);
@@ -154,6 +165,13 @@ const TodoForm = ({
   const handlePrioritySelect: React.Dispatch<React.SetStateAction<Priority>> = (value) => {
     setPriority(value);
     setPriorityTouchedByUser(true);
+  };
+
+  // A repeat the user picks (preset, "No repeat", or the suggestion chip) is final: the
+  // title's recurrence phrase must not re-apply over it. NLP writes go to the raw setter.
+  const handleRepeatSelect: React.Dispatch<React.SetStateAction<Partial<Options> | null>> = (value) => {
+    setRruleOptions(value);
+    setRepeatTouchedByUser(true);
   };
 
   const repeatValueLabel = derivedRepeatType
@@ -172,9 +190,12 @@ const TodoForm = ({
             setTitle={setTitle}
             titleRef={titleRef}
             setDateRange={setDateRange}
-            setPriority={setPriority}
-            setRruleOptions={setRruleOptions}
+            setPriority={handlePrioritySelect}
+            // In instance mode a repeat cannot be saved (see the Repeat row below), so the
+            // title must not set one either.
+            setRruleOptions={editInstanceOnly ? undefined : setRruleOptions}
             rruleOptions={rruleOptions}
+            repeatTouchedByUser={repeatTouchedByUser}
             onSubmit={() => handleForm()}
           />
         }
@@ -187,11 +208,13 @@ const TodoForm = ({
         />
       </SheetTitleNotesCard>
 
-      <RepeatSuggestionChip
-        title={title}
-        rruleOptions={rruleOptions}
-        setRruleOptions={setRruleOptions}
-      />
+      {!editInstanceOnly && (
+        <RepeatSuggestionChip
+          title={title}
+          rruleOptions={rruleOptions}
+          setRruleOptions={handleRepeatSelect}
+        />
+      )}
 
       {/* Schedule toggle — off turns the task into a floater (create) or converts one (edit). */}
       {canToggleSchedule && (
@@ -303,7 +326,10 @@ const TodoForm = ({
           }
           onClick={() => setActive("priority")}
         />
-        {scheduled && (
+        {/* Editing one occurrence cannot change the series' rule (the instance PATCH
+            ignores it), so the row is not offered there rather than taking a pick that
+            would be dropped on save. */}
+        {scheduled && !editInstanceOnly && (
           <>
             <SheetDivider />
             <SheetSelectorRow
@@ -364,7 +390,7 @@ const TodoForm = ({
         setPriority={handlePrioritySelect}
         listID={listID}
         setListID={setListID}
-        setRruleOptions={setRruleOptions}
+        setRruleOptions={handleRepeatSelect}
         derivedRepeatType={derivedRepeatType}
       />
     </div>
@@ -415,7 +441,7 @@ const TodoForm = ({
         }
       } else if (!scheduled) {
         // Schedule off → create an unscheduled floater (separate entity).
-        clearInput();
+        clearInput(activeListDefaultPriority);
         createFloaterMutateFn({
           id: "-1",
           title,
@@ -430,7 +456,7 @@ const TodoForm = ({
           userID: null,
         });
       } else {
-        clearInput();
+        clearInput(activeListDefaultPriority);
         createMutateFn({
           id: "-1",
           title,

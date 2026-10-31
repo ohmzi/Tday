@@ -38,6 +38,7 @@ import { flattenNotesToPlainText } from "@/lib/richNotes";
 import { tileSurface } from "@/lib/tileSurface";
 
 import RootFeedHeroHeader from "@/components/app/RootFeedHeroHeader";
+import { buildScheduledSearchResultHref } from "@/lib/todo/searchResultHref";
 const todayTileColor = "#6EA8E1";
 
 // Tile color + the i18n key (in the `scheduledTaskHome` namespace) for its label. Several of
@@ -219,7 +220,7 @@ export default function NativeScheduledTaskHomeDashboard() {
                       type="button"
                       key={todo.id}
                       className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-muted/65"
-                      onClick={() => router.push(`/app/todo?todo=${encodeURIComponent(todo.id)}`)}
+                      onClick={() => router.push(buildScheduledSearchResultHref(todo, { timeZone: userTimeZone?.timeZone }))}
                     >
                       <span className="h-2.5 w-2.5 rounded-full bg-accent" />
                       <span className="min-w-0 flex-1">

@@ -4,13 +4,13 @@ import com.ohmz.tday.shared.floater.FloaterResting
 import com.ohmz.tday.shared.floater.FloaterRestingTier
 
 /**
- * How big the undated pile is, as a shape rather than a number.
+ * How big the undated pile is, as a shape. The band picks the sentence's wording; the count
+ * itself is stated, so a reader learns the size without counting rows.
  *
- * Bands, not counts, on purpose. The count is already on screen — the rows are right there —
- * so printing it back is the redundancy this rewrite exists to remove. A band also survives
- * translation: a whole sentence per band needs no numeral agreement, whereas "{{count}} tasks"
- * would need Russian's three plural forms and Malay's none, and [SummaryStrings.t] is a naive
- * `{{param}}` replace with no plural machinery at all.
+ * Each band is its own sentence rather than one "{{count}} tasks" frame, because
+ * [SummaryStrings.t] is a naive `{{param}}` replace with no plural machinery: a per-band
+ * sentence keeps the numeral out of any noun agreement that Russian's three plural forms or
+ * Malay's none would otherwise need to get right.
  */
 internal enum class FloaterPileBand { ONE, FEW, SOME, MANY }
 
@@ -36,6 +36,19 @@ internal enum class FloaterNote {
     MEDIUM_MANY,
 
     /**
+     * Exactly one floater has gone quiet for a month or more (the list's FADING tier, short of
+     * RESTING). Named, because it is the only candidate: no ranking is claimed, only that this
+     * row's own last-write clock is old.
+     */
+    FADING_ONE,
+
+    /** Several floaters have gone quiet for a month or more; none is singled out. */
+    FADING_MANY,
+
+    /** The one-row pile is itself quiet for a month or more. Unnamed: the row is on screen. */
+    FADING_SOLE,
+
+    /**
      * Nothing else is worth saying, so point at the row the list itself puts first.
      *
      * The only note that is chosen for what is ABSENT: a pile with no pin, no High and no
@@ -57,6 +70,8 @@ internal enum class FloaterNote {
  */
 internal data class FloaterSummaryPlan(
     val band: FloaterPileBand,
+    /** How many open floaters the pile holds. A count, not a claim: it is the size of the input. */
+    val count: Int,
     val note: FloaterNote,
     /** The one task the note names, raw and uncompacted, or null when the note names none. */
     val noteTitle: String?,
@@ -91,10 +106,12 @@ internal object FloaterSummaryPlanner {
                 .thenByDescending { it.updatedAtEpochMs ?: 0L },
         )
 
+        fun tierOf(task: SummaryTaskInput) =
+            FloaterResting.tierFor(task.updatedAtEpochMs, nowEpochMs)
+
         val pinned = tasks.count { it.pinned }
-        val resting = tasks.count {
-            FloaterResting.tierFor(it.updatedAtEpochMs, nowEpochMs) == FloaterRestingTier.RESTING
-        }
+        val resting = tasks.count { tierOf(it) == FloaterRestingTier.RESTING }
+        val fading = tasks.count { tierOf(it) == FloaterRestingTier.FADING }
         val high = tasks.count { priorityRankOf(it.priority) == HIGH_PRIORITY_RANK }
         val medium = tasks.count { priorityRankOf(it.priority) == MEDIUM_PRIORITY_RANK }
 
@@ -104,6 +121,7 @@ internal object FloaterSummaryPlanner {
             resting = resting,
             high = high,
             medium = medium,
+            fading = fading,
         )
 
         // Nothing stood out, so point at the row the list itself puts first — the same nudge
@@ -119,9 +137,11 @@ internal object FloaterSummaryPlanner {
 
         // Naming the only row on screen is not a summary, it is an echo. A single-task pile
         // keeps the notes that COUNT something (dormancy) and drops the ones that point at a
-        // task, because with one task there is nothing to point away from.
+        // task, because with one task there is nothing to point away from. A lone fading row
+        // therefore gets its unnamed sentence instead of the named one.
         val single = tasks.size == 1
-        val noteTitle = when (chosen) {
+        val effective = if (single && chosen == FloaterNote.FADING_ONE) FloaterNote.FADING_SOLE else chosen
+        val noteTitle = when (effective) {
             FloaterNote.PINNED_ONE, FloaterNote.PINNED_MANY ->
                 ranked.first { it.pinned }.title
 
@@ -130,6 +150,10 @@ internal object FloaterSummaryPlanner {
 
             FloaterNote.MEDIUM_ONE, FloaterNote.MEDIUM_MANY ->
                 ranked.first { priorityRankOf(it.priority) == MEDIUM_PRIORITY_RANK }.title
+
+            // FADING_ONE is only chosen when exactly one row is fading, so this is that row.
+            FloaterNote.FADING_ONE ->
+                ranked.first { tierOf(it) == FloaterRestingTier.FADING }.title
 
             FloaterNote.START_WITH -> ranked.first().title
 
@@ -142,7 +166,8 @@ internal object FloaterSummaryPlanner {
         val naming = noteTitle != null
         return FloaterSummaryPlan(
             band = bandFor(tasks.size),
-            note = if (single && naming) FloaterNote.NONE else chosen,
+            count = tasks.size,
+            note = if (single && naming) FloaterNote.NONE else effective,
             noteTitle = if (single && naming) null else noteTitle,
         )
     }
@@ -164,6 +189,7 @@ internal object FloaterSummaryPlanner {
         resting: Int,
         high: Int,
         medium: Int,
+        fading: Int,
     ): FloaterNote = when {
         // A wholly dormant pile outranks a pin: when nothing has been touched in months,
         // "you pinned one of these" is not the story — the dormancy is. Below that, the pin
@@ -179,6 +205,10 @@ internal object FloaterSummaryPlanner {
         // all, but it never outranks High — a pile with both gets the High note only.
         medium == 1 -> FloaterNote.MEDIUM_ONE
         medium > 1 -> FloaterNote.MEDIUM_MANY
+        // Stale but not dormant: the row the list is quietly fading. Below priority, because
+        // a month untouched is a nudge, not a deadline the person has already been given.
+        fading == 1 -> FloaterNote.FADING_ONE
+        fading > 1 -> FloaterNote.FADING_MANY
         else -> FloaterNote.NONE
     }
 }
