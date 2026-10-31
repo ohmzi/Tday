@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import type { FloaterItemType } from "@/types";
+import type { FloaterListCache } from "@/features/floaterList/query/get-floater-list";
 
 // Schedules a floater into a real Todo (POST /floater/{id}/promote). The
 // floater row is consumed server-side, so both silos refetch on settle.
@@ -29,9 +30,10 @@ export const usePromoteFloater = () => {
         old.filter((item) => item.id !== floater.id);
       queryClient.setQueryData<FloaterItemType[]>(["floater"], remove);
       if (floater.listID) {
-        queryClient.setQueryData<FloaterItemType[]>(
+        // `["floaterList", id]` is `{ list, floaters }`; prune only `floaters`.
+        queryClient.setQueryData<FloaterListCache | undefined>(
           ["floaterList", floater.listID],
-          remove,
+          (old) => (old ? { ...old, floaters: remove(old.floaters) } : old),
         );
       }
     },

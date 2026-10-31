@@ -3,10 +3,11 @@ import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import { floaterSchema } from "@/schema";
 import type { FloaterItemType } from "@/types";
+import type { FloaterListCache } from "@/features/floaterList/query/get-floater-list";
 
 type UpdateFloaterContext = {
   oldFloaters?: FloaterItemType[];
-  oldListFloaters?: FloaterItemType[];
+  oldListFloaters?: FloaterListCache;
 };
 
 /** The writable fields of a floater row, as `PATCH /api/floater` takes them. */
@@ -66,7 +67,7 @@ export const useEditFloater = () => {
       await queryClient.cancelQueries({ queryKey: ["floaterList", updatedFloater.listID] });
 
       const oldFloaters = queryClient.getQueryData<FloaterItemType[]>(["floater"]);
-      const oldListFloaters = queryClient.getQueryData<FloaterItemType[]>([
+      const oldListFloaters = queryClient.getQueryData<FloaterListCache>([
         "floaterList",
         updatedFloater.listID,
       ]);
@@ -78,9 +79,12 @@ export const useEditFloater = () => {
         old.map(update),
       );
       if (updatedFloater.listID) {
-        queryClient.setQueryData(
+        // The floater-list cache is `{ list, floaters }`, not an array. An unloaded
+        // cache stays unloaded (`undefined` leaves it untouched) rather than being
+        // written as `[]`.
+        queryClient.setQueryData<FloaterListCache | undefined>(
           ["floaterList", updatedFloater.listID],
-          (old: FloaterItemType[] = []) => old.map(update),
+          (old) => (old ? { ...old, floaters: old.floaters.map(update) } : old),
         );
       }
 
