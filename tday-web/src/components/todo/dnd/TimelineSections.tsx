@@ -1,3 +1,4 @@
+import { isFocusedTodoRow } from "@/lib/todo/todo-id";
 import { useLayoutEffect, useRef } from "react";
 import { useDndMonitor } from "@dnd-kit/core";
 import { nativeAppScrollAttribute } from "@/components/app/nativeAppLayout";
@@ -107,7 +108,7 @@ export default function TimelineSections({
               key={todo.id}
               todo={todo}
               currentDayKey={getTodoDayKey(todo.due, timeZone)}
-              highlighted={focusedTaskId === todo.id}
+              highlighted={isFocusedTodoRow(focusedTaskId, todo.id)}
               perTaskOverdue={section.dayDiff === 0}
               overdue={section.kind === "earlier"}
             />

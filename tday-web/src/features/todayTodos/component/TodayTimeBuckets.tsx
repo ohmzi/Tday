@@ -1,3 +1,4 @@
+import { isFocusedTodoRow } from "@/lib/todo/todo-id";
 import {
   TODAY_BUCKETS,
   TodayBucketDndContext,
@@ -42,7 +43,7 @@ export default function TodayTimeBuckets({
               key={todo.id}
               todo={todo}
               currentBucket={bucket.label}
-              highlighted={focusedTaskId === todo.id}
+              highlighted={isFocusedTodoRow(focusedTaskId, todo.id)}
             />
           ))}
         </TodayBucketDroppable>

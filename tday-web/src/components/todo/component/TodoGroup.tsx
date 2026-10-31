@@ -1,3 +1,4 @@
+import { isFocusedTodoRow } from "@/lib/todo/todo-id";
 import { TodoItemType } from "@/types";
 import { useCallback, useEffect, useState } from "react";
 import { TodoItemContainer } from "./TodoItemContainer";
@@ -79,7 +80,7 @@ const TodoGroup = ({
             todoItem={item}
             overdue={overdue}
             perTaskOverdue={perTaskOverdue}
-            highlighted={highlightedTodoId === item.id}
+            highlighted={isFocusedTodoRow(highlightedTodoId, item.id)}
             showOverdueTag={showOverdueTag}
           />
         </div>

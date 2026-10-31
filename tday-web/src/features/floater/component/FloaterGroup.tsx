@@ -1,3 +1,4 @@
+import { isFocusedTodoRow } from "@/lib/todo/todo-id";
 import { cn } from "@/lib/utils";
 import type { FloaterItemType } from "@/types";
 import { useRowPlacement } from "@/hooks/useRowPlacement";
@@ -30,7 +31,7 @@ export default function FloaterGroup({
         <FloaterItemContainer
           key={item.id}
           floater={item}
-          highlighted={highlightedFloaterId === item.id}
+          highlighted={isFocusedTodoRow(highlightedFloaterId, item.id)}
           readOnly={readOnly}
         />
       ))}

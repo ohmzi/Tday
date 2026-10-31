@@ -1,3 +1,4 @@
+import { isFocusedTodoRow } from "@/lib/todo/todo-id";
 import { useEffect, useMemo } from "react";
 import {
   buildTimelineSections,
@@ -59,7 +60,7 @@ export function useTimelineSections({
   useEffect(() => {
     if (!timeline || !focusedTaskId) return;
     const earlier = timelineSections.find((section) => section.kind === "earlier");
-    if (earlier?.todos.some((todo) => todo.id === focusedTaskId)) {
+    if (earlier?.todos.some((todo) => isFocusedTodoRow(focusedTaskId, todo.id))) {
       setEarlierExpandedImmediately(true);
     }
   }, [focusedTaskId, setEarlierExpandedImmediately, timeline, timelineSections]);

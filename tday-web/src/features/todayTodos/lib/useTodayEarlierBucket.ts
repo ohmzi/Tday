@@ -1,3 +1,4 @@
+import { isFocusedTodoRow } from "@/lib/todo/todo-id";
 import { useEffect, useMemo } from "react";
 import { TodoItemType } from "@/types";
 import { buildTimelineSections } from "@/lib/timeline/buildTimelineSections";
@@ -73,7 +74,7 @@ export function useTodayEarlierBucket({
   // illustration to sequence against on a direct navigation.
   useEffect(() => {
     if (scope !== "today" || !focusedTaskId) return;
-    if (earlierItems.some((todo) => todo.id === focusedTaskId)) {
+    if (earlierItems.some((todo) => isFocusedTodoRow(focusedTaskId, todo.id))) {
       setEarlierExpandedImmediately(true);
     }
   }, [earlierItems, focusedTaskId, scope, setEarlierExpandedImmediately]);
