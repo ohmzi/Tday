@@ -1,10 +1,24 @@
-import { useEffect, useSyncExternalStore } from "react";
+import { useLayoutEffect, useSyncExternalStore } from "react";
 import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 import {
   TASK_COMPLETION_CHECK_TO_STRIKE_MS,
+  TASK_COMPLETION_COLLAPSE_MS,
+  TASK_COMPLETION_FADE_MS,
   TASK_COMPLETION_STRIKE_TO_FADE_MS,
   TASK_COMPLETION_TOTAL_MS,
 } from "@/lib/taskCompletionTiming";
+
+/**
+ * How long a committed hold waits for its row to leave the DOM before releasing anyway.
+ *
+ * A row can survive the commit: a screen whose cache the prune does not touch keeps it mounted.
+ * Without a bound that row would sit at the removing frame, invisible, for as long as it stayed
+ * mounted. The bound is the exit itself plus one fade of margin. By then the row has finished its
+ * collapse and React Query has had every chance to remove it, so a row still there is one that
+ * genuinely belongs on screen, and releasing it returns it to the list. Built from the exit rungs
+ * rather than a new number, so it moves with the sequence it guards.
+ */
+const COMMITTED_HOLD_FALLBACK_MS = TASK_COMPLETION_COLLAPSE_MS + TASK_COMPLETION_FADE_MS;
 
 /**
  * The in-flight half of checking a task off, held outside every component that could unmount.
@@ -35,9 +49,12 @@ type StagedCompletion = {
   timers: number[];
   /**
    * Set once the commit has pruned the row out of the caches while a row was still mounted for
-   * it. The entry then stays `removing` until that row unmounts — see `retireIfCommitted`.
+   * it. The entry then stays `removing` until that row unmounts or the fallback fires — see
+   * `retireIfCommitted`.
    */
   committed: boolean;
+  /** The fallback release armed by a committed hold, so a clean unmount can cancel it. */
+  fallbackTimer?: number;
 };
 
 const staged = new Map<string, StagedCompletion>();
@@ -75,6 +92,18 @@ function isRowMounted(id: string): boolean {
 function retireIfCommitted(id: string): void {
   const entry = staged.get(id);
   if (!entry?.committed || isRowMounted(id)) return;
+  release(id, entry);
+}
+
+/**
+ * Ends a committed sequence: drops the entry, cancels its fallback, and tells subscribers.
+ *
+ * Guarded on identity so a fallback or unmount that arrives after the entry was already released
+ * (and possibly re-staged for the same id) cannot tear down a newer sequence.
+ */
+function release(id: string, entry: StagedCompletion): void {
+  if (staged.get(id) !== entry) return;
+  if (entry.fallbackTimer !== undefined) window.clearTimeout(entry.fallbackTimer);
   staged.delete(id);
   emit();
 }
@@ -130,7 +159,12 @@ export function stageTaskCompletion(id: string, commit: () => void): void {
       } finally {
         if (committed && isRowMounted(id)) {
           // The row is still on screen holding its removing frame while React Query drops it.
+          // If it survives the commit, the fallback below releases it once the exit has run.
           entry.committed = true;
+          entry.fallbackTimer = window.setTimeout(
+            () => release(id, entry),
+            COMMITTED_HOLD_FALLBACK_MS,
+          );
         } else {
           staged.delete(id);
         }
@@ -151,7 +185,10 @@ export function stageTaskCompletion(id: string, commit: () => void): void {
  * once the last row showing it has unmounted.
  */
 export function useTaskCompletionPhase(id: string): TaskCompletionPhase | null {
-  useEffect(() => {
+  // Layout, not passive: registration has to be in place before the browser paints the row and
+  // before any commit can run against it. A passive effect could let a commit land in the gap
+  // between paint and effect, find no mounted row, release the hold, and flash the row back.
+  useLayoutEffect(() => {
     mountedRows.set(id, (mountedRows.get(id) ?? 0) + 1);
     return () => {
       const remaining = (mountedRows.get(id) ?? 1) - 1;
