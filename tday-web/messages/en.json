@@ -872,7 +872,7 @@
       "floaters-vs-todos": {
         "title": "Floaters vs dated tasks",
         "summary": "Dateless tasks live in Anytime; dated tasks live in Scheduled.",
-        "keywords": "floater, anytime, unscheduled, dateless, task, scheduled, difference",
+        "keywords": "floater, anytime, unscheduled, dateless, task, todo, scheduled, difference",
         "body": "A task with a due date shows up in Scheduled and on the calendar. A Floater has no date — it waits quietly in your Anytime feed until you're ready. Use Floaters for “someday” work that shouldn't clutter today.",
         "tip": "Floaters never appear on the calendar — that space is only for dated work."
       },

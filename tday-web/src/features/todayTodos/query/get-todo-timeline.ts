@@ -16,7 +16,7 @@ const getTodoTimeline = async () => {
   const { todos }: { todos: TodoApiItemType[] } = data;
 
   if (!todos) {
-    throw new Error(data.message || "bad server response: Did not recieve todo");
+    throw new Error(data.message || "bad server response: Did not receive task");
   }
 
   return todos.filter((todo) => todo.due != null).map((todo) => {

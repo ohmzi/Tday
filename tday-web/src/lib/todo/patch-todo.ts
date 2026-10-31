@@ -26,7 +26,7 @@ export async function patchTodo(
   options: TodoPatchOptions = {},
 ) {
   if (!todo.id) {
-    throw new Error("this todo is missing");
+    throw new Error("this task is missing");
   }
 
   const listID = "listID" in options ? options.listID : todo.listID;
