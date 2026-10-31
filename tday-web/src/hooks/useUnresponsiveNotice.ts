@@ -23,28 +23,52 @@ const UNRESPONSIVE_NOTICE_ID = "tday-unresponsive";
  * to handle, and a render failure is the error boundary's, which has its own reload.
  *
  * A late tick is only evidence of a blocked thread when the page was there to be blocked. A
- * backgrounded tab, a minimised or occluded window, a machine that slept — each stops the timers
- * for a while and looks identical to a stall from the inside (issue: "the webapp was just in
- * background, nothing broke, so why is it showing messages like this"). So a gap is only measured
- * between two ticks that were both taken while the page was visible AND focused, and every event
- * that could open such a gap on purpose — the tab hiding or returning, the window losing or gaining
- * focus, a page coming back from the bfcache — restarts the clock rather than letting the gap land.
+ * backgrounded tab, a minimised or occluded window, a machine that slept — each stops or throttles
+ * the timers for a while and looks identical to a stall from the inside. Two rules keep those out:
+ *
+ * 1. A tick only counts as "watching" when the page is visible and focused. Ticks taken while it is
+ *    not are recorded but never reported.
+ * 2. Any event that can open a gap on purpose (the tab hiding or returning, focus moving, a
+ *    freeze/resume, a page coming back from the bfcache) marks the watch as interrupted. The first
+ *    watching tick after that is skipped, whatever state the page is in when it fires. Background
+ *    timers fire late, so that first tick can land before `visibilitychange` is dispatched; the
+ *    interruption flag does not depend on the event arriving first, and it is only cleared by a
+ *    tick that was itself watching.
+ *
+ * A jump in the wall clock that the monotonic clock did not share (the machine slept, or the clock
+ * was changed) is also not a stall.
  */
 export function useUnresponsiveNotice(): void {
   const { t } = useTranslation("app");
 
   useEffect(() => {
     let lastTick = performance.now();
+    let lastWallTick = Date.now();
+    let interrupted = false;
+
     const timer = window.setInterval(() => {
       const now = performance.now();
+      const wall = Date.now();
       const gap = now - lastTick;
+      const wallGap = wall - lastWallTick;
       lastTick = now;
+      lastWallTick = wall;
+
       // Both halves of "the user is actually looking at this page". A page that
       // is not visible was throttled by the browser; a page that is visible but
       // unfocused is behind another window and its timers are not a promise
-      // about this app's health either.
+      // about this app's health either. Neither tick may clear the interruption,
+      // so the first watching tick after it is still skipped.
       if (document.hidden || !document.hasFocus()) return;
+      const wasInterrupted = interrupted;
+      interrupted = false;
+      if (wasInterrupted) return;
+
       if (gap < BLOCKED_NOTICE_MS) return;
+      // A block advances both clocks together. A jump in only the wall clock is the machine sleeping
+      // or the clock changing, not the thread being stuck.
+      if (Math.abs(wallGap - gap) >= BLOCKED_NOTICE_MS) return;
+
       toast(t("unresponsiveTitle"), {
         // One notice, however many times the thread stalls: the same id replaces it rather than
         // stacking a second copy behind the first.
@@ -55,23 +79,27 @@ export function useUnresponsiveNotice(): void {
       });
     }, TICK_MS);
 
-    // Any of these can sit inside a gap that is not a stall, so each one is
-    // treated as the start of a fresh watch rather than as a slow tick.
-    const resetClock = () => {
-      lastTick = performance.now();
+    // Any of these can sit inside a gap that is not a stall, so each one
+    // interrupts the watch. The next watching tick is then skipped.
+    const interrupt = () => {
+      interrupted = true;
     };
-    document.addEventListener("visibilitychange", resetClock);
-    window.addEventListener("focus", resetClock);
-    window.addEventListener("blur", resetClock);
-    window.addEventListener("pageshow", resetClock);
-    window.addEventListener("pagehide", resetClock);
+    document.addEventListener("visibilitychange", interrupt);
+    document.addEventListener("freeze", interrupt);
+    document.addEventListener("resume", interrupt);
+    window.addEventListener("focus", interrupt);
+    window.addEventListener("blur", interrupt);
+    window.addEventListener("pageshow", interrupt);
+    window.addEventListener("pagehide", interrupt);
     return () => {
       window.clearInterval(timer);
-      document.removeEventListener("visibilitychange", resetClock);
-      window.removeEventListener("focus", resetClock);
-      window.removeEventListener("blur", resetClock);
-      window.removeEventListener("pageshow", resetClock);
-      window.removeEventListener("pagehide", resetClock);
+      document.removeEventListener("visibilitychange", interrupt);
+      document.removeEventListener("freeze", interrupt);
+      document.removeEventListener("resume", interrupt);
+      window.removeEventListener("focus", interrupt);
+      window.removeEventListener("blur", interrupt);
+      window.removeEventListener("pageshow", interrupt);
+      window.removeEventListener("pagehide", interrupt);
     };
   }, [t]);
 }
