@@ -383,18 +383,24 @@ internal object TaskWidgetRemoteViews {
      * white pill `widget_add_button_background_list` draws purely to be tinted. Below 31 the
      * background stays the kind's rather than a white pill nothing tints, and only the glyph takes
      * the colour through `setColorFilter`, which is remotable all the way down to this app's floor.
+     *
+     * The wash is drawn by the `widget_add_pill` ImageView through `setImageTintList`, the same
+     * call that colours the glyph, and not by `setBackgroundTintList` on the button. Hosts dropped
+     * the background tint, which left the white pill invisible on the white widget surface.
      */
     private fun RemoteViews.applyAddButtonAccent(visuals: TaskWidgetVisuals) {
         val accent = visuals.accent
         if (accent == null) {
+            setVisible(R.id.widget_add_pill, false)
             setInt(R.id.widget_add, METHOD_SET_BACKGROUND_RESOURCE, visuals.addButtonBackground)
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            setInt(R.id.widget_add, METHOD_SET_BACKGROUND_RESOURCE, R.drawable.widget_add_button_background_list)
+            setInt(R.id.widget_add, METHOD_SET_BACKGROUND_RESOURCE, 0)
+            setVisible(R.id.widget_add_pill, true)
             setColorStateList(
-                R.id.widget_add,
-                "setBackgroundTintList",
+                R.id.widget_add_pill,
+                "setImageTintList",
                 ColorStateList.valueOf(accent.lightWash),
                 ColorStateList.valueOf(accent.nightWash),
             )
@@ -405,6 +411,7 @@ internal object TaskWidgetRemoteViews {
                 ColorStateList.valueOf(accent.night),
             )
         } else {
+            setVisible(R.id.widget_add_pill, false)
             setInt(R.id.widget_add, METHOD_SET_BACKGROUND_RESOURCE, visuals.addButtonBackground)
             setInt(R.id.widget_add_icon, METHOD_SET_COLOR_FILTER, accent.light)
         }

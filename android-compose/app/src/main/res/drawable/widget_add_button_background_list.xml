@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?><!-- The add button's pill on a per-list widget, whose colour is the one the user gave that list and
-     so cannot be named here. Opaque white although it is never drawn white: the render tints it
-     through View.setBackgroundTintList (API 31+ only — see TaskWidgetRemoteViews.applyAccent),
-     whose default SRC_IN blend takes BOTH the tint's colour and its alpha and keeps nothing of this
+     so cannot be named here. Opaque white although it is never drawn white: it is the src of the
+     widget_add_pill ImageView, which the render tints through ImageView.setImageTintList (API 31+
+     only — see TaskWidgetRemoteViews.applyAddButtonAccent), whose default SRC_IN blend takes BOTH the tint's colour and its alpha and keeps nothing of this
      shape but its geometry. So the list colour arrives already translucent and composites over
      whatever the host draws behind the widget, rather than over a surface this process guessed at.
      White rather than either accent wash, so if the tint is ever dropped the button cannot fall
