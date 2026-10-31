@@ -36,7 +36,7 @@ final class CompletedRepository {
 
     func uncomplete(_ item: CompletedItem) async throws {
         guard let originalTodoId = item.originalTodoId else {
-            throw APIError(message: "Completed todo is missing original todo id", statusCode: nil)
+            throw APIError(message: "Completed task is missing original task id", statusCode: nil)
         }
         let now = Date().epochMilliseconds
         _ = try await cacheManager.updateOfflineState { state in

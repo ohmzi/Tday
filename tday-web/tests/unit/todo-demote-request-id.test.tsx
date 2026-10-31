@@ -71,7 +71,7 @@ describe("todo demote requests carry the real todo id", () => {
   });
 
   it("convert-to-floater posts to the bare todo id, not the composite row key", async () => {
-    postMock.mockResolvedValue({ message: "todo demoted", floater: { id: "floater-9" } });
+    postMock.mockResolvedValue({ message: "task demoted", floater: { id: "floater-9" } });
     patchMock.mockResolvedValue({ message: "floater updated" });
     const queryClient = createClient();
 
@@ -96,7 +96,7 @@ describe("todo demote requests carry the real todo id", () => {
   });
 
   it("let-it-float (useDemoteTodo) posts to the bare todo id", async () => {
-    postMock.mockResolvedValue({ message: "todo demoted", floater: { id: "floater-9" } });
+    postMock.mockResolvedValue({ message: "task demoted", floater: { id: "floater-9" } });
     const queryClient = createClient();
 
     const { result } = renderHook(() => useDemoteTodo(), {

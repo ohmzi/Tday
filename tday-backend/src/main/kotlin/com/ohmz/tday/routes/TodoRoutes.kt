@@ -76,10 +76,10 @@ private fun Route.todoDemoteRoute(todoService: TodoService) {
                 either {
                     val todoId = call.parameters["id"]?.trim().orEmpty()
                     if (todoId.isBlank()) {
-                        raise(AppError.BadRequest("todo id is required"))
+                        raise(AppError.BadRequest("task id is required"))
                     }
                     val floater = todoService.demoteToFloater(user.id, todoId).bind()
-                    DemoteTodoResponse(message = "todo demoted", floater = floater)
+                    DemoteTodoResponse(message = "task demoted", floater = floater)
                 }
             }
         }
@@ -102,7 +102,7 @@ private fun Route.todoCreateRoute(todoService: TodoService) {
                 val priority = validateRequiredEnumValue<Priority>(body.priority, "priority").bind()
                 val rrule = body.rrule?.takeIf { it.isNotBlank() }
                 val todo = todoService.create(user.id, body.title, body.description, priority, due, rrule, body.listID).bind()
-                CreateTodoResponse(message = "todo created", todo = todo)
+                CreateTodoResponse(message = "task created", todo = todo)
             }
         }
     }
@@ -175,9 +175,9 @@ private fun Route.todoDeleteRoute(todoService: TodoService) {
     delete {
         call.withAuth { user ->
             val body = call.receive<TodoDeleteRequest>()
-            if (body.id.isBlank()) return@withAuth arrow.core.Either.Left(AppError.BadRequest("todo id is required"))
+            if (body.id.isBlank()) return@withAuth arrow.core.Either.Left(AppError.BadRequest("task id is required"))
             todoService.delete(user.id, body.id)
-                .map { count -> mapOf(MSG to if (count > 0) "todo deleted" else "todo already deleted") }
+                .map { count -> mapOf(MSG to if (count > 0) "task deleted" else "task already deleted") }
         }
     }
 }
@@ -192,7 +192,7 @@ private fun Route.todoCompleteRoutes(todoService: TodoService) {
                         ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest(ERR_INVALID_INSTANCE_DATE))
                 }
                 todoService.completeTodo(user.id, body.id, instanceDate)
-                    .map { mapOf(MSG to "todo completed") }
+                    .map { mapOf(MSG to "task completed") }
             }
         }
     }
@@ -206,7 +206,7 @@ private fun Route.todoCompleteRoutes(todoService: TodoService) {
                         ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest(ERR_INVALID_INSTANCE_DATE))
                 }
                 todoService.uncompleteTodo(user.id, body.id, instanceDate)
-                    .map { mapOf(MSG to "todo uncompleted") }
+                    .map { mapOf(MSG to "task uncompleted") }
             }
         }
     }

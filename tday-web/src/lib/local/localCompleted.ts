@@ -71,7 +71,7 @@ export function deleteCompletedTodos(body: Record<string, unknown> | null) {
     updateWorkspace((workspace) => {
       workspace.completedTodos = [];
     });
-    return { message: "completed todos cleared" };
+    return { message: "completed tasks cleared" };
   }
 
   const removed = updateWorkspace((workspace) => {
@@ -83,13 +83,13 @@ export function deleteCompletedTodos(body: Record<string, unknown> | null) {
   });
 
   return {
-    message: removed ? "completed todo removed" : "completed todo already removed",
+    message: removed ? "completed task removed" : "completed task already removed",
   };
 }
 
 export function updateCompletedTodo(body: Record<string, unknown>) {
   const id = normalize(body.id);
-  if (!id) throw localBadRequest("completed todo id is required", "id");
+  if (!id) throw localBadRequest("completed task id is required", "id");
   const priority = optionalPriority(body.priority);
 
   const due =
@@ -132,7 +132,7 @@ export function updateCompletedTodo(body: Record<string, unknown>) {
   });
 
   return {
-    message: updated ? "completed todo updated" : "completed todo already removed",
+    message: updated ? "completed task updated" : "completed task already removed",
   };
 }
 

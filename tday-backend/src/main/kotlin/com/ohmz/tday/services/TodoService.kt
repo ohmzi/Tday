@@ -300,7 +300,7 @@ class TodoServiceImpl(
         val result: Either<AppError, ResultRow> = newSuspendedTransaction(Dispatchers.IO) {
             val todo = Todos.selectAll().where {
                 (Todos.id eq todoId) and (Todos.userID eq userId)
-            }.firstOrNull() ?: return@newSuspendedTransaction Either.Left(AppError.NotFound("todo not found"))
+            }.firstOrNull() ?: return@newSuspendedTransaction Either.Left(AppError.NotFound("task not found"))
 
             if (todo[Todos.rrule] != null) {
                 // Floaters carry no recurrence; silently destroying a series is

@@ -120,7 +120,7 @@ class McpTestWorld(
             todos.values.toList().right()
 
         override suspend fun update(userId: String, id: String, fields: Map<String, Any?>): Either<AppError, Unit> {
-            val existing = todos[id] ?: return AppError.NotFound("todo not found").left()
+            val existing = todos[id] ?: return AppError.NotFound("task not found").left()
             val listId = fields["listID"] as? String
             if (fields.containsKey("listID") && listId != null && listId !in lists) {
                 return AppError.BadRequest("list not found", "listID").left()
@@ -141,13 +141,13 @@ class McpTestWorld(
             (if (todos.remove(id) != null) 1 else 0).right()
 
         override suspend fun completeTodo(userId: String, todoId: String, instanceDate: LocalDateTime?): Either<AppError, Unit> {
-            val existing = todos[todoId] ?: return AppError.NotFound("todo not found").left()
+            val existing = todos[todoId] ?: return AppError.NotFound("task not found").left()
             if (instanceDate == null) todos[todoId] = existing.copy(completed = true)
             return Unit.right()
         }
 
         override suspend fun uncompleteTodo(userId: String, todoId: String, instanceDate: LocalDateTime?): Either<AppError, Unit> {
-            val existing = todos[todoId] ?: return AppError.NotFound("todo not found").left()
+            val existing = todos[todoId] ?: return AppError.NotFound("task not found").left()
             if (instanceDate == null) todos[todoId] = existing.copy(completed = false)
             return Unit.right()
         }
@@ -161,19 +161,19 @@ class McpTestWorld(
         override suspend fun patchInstance(
             userId: String, todoId: String, instanceDate: LocalDateTime, fields: Map<String, Any?>,
         ): Either<AppError, Unit> {
-            if (todoId !in todos) return AppError.NotFound("todo not found").left()
+            if (todoId !in todos) return AppError.NotFound("task not found").left()
             patchedInstances += todoId to instanceDate
             return Unit.right()
         }
 
         override suspend fun deleteInstance(userId: String, todoId: String, instanceDate: LocalDateTime): Either<AppError, Unit> {
-            if (todoId !in todos) return AppError.NotFound("todo not found").left()
+            if (todoId !in todos) return AppError.NotFound("task not found").left()
             deletedInstances += todoId to instanceDate
             return Unit.right()
         }
 
         override suspend fun demoteToFloater(userId: String, todoId: String): Either<AppError, FloaterResponse> {
-            val existing = todos[todoId] ?: return AppError.NotFound("todo not found").left()
+            val existing = todos[todoId] ?: return AppError.NotFound("task not found").left()
             if (!existing.rrule.isNullOrBlank()) {
                 return AppError.BadRequest("a repeating todo cannot be demoted").left()
             }
