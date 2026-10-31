@@ -405,6 +405,7 @@
       "title": "Edit all task recurrences?",
       "subtitle": "This is a recurring task, make the same edit for all other recurrences?",
       "editInstance": "Edit this occurrence only",
+      "repeatSeriesNote": "Repeat changes apply to every occurrence in the series.",
       "editAll": "Edit all recurrences"
     }
   },

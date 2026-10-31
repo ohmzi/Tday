@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 /**
- * Editing a repeating task in the calendar: a changed repeat is a series-level change, so it
- * must reach the series PATCH directly. The this-or-all choice must not swallow it.
+ * Editing a repeating task in the calendar: any edit to a recurring task opens the scope
+ * prompt. A changed repeat is series-wide, so the prompt is told to disable "this occurrence".
  */
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -27,9 +27,12 @@ vi.mock("@/features/calendar/component/ConfirmationModals/ConfirmCancelEdit", ()
   default: () => null,
 }));
 
+// Reports the scope prompt's open state and the flag it was given, without its portal.
 vi.mock("@/features/calendar/component/ConfirmationModals/ConfirmEditAll", () => ({
-  default: ({ editAllDialogOpen }: { editAllDialogOpen: boolean }) =>
-    editAllDialogOpen ? <div data-testid="edit-all-dialog" /> : null,
+  default: ({ editAllDialogOpen, repeatChanged }: { editAllDialogOpen: boolean; repeatChanged: boolean }) =>
+    editAllDialogOpen ? (
+      <div data-testid="edit-all-dialog" data-repeat-changed={String(repeatChanged)} />
+    ) : null,
 }));
 
 vi.mock("@/features/calendar/component/CalendarForm/Form/LazyCalendarTaskFormBody", () => ({
@@ -77,6 +80,8 @@ function buildForm(overrides: Partial<CalendarTaskFormState> = {}): CalendarTask
     setDateRange: vi.fn(),
     rruleOptions: { freq: RRule.DAILY },
     setRruleOptions: vi.fn(),
+    repeatTouchedByUser: false,
+    setRepeatTouchedByUser: vi.fn(),
     listID: null,
     setListID: vi.fn(),
     derivedRepeatType: "Daily",
@@ -85,22 +90,44 @@ function buildForm(overrides: Partial<CalendarTaskFormState> = {}): CalendarTask
 }
 
 function renderEdit(todo: TodoItemType, form: CalendarTaskFormState) {
-  render(
-    <EditModal todo={todo} displayForm setDisplayForm={vi.fn()} form={form} />,
-  );
+  render(<EditModal todo={todo} displayForm setDisplayForm={vi.fn()} form={form} />);
   fireEvent.click(screen.getByRole("button", { name: "save" }));
 }
 
-describe("calendar edit: repeat changes on a recurring task", () => {
+describe("calendar edit: recurring task scope prompt", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   afterEach(cleanup);
 
-  it("changing the repeat patches the series directly with the new rule and the old checksum", () => {
+  it("changing the repeat opens the scope prompt flagged as a repeat change, without saving yet", () => {
     renderEdit(
       buildTodo(),
+      buildForm({ rruleOptions: { freq: RRule.WEEKLY }, derivedRepeatType: "Weekly" }),
+    );
+
+    expect(editCalendarTodo).not.toHaveBeenCalled();
+    expect(screen.getByTestId("edit-all-dialog").getAttribute("data-repeat-changed")).toBe("true");
+  });
+
+  it("clearing the repeat also goes through the scope prompt", () => {
+    renderEdit(buildTodo(), buildForm({ rruleOptions: null, derivedRepeatType: null }));
+
+    expect(editCalendarTodo).not.toHaveBeenCalled();
+    expect(screen.getByTestId("edit-all-dialog").getAttribute("data-repeat-changed")).toBe("true");
+  });
+
+  it("an unchanged repeat opens the scope prompt without the repeat flag", () => {
+    renderEdit(buildTodo(), buildForm({ title: "Standup, renamed" }));
+
+    expect(editCalendarTodo).not.toHaveBeenCalled();
+    expect(screen.getByTestId("edit-all-dialog").getAttribute("data-repeat-changed")).toBe("false");
+  });
+
+  it("a one-off task gaining a repeat saves directly against a null checksum", () => {
+    renderEdit(
+      buildTodo({ rrule: null }),
       buildForm({ rruleOptions: { freq: RRule.WEEKLY }, derivedRepeatType: "Weekly" }),
     );
 
@@ -108,25 +135,6 @@ describe("calendar edit: repeat changes on a recurring task", () => {
     expect(editCalendarTodo).toHaveBeenCalledTimes(1);
     const payload = editCalendarTodo.mock.calls[0][0];
     expect(payload.rrule).toBe("RRULE:FREQ=WEEKLY");
-    expect(payload.rruleChecksum).toBe("RRULE:FREQ=DAILY");
-  });
-
-  it("clearing the repeat sends a null rrule to the series", () => {
-    renderEdit(
-      buildTodo(),
-      buildForm({ rruleOptions: null, derivedRepeatType: null }),
-    );
-
-    expect(editCalendarTodo).toHaveBeenCalledTimes(1);
-    const payload = editCalendarTodo.mock.calls[0][0];
-    expect(payload.rrule).toBeNull();
-    expect(payload.rruleChecksum).toBe("RRULE:FREQ=DAILY");
-  });
-
-  it("an unchanged repeat still asks this-or-all before editing", () => {
-    renderEdit(buildTodo(), buildForm({ title: "Standup, renamed" }));
-
-    expect(screen.getByTestId("edit-all-dialog")).toBeTruthy();
-    expect(editCalendarTodo).not.toHaveBeenCalled();
+    expect(payload.rruleChecksum).toBeNull();
   });
 });

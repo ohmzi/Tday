@@ -46,6 +46,8 @@ export default function CreateCalendarDrawer({
     setDateRange,
     rruleOptions,
     setRruleOptions,
+    repeatTouchedByUser,
+    setRepeatTouchedByUser,
     listID,
     setListID,
     derivedRepeatType,
@@ -127,6 +129,8 @@ export default function CreateCalendarDrawer({
               listID={listID}
               setListID={setListID}
               rruleOptions={rruleOptions}
+              repeatTouchedByUser={repeatTouchedByUser}
+              setRepeatTouchedByUser={setRepeatTouchedByUser}
               setRruleOptions={setRruleOptions}
               derivedRepeatType={derivedRepeatType}
               onSubmit={handleSubmit}

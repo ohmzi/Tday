@@ -405,6 +405,7 @@
       "title": "Modificare tutte le ricorrenze?",
       "subtitle": "Questa è un'attività ricorrente, apportare la stessa modifica a tutte le altre ricorrenze?",
       "editInstance": "Modifica solo questa occorrenza",
+      "repeatSeriesNote": "Le modifiche alla ripetizione si applicano a tutte le occorrenze della serie.",
       "editAll": "Modifica tutte le ricorrenze"
     }
   },

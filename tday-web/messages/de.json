@@ -405,6 +405,7 @@
       "title": "Alle Wiederholungen bearbeiten?",
       "subtitle": "Dies ist eine wiederkehrende Aufgabe. Soll die Bearbeitung für alle anderen Wiederholungen übernommen werden?",
       "editInstance": "Nur dieses Vorkommen bearbeiten",
+      "repeatSeriesNote": "Änderungen an der Wiederholung gelten für alle Termine der Serie.",
       "editAll": "Alle Wiederholungen bearbeiten"
     }
   },

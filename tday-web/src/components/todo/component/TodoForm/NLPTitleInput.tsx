@@ -25,6 +25,11 @@ type NLPTitleInputProps = {
    * `applyNLPHighlighting`.
    */
   rruleOptions?: Partial<Options> | null;
+  /**
+   * True once the user has picked a repeat from the Repeat sheet, "No repeat" included.
+   * The title phrase then stops applying: it must not undo a choice the user made.
+   */
+  repeatTouchedByUser?: boolean;
   className?: string;
   onSubmit?: () => void;
 };
@@ -37,6 +42,7 @@ export default function NLPTitleInput({
   setPriority,
   setRruleOptions,
   rruleOptions,
+  repeatTouchedByUser = false,
   className,
   onSubmit,
 }: NLPTitleInputProps) {
@@ -109,7 +115,7 @@ export default function NLPTitleInput({
     // preset list must not be overwritten by a phrase that happens to still sit in
     // the title ("gym every day" → tap Monthly → keep typing → back to Daily).
     const rp = parseRecurrencePriority(dateCleaned);
-    if (rp.rrule && setRruleOptions && !rruleOptions) {
+    if (rp.rrule && setRruleOptions && !rruleOptions && !repeatTouchedByUser) {
       setRruleOptions(RRule.parseString(rp.rrule));
     }
     if (rp.priority && setPriority) {

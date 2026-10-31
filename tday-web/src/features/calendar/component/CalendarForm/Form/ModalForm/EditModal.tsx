@@ -44,6 +44,8 @@ const CalendarForm = ({ todo, displayForm, setDisplayForm, form }: CalendarFormP
     setDateRange,
     rruleOptions,
     setRruleOptions,
+    repeatTouchedByUser,
+    setRepeatTouchedByUser,
     listID,
     setListID,
     derivedRepeatType,
@@ -80,11 +82,9 @@ const CalendarForm = ({ todo, displayForm, setDisplayForm, form }: CalendarFormP
 
   const handleSubmit = () => {
     if (title.trim().length <= 0) return;
-    // A repeat belongs to the whole series: one occurrence cannot carry a different rule.
-    // Changing it therefore skips the this-or-all choice, whose "this occurrence" branch
-    // would silently drop the new rule. The series is patched directly, with the same
-    // checksums the "all" branch uses so the occurrence's date does not move the series.
-    if (todo.rrule && !repeatChanged) {
+    // A recurring task always asks this-or-all. A repeat change is offered as "all" only:
+    // the dialog disables "this occurrence", since one occurrence cannot carry a new rule.
+    if (todo.rrule) {
       setEditAllDialogOpen(true);
     } else {
       editCalendarTodo({
@@ -120,6 +120,7 @@ const CalendarForm = ({ todo, displayForm, setDisplayForm, form }: CalendarFormP
           listID,
         }}
         rruleChecksum={rruleChecksum!}
+        repeatChanged={repeatChanged}
         dateRangeChecksum={dateRangeChecksum}
         setDisplayForm={setDisplayForm}
         editAllDialogOpen={editAllDialogOpen}
@@ -158,6 +159,8 @@ const CalendarForm = ({ todo, displayForm, setDisplayForm, form }: CalendarFormP
                 listID={listID}
                 setListID={setListID}
                 rruleOptions={rruleOptions}
+                repeatTouchedByUser={repeatTouchedByUser}
+                setRepeatTouchedByUser={setRepeatTouchedByUser}
                 setRruleOptions={setRruleOptions}
                 derivedRepeatType={derivedRepeatType}
                 onSubmit={handleSubmit}

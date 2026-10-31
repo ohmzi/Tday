@@ -405,6 +405,7 @@
       "title": "Edit semua ulangan tugasan?",
       "subtitle": "Ini adalah tugasan berulang, buat edit yang sama untuk semua ulangan lain?",
       "editInstance": "Edit kejadian ini sahaja",
+      "repeatSeriesNote": "Perubahan ulangan terpakai kepada setiap kejadian dalam siri.",
       "editAll": "Edit semua ulangan"
     }
   },

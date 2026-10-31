@@ -43,6 +43,8 @@ export type CalendarTaskFormBodyProps = {
   setListID: Dispatch<SetStateAction<string | null>>;
   rruleOptions: Partial<Options> | null;
   setRruleOptions: Dispatch<SetStateAction<Partial<Options> | null>>;
+  repeatTouchedByUser: boolean;
+  setRepeatTouchedByUser: Dispatch<SetStateAction<boolean>>;
   derivedRepeatType: DerivedRepeatType;
   onSubmit: () => void;
 };
@@ -64,6 +66,8 @@ export default function CalendarTaskFormBody({
   setListID,
   rruleOptions,
   setRruleOptions,
+  repeatTouchedByUser,
+  setRepeatTouchedByUser,
   derivedRepeatType,
   onSubmit,
 }: CalendarTaskFormBodyProps) {
@@ -76,6 +80,12 @@ export default function CalendarTaskFormBody({
   const handlePrioritySelect: Dispatch<SetStateAction<Priority>> = (value) => {
     setPriority(value);
     setPriorityTouchedByUser(true);
+  };
+
+  // A repeat picked from the sheet is final; see TodoForm.handleRepeatSelect.
+  const handleRepeatSelect: Dispatch<SetStateAction<Partial<Options> | null>> = (value) => {
+    setRruleOptions(value);
+    setRepeatTouchedByUser(true);
   };
 
   const repeatValueLabel = derivedRepeatType
@@ -97,6 +107,7 @@ export default function CalendarTaskFormBody({
             setPriority={handlePrioritySelect}
             setRruleOptions={setRruleOptions}
             rruleOptions={rruleOptions}
+            repeatTouchedByUser={repeatTouchedByUser}
             onSubmit={onSubmit}
           />
         }
@@ -166,7 +177,7 @@ export default function CalendarTaskFormBody({
         setPriority={handlePrioritySelect}
         listID={listID}
         setListID={setListID}
-        setRruleOptions={setRruleOptions}
+        setRruleOptions={handleRepeatSelect}
         derivedRepeatType={derivedRepeatType}
       />
     </div>

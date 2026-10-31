@@ -64,12 +64,18 @@ vi.mock("@/features/floaterList/query/get-floater-list-meta", () => ({
   useFloaterListMetaData: () => ({ floaterListMetaData: {}, listMetaLoading: false }),
 }));
 
+// Captures the props the form hands the title field, so the instance-mode test can
+// assert the repeat setter is withheld rather than only that a row is missing.
+let lastNlpProps: Record<string, unknown> = {};
 vi.mock("@/components/todo/component/TodoForm/NLPTitleInput", () => ({
-  default: () => <div data-testid="todo-title-input" />,
+  default: (props: Record<string, unknown>) => {
+    lastNlpProps = props;
+    return <div data-testid="todo-title-input" />;
+  },
 }));
 
 vi.mock("@/components/todo/component/TodoForm/RepeatSuggestionChip", () => ({
-  default: () => null,
+  default: () => <div data-testid="repeat-suggestion-chip" />,
 }));
 
 vi.mock("@/features/completed/query/get-completedTodo", () => ({
@@ -163,6 +169,15 @@ describe("TodoForm repeat setting", () => {
     );
   });
 
+  it("create: picking a repeat marks it user-touched so the title phrase cannot re-apply", () => {
+    renderForm();
+    expect(lastNlpProps.repeatTouchedByUser).toBe(false);
+
+    pickRepeat("everyDay");
+
+    expect(lastNlpProps.repeatTouchedByUser).toBe(true);
+  });
+
   it("create: no repeat picked sends a null rrule", async () => {
     const getSubmit = renderForm();
 
@@ -202,7 +217,7 @@ describe("TodoForm repeat setting", () => {
     expect(params.rruleChecksum).toBe("RRULE:FREQ=DAILY");
   });
 
-  it("edit of a single occurrence does not offer a repeat row the instance save would drop", () => {
+  it("edit of a single occurrence renders the form but offers no repeat control", () => {
     todoItem = buildTodo({ rrule: "RRULE:FREQ=DAILY", instanceDate: new Date("2026-04-04T14:00:00.000Z") });
     render(
       <TodoFormContainer
@@ -214,7 +229,21 @@ describe("TodoForm repeat setting", () => {
       />,
     );
 
+    // The form really rendered: the title field is present before the absence checks mean anything.
+    expect(screen.getByTestId("todo-title-input")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^repeat,/ })).toBeNull();
+    expect(screen.queryByTestId("repeat-suggestion-chip")).toBeNull();
+    // The title field may not set a repeat either.
+    expect(lastNlpProps.setRruleOptions).toBeUndefined();
+  });
+
+  it("outside instance mode the title field and suggestion chip get the repeat setter", () => {
+    todoItem = buildTodo();
+    renderForm();
+
+    expect(screen.getByTestId("todo-title-input")).toBeTruthy();
+    expect(screen.getByTestId("repeat-suggestion-chip")).toBeTruthy();
+    expect(typeof lastNlpProps.setRruleOptions).toBe("function");
   });
 
   it("edit: clearing a repeat sends a null rrule against the old checksum", async () => {

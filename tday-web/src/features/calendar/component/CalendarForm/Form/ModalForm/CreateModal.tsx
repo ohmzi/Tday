@@ -44,6 +44,8 @@ const CreateCalendarForm = ({
     setDateRange,
     rruleOptions,
     setRruleOptions,
+    repeatTouchedByUser,
+    setRepeatTouchedByUser,
     listID,
     setListID,
     derivedRepeatType,
@@ -128,6 +130,8 @@ const CreateCalendarForm = ({
                 listID={listID}
                 setListID={setListID}
                 rruleOptions={rruleOptions}
+                repeatTouchedByUser={repeatTouchedByUser}
+                setRepeatTouchedByUser={setRepeatTouchedByUser}
                 setRruleOptions={setRruleOptions}
                 derivedRepeatType={derivedRepeatType}
                 onSubmit={handleSubmit}

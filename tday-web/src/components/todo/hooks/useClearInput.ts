@@ -16,6 +16,7 @@ export function useClearInput(
     setPriority,
     setPriorityTouchedByUser,
     setRruleOptions,
+    setRepeatTouchedByUser,
   } = useTodoForm();
   const clearInput = useCallback(
     function clearInput(activeListDefaultPriority?: Priority | null) {
@@ -35,6 +36,7 @@ export function useClearInput(
       setPriority(activeListDefaultPriority ?? "Low");
       setPriorityTouchedByUser(false);
       setRruleOptions(null);
+      setRepeatTouchedByUser(false);
       if (titleRef.current) {
         titleRef.current.textContent = "";
       }

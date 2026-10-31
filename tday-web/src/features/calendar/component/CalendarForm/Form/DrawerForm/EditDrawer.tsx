@@ -49,6 +49,8 @@ export default function EditCalendarDrawer({
     setDateRange,
     rruleOptions,
     setRruleOptions,
+    repeatTouchedByUser,
+    setRepeatTouchedByUser,
     listID,
     setListID,
     derivedRepeatType,
@@ -77,8 +79,9 @@ export default function EditCalendarDrawer({
 
   const handleSubmit = () => {
     if (title.trim().length <= 0) return;
-    // See EditModal: a repeat change is series-wide, so it bypasses the this-or-all choice.
-    if (todo.rrule && !repeatChanged) {
+    // A recurring task always asks this-or-all. A repeat change is offered as "all" only:
+    // the dialog disables "this occurrence", since one occurrence cannot carry a new rule.
+    if (todo.rrule) {
       setEditAllDialogOpen(true);
     } else {
       editCalendarTodo({
@@ -121,6 +124,7 @@ export default function EditCalendarDrawer({
           listID,
         }}
         rruleChecksum={rruleChecksum!}
+        repeatChanged={repeatChanged}
         dateRangeChecksum={dateRangeChecksum}
         setDisplayForm={setDisplayForm}
         editAllDialogOpen={editAllDialogOpen}
@@ -163,6 +167,8 @@ export default function EditCalendarDrawer({
               listID={listID}
               setListID={setListID}
               rruleOptions={rruleOptions}
+              repeatTouchedByUser={repeatTouchedByUser}
+              setRepeatTouchedByUser={setRepeatTouchedByUser}
               setRruleOptions={setRruleOptions}
               derivedRepeatType={derivedRepeatType}
               onSubmit={handleSubmit}

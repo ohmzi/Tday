@@ -405,6 +405,7 @@
       "title": "Modifier toutes les récurrences de la tâche ?",
       "subtitle": "Il s'agit d'une tâche récurrente, appliquer la même modification à toutes les autres récurrences ?",
       "editInstance": "Modifier cette occurrence uniquement",
+      "repeatSeriesNote": "Les modifications de répétition s'appliquent à toutes les occurrences de la série.",
       "editAll": "Modifier toutes les récurrences"
     }
   },

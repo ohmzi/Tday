@@ -176,7 +176,8 @@ export function updateTodo(body: Record<string, unknown>) {
     if (body.dateChanged === true && !dueProvided) {
       throw localBadRequest("due is required", "due");
     }
-    if (dueProvided) {
+    // dateChanged=false: the date is unchanged, so a series-wide edit must not move it.
+    if (dueProvided && body.dateChanged !== false) {
       const due = parseDueMinute(String(body.due));
       if (!due) throw localBadRequest("due must be a valid ISO-8601 datetime", "due");
       todo.due = due;
