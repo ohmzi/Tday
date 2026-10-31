@@ -183,7 +183,8 @@ private func tdaySRGB(_ rgb: UInt32) -> Color {
 ///
 /// The constants are the Android `WidgetColorMath` ones, numerically: the ceiling sits just above
 /// the brighter hand-tuned day accent, `tday_widget_today_accent` #6EA8E1 (luminance ≈ 0.367).
-/// Keep the two platforms in step if either changes.
+/// Keep the two platforms in step if either changes: Android `WidgetColorMath.DAY_LUMINANCE_CEILING`
+/// and `WidgetListAccent.LIGHT_WASH_ALPHA` (0.20) must match these constants and the widget's pill wash.
 private let tdayWidgetDayLuminanceCeiling = 0.38
 private let tdayWidgetDayDeepenStep = 0.02
 private let tdayWidgetDayDeepenLimit = 0.60

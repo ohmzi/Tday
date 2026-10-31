@@ -82,6 +82,7 @@ internal object WidgetColorMath {
      * `tday_widget_today_accent` #6EA8E1 has luminance ≈ 0.367 and `tday_widget_floater_accent`
      * #4D8F83 ≈ 0.319. Keys under it (the dark ones, and the hue-rich mid ones) are left alone.
      */
+    // Must stay in step with iOS `tdayWidgetDayLuminanceCeiling` (ios-swiftUI TdayListAccent.swift).
     const val DAY_LUMINANCE_CEILING = 0.38
     const val DAY_DEEPEN_STEP = 0.02f
 

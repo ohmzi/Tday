@@ -57,8 +57,25 @@ class WidgetColorMathTest {
     }
 
     @Test
-    fun `dark keys are left exactly as they are by day`() {
-        listOf("RED", "BLUE", "PURPLE", "SLATE", "DEEP_BLUE").forEach { key ->
+    fun `GOLD and YELLOW are deepened under the ceiling and keep their hue`() {
+        listOf("GOLD", "YELLOW").forEach { key ->
+            val source = palette(key)
+            val day = WidgetColorMath.deepenedForDay(source)
+            assertTrue("$key should be changed by day", day != source)
+            assertTrue(
+                "$key day luminance ${WidgetColorMath.luminance(day)} above ceiling",
+                WidgetColorMath.luminance(day) <= WidgetColorMath.DAY_LUMINANCE_CEILING + 1e-9,
+            )
+            assertTrue(
+                "$key hue moved by ${hueDistance(hue(source), hue(day))}",
+                hueDistance(hue(source), hue(day)) < 2.0,
+            )
+        }
+    }
+
+    @Test
+    fun `PINK CORAL LIME RED BLUE and PURPLE come back unchanged by day`() {
+        listOf("PINK", "CORAL", "LIME", "RED", "BLUE", "PURPLE").forEach { key ->
             assertEquals("$key", palette(key), WidgetColorMath.deepenedForDay(palette(key)))
         }
     }

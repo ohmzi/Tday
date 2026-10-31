@@ -1880,7 +1880,8 @@ private struct TdayTasksWidgetContent: View {
 
     /// The "+" pill's wash. A list's own colour carries more weight (0.20, the Android
     /// `LIGHT_WASH_ALPHA`) so a light key does not read as a white button on a light host; a feed
-    /// keeps its 0.14 wash, which its hand-tuned accent was tuned for.
+    /// keeps its 0.14 wash, which its hand-tuned accent was tuned for. The 0.20 must stay in step
+    /// with Android `WidgetListAccent.LIGHT_WASH_ALPHA`.
     private var addButtonWashOpacity: Double {
         guard renderingMode == .fullColor else { return 0.10 }
         return listAccent?.color == nil ? 0.14 : 0.20

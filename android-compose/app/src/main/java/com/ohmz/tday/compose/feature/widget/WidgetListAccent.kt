@@ -56,6 +56,7 @@ internal fun widgetListAccentFor(colorKey: String?): WidgetListAccent? {
  * as white on a light host. 0.20 gives the pill the same presence the built-in widgets have, while
  * still letting the host's surface show through.
  */
+// Must stay in step with iOS `TodayTasksWidget.addButtonWashOpacity` (0.20) in TodayTasksWidget.swift.
 private const val LIGHT_WASH_ALPHA = 0.20f
 
 /** A touch stronger than light: the same alpha over a near-black surface reads as almost nothing. */
