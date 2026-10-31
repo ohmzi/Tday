@@ -105,13 +105,13 @@ type Harness = {
   refetchListMeta: (meta: ListMeta) => void;
 };
 
-function renderCreateInList(listID: string): Harness {
+function renderCreateInList(listID: string | undefined): Harness {
   let submit: (() => void) | undefined;
   const tree = () => (
     <TodoFormContainer
       displayForm
       setDisplayForm={vi.fn()}
-      overrideFields={{ listID }}
+      overrideFields={listID ? { listID } : undefined}
       registerSubmit={(fn) => {
         submit = fn;
       }}
@@ -206,5 +206,41 @@ describe("scheduled list create starts on the list's default priority", () => {
     await settle();
     form.submit();
     expect(createMutateFn.mock.calls[0][0]).toMatchObject({ listID: "list-1", priority: "Low" });
+  });
+
+  describe("after a create clears the form", () => {
+    // The sheet stays mounted in these tests, so the priority row shows what the next task
+    // would start with. Labels come from priorityLabelKey: Low→"normal", High→"urgent".
+    const priorityRowLabel = () => screen.getByRole("button", { name: /^priority,/ }).getAttribute("aria-label");
+
+    it("resets to Low when there is no list", async () => {
+      const form = renderCreateInList(undefined);
+      await settle();
+      fireEvent.click(screen.getByRole("button", { name: /^priority,/ }));
+      fireEvent.click(screen.getByText("urgent"));
+      await settle();
+      form.submit();
+      await settle();
+      expect(priorityRowLabel()).toContain("normal");
+    });
+
+    it("resets to the list's default High after a create", async () => {
+      const form = renderCreateInList("list-1");
+      await settle();
+      form.submit();
+      await settle();
+      expect(priorityRowLabel()).toContain("urgent");
+    });
+
+    it("resets to the list's default after the user hand-picked a different priority", async () => {
+      const form = renderCreateInList("list-1");
+      await settle();
+      fireEvent.click(screen.getByRole("button", { name: /^priority,/ }));
+      fireEvent.click(screen.getByText("low"));
+      await settle();
+      form.submit();
+      await settle();
+      expect(priorityRowLabel()).toContain("urgent");
+    });
   });
 });
