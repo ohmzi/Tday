@@ -342,7 +342,15 @@ private struct TdayWidgetListAccent {
     /// on the home screen is the glyph in the app. Display only, as that function's doc
     /// requires: nothing here is written back anywhere.
     init(list: TdayWidgetListEntity) {
-        glyphAsset = tdayLucideListAsset(tdayResolvedListIconKey(list.iconKey, listName: list.name))
+        // The two pseudo views have no user-chosen glyph and their name is not a list name to infer
+        // from, so they wear the fixed glyphs the app uses for them: calendar-clock for Scheduled
+        // and alarm-clock for Overdue (the same pair Android's `pseudoIconRes` draws).
+        switch list.kind {
+        case .scheduled: glyphAsset = "LucideCalendarClock"
+        case .overdue: glyphAsset = "LucideAlarmClock"
+        case .todo, .floater:
+            glyphAsset = tdayLucideListAsset(tdayResolvedListIconKey(list.iconKey, listName: list.name))
+        }
         color = tdayListAccentColorOrNil(colorKey: list.colorKey)
     }
 }

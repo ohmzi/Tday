@@ -65,6 +65,7 @@ import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetListType
 import com.ohmz.tday.compose.feature.widget.snapshot.pseudoSelectionId
+import com.ohmz.tday.compose.feature.widget.snapshot.pseudoListTasks
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotWriter
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayTheme
@@ -204,7 +205,6 @@ internal class WidgetListPickerViewModel @Inject constructor(
             val state = offlineCacheManager.loadOfflineState()
             val openTodos = state.todos.filterNot { it.completed }.groupingBy { it.listId }.eachCount()
             val openFloaters = state.floaters.filterNot { it.completed }.groupingBy { it.listId }.eachCount()
-            val openDated = state.todos.filterNot { it.completed }.filter { it.dueEpochMs != null }
             val nowEpochMs = System.currentTimeMillis()
             _uiState.value = WidgetListPickerUiState(
                 loading = false,
@@ -215,7 +215,7 @@ internal class WidgetListPickerViewModel @Inject constructor(
                         name = "",
                         colorKey = "BLUE",
                         iconKey = null,
-                        openCount = openDated.size,
+                        openCount = pseudoListTasks(state, WidgetListType.SCHEDULED, nowEpochMs).size,
                     ),
                     WidgetListOption(
                         id = WidgetListType.OVERDUE.pseudoSelectionId,
@@ -223,11 +223,7 @@ internal class WidgetListPickerViewModel @Inject constructor(
                         name = "",
                         colorKey = "RED",
                         iconKey = null,
-                        openCount = openDated.count { task ->
-                            // `openDated` already dropped the undated rows; the fallback keeps
-                            // this free of a force-unwrap the guardrail forbids.
-                            (task.dueEpochMs ?: Long.MAX_VALUE) < nowEpochMs
-                        },
+                        openCount = pseudoListTasks(state, WidgetListType.OVERDUE, nowEpochMs).size,
                     ),
                 ),
                 todoLists = state.lists.map { list ->
