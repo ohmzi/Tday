@@ -1,7 +1,7 @@
-import { isFocusedTodoRow } from "@/lib/todo/todo-id";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { TodoItemType } from "@/types";
 import { buildTimelineSections } from "@/lib/timeline/buildTimelineSections";
+import { useExpandEarlierForFocus } from "@/lib/todo/focusHandoff";
 import type { TimelineItem, TimelineScope } from "../component/AllTasksTimelineContainer";
 
 // Stable identity so the memo below doesn't hand back a fresh empty array on
@@ -71,13 +71,14 @@ export function useTodayEarlierBucket({
 
   // A deep-linked/focused overdue task should not sit hidden behind a
   // collapsed header. Immediate (no hand-off beat) — there is no
-  // illustration to sequence against on a direct navigation.
-  useEffect(() => {
-    if (scope !== "today" || !focusedTaskId) return;
-    if (earlierItems.some((todo) => isFocusedTodoRow(focusedTaskId, todo.id))) {
-      setEarlierExpandedImmediately(true);
-    }
-  }, [earlierItems, focusedTaskId, scope, setEarlierExpandedImmediately]);
+  // illustration to sequence against on a direct navigation. Once per focus,
+  // so a refresh does not re-open a section the user closed.
+  const earlierRowIds = useMemo(() => earlierItems.map((todo) => todo.id), [earlierItems]);
+  useExpandEarlierForFocus({
+    focusedRowId: scope === "today" ? focusedTaskId : null,
+    earlierRowIds,
+    setExpandedImmediately: setEarlierExpandedImmediately,
+  });
 
   return { earlierItems, todayHasEarlierItems };
 }

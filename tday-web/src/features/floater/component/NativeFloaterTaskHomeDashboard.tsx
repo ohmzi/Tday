@@ -22,6 +22,7 @@ import FloaterGroup from "./FloaterGroup";
 import { useSearchParams } from "react-router-dom";
 import { TODO_FOCUS_TASK_QUERY_PARAM } from "@/lib/todoToastNavigation";
 import { buildFloaterSearchResultHref } from "@/lib/todo/searchResultHref";
+import { useFocusParamHandoff } from "@/lib/todo/focusHandoff";
 import { TaskRowSkeletonGroup } from "@/components/ui/TaskRowSkeleton";
 import { useSkeletonCrossfade } from "@/hooks/useSkeletonCrossfade";
 import FloaterListFormSheet from "@/features/floaterList/component/FloaterListFormSheet";
@@ -54,6 +55,7 @@ export default function NativeFloaterTaskHomeDashboard() {
   const [searchParams] = useSearchParams();
   // A search result or deep link from elsewhere in the app names the Anytime task to focus.
   const focusedFloaterId = searchParams.get(TODO_FOCUS_TASK_QUERY_PARAM);
+  useFocusParamHandoff(focusedFloaterId);
   const placementRef = useRowPlacement<HTMLDivElement>();
   const floaterAccent = nativeScreenAccentColors.floater;
 

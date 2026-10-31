@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
@@ -41,8 +41,9 @@ import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/navigation";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { Pencil, Search, Users } from "lucide-react";
-import { isFocusedTodoRow } from "@/lib/todo/todo-id";
-import { TODO_FOCUS_TASK_QUERY_PARAM } from "@/lib/todoToastNavigation";
+import { resolveFocusedRowId } from "@/lib/todo/todo-id";
+import { useExpandEarlierForFocus, useFocusParamHandoff } from "@/lib/todo/focusHandoff";
+import { TODO_FOCUS_INSTANCE_QUERY_PARAM, TODO_FOCUS_TASK_QUERY_PARAM } from "@/lib/todoToastNavigation";
 
 const ListContainer = ({ id }: { id: string }) => {
     const locale = useLocale();
@@ -54,7 +55,14 @@ const ListContainer = ({ id }: { id: string }) => {
     const [searchParams] = useSearchParams();
     // A search result or deep link that names a task in this list. Highlighted and
     // scrolled to the same way the All and Today screens do it.
-    const focusedTaskId = searchParams.get(TODO_FOCUS_TASK_QUERY_PARAM);
+    const focusTaskParam = searchParams.get(TODO_FOCUS_TASK_QUERY_PARAM);
+    const focusInstanceParam = searchParams.get(TODO_FOCUS_INSTANCE_QUERY_PARAM);
+    // The exact occurrence to highlight; a series never lights up more than one row.
+    const focusedTaskId = useMemo(
+        () => resolveFocusedRowId(listTodos.map((todo) => todo.id), focusTaskParam, focusInstanceParam),
+        [focusInstanceParam, focusTaskParam, listTodos],
+    );
+    useFocusParamHandoff(focusTaskParam);
     const [searchQuery, setSearchQuery] = useState("");
     const [editListOpen, setEditListOpen] = useState(false);
     const [membersOpen, setMembersOpen] = useState(false);
@@ -120,14 +128,16 @@ const ListContainer = ({ id }: { id: string }) => {
     const barSlots = useNativePageBarSlots();
 
     // A focused task inside the collapsed Earlier bucket must not stay hidden behind
-    // its header. Immediate, like Today's own deep-link expand.
-    useEffect(() => {
-        if (!focusedTaskId) return;
-        const earlier = timelineSections.find((section) => section.kind === "earlier");
-        if (earlier?.todos.some((todo) => isFocusedTodoRow(focusedTaskId, todo.id))) {
-            setEarlierExpandedImmediately(true);
-        }
-    }, [focusedTaskId, setEarlierExpandedImmediately, timelineSections]);
+    // its header. Immediate, like Today's own deep-link expand, and once per focus.
+    const earlierRowIds = useMemo(
+        () => timelineSections.find((section) => section.kind === "earlier")?.todos.map((todo) => todo.id) ?? [],
+        [timelineSections],
+    );
+    useExpandEarlierForFocus({
+        focusedRowId: focusedTaskId,
+        earlierRowIds,
+        setExpandedImmediately: setEarlierExpandedImmediately,
+    });
 
     const listName = listMetaData[id]?.name?.trim() || "";
     const listColor = listMetaData[id]?.color;

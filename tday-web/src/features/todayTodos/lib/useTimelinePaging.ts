@@ -1,4 +1,3 @@
-import { isFocusedTodoRow } from "@/lib/todo/todo-id";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { TimelineSection as BuiltTimelineSection } from "@/lib/timeline/buildTimelineSections";
 import type { TimelineItem, TimelineSection } from "../component/AllTasksTimelineContainer";
@@ -78,7 +77,7 @@ export function useTimelinePaging({
   const focusedTaskIndex = useMemo(
     () =>
       focusedTaskId
-        ? scopeFilteredItems.findIndex((item) => isFocusedTodoRow(focusedTaskId, item.todo.id))
+        ? scopeFilteredItems.findIndex((item) => item.todo.id === focusedTaskId)
         : -1,
     [focusedTaskId, scopeFilteredItems],
   );

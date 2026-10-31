@@ -3,7 +3,6 @@ import {
   buildFloaterSearchResultHref,
   buildScheduledSearchResultHref,
 } from "@/lib/todo/searchResultHref";
-import { isFocusedTodoRow } from "@/lib/todo/todo-id";
 
 const NOW = new Date("2026-04-10T15:00:00.000Z");
 const TZ = "UTC";
@@ -20,7 +19,7 @@ describe("buildScheduledSearchResultHref", () => {
       { timeZone: TZ, now: NOW },
     );
 
-    expect(href).toBe("/app/list/list-7?focusTask=task-1");
+    expect(href).toBe("/app/list/list-7?focusTask=task-1&focusInstance=1775833200000");
   });
 
   it("encodes the list id in the path", () => {
@@ -56,7 +55,7 @@ describe("buildScheduledSearchResultHref", () => {
       { timeZone: TZ, now: NOW },
     );
 
-    expect(href).toBe("/app/scheduled?focusTask=task-4&focusDate=2026-04-20");
+    expect(href).toBe("/app/scheduled?focusTask=task-4&focusDate=2026-04-20&focusInstance=123");
   });
 
   it("opens an unlisted completed task on All with its day", () => {
@@ -90,18 +89,5 @@ describe("buildFloaterSearchResultHref", () => {
     const href = buildFloaterSearchResultHref({ id: "float-3", listID: null });
 
     expect(href).toBe("/app/floater?focusTask=float-3");
-  });
-});
-
-describe("isFocusedTodoRow", () => {
-  it("matches a composite row id against the bare focus id", () => {
-    expect(isFocusedTodoRow("task-1", "task-1:1775833200000")).toBe(true);
-    expect(isFocusedTodoRow("task-1", "task-1")).toBe(true);
-  });
-
-  it("does not match other rows or a missing focus", () => {
-    expect(isFocusedTodoRow("task-1", "task-2:1")).toBe(false);
-    expect(isFocusedTodoRow(null, "task-1")).toBe(false);
-    expect(isFocusedTodoRow("", "task-1")).toBe(false);
   });
 });

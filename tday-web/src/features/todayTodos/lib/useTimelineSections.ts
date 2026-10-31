@@ -1,4 +1,3 @@
-import { isFocusedTodoRow } from "@/lib/todo/todo-id";
 import { useEffect, useMemo } from "react";
 import {
   buildTimelineSections,
@@ -6,6 +5,7 @@ import {
 } from "@/lib/timeline/buildTimelineSections";
 import { getTodoDateSectionId } from "@/lib/todoToastNavigation";
 import { scrollIntoView } from "@/lib/scroll";
+import { useExpandEarlierForFocus } from "@/lib/todo/focusHandoff";
 import type { TimelineItem, TimelineScope } from "../component/AllTasksTimelineContainer";
 
 /**
@@ -56,14 +56,19 @@ export function useTimelineSections({
     });
   }, [appDict, dragActive, locale, scope, timeline, timelineItems, timeZone]);
 
-  // Expand Earlier when the focused task lives in the past (timeline scopes).
-  useEffect(() => {
-    if (!timeline || !focusedTaskId) return;
-    const earlier = timelineSections.find((section) => section.kind === "earlier");
-    if (earlier?.todos.some((todo) => isFocusedTodoRow(focusedTaskId, todo.id))) {
-      setEarlierExpandedImmediately(true);
-    }
-  }, [focusedTaskId, setEarlierExpandedImmediately, timeline, timelineSections]);
+  // Expand Earlier when the focused task lives in the past (timeline scopes), once per focus.
+  const earlierRowIds = useMemo(
+    () =>
+      timeline
+        ? (timelineSections.find((section) => section.kind === "earlier")?.todos.map((todo) => todo.id) ?? [])
+        : [],
+    [timeline, timelineSections],
+  );
+  useExpandEarlierForFocus({
+    focusedRowId: timeline ? focusedTaskId : null,
+    earlierRowIds,
+    setExpandedImmediately: setEarlierExpandedImmediately,
+  });
 
   // Scroll a focused date into view within the timeline (the bucket may be an
   // aggregate Earlier / Rest / month section).
