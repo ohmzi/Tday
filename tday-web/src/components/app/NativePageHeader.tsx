@@ -1,7 +1,8 @@
 import type { ElementType, ReactNode, RefObject } from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { ChevronLeft } from "lucide-react";
-import { useRouter } from "@/lib/navigation";
+import { usePathname, useRouter } from "@/lib/navigation";
+import { announceListScreenExit } from "@/hooks/useListScreenHandoverHaptic";
 import { rootFeedHeaderButtonClass } from "./RootFeedHeroHeader";
 import { nativeAppScrollAttribute } from "./nativeAppLayout";
 import { clamp01, smootherstep } from "./nativeHeaderEasing";
@@ -246,8 +247,13 @@ type Props = {
  */
 export function NativePageBackButton({ fallbackHref = "/app/tday" }: { fallbackHref?: string }) {
   const router = useRouter();
+  const pathname = usePathname();
 
   const goBack = () => {
+    // Leaving a list screen buzzes here, inside the tap, the way the other back
+    // and primary-action haptics do. Whichever way the exit below resolves —
+    // history pop or fallback push — it is still an exit, so this comes first.
+    announceListScreenExit(pathname);
     // React Router stamps an index on each history entry, back-filling 0 on
     // every fresh document. At 0 this page is where the document started — a
     // deep link, a share target, an external entry — and popping would leave
