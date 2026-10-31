@@ -1,13 +1,10 @@
 // @vitest-environment jsdom
 
 /**
- * The "T'Day stopped responding" notice must only fire for a thread that was actually blocked while
- * the page was on screen. A backgrounded tab's throttled timers look identical to a stall from the
- * inside, so the watchdog must stay quiet for them, and still report a real stall in the foreground.
- *
- * The clocks are driven by hand: `performance.now` and `Date.now` are stubbed, and only the interval
- * itself runs on fake timers. A "block" advances both clocks before one tick fires, which is what a
- * real stall looks like to the hook.
+ * The "T'Day stopped responding" notice is driven by the browser's `longtask` entries. A long task
+ * is only evidence of a stall when the page was on screen and focused, and it started after the
+ * last interruption. Timers are not used: a background tab or a sleeping machine looks like a stall
+ * to a timer, and a missed notice is preferred over a false one.
  */
 
 import { renderHook } from "@testing-library/react";
@@ -20,44 +17,53 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
+type Callback = (list: { getEntries: () => Array<{ startTime: number; duration: number }> }) => void;
+
+let observers: FakeObserver[] = [];
 let perfNow = 0;
 let wallNow = 0;
 let hidden = false;
+let focused = true;
 
-function setHidden(next: boolean) {
-  hidden = next;
+class FakeObserver {
+  static supportedEntryTypes: string[] = ["longtask"];
+  readonly observe = vi.fn();
+  readonly disconnect = vi.fn();
+  constructor(readonly callback: Callback) {
+    observers.push(this);
+  }
+  deliver(entries: Array<{ startTime: number; duration: number }>) {
+    this.callback({ getEntries: () => entries });
+  }
 }
 
 function setVisibility(next: boolean) {
-  setHidden(!next);
+  hidden = !next;
   document.dispatchEvent(new Event("visibilitychange"));
 }
 
-/** A stall of `ms`: both clocks move, and no tick fires until the caller advances the interval. */
-function block(ms: number) {
-  perfNow += ms;
-  wallNow += ms;
+function longTask(startTime: number, duration: number) {
+  return { startTime, duration };
 }
 
-/** A background throttle: time passes for the clocks, and the timer fires late. */
-function elapse(ms: number) {
-  perfNow += ms;
-  wallNow += ms;
-}
-
-function tick() {
-  vi.advanceTimersByTime(1000);
+function latestObserver(): FakeObserver {
+  const observer = observers.at(-1);
+  if (!observer) throw new Error("no PerformanceObserver created");
+  return observer;
 }
 
 describe("useUnresponsiveNotice", () => {
   beforeEach(() => {
-    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    observers = [];
     perfNow = 0;
     wallNow = 0;
     hidden = false;
+    focused = true;
+    FakeObserver.supportedEntryTypes = ["longtask"];
+    vi.stubGlobal("PerformanceObserver", FakeObserver);
     vi.spyOn(performance, "now").mockImplementation(() => perfNow);
     vi.spyOn(Date, "now").mockImplementation(() => wallNow);
-    vi.spyOn(document, "hasFocus").mockReturnValue(true);
+    vi.spyOn(document, "hasFocus").mockImplementation(() => focused);
     Object.defineProperty(document, "hidden", { configurable: true, get: () => hidden });
     Object.defineProperty(document, "visibilityState", {
       configurable: true,
@@ -67,17 +73,21 @@ describe("useUnresponsiveNotice", () => {
   });
 
   afterEach(() => {
-    vi.useRealTimers();
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
     delete (document as unknown as Record<string, unknown>).hidden;
     delete (document as unknown as Record<string, unknown>).visibilityState;
   });
 
-  it("reports a real stall while the page is visible and focused", () => {
+  it("observes longtask entries that are not buffered", () => {
     renderHook(() => useUnresponsiveNotice());
-    tick();
-    block(5000);
-    tick();
+    expect(latestObserver().observe).toHaveBeenCalledWith({ type: "longtask", buffered: false });
+  });
+
+  it("shows the notice for a long task while the page is visible and focused", () => {
+    renderHook(() => useUnresponsiveNotice());
+    perfNow = 1000;
+    latestObserver().deliver([longTask(1000, 5000)]);
 
     expect(toast).toHaveBeenCalledTimes(1);
     expect(vi.mocked(toast).mock.calls[0]?.[0]).toBe("unresponsiveTitle");
@@ -87,77 +97,68 @@ describe("useUnresponsiveNotice", () => {
     });
   });
 
-  it("does not report a background gap when the tab returns with its event", () => {
+  it("ignores a long task that started before an interruption", () => {
     renderHook(() => useUnresponsiveNotice());
-    tick();
-
-    setVisibility(false);
-    elapse(60_000);
-    tick();
-    elapse(60_000);
-    tick();
-
-    setVisibility(true);
-    tick();
-
-    expect(toast).not.toHaveBeenCalled();
-  });
-
-  it("does not report a background gap when the first visible tick lands before the event", () => {
-    renderHook(() => useUnresponsiveNotice());
-    tick();
-
-    setVisibility(false);
-    elapse(60_000);
-    tick();
-
-    // The browser flips visibility, and a throttled tick fires before visibilitychange is dispatched.
-    setHidden(false);
-    elapse(60_000);
-    tick();
-
-    expect(toast).not.toHaveBeenCalled();
-  });
-
-  it("does not report a gap that spans a window focus change", () => {
-    renderHook(() => useUnresponsiveNotice());
-    tick();
-
+    perfNow = 1000;
     window.dispatchEvent(new Event("blur"));
-    elapse(30_000);
-    tick();
-    window.dispatchEvent(new Event("focus"));
-    elapse(30_000);
-    tick();
+    latestObserver().deliver([longTask(500, 5000)]);
 
     expect(toast).not.toHaveBeenCalled();
   });
 
-  it("does not report a sleep, where the wall clock jumps without the monotonic clock", () => {
+  it("shows a long task that started after an interruption", () => {
     renderHook(() => useUnresponsiveNotice());
-    tick();
-
-    wallNow += 60_000;
-    perfNow += 3000;
-    tick();
-
-    expect(toast).not.toHaveBeenCalled();
-  });
-
-  it("keeps reporting real stalls after a background period", () => {
-    renderHook(() => useUnresponsiveNotice());
-    tick();
-
-    setVisibility(false);
-    elapse(60_000);
-    tick();
-    setVisibility(true);
-    tick();
-    tick();
-
-    block(5000);
-    tick();
+    perfNow = 1000;
+    window.dispatchEvent(new Event("blur"));
+    latestObserver().deliver([longTask(1500, 5000)]);
 
     expect(toast).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores a long task delivered while the page is hidden", () => {
+    renderHook(() => useUnresponsiveNotice());
+    setVisibility(false);
+    latestObserver().deliver([longTask(1000, 5000)]);
+
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it("ignores a long task delivered while the window is not focused", () => {
+    renderHook(() => useUnresponsiveNotice());
+    focused = false;
+    latestObserver().deliver([longTask(1000, 5000)]);
+
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it("ignores a task shorter than the threshold", () => {
+    renderHook(() => useUnresponsiveNotice());
+    latestObserver().deliver([longTask(1000, 2000)]);
+
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it("never shows anything where longtask is unsupported", () => {
+    FakeObserver.supportedEntryTypes = ["navigation", "resource"];
+    renderHook(() => useUnresponsiveNotice());
+
+    expect(observers).toHaveLength(0);
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it("shows no notice for a 60 s gap on both clocks with no event", () => {
+    renderHook(() => useUnresponsiveNotice());
+    perfNow += 60_000;
+    wallNow += 60_000;
+
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it("disconnects the observer on unmount", () => {
+    const { unmount } = renderHook(() => useUnresponsiveNotice());
+    const observer = latestObserver();
+    unmount();
+
+    expect(observer.disconnect).toHaveBeenCalledTimes(1);
   });
 });

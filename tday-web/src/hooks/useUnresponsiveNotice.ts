@@ -8,9 +8,6 @@ import { toast } from "sonner";
  */
 const BLOCKED_NOTICE_MS = 2500;
 
-/** How often the thread checks in. A tick that arrives late *is* the block being measured. */
-const TICK_MS = 1000;
-
 /** Sonner's identity for the notice, so a second stall replaces the first notice instead of stacking. */
 const UNRESPONSIVE_NOTICE_ID = "tday-unresponsive";
 
@@ -22,68 +19,55 @@ const UNRESPONSIVE_NOTICE_ID = "tday-unresponsive";
  * with the reload beside it. A block that never ends is the browser's own "page unresponsive" prompt
  * to handle, and a render failure is the error boundary's, which has its own reload.
  *
- * A late tick is only evidence of a blocked thread when the page was there to be blocked. A
- * backgrounded tab, a minimised or occluded window, a machine that slept — each stops or throttles
- * the timers for a while and looks identical to a stall from the inside. Two rules keep those out:
+ * The signal is the browser's own `longtask` entry: a task that ran on the main thread for longer
+ * than the threshold. Timer-gap detection was tried and rejected. A background tab, a throttled
+ * timer, or a machine that slept all stop the timers for a while, and from inside the page they
+ * look exactly like a stall. A long task is only recorded for work that actually ran.
  *
- * 1. A tick only counts as "watching" when the page is visible and focused. Ticks taken while it is
- *    not are recorded but never reported.
- * 2. Any event that can open a gap on purpose (the tab hiding or returning, focus moving, a
- *    freeze/resume, a page coming back from the bfcache) marks the watch as interrupted. The first
- *    watching tick after that is skipped, whatever state the page is in when it fires. Background
- *    timers fire late, so that first tick can land before `visibilitychange` is dispatched; the
- *    interruption flag does not depend on the event arriving first, and it is only cleared by a
- *    tick that was itself watching.
+ * A long task is reported only when all of these hold:
+ * - the page was visible and focused when the entry was delivered;
+ * - the task started after the last interruption (hide, blur, freeze, pagehide, and similar),
+ *   so a task that began before the user left the page does not count.
  *
- * A jump in the wall clock that the monotonic clock did not share (the machine slept, or the clock
- * was changed) is also not a stall.
+ * Where `longtask` is not supported (Safari and Firefox), no notice is shown at all. This is
+ * deliberate: a missed notice is better than a false one. There is no timer-gap fallback.
  */
 export function useUnresponsiveNotice(): void {
   const { t } = useTranslation("app");
 
   useEffect(() => {
-    let lastTick = performance.now();
-    let lastWallTick = Date.now();
-    let interrupted = false;
+    if (typeof PerformanceObserver === "undefined") return;
+    if (!PerformanceObserver.supportedEntryTypes?.includes("longtask")) return;
 
-    const timer = window.setInterval(() => {
-      const now = performance.now();
-      const wall = Date.now();
-      const gap = now - lastTick;
-      const wallGap = wall - lastWallTick;
-      lastTick = now;
-      lastWallTick = wall;
-
-      // Both halves of "the user is actually looking at this page". A page that
-      // is not visible was throttled by the browser; a page that is visible but
-      // unfocused is behind another window and its timers are not a promise
-      // about this app's health either. Neither tick may clear the interruption,
-      // so the first watching tick after it is still skipped.
-      if (document.hidden || !document.hasFocus()) return;
-      const wasInterrupted = interrupted;
-      interrupted = false;
-      if (wasInterrupted) return;
-
-      if (gap < BLOCKED_NOTICE_MS) return;
-      // A block advances both clocks together. A jump in only the wall clock is the machine sleeping
-      // or the clock changing, not the thread being stuck.
-      if (Math.abs(wallGap - gap) >= BLOCKED_NOTICE_MS) return;
-
-      toast(t("unresponsiveTitle"), {
-        // One notice, however many times the thread stalls: the same id replaces it rather than
-        // stacking a second copy behind the first.
-        id: UNRESPONSIVE_NOTICE_ID,
-        description: t("unresponsiveBody", { seconds: Math.max(1, Math.round(gap / 1000)) }),
-        action: { label: t("unresponsiveReload"), onClick: () => window.location.reload() },
-        duration: Number.POSITIVE_INFINITY,
-      });
-    }, TICK_MS);
-
-    // Any of these can sit inside a gap that is not a stall, so each one
-    // interrupts the watch. The next watching tick is then skipped.
+    // performance.now() of the last hide, blur, freeze, or similar event. A task that started
+    // before it belongs to a stretch the user was not looking at.
+    let lastInterruptAt = performance.now();
     const interrupt = () => {
-      interrupted = true;
+      lastInterruptAt = performance.now();
     };
+
+    const observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (entry.duration < BLOCKED_NOTICE_MS) continue;
+        // Both halves of "the user is actually looking at this page". A hidden or
+        // unfocused page can still run a long task, but it is not one the user saw.
+        if (document.hidden || !document.hasFocus()) continue;
+        if (entry.startTime <= lastInterruptAt) continue;
+
+        toast(t("unresponsiveTitle"), {
+          // One notice, however many times the thread stalls: the same id replaces it rather than
+          // stacking a second copy behind the first.
+          id: UNRESPONSIVE_NOTICE_ID,
+          description: t("unresponsiveBody", {
+            seconds: Math.max(1, Math.round(entry.duration / 1000)),
+          }),
+          action: { label: t("unresponsiveReload"), onClick: () => window.location.reload() },
+          duration: Number.POSITIVE_INFINITY,
+        });
+      }
+    });
+    observer.observe({ type: "longtask", buffered: false });
+
     document.addEventListener("visibilitychange", interrupt);
     document.addEventListener("freeze", interrupt);
     document.addEventListener("resume", interrupt);
@@ -92,7 +76,7 @@ export function useUnresponsiveNotice(): void {
     window.addEventListener("pageshow", interrupt);
     window.addEventListener("pagehide", interrupt);
     return () => {
-      window.clearInterval(timer);
+      observer.disconnect();
       document.removeEventListener("visibilitychange", interrupt);
       document.removeEventListener("freeze", interrupt);
       document.removeEventListener("resume", interrupt);
