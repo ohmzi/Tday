@@ -155,7 +155,10 @@ private fun Route.todoPatchRoute(todoService: TodoService) {
                             ?: raise(AppError.BadRequest(ERR_INVALID_DUE))
                         fields["due"] = parsed
                     }
-                } else if (!body.due.isNullOrBlank()) {
+                } else if (body.dateChanged == null && !body.due.isNullOrBlank()) {
+                    // dateChanged=false means the client's date is unchanged. A whole-series
+                    // edit from an occurrence sends that occurrence's due, which must not
+                    // move the series anchor, so the due is ignored in that case.
                     val parsed = parseDueMinute(body.due)
                         ?: raise(AppError.BadRequest(ERR_INVALID_DUE))
                     fields["due"] = parsed

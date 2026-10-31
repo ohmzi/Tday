@@ -405,6 +405,7 @@
       "title": "Editar todas as recorrências da tarefa?",
       "subtitle": "Esta é uma tarefa recorrente, fazer a mesma edição para todas as outras recorrências?",
       "editInstance": "Editar apenas esta ocorrência",
+      "repeatSeriesNote": "As alterações de repetição aplicam-se a todas as ocorrências da série.",
       "editAll": "Editar todas as recorrências"
     }
   },

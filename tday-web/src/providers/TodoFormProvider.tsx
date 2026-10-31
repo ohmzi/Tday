@@ -33,6 +33,10 @@ interface TodoFormContextType {
   setDateRange: React.Dispatch<SetStateAction<FormDateRange>>;
   rruleOptions: Partial<Options> | null;
   setRruleOptions: React.Dispatch<SetStateAction<Partial<Options> | null>>;
+  // True once the user has picked a repeat from the Repeat sheet (including "No repeat").
+  // While true, a recurrence phrase still sitting in the title must not re-apply a repeat.
+  repeatTouchedByUser: boolean;
+  setRepeatTouchedByUser: React.Dispatch<SetStateAction<boolean>>;
   timeZone: string;
   derivedRepeatType:
     | "Daily"
@@ -92,6 +96,7 @@ const TodoFormProvider = ({ children, todoItem, overrideFields }: TodoFormProvid
   const [rruleOptions, setRruleOptions] = useState(
     todoItem?.rrule ? RRule.parseString(todoItem.rrule) : null,
   );
+  const [repeatTouchedByUser, setRepeatTouchedByUser] = useState(false);
   const dateRangeChecksum = todoItem
     ? todoItem.due.toISOString()
     : dateRange.to.toISOString();
@@ -121,6 +126,8 @@ const TodoFormProvider = ({ children, todoItem, overrideFields }: TodoFormProvid
     setDateRange,
     rruleOptions,
     setRruleOptions,
+    repeatTouchedByUser,
+    setRepeatTouchedByUser,
     timeZone,
     derivedRepeatType,
     dateRangeChecksum,

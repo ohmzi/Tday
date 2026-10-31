@@ -8,6 +8,7 @@ import { useEditCalendarTodo } from "@/features/calendar/query/update-calendar-t
 import ConfirmEditAllDrawer from "@/features/calendar/component/ConfirmationModals/ConfirmEditAllDrawer";
 import ConfirmCancelEditDrawer from "@/features/calendar/component/ConfirmationModals/ConfirmCancelEditDrawer";
 import type { CalendarTaskFormState } from "@/features/calendar/hooks/useCalendarTaskFormState";
+import { normalizeRrule } from "@/lib/normalize-rrule";
 // The body is the lazy half of this screen; the sheet around it is not. See
 // LazyCalendarTaskFormBody for why the split moved in here.
 import CalendarTaskFormBody from "../LazyCalendarTaskFormBody";
@@ -48,21 +49,25 @@ export default function EditCalendarDrawer({
     setDateRange,
     rruleOptions,
     setRruleOptions,
+    repeatTouchedByUser,
+    setRepeatTouchedByUser,
     listID,
     setListID,
     derivedRepeatType,
   } = form;
 
+  const nextRrule = rruleOptions ? new RRule(rruleOptions).toString() : null;
+  const repeatChanged = nextRrule !== normalizeRrule(todo.rrule);
+
   const hasUnsavedChanges = useMemo(() => {
-    const rruleString = rruleOptions ? RRule.optionsToString(rruleOptions) : null;
     return (
       title !== todo.title ||
       description !== (todo.description ?? "") ||
       priority !== todo.priority ||
       dateRange.to?.getTime() !== todo.due?.getTime() ||
-      rruleString !== (todo.rrule ?? null)
+      repeatChanged
     );
-  }, [title, description, priority, dateRange, rruleOptions, todo]);
+  }, [title, description, priority, dateRange, repeatChanged, todo]);
 
   const { editCalendarTodo, editTodoStatus } = useEditCalendarTodo();
 
@@ -74,12 +79,16 @@ export default function EditCalendarDrawer({
 
   const handleSubmit = () => {
     if (title.trim().length <= 0) return;
+    // A recurring task always asks this-or-all. A repeat change is offered as "all" only:
+    // the dialog disables "this occurrence", since one occurrence cannot carry a new rule.
     if (todo.rrule) {
       setEditAllDialogOpen(true);
     } else {
       editCalendarTodo({
         ...todo,
-        rrule: rruleOptions ? new RRule(rruleOptions).toString() : null,
+        dateRangeChecksum,
+        rruleChecksum,
+        rrule: nextRrule,
         title,
         description,
         priority,
@@ -115,6 +124,7 @@ export default function EditCalendarDrawer({
           listID,
         }}
         rruleChecksum={rruleChecksum!}
+        repeatChanged={repeatChanged}
         dateRangeChecksum={dateRangeChecksum}
         setDisplayForm={setDisplayForm}
         editAllDialogOpen={editAllDialogOpen}
@@ -156,6 +166,9 @@ export default function EditCalendarDrawer({
               setDateRange={setDateRange}
               listID={listID}
               setListID={setListID}
+              rruleOptions={rruleOptions}
+              repeatTouchedByUser={repeatTouchedByUser}
+              setRepeatTouchedByUser={setRepeatTouchedByUser}
               setRruleOptions={setRruleOptions}
               derivedRepeatType={derivedRepeatType}
               onSubmit={handleSubmit}

@@ -405,6 +405,7 @@
       "title": "¿Editar todas las recurrencias?",
       "subtitle": "Esta es una tarea recurrente, ¿aplicar el mismo cambio a todas las demás recurrencias?",
       "editInstance": "Editar solo esta instancia",
+      "repeatSeriesNote": "Los cambios de repetición se aplican a todas las ocurrencias de la serie.",
       "editAll": "Editar todas las recurrencias"
     }
   },
