@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import { patchFloaterFields } from "@/features/floater/query/update-floater";
+import { canonicalTodoId } from "@/lib/todo/todo-id";
 import type { FloaterItemType, TodoItemType } from "@/types";
 
 export type ConvertTodoToFloaterInput = {
@@ -47,7 +48,8 @@ export const useConvertTodoToFloater = () => {
       listID,
     }: ConvertTodoToFloaterInput) => {
       const response = (await api.POST({
-        url: `/api/todo/${todo.id}/demote`,
+        // The row may be a composite `${id}:${ms}` list/calendar key; the route takes the bare id.
+        url: `/api/todo/${canonicalTodoId(todo.id)}/demote`,
         headers: { "Content-Type": "application/json" },
         body: undefined,
       })) as DemoteTodoResponse | null;

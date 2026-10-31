@@ -351,8 +351,9 @@ struct WidgetConfigurableListEntry: Codable, Equatable {
     /// never a resolved asset name or hex. A key is resolved by the reader, so the widget's
     /// accent follows a palette or glyph-table revision the next time it renders; a value baked
     /// in here would be frozen at write time, and nothing re-writes this file until the app's
-    /// cache changes. The resolvers are `tdayLucideListAsset` and `tdayListAccentColorOrNil`
-    /// (`Tday/UI/Theme/TdayListAccent.swift`), which the widget target compiles for this.
+    /// cache changes. The resolvers are `tdayLucideListAsset` and, for the widget's day glyph,
+    /// `tdayWidgetDayListAccentColorOrNil` (`Tday/UI/Theme/TdayListAccent.swift`), which the
+    /// widget target compiles for this.
     ///
     /// Both OPTIONAL, and that is load-bearing twice over. A catalog written before these
     /// fields existed still decodes — the synthesized decoder reads an absent optional as nil

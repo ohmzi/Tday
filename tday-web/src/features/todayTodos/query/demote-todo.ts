@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
+import { canonicalTodoId } from "@/lib/todo/todo-id";
 import type { TodoItemType } from "@/types";
 
 // "Let it float": demotes a stale todo into an Anytime floater
@@ -12,7 +13,9 @@ export const useDemoteTodo = () => {
   const { mutate: demoteMutateFn, isPending: demotePending } = useMutation({
     mutationFn: async (todo: TodoItemType) => {
       await api.POST({
-        url: `/api/todo/${todo.id}/demote`,
+        // Rows from the list, today and calendar screens carry a composite `${id}:${ms}`
+        // key; the route takes the bare todo id.
+        url: `/api/todo/${canonicalTodoId(todo.id)}/demote`,
         headers: { "Content-Type": "application/json" },
         body: undefined,
       });

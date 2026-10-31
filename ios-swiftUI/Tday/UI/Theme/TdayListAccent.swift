@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 /// A list's own accent — its Lucide glyph and its colour — resolved from the opaque KEYS the
@@ -170,4 +171,51 @@ private func tdaySRGB(_ rgb: UInt32) -> Color {
         blue: Double(rgb & 0xFF) / 255,
         opacity: 1
     )
+}
+
+// MARK: - Widget day deepening
+
+/// Day counterpart to the Android widget's night lift. A list key brighter than the ceiling is
+/// deepened toward black, only as far as it takes to clear it, so a light key (YELLOW, LIME, GOLD,
+/// PINK, CORAL) carries a glyph that reads on a light host surface. Blending toward black scales
+/// every channel by one factor, so the hue is kept. Dark keys (RED, BLUE, PURPLE, SLATE) are
+/// returned unchanged.
+///
+/// The constants are the Android `WidgetColorMath` ones, numerically: the ceiling sits just above
+/// the brighter hand-tuned day accent, `tday_widget_today_accent` #6EA8E1 (luminance ≈ 0.367).
+/// Keep the two platforms in step if either changes: Android `WidgetColorMath.DAY_LUMINANCE_CEILING`
+/// and `WidgetListAccent.LIGHT_WASH_ALPHA` (0.20) must match these constants and the widget's pill wash.
+private let tdayWidgetDayLuminanceCeiling = 0.38
+private let tdayWidgetDayDeepenStep = 0.02
+private let tdayWidgetDayDeepenLimit = 0.60
+
+/// WCAG relative luminance of an sRGB value, matching `ColorUtils.calculateLuminance` on Android.
+private func tdayRelativeLuminance(_ rgb: UInt32) -> Double {
+    func linear(_ channel: UInt32) -> Double {
+        let s = Double(channel) / 255
+        return s <= 0.03928 ? s / 12.92 : pow((s + 0.055) / 1.055, 2.4)
+    }
+    return 0.2126 * linear((rgb >> 16) & 0xFF)
+        + 0.7152 * linear((rgb >> 8) & 0xFF)
+        + 0.0722 * linear(rgb & 0xFF)
+}
+
+/// The list's colour as a widget's day glyph wears it: the palette value, deepened when too bright.
+/// Nil for the same reasons as `tdayListAccentColorOrNil`.
+func tdayWidgetDayListAccentColorOrNil(colorKey: String?) -> Color? {
+    guard let key = tdayNormalizedListAccentColorKeyOrNil(colorKey),
+          let palette = tdayListAccentRGBByKey[key] else {
+        return nil
+    }
+    var amount = 0.0
+    var deepened = palette
+    while amount < tdayWidgetDayDeepenLimit, tdayRelativeLuminance(deepened) > tdayWidgetDayLuminanceCeiling {
+        amount += tdayWidgetDayDeepenStep
+        let factor = 1 - amount
+        func scaled(_ shift: UInt32) -> UInt32 {
+            UInt32((Double((palette >> shift) & 0xFF) * factor).rounded())
+        }
+        deepened = (scaled(16) << 16) | (scaled(8) << 8) | scaled(0)
+    }
+    return tdaySRGB(deepened)
 }
