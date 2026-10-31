@@ -23,7 +23,7 @@ export type FloaterSummaryTask = {
   updatedAtEpochMs: number | null;
 };
 
-/** How big the pile is, as a shape rather than a number — the count is already on screen. */
+/** How big the pile is. The band picks the wording; the count is stated alongside it. */
 export type FloaterPileBand = "one" | "few" | "some" | "many";
 
 /** The single extra thing worth saying about the pile. At most one is ever chosen. */
@@ -38,6 +38,12 @@ export type FloaterNote =
   | "priorityMany"
   | "mediumOne"
   | "mediumMany"
+  /** Exactly one floater has gone quiet for a month or more: named, as the only candidate. */
+  | "fadingOne"
+  /** Several floaters have gone quiet for a month or more; none is singled out. */
+  | "fadingMany"
+  /** The one-row pile is quiet for a month or more: unnamed, the row is on screen. */
+  | "fadingSole"
   /**
    * Nothing else worth saying, so point at the row the list itself puts first. The only note
    * chosen for what is ABSENT; falls to "none" for a single-row pile.
@@ -46,6 +52,8 @@ export type FloaterNote =
 
 export type FloaterSummaryPlan = {
   band: FloaterPileBand;
+  /** How many open floaters the pile holds: the size of the input, not a claim. */
+  count: number;
   note: FloaterNote;
   /** The one task the note names, raw and uncompacted, or null when the note names none. */
   noteTitle: string | null;
@@ -80,10 +88,15 @@ export function floaterPileBand(count: number): FloaterPileBand {
  * [planFloaterSummary] so the plan reads as "count, choose, name" and the precedence chain stays
  * one readable ladder.
  */
-function noteFor(
-  counts: { total: number; pinned: number; resting: number; high: number; medium: number },
-): FloaterNote {
-  const { total, pinned, resting, high, medium } = counts;
+function noteFor(counts: {
+  total: number;
+  pinned: number;
+  resting: number;
+  high: number;
+  medium: number;
+  fading: number;
+}): FloaterNote {
+  const { total, pinned, resting, high, medium, fading } = counts;
   // A wholly dormant pile outranks a pin: when nothing has been touched in months, "you pinned
   // one of these" is not the story. Below that the pin wins — it is the one mark the person made.
   if (resting === total) return "restingAll";
@@ -97,6 +110,9 @@ function noteFor(
   // it never outranks High — a pile with both gets the High note only.
   if (medium === 1) return "mediumOne";
   if (medium > 1) return "mediumMany";
+  // Stale but not dormant: a month untouched is a nudge, below priority.
+  if (fading === 1) return "fadingOne";
+  if (fading > 1) return "fadingMany";
   return "none";
 }
 
@@ -118,10 +134,10 @@ export function planFloaterSummary(
     return (b.updatedAtEpochMs ?? 0) - (a.updatedAtEpochMs ?? 0);
   });
 
+  const tierOf = (task: FloaterSummaryTask) => floaterRestingTier(task.updatedAtEpochMs, nowEpochMs);
   const pinned = tasks.filter((task) => task.pinned).length;
-  const resting = tasks.filter(
-    (task) => floaterRestingTier(task.updatedAtEpochMs, nowEpochMs) === "resting",
-  ).length;
+  const resting = tasks.filter((task) => tierOf(task) === "resting").length;
+  const fading = tasks.filter((task) => tierOf(task) === "fading").length;
   const high = tasks.filter((task) => isHighPriorityFloater(task.priority)).length;
   const medium = tasks.filter((task) => isMediumPriorityFloater(task.priority)).length;
 
@@ -131,6 +147,7 @@ export function planFloaterSummary(
     resting,
     high,
     medium,
+    fading,
   });
 
   // Nothing stood out, so point at the row the list itself puts first — the same nudge the
@@ -140,26 +157,32 @@ export function planFloaterSummary(
   const chosen: FloaterNote =
     note === "none" && tasks.length > 1 ? "startWith" : note;
 
+  // Naming the only row on screen is an echo, not a summary. A lone fading row takes its unnamed
+  // sentence instead, so the single-row case is decided before the title is looked up.
+  const single = tasks.length === 1;
+  const effective: FloaterNote = single && chosen === "fadingOne" ? "fadingSole" : chosen;
+
   // The resting notes name nobody: updatedAt is a last-write clock, so "this one has waited
-  // longest" is a claim about creation time that a rename silently falsifies.
+  // longest" is a claim about creation time that a rename silently falsifies. The fading note
+  // names its row only because it is the sole fading row, so no ranking is claimed.
   let noteTitle: string | null = null;
-  if (chosen === "pinnedOne" || chosen === "pinnedMany") {
+  if (effective === "pinnedOne" || effective === "pinnedMany") {
     noteTitle = ranked.find((task) => task.pinned)?.title ?? null;
-  } else if (chosen === "priorityOne" || chosen === "priorityMany") {
+  } else if (effective === "priorityOne" || effective === "priorityMany") {
     noteTitle = ranked.find((task) => isHighPriorityFloater(task.priority))?.title ?? null;
-  } else if (chosen === "mediumOne" || chosen === "mediumMany") {
+  } else if (effective === "mediumOne" || effective === "mediumMany") {
     noteTitle = ranked.find((task) => isMediumPriorityFloater(task.priority))?.title ?? null;
-  } else if (chosen === "startWith") {
+  } else if (effective === "fadingOne") {
+    noteTitle = ranked.find((task) => tierOf(task) === "fading")?.title ?? null;
+  } else if (effective === "startWith") {
     noteTitle = ranked[0]?.title ?? null;
   }
 
-  // Naming the only row on screen is an echo, not a summary. A single-task pile keeps the notes
-  // that COUNT something and drops the ones that point at a task.
-  const single = tasks.length === 1;
   const naming = noteTitle !== null;
   return {
     band: floaterPileBand(tasks.length),
-    note: single && naming ? "none" : chosen,
+    count: tasks.length,
+    note: single && naming ? "none" : effective,
     noteTitle: single && naming ? null : noteTitle,
   };
 }
@@ -182,6 +205,9 @@ const NOTE_KEYS: Record<Exclude<FloaterNote, "none">, string> = {
   priorityMany: "floaterPriorityMany",
   mediumOne: "floaterMediumOne",
   mediumMany: "floaterMediumMany",
+  fadingOne: "floaterFadingOne",
+  fadingMany: "floaterFadingMany",
+  fadingSole: "floaterFadingSole",
 };
 
 export type SummaryTranslate = (key: string, params?: Record<string, unknown>) => string;
@@ -200,7 +226,7 @@ export function compactSummaryTitle(title: string, t: SummaryTranslate): string 
  * twelve-floater summary.
  */
 export function renderFloaterSummary(plan: FloaterSummaryPlan, t: SummaryTranslate): string {
-  const pile = t(PILE_KEYS[plan.band]);
+  const pile = t(PILE_KEYS[plan.band], { count: plan.count });
   if (plan.note === "none") return pile;
   // "Nothing here has been touched in months" is a sentence about a pile; said of the one row
   // on screen it reads as "this screen is empty", the opposite of the line it follows.

@@ -299,6 +299,7 @@ object GuideContentExporter {
         "floaterStartWith", "floaterPinnedOne", "floaterPinnedMany", "floaterPriorityOne",
         "floaterPriorityMany", "floaterMediumOne", "floaterMediumMany",
         "floaterRestingOne", "floaterRestingMany", "floaterRestingAll", "floaterRestingAllOne",
+        "floaterFadingOne", "floaterFadingMany", "floaterFadingSole",
     )
 
     private data class SummaryBundleData(
