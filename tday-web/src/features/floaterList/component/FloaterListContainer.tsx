@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
 import { Pencil, RotateCcw, Search, Users } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { TODO_FOCUS_TASK_QUERY_PARAM } from "@/lib/todoToastNavigation";
+import { useFocusParamHandoff } from "@/lib/todo/focusHandoff";
 import { useToast } from "@/hooks/use-toast";
 import { useResetFloaterList } from "@/features/floaterList/query/reset-floater-list";
 import { useTranslation } from "react-i18next";
@@ -38,6 +41,10 @@ export default function FloaterListContainer({ id }: { id: string }) {
   // replace it between two frames — `useSkeletonCrossfade` owns both halves.
   const { showSkeleton, skeletonClassName } = useSkeletonCrossfade(floaterListLoading);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchParams] = useSearchParams();
+  // A search result or deep link that names a floater in this list.
+  const focusedFloaterId = searchParams.get(TODO_FOCUS_TASK_QUERY_PARAM);
+  useFocusParamHandoff(focusedFloaterId);
   const [editListOpen, setEditListOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
 
@@ -260,6 +267,7 @@ export default function FloaterListContainer({ id }: { id: string }) {
           <FloaterGroup
             className="tday-content-enter"
             floaters={sortedFloaters}
+            highlightedFloaterId={focusedFloaterId}
             readOnly={isViewer}
           />
         </ListScopeProvider>

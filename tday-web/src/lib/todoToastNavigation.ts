@@ -2,6 +2,8 @@ import { TodoItemType } from "@/types";
 
 export const TODO_FOCUS_TASK_QUERY_PARAM = "focusTask";
 export const TODO_FOCUS_DATE_QUERY_PARAM = "focusDate";
+/** Occurrence ms of a recurring task's instance, so only that occurrence is focused. */
+export const TODO_FOCUS_INSTANCE_QUERY_PARAM = "focusInstance";
 export const TODO_FOCUS_MODE_QUERY_PARAM = "focusMode";
 export const TODO_FOCUS_MODE_DELETED = "deleted";
 
