@@ -312,7 +312,10 @@ const TodoForm = ({
           }
           onClick={() => setActive("priority")}
         />
-        {scheduled && (
+        {/* Editing one occurrence cannot change the series' rule (the instance PATCH
+            ignores it), so the row is not offered there rather than taking a pick that
+            would be dropped on save. */}
+        {scheduled && !editInstanceOnly && (
           <>
             <SheetDivider />
             <SheetSelectorRow

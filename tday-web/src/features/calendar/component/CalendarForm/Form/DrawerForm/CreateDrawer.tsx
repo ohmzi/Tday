@@ -126,6 +126,7 @@ export default function CreateCalendarDrawer({
               setDateRange={setDateRange}
               listID={listID}
               setListID={setListID}
+              rruleOptions={rruleOptions}
               setRruleOptions={setRruleOptions}
               derivedRepeatType={derivedRepeatType}
               onSubmit={handleSubmit}

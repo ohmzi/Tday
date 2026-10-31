@@ -41,6 +41,7 @@ export type CalendarTaskFormBodyProps = {
   setDateRange: Dispatch<SetStateAction<DateRange>>;
   listID: string | null;
   setListID: Dispatch<SetStateAction<string | null>>;
+  rruleOptions: Partial<Options> | null;
   setRruleOptions: Dispatch<SetStateAction<Partial<Options> | null>>;
   derivedRepeatType: DerivedRepeatType;
   onSubmit: () => void;
@@ -61,6 +62,7 @@ export default function CalendarTaskFormBody({
   setDateRange,
   listID,
   setListID,
+  rruleOptions,
   setRruleOptions,
   derivedRepeatType,
   onSubmit,
@@ -94,6 +96,7 @@ export default function CalendarTaskFormBody({
             setDateRange={setDateRange}
             setPriority={handlePrioritySelect}
             setRruleOptions={setRruleOptions}
+            rruleOptions={rruleOptions}
             onSubmit={onSubmit}
           />
         }

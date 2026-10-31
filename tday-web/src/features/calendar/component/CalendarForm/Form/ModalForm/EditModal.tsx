@@ -8,6 +8,7 @@ import { useEditCalendarTodo } from "@/features/calendar/query/update-calendar-t
 import { Modal, ModalOverlay, ModalContent } from "@/components/ui/Modal";
 import { SheetHeader } from "@/components/ui/sheet-chrome";
 import type { CalendarTaskFormState } from "@/features/calendar/hooks/useCalendarTaskFormState";
+import { normalizeRrule } from "@/lib/normalize-rrule";
 // The body is the lazy half of this screen; the sheet around it is not. See
 // LazyCalendarTaskFormBody for why the split moved in here.
 import CalendarTaskFormBody from "../LazyCalendarTaskFormBody";
@@ -48,16 +49,18 @@ const CalendarForm = ({ todo, displayForm, setDisplayForm, form }: CalendarFormP
     derivedRepeatType,
   } = form;
 
+  const nextRrule = rruleOptions ? new RRule(rruleOptions).toString() : null;
+  const repeatChanged = nextRrule !== normalizeRrule(todo.rrule);
+
   const hasUnsavedChanges = useMemo(() => {
-    const rruleString = rruleOptions ? RRule.optionsToString(rruleOptions) : null;
     return (
       title !== todo.title ||
       description !== (todo.description ?? "") ||
       priority !== todo.priority ||
       dateRange.to?.getTime() !== todo.due?.getTime() ||
-      rruleString !== (todo.rrule ?? null)
+      repeatChanged
     );
-  }, [title, description, priority, dateRange, rruleOptions, todo]);
+  }, [title, description, priority, dateRange, repeatChanged, todo]);
 
   const { editCalendarTodo, editTodoStatus } = useEditCalendarTodo();
 
@@ -77,12 +80,18 @@ const CalendarForm = ({ todo, displayForm, setDisplayForm, form }: CalendarFormP
 
   const handleSubmit = () => {
     if (title.trim().length <= 0) return;
-    if (todo.rrule) {
+    // A repeat belongs to the whole series: one occurrence cannot carry a different rule.
+    // Changing it therefore skips the this-or-all choice, whose "this occurrence" branch
+    // would silently drop the new rule. The series is patched directly, with the same
+    // checksums the "all" branch uses so the occurrence's date does not move the series.
+    if (todo.rrule && !repeatChanged) {
       setEditAllDialogOpen(true);
     } else {
       editCalendarTodo({
         ...todo,
-        rrule: rruleOptions ? new RRule(rruleOptions).toString() : null,
+        dateRangeChecksum,
+        rruleChecksum,
+        rrule: nextRrule,
         title,
         description,
         priority,
@@ -148,6 +157,7 @@ const CalendarForm = ({ todo, displayForm, setDisplayForm, form }: CalendarFormP
                 setDateRange={setDateRange}
                 listID={listID}
                 setListID={setListID}
+                rruleOptions={rruleOptions}
                 setRruleOptions={setRruleOptions}
                 derivedRepeatType={derivedRepeatType}
                 onSubmit={handleSubmit}

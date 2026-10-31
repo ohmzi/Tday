@@ -127,6 +127,7 @@ const CreateCalendarForm = ({
                 setDateRange={setDateRange}
                 listID={listID}
                 setListID={setListID}
+                rruleOptions={rruleOptions}
                 setRruleOptions={setRruleOptions}
                 derivedRepeatType={derivedRepeatType}
                 onSubmit={handleSubmit}
