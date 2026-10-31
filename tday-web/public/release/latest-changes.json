@@ -1,11 +1,11 @@
 {
-  "version": "0.8.7",
-  "publishedAt": "2026-10-21T15:53:32-04:00",
+  "version": "0.8.8",
+  "publishedAt": "2026-10-31T11:51:04-04:00",
   "notes": [
-    "Fix the sanitizer patterns CodeQL flags in the Sentry guardrail test",
-    "Refresh the Android README screenshots",
-    "Align the Docker build plugin pins with the root build"
+    "Fix floater edit crash on the floater-list cache shape",
+    "Fix header search button closing right after opening",
+    "Scope repeat edits to the series and guard picked repeats"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.7",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.6..v0.8.7"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.8",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.7..v0.8.8"
 }
