@@ -123,6 +123,7 @@ import com.ohmz.tday.compose.core.ui.TaskSwipeSlot
 import com.ohmz.tday.compose.core.ui.TaskSwipeSlotBackHandler
 import com.ohmz.tday.compose.core.ui.TdayDragLift
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
+import com.ohmz.tday.compose.core.ui.TdayIllustration
 import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
@@ -1067,6 +1068,7 @@ fun CalendarScreen( // skipcq: KT-R1006
                                 icon = R.drawable.ic_lucide_search,
                                 accentColor = CalendarAccentPurple,
                                 title = stringResource(R.string.scheduled_task_home_search_no_results),
+                                illustration = TdayIllustration.SEARCH,
                                 description = stringResource(R.string.search_no_results_body),
                                 modifier = Modifier.padding(vertical = TdayDimens.SpacingLg),
                             )
@@ -1075,6 +1077,7 @@ fun CalendarScreen( // skipcq: KT-R1006
                                 icon = R.drawable.ic_lucide_calendar_1,
                                 accentColor = CalendarAccentPurple,
                                 title = stringResource(R.string.calendar_no_pending),
+                                illustration = TdayIllustration.CAL,
                                 description = stringResource(R.string.calendar_no_pending_body),
                                 modifier = Modifier.padding(vertical = TdayDimens.SpacingLg),
                             )

@@ -2246,7 +2246,8 @@ struct TodoListScreen: View {
                     ? L("All done for today")
                     : L("All done for tonight"),
                 description: date.formatted(.dateTime.weekday(.wide).day().month(.wide)),
-                celebrate: celebratesEmptyState
+                celebrate: celebratesEmptyState,
+                illustration: .done
             )
             .transition(emptyStateIllustrationTransition)
         } else {
@@ -2255,7 +2256,8 @@ struct TodoListScreen: View {
                 accentColor: modeAccentColor,
                 title: emptyTimelineTitle(for: viewModel.mode, isListDetail: isListDetailScreen, at: date),
                 description: emptyTimelineDescription(for: viewModel.mode, isListDetail: isListDetailScreen),
-                celebrate: celebratesEmptyState
+                celebrate: celebratesEmptyState,
+                illustration: emptyTimelineIllustration(for: viewModel.mode, isListDetail: isListDetailScreen)
             )
             .transition(emptyStateIllustrationTransition)
         }
@@ -3335,7 +3337,8 @@ struct TodoListScreen: View {
                         .foregroundStyle(colors.primary)
                 }
                 .buttonStyle(.plain)
-            )
+            ),
+            illustration: .search
         )
         .frame(
             maxWidth: .infinity,
@@ -3458,7 +3461,8 @@ struct TodoListScreen: View {
                                 accentColor: modeAccentColor,
                                 title: emptyTimelineTitle(for: viewModel.mode, isListDetail: isListDetailScreen),
                                 description: emptyTimelineDescription(for: viewModel.mode, isListDetail: isListDetailScreen),
-                                celebrate: celebratesEmptyState
+                                celebrate: celebratesEmptyState,
+                                illustration: emptyTimelineIllustration(for: viewModel.mode, isListDetail: isListDetailScreen)
                             )
                             .frame(maxWidth: .infinity, minHeight: inlineEmptyStateGapHeight, alignment: .center)
                             .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
@@ -6722,6 +6726,21 @@ private func emptyTimelineMessage(for mode: TodoListMode, at date: Date = Date()
 
 /// The empty scene's title. Floater splits on whether a list is open: the root
 /// feed speaks about floaters at large, a list about its own.
+/// The illustrated scene for a mode's empty state. Mirrors Android's
+/// `emptyStateIllustrationForMode` and web's `SCOPE_CONFIG`; keep the three in step.
+private func emptyTimelineIllustration(for mode: TodoListMode, isListDetail: Bool) -> TdayIllustration {
+    switch mode {
+    case .today, .scheduled:
+        return .cal
+    case .overdue:
+        return .overdue
+    case .floater:
+        return isListDetail ? .box : .anytime
+    case .all, .priority, .list:
+        return .box
+    }
+}
+
 private func emptyTimelineTitle(for mode: TodoListMode, isListDetail: Bool, at date: Date = Date()) -> String {
     if mode == .floater, isListDetail {
         return L("No floaters in this list")

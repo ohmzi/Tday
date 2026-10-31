@@ -851,14 +851,16 @@ struct CalendarScreen: View {
                             .foregroundStyle(colors.primary)
                     }
                     .buttonStyle(.plain)
-                )
+                ),
+                illustration: .search
             )
         } else {
             TdayEmptyState(
                 assetName: "LucideCalendar",
                 accentColor: calendarAccentColor,
                 title: L("No tasks due this day"),
-                description: L("Select another date on the calendar.")
+                description: L("Select another date on the calendar."),
+                illustration: .cal
             )
         }
     }

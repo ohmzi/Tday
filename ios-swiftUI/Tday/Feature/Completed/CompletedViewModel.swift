@@ -59,7 +59,7 @@ final class CompletedViewModel {
         isLoading = false
     }
 
-    /// Swipe-to-copy: writes the task's title/notes/due/priority as plain text
+    /// Swipe-to-copy: writes the task's title/notes/due as plain text (no priority)
     /// to the system pasteboard. See TodoListViewModel.copyToClipboard.
     func copyToClipboard(_ item: CompletedItem) {
         UIPasteboard.general.string = ShareSheet.taskShareText(item)

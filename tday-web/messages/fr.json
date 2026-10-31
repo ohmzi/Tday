@@ -835,9 +835,9 @@
       },
       "copy-task-text": {
         "title": "Copier les détails de la tâche",
-        "summary": "Copiez le titre, les notes, l'échéance et la priorité d'une tâche sous forme de texte.",
+        "summary": "Copiez le titre, les notes et l'échéance d'une tâche sous forme de texte.",
         "keywords": "copier, presse-papiers, partager, texte, balayer",
-        "body": "Balayez une tâche et appuyez sur Copier — ou utilisez le bouton Copier sur ordinateur — pour copier son titre, ses notes, son échéance et sa priorité en texte brut, prêt à coller n'importe où.",
+        "body": "Balayez une tâche et appuyez sur Copier — ou utilisez le bouton Copier sur ordinateur — pour copier son titre, ses notes et son échéance en texte brut, prêt à coller n'importe où.",
         "tip": "Pratique pour coller une tâche dans un message, un e-mail ou une autre application sans avoir à la retaper."
       },
       "long-press-actions": {

@@ -835,9 +835,9 @@
       },
       "copy-task-text": {
         "title": "Copiar detalhes da tarefa",
-        "summary": "Copie o título, as notas, a data de vencimento e a prioridade de uma tarefa como texto.",
+        "summary": "Copie o título, as notas e a data de vencimento de uma tarefa como texto.",
         "keywords": "copiar, área de transferência, compartilhar, texto, deslizar",
-        "body": "Deslize uma tarefa e toque em Copiar — ou use o botão Copiar no desktop — para copiar seu título, notas, data de vencimento e prioridade como texto simples, pronto para colar em qualquer lugar.",
+        "body": "Deslize uma tarefa e toque em Copiar — ou use o botão Copiar no desktop — para copiar seu título, notas e data de vencimento como texto simples, pronto para colar em qualquer lugar.",
         "tip": "Útil para colar uma tarefa em uma mensagem, e-mail ou outro aplicativo sem precisar redigitá-la."
       },
       "long-press-actions": {

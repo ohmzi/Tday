@@ -329,7 +329,8 @@ struct CompletedScreen: View {
                     variant: isFloaterTab ? .floater : .scheduled,
                     size: CompletedMark.badgeGlyphSize,
                     tint: colors.onPrimary
-                ))
+                )),
+                illustration: .history
             )
                 // This scene is decoration: nothing in it is
                 // tappable, and the overlay it sits in spans the
@@ -756,7 +757,8 @@ struct CompletedScreen: View {
                         .foregroundStyle(colors.primary)
                 }
                 .buttonStyle(.plain)
-            )
+            ),
+            illustration: .search
         )
     }
 

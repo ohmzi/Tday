@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+<defs>
+</defs>
+<g><g class="rise">
+    <path d="M86 262 C84 160 120 54 200 34 C280 54 316 160 314 262 Z" fill="var(--arch)"/>
+    <path d="M104 262 C104 170 132 84 200 56 C268 84 296 170 296 262 Z" fill="var(--archL)" opacity=".6"/>
+    <ellipse cx="200" cy="287" rx="178" ry="6" fill="var(--floorS)"/>
+
+    <!-- hanging plant on a hook, draping on the left -->
+    <rect x="88" y="38" width="8" height="3" rx="1.5" fill="var(--panelD)"/>
+    <path d="M92 41 V47 Q92 51 88 51" stroke="var(--glass)" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+    <path d="M88 51 L64 122 M88 51 L86 122 M88 51 L110 122" stroke="var(--glass)" stroke-width=".9" fill="none" opacity=".8"/>
+    <g class="sway" style="transform-origin:50% 0%">
+      <path d="M64 124 C56 146 58 164 50 186 M76 128 C72 150 76 170 68 192 M98 128 C104 150 100 170 106 190 M110 124 C118 144 114 162 112 180" stroke="var(--leafD)" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+      <ellipse cx="54" cy="150" rx="4.4" ry="2.3" transform="rotate(-40 54 150)" fill="var(--leaf)"/>
+      <ellipse cx="62" cy="166" rx="4.4" ry="2.3" transform="rotate(30 62 166)" fill="var(--leafL)"/>
+      <ellipse cx="50" cy="178" rx="4.2" ry="2.2" transform="rotate(-30 50 178)" fill="var(--leaf)"/>
+      <ellipse cx="72" cy="158" rx="4.4" ry="2.3" transform="rotate(-35 72 158)" fill="var(--leaf)"/>
+      <ellipse cx="68" cy="180" rx="4.2" ry="2.2" transform="rotate(35 68 180)" fill="var(--leafL)"/>
+      <ellipse cx="88" cy="152" rx="4.4" ry="2.3" transform="rotate(-30 88 152)" fill="var(--leafD)"/>
+      <ellipse cx="104" cy="160" rx="4.4" ry="2.3" transform="rotate(40 104 160)" fill="var(--leaf)"/>
+      <ellipse cx="110" cy="182" rx="4.2" ry="2.2" transform="rotate(-30 110 182)" fill="var(--leafL)"/>
+      <ellipse cx="116" cy="164" rx="3.6" ry="2" transform="rotate(35 116 164)" fill="var(--leafD)"/>
+    </g>
+    <path d="M62 126 h50 l-5 26 q-1 4 -5 4 h-30 q-4 0 -5 -4z" fill="var(--pot)"/>
+    <rect x="60" y="120" width="54" height="6" rx="3" fill="var(--potL)"/>
+    <path d="M74 134 q12 4 26 0" stroke="var(--potL)" stroke-width="1.2" fill="none" opacity=".7" stroke-linecap="round"/>
+
+    <!-- window: frame, glass, sash bars, glare -->
+    <rect x="118" y="34" width="164" height="212" rx="4" fill="var(--panel)"/>
+    <rect x="118" y="34" width="8" height="212" fill="var(--panelD)" opacity=".5"/>
+    <rect x="124" y="40" width="152" height="200" fill="var(--panelD)"/>
+    <rect x="130" y="46" width="140" height="190" fill="var(--monL)"/>
+    <rect x="130" y="46" width="140" height="70" fill="var(--mon)" opacity=".35"/>
+    <path d="M150 46 H160 L138 236 H129 Z" fill="var(--glare)" opacity=".22"/>
+    <path d="M176 46 H180 L157 236 H153 Z" fill="var(--glare)" opacity=".12"/>
+    <path d="M250 46 H258 L232 236 H223 Z" fill="var(--glare)" opacity=".2"/>
+    <path d="M266 46 H269 L240 150 H237 Z" fill="var(--glare)" opacity=".12"/>
+
+    <!-- clouds drifting slowly -->
+    <g class="drift">
+      <rect x="138" y="90" width="36" height="4" rx="2" fill="var(--cloud)" opacity=".25"/>
+      <rect x="138" y="84" width="36" height="10" rx="5" fill="var(--glare)" opacity=".9"/>
+      <circle cx="150" cy="84" r="6.5" fill="var(--glare)" opacity=".9"/>
+      <circle cx="162" cy="79" r="9" fill="var(--glare)" opacity=".9"/>
+    </g>
+    <g class="drift" style="animation-delay:1.4s">
+      <rect x="206" y="150" width="34" height="9" rx="4.5" fill="var(--glare)" opacity=".85"/>
+      <circle cx="218" cy="150" r="6" fill="var(--glare)" opacity=".85"/>
+      <circle cx="230" cy="146" r="8.5" fill="var(--glare)" opacity=".85"/>
+    </g>
+
+    <!-- paper airplane on a gentle float loop -->
+    <g class="glide">
+      <path d="M150 124 q-10 3 -22 1" stroke="var(--glare)" stroke-width="1.2" stroke-dasharray="2 3" fill="none" opacity=".8" stroke-linecap="round"/>
+      <g transform="translate(190 112) rotate(-8)">
+        <path d="M20 0 L-16 -9 L-8 0Z" fill="var(--glare)"/>
+        <path d="M20 0 L-8 0 L-14 7Z" fill="var(--panelD)"/>
+        <path d="M-8 0 L-14 -1 L-16 -9 L-14 7Z" fill="var(--panel)" opacity=".5"/>
+        <path d="M20 0 L-8 0" stroke="var(--panelD)" stroke-width=".9"/>
+      </g>
+    </g>
+
+    <!-- sash bars -->
+    <rect x="197" y="46" width="6" height="190" fill="var(--panel)"/>
+    <rect x="130" y="126" width="140" height="6" fill="var(--panel)"/>
+
+    <!-- sill -->
+    <rect x="106" y="246" width="188" height="4" rx="1.5" fill="var(--panel)"/>
+    <rect x="106" y="250" width="188" height="6" rx="1" fill="var(--panelD)"/>
+
+    <!-- sill props: potted plant, mug with steam, notepad and pencil -->
+    <ellipse cx="142" cy="246" rx="16" ry="2" fill="var(--shadowC)"/>
+    <g class="sway">
+      <path d="M140 224 q-14 -14 -10 -36 q8 14 10 36z" fill="var(--leafD)"/>
+      <path d="M142 224 q-4 -34 8 -58 q4 26 -6 58z" fill="var(--leaf)"/>
+      <path d="M144 224 q14 -12 20 -26 q-6 16 -18 26z" fill="var(--leafL)"/>
+      <path d="M143 222 q-2 -18 0 -36" stroke="var(--leafD)" stroke-width=".9" fill="none"/>
+    </g>
+    <rect x="128" y="224" width="28" height="5" rx="2" fill="var(--pot)"/>
+    <path d="M130 229 h24 l-3 17 h-18z" fill="var(--pot)"/>
+    <path d="M134 234 h10" stroke="var(--potL)" stroke-width="1.2" stroke-linecap="round"/>
+
+    <ellipse cx="196" cy="246" rx="11" ry="2" fill="var(--shadowC)"/>
+    <path d="M193 226 q-3 -5 0 -10" stroke="var(--glass)" stroke-width="1.5" fill="none" stroke-linecap="round" class="steam"/>
+    <path d="M199 226 q3 -5 0 -10" stroke="var(--glass)" stroke-width="1.5" fill="none" stroke-linecap="round" class="steam s2"/>
+    <path d="M205 236 q7 0 7 5 q0 5 -7 5" stroke="var(--mug)" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    <path d="M186 232 h20 l-1.6 12 a3 3 0 0 1 -3 2 h-10.8 a3 3 0 0 1 -3 -2z" fill="var(--mug)"/>
+    <ellipse cx="196" cy="232" rx="10" ry="2" fill="var(--mugD)"/>
+    <ellipse cx="196" cy="232.2" rx="8" ry="1.1" fill="var(--pot)"/>
+    <path d="M190 237 v7" stroke="var(--glare)" stroke-width="1.4" opacity=".25" stroke-linecap="round"/>
+
+    <rect x="226" y="236" width="26" height="10" rx="1.5" fill="var(--cup)"/>
+    <rect x="226" y="236" width="3" height="10" fill="var(--coral)" opacity=".75"/>
+    <path d="M233 240 h17 M233 243 h13" stroke="var(--mon)" stroke-width=".8"/>
+    <rect x="226" y="245" width="26" height="1.6" fill="var(--panelD)"/>
+    <g transform="rotate(-12 250 234)">
+      <rect x="238" y="232.4" width="24" height="3.2" rx="1" fill="var(--note)"/>
+      <rect x="238" y="232.4" width="3" height="3.2" rx="1" fill="var(--coral)" opacity=".8"/>
+      <rect x="241" y="232.4" width="1.6" height="3.2" fill="var(--glass)"/>
+      <path d="M262 232.4 L268 234 L262 235.6Z" fill="var(--chair)"/>
+      <path d="M266.4 233.2 L268 234 L266.4 234.8Z" fill="var(--screen)"/>
+    </g>
+  </g></g>
+</svg>
