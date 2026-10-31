@@ -7,7 +7,12 @@ import type { FloaterListCache } from "@/features/floaterList/query/get-floater-
 
 type UpdateFloaterContext = {
   oldFloaters?: FloaterItemType[];
+  /** The target list's `{ list, floaters }` before the optimistic write. */
   oldListFloaters?: FloaterListCache;
+  /** The list the row was in before this edit, when the edit moves it. */
+  previousListID: string | null;
+  /** That previous list's cache before the optimistic prune. */
+  oldPreviousListFloaters?: FloaterListCache;
 };
 
 /** The writable fields of a floater row, as `PATCH /api/floater` takes them. */
@@ -63,35 +68,86 @@ export const useEditFloater = () => {
   >({
     mutationFn: patchFloater,
     onMutate: async (updatedFloater) => {
+      const newListID = updatedFloater.listID ?? null;
       await queryClient.cancelQueries({ queryKey: ["floater"] });
-      await queryClient.cancelQueries({ queryKey: ["floaterList", updatedFloater.listID] });
+      if (newListID) {
+        await queryClient.cancelQueries({ queryKey: ["floaterList", newListID] });
+      }
 
       const oldFloaters = queryClient.getQueryData<FloaterItemType[]>(["floater"]);
-      const oldListFloaters = queryClient.getQueryData<FloaterListCache>([
-        "floaterList",
-        updatedFloater.listID,
-      ]);
+      // The root cache is the only place that records which list the row was in.
+      // If it is not loaded, the old list cannot be pruned here and is left to the
+      // invalidation in onSettled.
+      const previousListID =
+        oldFloaters?.find((floater) => floater.id === updatedFloater.id)?.listID ?? null;
+      const movedFromListID =
+        previousListID && previousListID !== newListID ? previousListID : null;
+      if (movedFromListID) {
+        await queryClient.cancelQueries({ queryKey: ["floaterList", movedFromListID] });
+      }
+
+      const oldListFloaters = newListID
+        ? queryClient.getQueryData<FloaterListCache>(["floaterList", newListID])
+        : undefined;
+      const oldPreviousListFloaters = movedFromListID
+        ? queryClient.getQueryData<FloaterListCache>(["floaterList", movedFromListID])
+        : undefined;
 
       const update = (floater: FloaterItemType) =>
         floater.id === updatedFloater.id ? { ...floater, ...updatedFloater } : floater;
 
-      queryClient.setQueryData(["floater"], (old: FloaterItemType[] = []) =>
-        old.map(update),
+      // Unloaded caches stay unloaded: an `undefined` return leaves them untouched
+      // instead of writing `[]` (the floaterList cache is `{ list, floaters }`).
+      queryClient.setQueryData<FloaterItemType[] | undefined>(["floater"], (old) =>
+        old ? old.map(update) : old,
       );
-      if (updatedFloater.listID) {
-        // The floater-list cache is `{ list, floaters }`, not an array. An unloaded
-        // cache stays unloaded (`undefined` leaves it untouched) rather than being
-        // written as `[]`.
+
+      if (movedFromListID) {
         queryClient.setQueryData<FloaterListCache | undefined>(
-          ["floaterList", updatedFloater.listID],
-          (old) => (old ? { ...old, floaters: old.floaters.map(update) } : old),
+          ["floaterList", movedFromListID],
+          (old) =>
+            old
+              ? {
+                  ...old,
+                  floaters: old.floaters.filter((floater) => floater.id !== updatedFloater.id),
+                }
+              : old,
         );
       }
 
-      return { oldFloaters, oldListFloaters };
+      if (newListID) {
+        queryClient.setQueryData<FloaterListCache | undefined>(
+          ["floaterList", newListID],
+          (old) => {
+            if (!old) return old;
+            const alreadyInList = old.floaters.some(
+              (floater) => floater.id === updatedFloater.id,
+            );
+            return {
+              ...old,
+              floaters: alreadyInList
+                ? old.floaters.map(update)
+                : [...old.floaters, updatedFloater],
+            };
+          },
+        );
+      }
+
+      return {
+        oldFloaters,
+        oldListFloaters,
+        previousListID: movedFromListID,
+        oldPreviousListFloaters,
+      };
     },
     onError: (error, updatedFloater, context) => {
       queryClient.setQueryData(["floater"], context?.oldFloaters);
+      if (context?.previousListID) {
+        queryClient.setQueryData(
+          ["floaterList", context.previousListID],
+          context.oldPreviousListFloaters,
+        );
+      }
       if (updatedFloater.listID) {
         queryClient.setQueryData(
           ["floaterList", updatedFloater.listID],
@@ -100,10 +156,18 @@ export const useEditFloater = () => {
       }
       toast({ description: error.message, variant: "destructive" });
     },
-    onSettled: (_data, _error, updatedFloater) => {
+    onSettled: (_data, _error, updatedFloater, context) => {
       queryClient.invalidateQueries({ queryKey: ["floater"] });
       queryClient.invalidateQueries({ queryKey: ["floaterListMeta"] });
-      queryClient.invalidateQueries({ queryKey: ["floaterList", updatedFloater.listID] });
+      // Both ends of a move: the list it left and the list it entered.
+      const listIDs = new Set(
+        [updatedFloater.listID, context?.previousListID].filter(
+          (id): id is string => Boolean(id),
+        ),
+      );
+      for (const listID of listIDs) {
+        queryClient.invalidateQueries({ queryKey: ["floaterList", listID] });
+      }
     },
   });
 
