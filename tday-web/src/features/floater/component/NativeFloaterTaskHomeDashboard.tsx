@@ -198,6 +198,7 @@ export default function NativeFloaterTaskHomeDashboard() {
               icon={Leaf}
               accentColor={floaterAccent}
               title={appDict("floaterEmpty")}
+              illustration="anytime"
               description={appDict("floaterEmptyBody")}
               // Finishing the feed is a payoff, not an absence: the confetti is
               // for the tick that emptied it, not for an empty Anytime feed.
@@ -223,6 +224,7 @@ export default function NativeFloaterTaskHomeDashboard() {
             icon={Search}
             accentColor={floaterAccent}
             title={appDict("noMatchingFloaters")}
+            illustration="search"
             description={appDict("searchEmptyBody")}
             action={
               <button

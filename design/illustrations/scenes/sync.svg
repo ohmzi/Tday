@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+<defs>
+  <clipPath id="sync-arch"><path d="M16 284 C20 112 120 22 258 18 C330 16 386 36 390 118 V284 Z"/></clipPath>
+</defs>
+<g><g class="rise">
+    <!-- organic arch backdrop with light shafts; window sits inside it -->
+    <path d="M16 284 C20 112 120 22 258 18 C330 16 386 36 390 118 V284 Z" fill="var(--arch)"/>
+    <g clip-path="url(#sync-arch)" opacity=".5">
+      <path d="M250 18 L150 284 H196 L290 18Z" fill="var(--archL)"/>
+    </g>
+    <ellipse cx="200" cy="287" rx="178" ry="6" fill="var(--floorS)"/>
+    <path d="M150 284 q90 -10 210 -4 q14 2 14 4z" fill="var(--rug)"/>
+
+    <!-- window on the right with a drifting cloud -->
+    <rect x="284" y="34" width="104" height="136" rx="3" fill="var(--panel)"/>
+    <rect x="290" y="40" width="92" height="124" fill="var(--cloud)" opacity=".3"/>
+    <g class="drift"><path d="M298 74 q0 -8 9 -8 q3 -7 12 -4 q6 -5 13 1 q7 0 7 7 q0 5 -5 5 h-33 q-3 0 -3 -1z" fill="var(--glare)" opacity=".9"/></g>
+    <g class="drift" style="animation-delay:-4s"><path d="M336 112 q0 -6 7 -6 q2 -5 9 -3 q5 -4 10 1 q5 0 5 5 q0 4 -4 4 h-24 q-3 0 -3 -1z" fill="var(--glare)" opacity=".7"/></g>
+    <path d="M300 150 L318 44" stroke="var(--glare)" stroke-width="5" opacity=".15"/>
+    <rect x="334" y="40" width="4" height="124" fill="var(--panel)"/>
+    <rect x="290" y="96" width="92" height="4" fill="var(--panel)"/>
+    <rect x="276" y="170" width="116" height="6" rx="1" fill="var(--desk)"/>
+    <rect x="276" y="170" width="116" height="1.5" fill="var(--deskL)"/>
+
+    <!-- tucked-in chair under the desk: seat and legs show below the modesty panel -->
+    <rect x="166" y="250" width="88" height="9" rx="3" fill="var(--cushion)"/>
+    <rect x="166" y="257" width="88" height="2.5" rx="1" fill="var(--cushionD)"/>
+    <rect x="170" y="259" width="5" height="24" fill="var(--chairD)"/>
+    <rect x="246" y="259" width="5" height="24" fill="var(--chairD)"/>
+    <rect x="172" y="272" width="76" height="3" rx="1.5" fill="var(--chairD)"/>
+    <ellipse cx="173" cy="284.4" rx="6" ry="1.5" fill="var(--shadowC)"/>
+    <ellipse cx="249" cy="284.4" rx="6" ry="1.5" fill="var(--shadowC)"/>
+
+    <!-- desk: top with edge highlight, modesty panel with seam, legs and feet -->
+    <rect x="40" y="206" width="320" height="50" fill="var(--panel)"/>
+    <rect x="40" y="206" width="320" height="8" fill="var(--panelD)"/>
+    <rect x="40" y="214" width="320" height="2" fill="var(--panelD)" opacity=".5"/>
+    <path d="M200 216 v38" stroke="var(--panelD)" stroke-width="1.2"/>
+    <circle cx="193" cy="236" r="1.4" fill="var(--panelD)"/><circle cx="207" cy="236" r="1.4" fill="var(--panelD)"/>
+    <rect x="30" y="194" width="340" height="8" fill="var(--desk)"/>
+    <rect x="30" y="194" width="340" height="1.8" fill="var(--deskL)"/>
+    <rect x="30" y="195.8" width="340" height="1" fill="var(--glare)" opacity=".18"/>
+    <rect x="30" y="202" width="340" height="4" fill="var(--deskD)"/>
+    <path d="M60 198 h40 M120 199 h30 M250 198 h44" stroke="var(--deskD)" stroke-width=".7" opacity=".5"/>
+    <rect x="36" y="206" width="7" height="74" fill="var(--deskD)"/>
+    <rect x="352" y="206" width="7" height="74" fill="var(--desk)"/>
+    <rect x="352" y="206" width="1.4" height="74" fill="var(--deskL)"/>
+    <rect x="34" y="279" width="11" height="4" rx="1.5" fill="var(--deskD)"/>
+    <rect x="350" y="279" width="11" height="4" rx="1.5" fill="var(--deskD)"/>
+    <ellipse cx="39" cy="284.4" rx="9" ry="1.6" fill="var(--shadowC)"/>
+    <ellipse cx="356" cy="284.4" rx="9" ry="1.6" fill="var(--shadowC)"/>
+    <path d="M290 176 L378 176 L302 196 L230 196 Z" fill="var(--light)" opacity=".3"/>
+
+    <!-- desk lamp: base, arm and shade with a light cone -->
+    <ellipse cx="72" cy="195" rx="12" ry="1.8" fill="var(--shadowC)"/>
+    <ellipse cx="72" cy="192.6" rx="11" ry="2.4" fill="var(--lampD)"/>
+    <path d="M72 192 L84 130 L104 118" stroke="var(--lamp)" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="84" cy="130" r="3" fill="var(--lampD)"/>
+    <path d="M96 108 l18 10 l-8 10 z" fill="var(--lamp)"/>
+    <path d="M108 124 l-6 4" stroke="var(--light)" stroke-width="3" stroke-linecap="round" opacity=".9"/>
+
+    <!-- phone standing on a charging dock; thick sync arrows and pause mark on screen -->
+    <ellipse cx="190" cy="196" rx="16" ry="1.8" fill="var(--shadowC)"/>
+    <rect x="176" y="134" width="26" height="56" rx="5" fill="var(--phoneD)"/>
+    <rect x="200" y="136" width="2" height="52" rx="1" fill="var(--glare)" opacity=".18"/>
+    <rect x="179" y="138" width="20" height="48" rx="2.5" fill="var(--screen)"/>
+    <rect x="182" y="141" width="6" height="1" rx=".5" fill="var(--screenL)"/>
+    <path d="M182.5 160 a7 7 0 0 1 12 -4" stroke="var(--bar)" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+    <path d="M191.2 154.6 L196.4 156.2 L195.4 150.8 Z" fill="var(--bar)"/>
+    <path d="M195.5 168 a7 7 0 0 1 -12 4" stroke="var(--bar)" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+    <path d="M183.8 170.6 L178.6 169 L179.6 174.4 Z" fill="var(--bar)"/>
+    <rect x="185.4" y="178.5" width="2.4" height="6.5" rx=".9" fill="var(--twinkle)" class="pulse"/>
+    <rect x="190.2" y="178.5" width="2.4" height="6.5" rx=".9" fill="var(--twinkle)" class="pulse"/>
+    <rect x="166" y="187" width="44" height="7" rx="3" fill="var(--routerD)"/>
+    <rect x="170" y="185" width="36" height="3" rx="1.5" fill="var(--router)"/>
+    <circle cx="204" cy="190.5" r="1" fill="var(--leaf)"/>
+
+    <!-- mug with steam, handle and highlight -->
+    <ellipse cx="240" cy="194.6" rx="13" ry="1.8" fill="var(--shadowC)"/>
+    <path d="M245 180 q7 0 7 6 q0 6 -7 6" stroke="var(--mug)" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    <path d="M230 176 h16 l-1.4 15 a3 3 0 0 1 -3 3 h-8.2 a3 3 0 0 1 -3 -3 z" fill="var(--mug)"/>
+    <path d="M242 181 v9" stroke="var(--glare)" stroke-width="1.4" opacity=".25" stroke-linecap="round"/>
+    <ellipse cx="238" cy="176" rx="8" ry="1.8" fill="var(--mugD)"/>
+    <ellipse cx="238" cy="176.2" rx="6.6" ry="1.1" fill="var(--pot)" opacity=".85"/>
+    <path d="M235 172 q-3 -5 0 -10" stroke="var(--glass)" stroke-width="1.5" fill="none" stroke-linecap="round" class="steam"/>
+    <path d="M241 172 q3 -5 0 -10" stroke="var(--glass)" stroke-width="1.5" fill="none" stroke-linecap="round" class="steam s2"/>
+
+    <!-- notebook stack with a pen on top -->
+    <ellipse cx="280" cy="194.8" rx="18" ry="1.6" fill="var(--shadowC)"/>
+    <rect x="262" y="184" width="34" height="10" fill="var(--book2)"/>
+    <rect x="296" y="185" width="2" height="8" fill="var(--cup)"/>
+    <rect x="264" y="177" width="32" height="7" fill="var(--book3)"/>
+    <rect x="294" y="178" width="2" height="6" fill="var(--cup)"/>
+    <rect x="262" y="170" width="33" height="7" fill="var(--book)"/>
+    <rect x="262" y="170" width="33" height="1.2" fill="var(--glare)" opacity=".25"/>
+    <rect x="295" y="171" width="2" height="6" fill="var(--cup)"/>
+    <path d="M266 169.5 L290 162" stroke="var(--coral)" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="290" cy="162" r="1.2" fill="var(--deskD)"/>
+
+    <!-- folded blanket at the desk's foot -->
+    <ellipse cx="92" cy="284.5" rx="48" ry="2" fill="var(--shadowC)"/>
+    <path d="M44 284 C44 272 50 266 66 266 L120 266 C130 266 136 271 136 280 L136 284 Z" fill="var(--cushion)"/>
+    <path d="M44 284 V281 C44 278 48 277 54 277 H126 C132 277 136 279 136 282 V284 Z" fill="var(--cushionD)"/>
+    <path d="M52 271 C72 269 104 269 128 270" stroke="var(--cushionD)" stroke-width="1" fill="none" opacity=".8"/>
+
+    <!-- cat: curled asleep on the blanket -->
+    <g class="breathe">
+      <path d="M68 272 C68 258 82 252 98 252 C114 252 124 260 122 272 C121 280 114 281 98 281 L78 281 C72 281 68 278 68 272Z" fill="var(--cat)"/>
+      <path d="M68 272 C68 262 74 256 84 254 C76 262 74 272 76 280 L70 280 C68 278 68 275 68 272Z" fill="var(--catD)" opacity=".4"/>
+      <path d="M104 260 C112 262 118 266 118 272" stroke="var(--catL)" stroke-width="1.6" fill="none" opacity=".7" stroke-linecap="round"/>
+      <path d="M88 258 q3 5 0 10 M98 256 q3 5 0 10 M108 258 q3 5 0 10" stroke="var(--catD)" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".8"/>
+    </g>
+    <path d="M122 276 C120 284 96 285 78 282" stroke="var(--cat)" stroke-width="4.5" fill="none" stroke-linecap="round" class="tail"/>
+    <path d="M92 284 C84 284 78 283 76 282" stroke="var(--catD)" stroke-width="4.5" fill="none" stroke-linecap="round" opacity=".7"/>
+    <path d="M52 272 C50 264 56 258 64 258 C72 258 78 264 78 270 C78 278 72 282 64 282 C58 282 54 278 52 272Z" fill="var(--cat)"/>
+    <path d="M54 262 L52 252 L62 258 Z M68 258 L72 250 L75 262 Z" fill="var(--cat)"/>
+    <path d="M55 260 L54 255 L59 258 Z M69 260 L71 255 L73 261 Z" fill="var(--note2)" opacity=".7"/>
+    <path d="M58 276 C60 280 68 280 72 276 C70 282 60 282 58 276Z" fill="var(--catL)" opacity=".8"/>
+    <path d="M56 270 q3 2.2 6 0 M66 269.6 q3 2.2 6 0" stroke="var(--catD)" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    <path d="M62 276 h3 l-1.5 2 z" fill="var(--note2)"/>
+    <path d="M58 280 q3 -3 8 -2 q2 1 0 3 h-8z" fill="var(--catL)"/>
+    <text x="84" y="246" font-size="9" font-weight="700" fill="var(--glass)" class="zz" font-family="system-ui">z</text>
+    <text x="93" y="237" font-size="7" font-weight="700" fill="var(--glass)" class="zz z2" font-family="system-ui">z</text>
+  </g></g>
+</svg>

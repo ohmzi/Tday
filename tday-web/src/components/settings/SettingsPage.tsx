@@ -1904,6 +1904,7 @@ export default function SettingsPage() {
           icon={Search}
           accentColor={nativeScreenAccentColors.settings}
           title={appDict("noMatchingSettings")}
+          illustration="search"
           description={appDict("searchEmptyBody")}
           action={
             <button

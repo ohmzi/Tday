@@ -170,6 +170,7 @@
 		E1BD58F3802B8806874A2E29 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DABE0225668571D48D55B96 /* AuthViewModel.swift */; };
 		EF64B4D7E0FB06A86DA86E0C /* TaskFloatingActionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */; };
 		7E1A4C90B3D2F5680A1C9E33 /* TdayEmptyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F84D07BC61E9A35D8B47021 /* TdayEmptyState.swift */; };
+		5C2E8A41D7F3B9A60E1D4C72 /* TdayIllustration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A6F3D21C84E7B05F2A1D963 /* TdayIllustration.swift */; };
 		C0FE7712A4B6D8E90F1A2B3C /* TdayConfetti.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FE7714E5F60718293A4B5C /* TdayConfetti.swift */; };
 		F0A57E0100000000000000A2 /* TdayFeedItemMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0100000000000000A1 /* TdayFeedItemMotion.swift */; };
 		F0A57E0400000000000000A2 /* TdayBarTitleReserve.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0400000000000000A1 /* TdayBarTitleReserve.swift */; };
@@ -306,6 +307,7 @@
 		055D0F0501B287B70456AF4B /* TodoRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoRepository.swift; sourceTree = "<group>"; };
 		0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskFloatingActionButton.swift; sourceTree = "<group>"; };
 		2F84D07BC61E9A35D8B47021 /* TdayEmptyState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayEmptyState.swift; sourceTree = "<group>"; };
+		9A6F3D21C84E7B05F2A1D963 /* TdayIllustration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayIllustration.swift; sourceTree = "<group>"; };
 		C0FE7714E5F60718293A4B5C /* TdayConfetti.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayConfetti.swift; sourceTree = "<group>"; };
 		0E4F3B64B40942F48202C32E /* AppDataMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDataMode.swift; sourceTree = "<group>"; };
 		133161412A6BD2A0C04F745A /* SnackbarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnackbarManager.swift; sourceTree = "<group>"; };
@@ -1160,6 +1162,7 @@
 				133161412A6BD2A0C04F745A /* SnackbarManager.swift */,
 				0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */,
 				2F84D07BC61E9A35D8B47021 /* TdayEmptyState.swift */,
+				9A6F3D21C84E7B05F2A1D963 /* TdayIllustration.swift */,
 				C0FE7714E5F60718293A4B5C /* TdayConfetti.swift */,
 				F0A57E0100000000000000A1 /* TdayFeedItemMotion.swift */,
 				F0A57E0200000000000000A1 /* TdayTaskRowSkeleton.swift */,
@@ -1595,6 +1598,7 @@
 				5D93F6903E05BD9902C43A51 /* SystemCredentialService.swift in Sources */,
 				EF64B4D7E0FB06A86DA86E0C /* TaskFloatingActionButton.swift in Sources */,
 				7E1A4C90B3D2F5680A1C9E33 /* TdayEmptyState.swift in Sources */,
+				5C2E8A41D7F3B9A60E1D4C72 /* TdayIllustration.swift in Sources */,
 				C0FE7712A4B6D8E90F1A2B3C /* TdayConfetti.swift in Sources */,
 				3172D88F15D3395465E578E3 /* TaskReminderScheduler.swift in Sources */,
 				CAFE0D1E000000000000005C /* DayAhead.swift in Sources */,

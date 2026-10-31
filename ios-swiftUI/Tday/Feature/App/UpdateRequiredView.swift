@@ -16,9 +16,11 @@ struct UpdateRequiredView: View {
             VStack(spacing: 20) {
                 switch versionCheckResult {
                 case let .appUpdateRequired(requiredVersion):
-                    Image(systemName: "arrow.down.app.fill")
-                        .font(.system(size: 44))
-                        .foregroundStyle(colors.primary)
+                    Image(TdayIllustration.update.rawValue)
+                        .resizable()
+                        .aspectRatio(400.0 / 300.0, contentMode: .fit)
+                        .frame(maxWidth: 240)
+                        .accessibilityHidden(true)
 
                     Text("Update Required")
                         .font(.tdayRounded(.title2, weight: .bold))
@@ -47,9 +49,11 @@ struct UpdateRequiredView: View {
                     .buttonStyle(.bordered)
 
                 case let .serverUpdateRequired(serverVersion):
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 44))
-                        .foregroundStyle(colors.error)
+                    Image(TdayIllustration.srv.rawValue)
+                        .resizable()
+                        .aspectRatio(400.0 / 300.0, contentMode: .fit)
+                        .frame(maxWidth: 240)
+                        .accessibilityHidden(true)
 
                     Text("Server Update Needed")
                         .font(.tdayRounded(.title2, weight: .bold))

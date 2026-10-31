@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+<defs>
+  <clipPath id="oops-arch"><path d="M70 284 C70 150 120 40 200 26 C280 40 330 150 330 284Z"/></clipPath>
+</defs>
+<g><g class="rise">
+    <path d="M70 284 C70 150 120 40 200 26 C280 40 330 150 330 284Z" fill="var(--arch)"/>
+    <g clip-path="url(#oops-arch)"><path d="M330 60 L262 284 H292 L330 120Z" fill="var(--archL)" opacity=".55"/></g>
+    <ellipse cx="200" cy="284" rx="185" ry="7" fill="var(--floorS)"/>
+    <path d="M150 284 q60 -12 190 -4 q20 2 20 4z" fill="var(--rug)"/>
+    <path d="M168 282 h170" stroke="var(--rugD)" stroke-width="1.4" stroke-dasharray="3 4"/>
+    <!-- pendant from the ceiling: cord, dome shade above the socket; the group swings -->
+    <g class="swing">
+      <path d="M250 6 V14" stroke="var(--lampD)" stroke-width="1.2"/>
+      <rect x="246" y="14" width="8" height="3" rx="1" fill="var(--lamp)"/>
+      <path d="M244 22 C244 14 256 14 256 22 L262 31 H238 Z" fill="var(--lamp)"/>
+      <path d="M248 20 L246 28" stroke="var(--glare)" stroke-width="1.2" opacity=".25"/>
+      <path d="M238 31 H262" stroke="var(--lampD)" stroke-width="1.2"/>
+      <rect x="246" y="31" width="8" height="10" rx="1.5" fill="var(--lamp)"/>
+      <path d="M246 34 h8 M246 37 h8" stroke="var(--lampD)" stroke-width=".7"/>
+      <rect x="247.4" y="32" width="1.1" height="8" fill="var(--glare)" opacity=".35"/>
+      <ellipse cx="250" cy="41" rx="4" ry="1" fill="var(--lampD)"/>
+    </g>
+    <!-- sturdy two-step stool: thick rails, tread with edge highlight, contact shadow -->
+    <ellipse cx="190" cy="284" rx="40" ry="3.4" fill="var(--shadowC)"/>
+    <rect x="155" y="193" width="7" height="51" rx="2" fill="var(--chair)"/>
+    <rect x="155" y="193" width="1.6" height="51" fill="var(--chairL)"/>
+    <rect x="154" y="190" width="9" height="4" rx="2" fill="var(--chairD)"/>
+    <path d="M168 250 L160 284 M210 250 L218 284" stroke="var(--chairD)" stroke-width="6" stroke-linecap="round"/>
+    <path d="M166 266 H212" stroke="var(--chairD)" stroke-width="2.6"/>
+    <rect x="164" y="262" width="50" height="5" rx="1.5" fill="var(--chair)"/>
+    <rect x="164" y="262" width="50" height="1.2" fill="var(--chairL)"/>
+    <rect x="160" y="242" width="58" height="6" rx="1.5" fill="var(--chair)"/>
+    <rect x="160" y="242" width="58" height="1.6" rx=".8" fill="var(--chairL)"/>
+    <rect x="160" y="247" width="58" height="1.6" fill="var(--chairD)"/>
+    <path d="M172 264.5 h18 M194 264.5 h14" stroke="var(--chairD)" stroke-width=".6" opacity=".6"/>
+    <!-- open toolbox with wrench on the floor -->
+    <ellipse cx="322" cy="284" rx="38" ry="3" fill="var(--shadowC)"/>
+    <path d="M296 268 L302 250 L348 246 L344 264Z" fill="var(--top)"/>
+    <path d="M302 250 L348 246 L346 249 L304 253Z" fill="var(--topL)" opacity=".7"/>
+    <rect x="296" y="266" width="50" height="18" rx="2" fill="var(--coral)"/>
+    <rect x="296" y="278" width="50" height="6" rx="2" fill="var(--top)"/>
+    <rect x="300" y="268" width="42" height="4" rx="1" fill="var(--topD)" opacity=".7"/>
+    <rect x="296" y="266" width="50" height="1.6" fill="var(--glare)" opacity=".3"/>
+    <path d="M304 268 h12 M320 268 h10" stroke="var(--topL)" stroke-width="1"/>
+    <rect x="300" y="280" width="5" height="2.4" rx="1" fill="var(--topD)"/>
+    <rect x="337" y="280" width="5" height="2.4" rx="1" fill="var(--topD)"/>
+    <g transform="rotate(-14 330 281)">
+      <rect x="308" y="279" width="34" height="4" rx="2" fill="var(--shoe)"/>
+      <circle cx="310" cy="281" r="3.8" fill="var(--shoe)" stroke="var(--shoeD)" stroke-width=".8"/>
+      <circle cx="310" cy="281" r="1.3" fill="var(--shoeD)"/>
+      <path d="M340 277 q5 0 5 4 q0 4 -5 4z" fill="var(--shoe)" stroke="var(--shoeD)" stroke-width=".8"/>
+      <path d="M312 280.4 h26" stroke="var(--shoeD)" stroke-width=".6"/>
+    </g>
+    <!-- cat sits on the floor, watching up at him -->
+    <ellipse cx="128" cy="284" rx="22" ry="3" fill="var(--shadowC)"/>
+    <path d="M116 284 C110 270 112 252 122 244 C128 240 138 240 144 246 C150 254 150 270 146 284Z" fill="var(--cat)"/>
+    <path d="M124 284 C124 274 130 268 140 270" stroke="var(--catD)" stroke-width="1" fill="none" opacity=".7"/>
+    <path d="M140 256 C146 260 148 270 146 284 H141 C142 274 140 264 138 258Z" fill="var(--catL)" opacity=".6"/>
+    <path d="M118 254 q4 6 2 14 M126 250 q3 6 1 12 M134 252 q3 5 1 10" stroke="var(--catD)" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".8"/>
+    <rect x="128" y="280" width="6" height="4" rx="2" fill="var(--catL)"/>
+    <rect x="137" y="280" width="6" height="4" rx="2" fill="var(--catL)"/>
+    <path d="M122 240 C118 232 120 226 126 224 L125 212 C129 214 132 218 134 220 C138 219 142 219 146 220 L149 212 L150 224 C154 226 156 232 154 240 C152 246 146 249 138 249 C130 249 124 246 122 240Z" fill="var(--cat)"/>
+    <path d="M125 222 L125 214 L130 220Z M148 222 L149 214 L144 220Z" fill="var(--note2)" opacity=".75"/>
+    <path d="M136 221 q1 3 0 5 M141 221 q1 3 0 5 M130 226 q1 2 0 4" stroke="var(--catD)" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+    <path d="M128 235 q3 -3 6 0 q-3 2 -6 0z" fill="var(--catD)"/>
+    <path d="M142 235 q3 -3 6 0 q-3 2 -6 0z" fill="var(--catD)"/>
+    <path d="M138 241 h2 l-1 1.6z" fill="var(--note2)"/>
+    <path d="M124 240 h-6 M124 242 l-6 1 M152 240 h6 M152 242 l6 1" stroke="var(--catL)" stroke-width=".6"/>
+    <path d="M118 284 C104 284 100 276 106 272 C110 270 112 274 110 278" stroke="var(--cat)" stroke-width="5" fill="none" stroke-linecap="round" class="tail"/>
+
+    <!-- standing man on the stool, head tipped up, near hand reaching for the socket -->
+    <g transform="translate(116,-13.4) scale(.78)" style="--top:var(--mustard);--topD:var(--mustardD);--topL:var(--mustardL);--pants:var(--denim);--pantsD:var(--denimD);--pantsL:var(--denimL)">
+      <!-- far leg (behind): knee bend, calf curve, sneaker -->
+      <path d="M84 226 L104 226 C106 246 106 262 104 282 C106 292 108 300 106 314 C105 322 103 326 99 326 L88 326 C84 326 82 322 82 318 C82 304 84 292 84 280 C83 262 82 246 84 226Z" fill="var(--pantsD)"/>
+      <path d="M78 330 C78 322 84 318 92 318 C100 318 108 322 112 327 C114 330 113 331 110 331 L82 331 C80 331 78 331 78 330Z" fill="var(--shoeD)"/>
+      <!-- near leg: thigh, knee cap, shin with calf curve -->
+      <path d="M98 226 L124 226 C126 246 127 262 124 282 C124 292 126 300 124 314 C123 320 122 322 120 322 L104 322 C101 322 100 318 100 312 C100 300 100 292 99 284 C97 266 98 246 98 226Z" fill="var(--pants)"/>
+      <path d="M110 276 C114 273 120 274 123 279" stroke="var(--pantsL)" stroke-width="1.2" fill="none" opacity=".8"/>
+      <path d="M101 296 C104 304 104 312 102 318" stroke="var(--pantsD)" stroke-width="1.2" fill="none" opacity=".7"/>
+      <path d="M108 236 q-2 30 0 46" stroke="var(--pantsD)" stroke-width="1" fill="none" opacity=".6"/>
+      <!-- near sneaker: toe spring, collar, laces, sole -->
+      <path d="M96 330 C96 321 104 316 114 316 C122 316 130 320 136 325 C139 328 138 331 134 331 L100 331 C97 331 96 331 96 330Z" fill="var(--shoe)"/>
+      <path d="M122 322 C126 323 130 325 133 328" stroke="var(--shoeD)" stroke-width=".9" fill="none"/>
+      <path d="M98 322 C102 320 106 320 110 321" stroke="var(--shoeD)" stroke-width=".8" fill="none"/>
+      <path d="M110 320 l3 -2 M114 319 l3 -2 M118 318 l3 -2" stroke="var(--shoeD)" stroke-width=".9" stroke-linecap="round"/>
+      <path d="M96 331 H136" stroke="var(--sole)" stroke-width="2.6" stroke-linecap="round"/>
+      <!-- far arm: mustard sleeve with folds, skin forearm, hand wrapped round the stool rail -->
+      <path d="M80 150 C74 170 64 188 60 206" stroke="var(--topD)" stroke-width="12" fill="none" stroke-linecap="round"/>
+      <path d="M70 180 q4 4 2 10 M74 166 q3 5 1 9" stroke="var(--topD)" stroke-width=".9" fill="none" opacity=".7"/>
+      <path d="M60 206 C58 226 58 244 58 258" stroke="var(--skin)" stroke-width="10" fill="none" stroke-linecap="round"/>
+      <path d="M54 214 C55 230 55 246 54 256" stroke="var(--skinD)" stroke-width="1" fill="none" opacity=".5"/>
+      <!-- torso in a mustard top: shade on the left, hem and collar -->
+      <path d="M70 146 C76 134 90 130 100 132 C110 130 120 136 124 148 L126 236 C124 242 118 244 110 244 L80 244 C72 244 68 240 68 234Z" fill="var(--top)"/>
+      <path d="M70 148 C72 172 72 200 70 234 C69 240 70 242 74 243 C71 236 71 200 73 164Z" fill="var(--topD)" opacity=".8"/>
+      <path d="M68 234 C84 238 110 238 126 234" stroke="var(--topD)" stroke-width="3" fill="none"/>
+      <path d="M92 132 C96 139 104 139 108 132" stroke="var(--topD)" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M108 150 q4 12 2 26" stroke="var(--topD)" stroke-width="1" fill="none" opacity=".7"/>
+      <!-- near arm reaching up: sleeve, then forearm to the wrist -->
+      <path d="M118 152 C124 140 130 128 136 116" stroke="var(--top)" stroke-width="12" fill="none" stroke-linecap="round"/>
+      <path d="M130 124 C132 120 134 118 136 116" stroke="var(--topD)" stroke-width="1" fill="none"/>
+      <path d="M136 116 C146 110 154 106 160 104" stroke="var(--skin)" stroke-width="8" fill="none" stroke-linecap="round"/>
+      <!-- bulb held in the hand, screw base inside the grip -->
+      <circle cx="172" cy="76" r="7" fill="var(--light)" stroke="var(--glass)" stroke-width=".9"/>
+      <path d="M168 72 q2 -3 4 -2" stroke="var(--glare)" stroke-width="1" fill="none" opacity=".9"/>
+      <rect x="168.5" y="83" width="7" height="7" rx="1" fill="var(--glass)" opacity=".7"/>
+      <path d="M168.5 85.5 h7 M168.5 88 h7" stroke="var(--panelD)" stroke-width=".6"/>
+      <!-- near hand: palm, thumb on the far side, fingers curled round the base -->
+      <path d="M158 104 C156 96 162 90 170 88 C179 87 182 96 180 104 C178 110 166 111 158 104Z" fill="var(--skin)"/>
+      <path d="M168 91 C165 89 164 92 165 95" stroke="var(--skin)" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+      <rect x="170" y="86" width="9" height="4" rx="2" fill="var(--skin)" stroke="var(--skinD)" stroke-width=".5"/>
+      <rect x="170" y="91" width="9" height="4" rx="2" fill="var(--skin)" stroke="var(--skinD)" stroke-width=".5"/>
+      <path d="M160 100 q3 1 6 0" stroke="var(--skinD)" stroke-width=".7" fill="none" opacity=".7"/>
+      <!-- neck, head tipped up: open eye looking up, short straight hair and beard -->
+      <path d="M86 110 L100 112 L100 132 C95 135 89 135 84 132Z" fill="var(--skinD)"/>
+      <g transform="rotate(-10 96 100)">
+        <path d="M79 86 C84 77 98 75 105 82 C108 86 109 91 108 95 C109 98 111 101 113 104 C112 106 110 107 108 107 C109 108 109 110 108 111 C108 113 107 115 106 117 C103 121 97 122 92 120 C88 118 86 114 85 112 C79 108 76 100 77 93 C77 90 78 88 79 86Z" fill="var(--skin)"/>
+        <path d="M92 120 C97 122 103 121 106 117 C102 119 96 119 92 116Z" fill="var(--skinD)" opacity=".7"/>
+        <ellipse cx="99" cy="108" rx="4.5" ry="2.6" fill="var(--note2)" opacity=".25"/>
+        <path d="M84 100 C80 99 79 104 81 107 C82 109 84 110 86 109Z" fill="var(--skinD)"/>
+        <path d="M83 102 C82 104 82 106 84 107" stroke="var(--skin)" stroke-width=".9" fill="none"/>
+        <path d="M77 77 C77 71 84 66 92 67 C101 67 109 72 111 81 C111 86 109 89 107 88 C104 84 99 82 94 84 C89 86 85 90 84 97 C84 101 82 104 78 105 C76 98 76 88 77 77Z" fill="var(--hair)"/>
+        <path d="M86 73 q8 -5 17 -1" stroke="var(--hairL)" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+        <path d="M84 100 C85 110 88 118 94 121 C100 123 106 120 107 115 C108 112 107 110 106 108 C103 112 99 113 96 111 C92 109 88 106 86 102Z" fill="var(--hair)"/>
+        <path d="M99 88 C101 86.5 104 86.5 106 88" stroke="var(--hair)" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+        <path d="M100 96 C101.6 93.6 104.4 93.6 106 96 C104.4 97.8 101.6 97.8 100 96Z" fill="var(--glare)" stroke="var(--hair)" stroke-width=".9"/>
+        <circle cx="103.2" cy="95.4" r="1.1" fill="var(--hair)"/>
+        <path d="M109.5 104.6 q-1.2 .8 -2.4 .2" stroke="var(--skinD)" stroke-width="1" fill="none" stroke-linecap="round"/>
+        <path d="M106.6 110.2 C107.6 110.8 108.4 110.6 108.8 110" stroke="var(--lip)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      </g>
+    </g>
+  </g></g>
+</svg>

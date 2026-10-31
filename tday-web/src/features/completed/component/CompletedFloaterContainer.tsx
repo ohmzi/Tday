@@ -95,6 +95,7 @@ const CompletedFloaterContainer = ({
           iconClassName="h-8 w-8"
           accentColor={completedAccent}
           title={completedDict("floaterEmpty")}
+          illustration="history"
           description={completedDict("floaterEmptyBody")}
         />
       )}
@@ -104,6 +105,7 @@ const CompletedFloaterContainer = ({
           icon={Search}
           accentColor={completedAccent}
           title={appDict("noMatchingTasks")}
+          illustration="search"
           description={appDict("searchEmptyBody")}
           action={
             <button

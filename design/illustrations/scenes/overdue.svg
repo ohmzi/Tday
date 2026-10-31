@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+<defs>
+  <clipPath id="overdue-ovd-arch"><path d="M24 262 C30 140 110 48 220 40 C300 34 360 28 400 26 V262Z"/></clipPath>
+</defs>
+<g><g class="rise">
+    <!-- soft arch backdrop with light shafts clipped inside, floor ellipse -->
+    <clipPath id="overdue-ovd-arch"><path d="M24 262 C30 140 110 48 220 40 C300 34 360 28 400 26 V262Z"/></clipPath>
+    <path d="M24 262 C30 140 110 48 220 40 C300 34 360 28 400 26 V262Z" fill="var(--arch)"/>
+    <g clip-path="url(#overdue-ovd-arch)" opacity=".55">
+      <path d="M400 40 L300 262 H340 L400 90Z" fill="var(--archL)"/>
+      <path d="M220 40 L150 262 H175 L240 40Z" fill="var(--archL)"/>
+    </g>
+    <ellipse cx="200" cy="287" rx="178" ry="6" fill="var(--floorS)"/>
+
+    <!-- wall clock: hour markers, slow minute hand -->
+    <circle cx="204" cy="96" r="56" fill="var(--shadowC)"/>
+    <circle cx="200" cy="30" r="2" fill="var(--glass)"/>
+    <circle cx="200" cy="92" r="56" fill="var(--deskD)"/>
+    <circle cx="200" cy="92" r="53" fill="var(--desk)"/>
+    <path d="M160 64 A50 50 0 0 1 196 42" stroke="var(--deskL)" stroke-width="3" fill="none" stroke-linecap="round" opacity=".8"/>
+    <circle cx="200" cy="92" r="46" fill="var(--cup)"/>
+    <circle cx="200" cy="92" r="46" fill="none" stroke="var(--deskD)" stroke-width=".8" opacity=".5"/>
+    <path d="M168 128 A40 40 0 0 0 232 128" stroke="var(--deskD)" stroke-width="1.4" fill="none" opacity=".12"/>
+    <circle cx="200" cy="52" r="3" fill="var(--screen)"/>
+    <circle cx="220" cy="57.4" r="1.8" fill="var(--deskD)"/>
+    <circle cx="234.6" cy="72" r="1.8" fill="var(--deskD)"/>
+    <circle cx="240" cy="92" r="3" fill="var(--screen)"/>
+    <circle cx="234.6" cy="112" r="1.8" fill="var(--deskD)"/>
+    <circle cx="220" cy="126.6" r="1.8" fill="var(--deskD)"/>
+    <circle cx="200" cy="132" r="3" fill="var(--screen)"/>
+    <circle cx="180" cy="126.6" r="1.8" fill="var(--deskD)"/>
+    <circle cx="165.4" cy="112" r="1.8" fill="var(--deskD)"/>
+    <circle cx="160" cy="92" r="3" fill="var(--screen)"/>
+    <circle cx="165.4" cy="72" r="1.8" fill="var(--deskD)"/>
+    <circle cx="180" cy="57.4" r="1.8" fill="var(--deskD)"/>
+    <path d="M200 92 L181 81" stroke="var(--screen)" stroke-width="3.6" stroke-linecap="round"/>
+    <g class="mspin" style="transform-origin:200px 92px">
+      <path d="M200 92 V50" stroke="var(--screen)" stroke-width="2.4" stroke-linecap="round"/>
+    </g>
+    <circle cx="200" cy="92" r="3" fill="var(--coral)"/>
+
+    <!-- rug under the console -->
+    <path d="M52 284 Q200 272 348 284 Q356 290 346 294 Q200 300 56 294 Q46 290 52 284Z" fill="var(--rug)"/>
+    <path d="M80 287 H320" stroke="var(--rugD)" stroke-width="1.3" stroke-dasharray="3 4"/>
+
+    <!-- console table: wood-grain top, apron with drawer and knob, turned legs, lower shelf -->
+    <ellipse cx="200" cy="281" rx="128" ry="3" fill="var(--shadowC)"/>
+    <rect x="70" y="194" width="260" height="8" rx="2" fill="var(--desk)"/>
+    <rect x="70" y="194" width="260" height="2" fill="var(--deskL)"/>
+    <path d="M74 197 q60 -1.6 120 0 t120 0 M80 199.5 q50 -1.2 100 0 t110 0" stroke="var(--deskD)" stroke-width=".7" fill="none" opacity=".35"/>
+    <rect x="70" y="200" width="260" height="3" fill="var(--deskD)"/>
+    <rect x="80" y="203" width="240" height="14" fill="var(--panel)"/>
+    <path d="M84 206 q60 -1.2 120 0 t116 0 M84 211 q70 -1 130 0 t110 0 M84 214.5 q60 -1 120 0 t110 0" stroke="var(--panelD)" stroke-width=".7" fill="none" opacity=".7"/>
+    <rect x="150" y="205" width="100" height="11" rx="1.5" fill="var(--desk)" stroke="var(--deskD)" stroke-width=".8"/>
+    <path d="M154 208 q40 -.8 92 0" stroke="var(--deskD)" stroke-width=".6" fill="none" opacity=".4"/>
+    <circle cx="200" cy="210.5" r="2" fill="var(--glare)" stroke="var(--deskD)" stroke-width=".8"/>
+    <path d="M80 217 L88 217 L90 280 L82 280Z" fill="var(--deskD)"/>
+    <path d="M312 217 L320 217 L318 280 L310 280Z" fill="var(--deskD)"/>
+    <path d="M81.5 220 L82.5 276" stroke="var(--desk)" stroke-width="1.4" opacity=".6"/>
+    <path d="M313.5 220 L314.5 276" stroke="var(--desk)" stroke-width="1.4" opacity=".6"/>
+    <rect x="78" y="279" width="14" height="4" rx="1.5" fill="var(--deskD)"/>
+    <rect x="308" y="279" width="14" height="4" rx="1.5" fill="var(--deskD)"/>
+    <rect x="88" y="240" width="224" height="4" fill="var(--deskD)"/>
+
+    <!-- tidy stack of three books, with contact shadows -->
+    <ellipse cx="110" cy="195" rx="34" ry="2.4" fill="var(--shadowC)"/>
+    <ellipse cx="110" cy="195" rx="26" ry="1.2" fill="var(--shadowC)"/>
+    <rect x="84" y="182" width="52" height="12" rx="1" fill="var(--book)"/>
+    <rect x="84" y="183" width="52" height="1.6" fill="var(--book2)"/>
+    <rect x="96" y="186" width="22" height="4" rx="1" fill="var(--cup)"/>
+    <rect x="88" y="170" width="44" height="12" rx="1" fill="var(--coral)"/>
+    <rect x="88" y="171" width="44" height="1.6" fill="var(--note)"/>
+    <rect x="98" y="174" width="18" height="4" rx="1" fill="var(--cup)"/>
+    <rect x="86" y="158" width="44" height="12" rx="1" fill="var(--leaf)"/>
+    <rect x="86" y="159" width="44" height="1.6" fill="var(--leafD)"/>
+    <rect x="96" y="162" width="20" height="4" rx="1" fill="var(--cup)"/>
+
+    <!-- small potted succulent, with contact shadow -->
+    <ellipse cx="168" cy="195" rx="22" ry="2.4" fill="var(--shadowC)"/>
+    <ellipse cx="168" cy="195" rx="14" ry="1.2" fill="var(--shadowC)"/>
+    <path d="M168 176 C162 166 162 158 168 150 C174 158 174 166 168 176Z" fill="var(--leaf)"/>
+    <path d="M168 176 C160 170 156 162 160 156 C166 160 168 168 168 176Z" fill="var(--leafD)"/>
+    <path d="M168 176 C176 170 180 162 176 156 C170 160 168 168 168 176Z" fill="var(--leafD)"/>
+    <path d="M168 176 C162 172 156 168 152 164 C158 162 166 168 168 176Z" fill="var(--leafL)"/>
+    <path d="M168 176 C174 172 180 168 184 164 C178 162 170 168 168 176Z" fill="var(--leafL)"/>
+    <path d="M168 174 V158" stroke="var(--leafD)" stroke-width=".8"/>
+    <path d="M153 194 L156 180 H180 L183 194Z" fill="var(--pot)"/>
+    <path d="M157 183 V191" stroke="var(--potL)" stroke-width="2" stroke-linecap="round" opacity=".7"/>
+    <rect x="151" y="176" width="34" height="5" rx="2" fill="var(--potL)"/>
+    <ellipse cx="168" cy="176" rx="15" ry="2.2" fill="var(--deskD)"/>
+
+    <!-- hourglass with sand settling in the lower bulb, with contact shadow -->
+    <ellipse cx="224" cy="195" rx="15" ry="2" fill="var(--shadowC)"/>
+    <ellipse cx="224" cy="195" rx="9" ry="1" fill="var(--shadowC)"/>
+    <rect x="214" y="166" width="20" height="3" rx="1" fill="var(--chairD)"/>
+    <rect x="214" y="191" width="20" height="3" rx="1" fill="var(--chairD)"/>
+    <path d="M217 169 H231 C231 174 227 177 224 179.5 C221 177 217 174 217 169Z" fill="var(--glare)" fill-opacity=".14" stroke="var(--glass)" stroke-width=".9"/>
+    <path d="M224 180.5 C227 183 231 186 231 191 H217 C217 186 221 183 224 180.5Z" fill="var(--glare)" fill-opacity=".14" stroke="var(--glass)" stroke-width=".9"/>
+    <path d="M219.5 170 H228.5 C228 173 226.5 175 224 177 C221.5 175 220 173 219.5 170Z" fill="var(--note)"/>
+    <path d="M218.6 191 H229.4 C229 187 227 185.5 224 184.2 C221 185.5 219 187 218.6 191Z" fill="var(--note)"/>
+    <path d="M224 179.5 V184" stroke="var(--note)" stroke-width=".8"/>
+
+    <!-- cat sitting on the table, grooming a raised paw -->
+    <ellipse cx="290" cy="195" rx="26" ry="2.4" fill="var(--shadowC)"/>
+    <path d="M272 192 C262 192 258 184 262 178" stroke="var(--cat)" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M262 178 C262 176 264 175 266 177" stroke="var(--catD)" stroke-width="5" fill="none" stroke-linecap="round" class="tail"/>
+    <g class="breathe">
+      <path d="M272 194 C268 180 268 162 278 152 C284 146 296 146 302 152 C312 162 314 180 310 194Z" fill="var(--cat)"/>
+      <path d="M298 158 C308 168 312 182 310 194 H303 C305 182 302 168 296 160Z" fill="var(--catD)" opacity=".5"/>
+      <path d="M280 170 q4 4 0 8 M286 166 q4 4 0 8 M292 168 q4 4 0 8" stroke="var(--catD)" stroke-width="1.4" fill="none" opacity=".7" stroke-linecap="round"/>
+      <path d="M270 190 C266 184 272 180 280 182 C286 184 288 192 282 194Z" fill="var(--catD)" opacity=".4"/>
+    </g>
+    <path d="M300 172 C306 162 310 150 308 140" stroke="var(--cat)" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <g transform="translate(288 140) scale(.9) translate(-236 -254)">
+      <path d="M218 266 C214 258 216 250 222 246 L220 234 C224 236 228 240 230 243 C234 242 238 242 242 243 C245 239 249 236 253 234 L252 246 C257 251 258 259 255 265 C251 272 243 275 236 275 C228 275 221 272 218 266Z" fill="var(--cat)"/>
+      <path d="M222 245 L221 237 L228 243Z M251 245 L252 237 L245 243Z" fill="var(--note2)" opacity=".75"/>
+      <path d="M236 243 q1 4 0 7 M232 244 q-1 3 0 5 M240 244 q1 3 0 5" stroke="var(--catD)" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      <path d="M226 264 C228 268 244 268 246 264 C244 271 228 271 226 264Z" fill="var(--catL)"/>
+      <path d="M224 256 q3 2.5 6 0 M241 256 q3 2.5 6 0" stroke="var(--catD)" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+      <path d="M234 262 h4 l-2 2.4z" fill="var(--note2)"/>
+      <path d="M236 264.4 v1.6 M236 266 q-2 1.6 -3.6 0.6 M236 266 q2 1.6 3.6 0.6" stroke="var(--catD)" stroke-width=".8" fill="none" stroke-linecap="round"/>
+      <path d="M226 265 h-10 M226 267 l-9 3 M246 265 h10 M246 267 l9 3" stroke="var(--catL)" stroke-width=".6" opacity=".9"/>
+    </g>
+    <path d="M302 142 C300 134 304 124 310 124 C316 124 318 132 316 140 C315 146 310 148 306 146Z" fill="var(--catL)"/>
+    <path d="M308 128 v5 M312 128 v5" stroke="var(--catD)" stroke-width=".7"/>
+    <path d="M272 194 q0 -6 7 -6 q7 0 7 4 l0 2z" fill="var(--catL)"/>
+    <path d="M275 190 v3 M278 189.5 v3" stroke="var(--catD)" stroke-width=".6"/>
+  </g></g>
+</svg>

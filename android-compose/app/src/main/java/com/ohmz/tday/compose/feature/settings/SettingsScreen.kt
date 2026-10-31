@@ -124,6 +124,7 @@ import com.ohmz.tday.compose.core.push.readUnifiedPushDistributorState
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TdayDisclosureMotion
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
+import com.ohmz.tday.compose.core.ui.TdayIllustration
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
@@ -830,6 +831,7 @@ fun SettingsScreen(
                     icon = R.drawable.ic_lucide_sliders_horizontal,
                     accentColor = colorScheme.primary,
                     title = stringResource(R.string.search_no_results_settings),
+                    illustration = TdayIllustration.SEARCH,
                     description = stringResource(R.string.search_no_results_body),
                     modifier = Modifier.padding(vertical = TdayDimens.Spacing3xl),
                 )

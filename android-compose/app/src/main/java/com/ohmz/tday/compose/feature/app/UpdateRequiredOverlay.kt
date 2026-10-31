@@ -50,6 +50,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.ui.TdayIllustration
+import com.ohmz.tday.compose.core.ui.TdayIllustrationImage
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.feature.release.GitHubAsset
 import com.ohmz.tday.compose.feature.release.GitHubRelease
@@ -81,7 +83,7 @@ private val CardContentSpacing = 16.dp
 
 /** The download or warning glyph the card opens with. Far above `IconXl` because it is the card's
  *  illustration, not an icon beside a label. */
-private val StatusIconSize = 48.dp
+private val OverlayIllustrationMaxWidth = 240.dp
 
 // The spinner shown while the release is being looked up, drawn where the install button will land.
 private val ReleaseCheckSpinnerSize = 24.dp
@@ -196,12 +198,9 @@ fun UpdateRequiredOverlay(
                         val isInstallerBusy =
                             installState is OverlayInstallState.Downloading ||
                                 installState is OverlayInstallState.Installing
-
-                        Icon(
-                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_download),
-                            contentDescription = null,
-                            tint = colorScheme.primary,
-                            modifier = Modifier.size(StatusIconSize),
+                        TdayIllustrationImage(
+                            illustration = TdayIllustration.UPDATE,
+                            modifier = Modifier.widthIn(max = OverlayIllustrationMaxWidth),
                         )
                         Text(
                             text = stringResource(R.string.app_update_required_title),
@@ -281,11 +280,9 @@ fun UpdateRequiredOverlay(
                     }
 
                     is VersionCheckResult.ServerUpdateRequired -> {
-                        Icon(
-                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_triangle_alert),
-                            contentDescription = null,
-                            tint = colorScheme.error,
-                            modifier = Modifier.size(StatusIconSize),
+                        TdayIllustrationImage(
+                            illustration = TdayIllustration.SRV,
+                            modifier = Modifier.widthIn(max = OverlayIllustrationMaxWidth),
                         )
                         Text(
                             text = stringResource(R.string.server_update_required_title),

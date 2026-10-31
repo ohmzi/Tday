@@ -183,6 +183,7 @@ import com.ohmz.tday.compose.core.ui.TaskSwipeSlot
 import com.ohmz.tday.compose.core.ui.TaskSwipeSlotBackHandler
 import com.ohmz.tday.compose.core.ui.TdayDragLift
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
+import com.ohmz.tday.compose.core.ui.TdayIllustration
 import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
@@ -1265,6 +1266,12 @@ fun TodoListScreen( // skipcq: KT-R1006
     } else {
         emptySceneIcon
     }
+    val emptyModeIllustration = emptyStateIllustrationForMode(
+        mode = uiState.mode,
+        isFloaterList = isListDetailScreen,
+    )
+    val emptyStateSceneIllustration =
+        if (isDayDone) TdayIllustration.DONE else emptyModeIllustration
     val emptyStateSceneTitle = if (isDayDone) {
         if (isTodayDaytime) {
             stringResource(R.string.todos_all_done_today)
@@ -1987,6 +1994,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                                 mode = uiState.mode,
                                 isFloaterList = isListDetailScreen,
                             ),
+                            illustration = emptyModeIllustration,
                             celebrate = celebrateEmptyState,
                             // The overlay callers below pass nothing:
                             // they draw over a page where nothing is
@@ -2238,6 +2246,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                             accentColor = titleColor,
                             title = emptyStateSceneTitle,
                             description = emptyStateSceneDescription,
+                            illustration = emptyStateSceneIllustration,
                             celebrate = celebrateEmptyState,
                             // Mirrors the floater home: hold the burst back for
                             // exactly as long as this item's own placement spec
@@ -3067,6 +3076,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                                     icon = R.drawable.ic_lucide_search,
                                     accentColor = titleColor,
                                     title = stringResource(R.string.scheduled_task_home_search_no_results),
+                                    illustration = TdayIllustration.SEARCH,
                                     description = stringResource(R.string.search_no_results_body),
                                     // Clears the query without leaving the
                                     // search, so the next word can be typed
@@ -3284,6 +3294,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                         accentColor = titleColor,
                         title = emptyStateSceneTitle,
                         description = emptyStateSceneDescription,
+                        illustration = emptyStateSceneIllustration,
                         celebrate = celebrateEmptyState,
                     )
                 }
@@ -8180,4 +8191,18 @@ private fun restingAlphaFor(
         FloaterRestingTier.FADING -> 0.6f
         else -> 1f
     }
+}
+
+/**
+ * The illustrated scene for a mode's empty state. Mirrors web's `SCOPE_CONFIG`
+ * (`AllTasksTimelineContainer`) and iOS's `TodoListScreen`, keep the three in step.
+ */
+internal fun emptyStateIllustrationForMode(
+    mode: TodoListMode,
+    isFloaterList: Boolean,
+): TdayIllustration = when (mode) {
+    TodoListMode.TODAY, TodoListMode.SCHEDULED -> TdayIllustration.CAL
+    TodoListMode.OVERDUE -> TdayIllustration.OVERDUE
+    TodoListMode.FLOATER -> if (isFloaterList) TdayIllustration.BOX else TdayIllustration.ANYTIME
+    TodoListMode.ALL, TodoListMode.PRIORITY, TodoListMode.LIST -> TdayIllustration.BOX
 }

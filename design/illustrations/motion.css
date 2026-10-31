@@ -1,0 +1,42 @@
+/* Ambient motion for the illustrated states (web only; Android and iOS float
+   the whole scene instead). Scene sources use bare class names (`sway`); the
+   generator prefixes them `il-` in the web output so they cannot collide with
+   app classes. Every loop here is a small transform or opacity change, and every one stops
+   under reduced motion. Not tokens — see docs/motion.md (illustration ambience
+   is a web-only, per-scene decoration with no native twin). */
+.tday-illus .il-rise{animation:il-rise .7s var(--tday-ease-scene) both}
+@keyframes il-rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.tday-illus .il-sway{animation:il-sway 5s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+@keyframes il-sway{0%,100%{transform:rotate(-2.5deg)}50%{transform:rotate(2.5deg)}}
+.tday-illus .il-blink{animation:il-blink 1.6s steps(1) infinite}
+@keyframes il-blink{0%,55%{opacity:1}56%,100%{opacity:.15}}
+.tday-illus .il-tail{animation:il-tail 3.4s ease-in-out infinite;transform-box:fill-box;transform-origin:0% 50%}
+@keyframes il-tail{0%,100%{transform:rotate(0)}50%{transform:rotate(-12deg)}}
+.tday-illus .il-breathe{animation:il-breathe 3.6s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+@keyframes il-breathe{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.06)}}
+.tday-illus .il-tilt{animation:il-tilt 6s ease-in-out infinite;transform-box:fill-box;transform-origin:30% 95%}
+@keyframes il-tilt{0%,100%{transform:rotate(0)}50%{transform:rotate(4deg)}}
+.tday-illus .il-pulse{animation:il-pulse 2.4s ease-in-out infinite}
+@keyframes il-pulse{0%,100%{opacity:.35}50%{opacity:1}}
+.tday-illus .il-steam{animation:il-steam 3.2s ease-in-out infinite;transform-box:fill-box}
+.tday-illus .il-steam.il-s2{animation-delay:1.6s}
+@keyframes il-steam{0%{opacity:0;transform:translateY(5px)}40%{opacity:.8}100%{opacity:0;transform:translateY(-12px)}}
+.tday-illus .il-zz{animation:il-zz 4s ease-in-out infinite;transform-box:fill-box}
+.tday-illus .il-zz.il-z2{animation-delay:1.3s}
+@keyframes il-zz{0%{opacity:0;transform:translate(0,4px) scale(.7)}30%{opacity:.9}100%{opacity:0;transform:translate(8px,-14px) scale(1)}}
+.tday-illus .il-twinkle{animation:il-twinkle 2.8s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.tday-illus .il-t2{animation-delay:1.3s}
+@keyframes il-twinkle{0%,100%{opacity:.25;transform:scale(.6)}50%{opacity:1;transform:scale(1)}}
+.tday-illus .il-drift{animation:il-drift 9s ease-in-out infinite;transform-box:fill-box}
+@keyframes il-drift{0%,100%{transform:translateX(-6px)}50%{transform:translateX(6px)}}
+.tday-illus .il-glide{animation:il-glide 6s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 50%}
+@keyframes il-glide{0%,100%{transform:translate(0,0) rotate(0)}50%{transform:translate(10px,-7px) rotate(-5deg)}}
+.tday-illus .il-lidq{animation:il-lidq 4.2s linear infinite}
+@keyframes il-lidq{0%,93.9%{opacity:0}94%,100%{opacity:1}}
+.tday-illus .il-mspin{animation:il-mspin 3600s linear infinite;transform-box:view-box}
+@keyframes il-mspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.tday-illus .il-spin{animation:il-spin 12s linear infinite;transform-box:fill-box;transform-origin:50% 50%}
+@keyframes il-spin{to{transform:rotate(360deg)}}
+.tday-illus .il-swing{animation:il-swing 4.5s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 0%}
+@keyframes il-swing{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+@media (prefers-reduced-motion:reduce){.tday-illus [class*="il-"]{animation:none!important}}
