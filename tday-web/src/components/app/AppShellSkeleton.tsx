@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
  */
 export default function AppShellSkeleton() {
   return (
-    <div className="relative flex h-screen min-h-screen overflow-hidden bg-background text-foreground">
+    <div className="relative flex h-dvh min-h-dvh overflow-hidden bg-background text-foreground">
       <div className="relative z-0 flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className={nativeAppScrollClassName}>
           <div className={nativeAppContentClassName}>

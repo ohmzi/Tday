@@ -92,7 +92,7 @@ export default function CalendarTaskFormBody({
             setTitle={setTitle}
             titleRef={titleRef}
             setDateRange={setDateRange}
-            setPriority={setPriority}
+            setPriority={handlePrioritySelect}
             setRruleOptions={setRruleOptions}
             onSubmit={onSubmit}
           />

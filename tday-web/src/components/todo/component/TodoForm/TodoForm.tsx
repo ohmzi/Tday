@@ -141,6 +141,15 @@ const TodoForm = ({
     setPriority,
   ]);
 
+  // The default of whichever list this form is filing into right now, for resetting
+  // the priority after a create: the same lookup the effect above uses.
+  const activeListDefaultPriority = (() => {
+    const activeListId = scheduled ? listID : floaterListID;
+    if (!activeListId) return null;
+    const meta = listMetaData[activeListId] ?? floaterListMetaData[activeListId];
+    return meta?.defaultPriority ?? null;
+  })();
+
   // Bridge submit + title-empty state up to the native sheet header.
   useEffect(() => {
     registerSubmit?.(handleForm);
@@ -172,7 +181,7 @@ const TodoForm = ({
             setTitle={setTitle}
             titleRef={titleRef}
             setDateRange={setDateRange}
-            setPriority={setPriority}
+            setPriority={handlePrioritySelect}
             setRruleOptions={setRruleOptions}
             rruleOptions={rruleOptions}
             onSubmit={() => handleForm()}
@@ -415,7 +424,7 @@ const TodoForm = ({
         }
       } else if (!scheduled) {
         // Schedule off → create an unscheduled floater (separate entity).
-        clearInput();
+        clearInput(activeListDefaultPriority);
         createFloaterMutateFn({
           id: "-1",
           title,
@@ -430,7 +439,7 @@ const TodoForm = ({
           userID: null,
         });
       } else {
-        clearInput();
+        clearInput(activeListDefaultPriority);
         createMutateFn({
           id: "-1",
           title,
