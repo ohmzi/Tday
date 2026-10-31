@@ -78,7 +78,7 @@
     <circle cx="213.2" cy="175.6" r="1" fill="var(--glare)"/>
     <path d="M168 184 l-5 1 l4 3z M232 184 l5 1 l-4 3z" fill="var(--cat)"/>
     <path d="M190 190 q10 4 20 0" stroke="var(--catL)" stroke-width=".8" fill="none" opacity=".6"/>
-    <g class="lidq">
+    <g class="lidq" data-static="hidden">
       <rect x="184" y="172" width="8" height="9" fill="var(--cat)"/>
       <path d="M184.5 177 q3.5 2.5 7 0" stroke="var(--catD)" stroke-width="1.2" fill="none" stroke-linecap="round"/>
       <rect x="208" y="172" width="8" height="9" fill="var(--cat)"/>

@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
 <defs>
-  <clipPath id="ovd-arch"><path d="M24 262 C30 140 110 48 220 40 C300 34 360 28 400 26 V262Z"/></clipPath>
+  <clipPath id="overdue-ovd-arch"><path d="M24 262 C30 140 110 48 220 40 C300 34 360 28 400 26 V262Z"/></clipPath>
 </defs>
 <g><g class="rise">
     <!-- soft arch backdrop with light shafts clipped inside, floor ellipse -->
-    <clipPath id="ovd-arch"><path d="M24 262 C30 140 110 48 220 40 C300 34 360 28 400 26 V262Z"/></clipPath>
+    <clipPath id="overdue-ovd-arch"><path d="M24 262 C30 140 110 48 220 40 C300 34 360 28 400 26 V262Z"/></clipPath>
     <path d="M24 262 C30 140 110 48 220 40 C300 34 360 28 400 26 V262Z" fill="var(--arch)"/>
-    <g clip-path="url(#ovd-arch)" opacity=".55">
+    <g clip-path="url(#overdue-ovd-arch)" opacity=".55">
       <path d="M400 40 L300 262 H340 L400 90Z" fill="var(--archL)"/>
       <path d="M220 40 L150 262 H175 L240 40Z" fill="var(--archL)"/>
     </g>

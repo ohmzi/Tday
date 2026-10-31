@@ -16,8 +16,8 @@
 // Android picks light/dark itself (not drawable-night) because the in-app theme
 // can differ from the system one; iOS assets follow the SwiftUI colour scheme.
 //
-// Native art is static: classes, <text> and dashes are dropped there, and the
-// whole scene floats instead (TdayEmptyState). `--check` exits 1 when any
+// Native art is static: classes, <text> and dashes are dropped there, as is any
+// element marked data-static="hidden", and the whole scene floats instead (TdayEmptyState). `--check` exits 1 when any
 // output differs from what is committed, so CI catches drift.
 //
 // Usage: node scripts/illustrations.mjs [--check]
@@ -101,6 +101,7 @@ function webMarkup(id, svg) {
     if (palette.light[t] === undefined) throw new Error(`${id}: unknown token --${t}`);
     return `var(--il-${t})`;
   });
+  inner = inner.replace(/style="([^"]*)"/g, (_, st) => `style="${st.replace(/(^|;)\s*--([\w-]+)\s*:/g, "$1--il-$2:")}"`);
   inner = inner.replace(/class="([^"]+)"/g, (_, c) => `class="${c.split(/\s+/).map((k) => `il-${k}`).join(" ")}"`);
   inner = inner.replace(/<!--[\s\S]*?-->/g, "").replace(/\n\s*\n/g, "\n").replace(/^\s+/gm, "");
   return inner;
@@ -191,21 +192,41 @@ const INHERITED = ["fill", "stroke", "stroke-width", "stroke-linecap", "stroke-l
 /** Static tree for native targets: <use> inlined, text dropped, styles resolved. */
 function flatten(id, svg, doc) {
   const byId = (ref) => doc.getElementById(ref.replace(/^#/, ""));
-  const walk = (el, inherit, opacity) => {
+  // Token overrides declared on a group (a person's own skin/clothes), innermost first.
+  const resolveRaw = (raw, overrides) => {
+    let v = raw;
+    for (let depth = 0; depth < 8; depth++) {
+      const m = /^var\(--([\w-]+)\)$/.exec((v || "").trim());
+      if (!m) return v;
+      const hit = overrides.find((o) => m[1] in o);
+      if (!hit) return v;
+      v = hit[m[1]];
+      overrides = overrides.slice(overrides.indexOf(hit) + 1);
+    }
+    return v;
+  };
+  const walk = (el, inherit, opacity, overrides = []) => {
     const where = `${id}:<${el.localName}>`;
     if (["text", "title", "desc", "defs", "clipPath", "style"].includes(el.localName)) return null;
+    // Shown only mid-animation on web (a blink's closed lids): the static art leaves it out.
+    if (el.getAttribute("data-static") === "hidden") return null;
     if (el.localName === "use") {
       const ref = byId(el.getAttribute("href") || el.getAttribute("xlink:href"));
       if (!ref) throw new Error(`${where}: dangling use`);
       const x = num(el, "x"), y = num(el, "y");
-      const g = walk(ref, inherit, opacity);
+      const g = walk(ref, inherit, opacity, overrides);
       if (!g) return null;
       const ops = parseTransform(el.getAttribute("transform"), where);
       if (x || y) ops.push({ translateX: x, translateY: y });
       return ops.length ? { kind: "group", ops, clip: null, children: [g] } : g;
     }
+    const decls = {};
+    for (const m of (el.getAttribute("style") || "").matchAll(/--([\w-]+)\s*:\s*([^;]+)/g)) decls[m[1]] = m[2].trim();
+    if (Object.keys(decls).length) overrides = [decls, ...overrides];
     const style = { ...inherit };
-    for (const a of INHERITED) if (el.hasAttribute(a)) style[a] = el.getAttribute(a);
+    for (const a of INHERITED) {
+      if (el.hasAttribute(a)) style[a] = resolveRaw(el.getAttribute(a), overrides);
+    }
     const op = opacity * num(el, "opacity", 1);
     const ops = parseTransform(el.getAttribute("transform"), where);
     let clip = null;
@@ -216,7 +237,7 @@ function flatten(id, svg, doc) {
       clip = [...c.children].map(shapePath).filter(Boolean).join(" ");
     }
     if (el.localName === "g" || el.localName === "svg") {
-      const children = [...el.children].map((c) => walk(c, style, op)).filter(Boolean);
+      const children = [...el.children].map((c) => walk(c, style, op, overrides)).filter(Boolean);
       if (!children.length) return null;
       return { kind: "group", ops, clip, children };
     }

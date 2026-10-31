@@ -114,6 +114,7 @@ T'Day is a task app, not a marketing site. Mobile screens should feel quiet, use
 - Motion has its own shared vocabulary: durations, delays, easings, springs, and press scales come from `MotionTokens.kt` (`shared/src/commonMain/kotlin/com/ohmz/tday/shared/motion/`) through a generated artifact per client — web `--tday-*` custom properties, `ease-*` utilities and `src/lib/motion.ts`; Android `TdayMotionTokens`; iOS `TdayMotion`. Never hand-edit a generated artifact.
 - A motion value two clients share belongs in `MotionTokens.kt`; a one-client value with a written argument stays put and carries a `not a token — see docs/motion.md` comment. After editing `MotionTokens.kt`, run `./gradlew :shared:exportMotionTokens` and commit the regenerated artifacts — `./gradlew :shared:verifyMotionTokens` is the CI drift gate.
 - See `docs/motion.md` for the normative table, the idiom rules, and the deliberate non-tokens.
+- Illustrated empty/error states come from `design/illustrations/` (one SVG per scene + `palette.json`). Edit the source, then run `node scripts/illustrations.mjs`; it regenerates the web scenes, Android VectorDrawables and iOS imagesets, and `--check` (run by the web tests) is the drift gate. Never hand-edit the generated files. See `design/illustrations/README.md`.
 
 ## Global Version Management
 

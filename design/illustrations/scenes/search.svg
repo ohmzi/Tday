@@ -1,5 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
 <defs>
+  <g id="search-drw">
+    <rect width="40" height="22" rx="1.5" fill="var(--desk)"/>
+    <rect x="2" y="2" width="36" height="18" rx="1" fill="none" stroke="var(--deskD)" stroke-width=".8" opacity=".6"/>
+    <rect x="12" y="3.5" width="16" height="4.5" rx="1" fill="var(--twinkle)"/>
+    <rect x="14" y="4.8" width="12" height="2" fill="var(--glare)" opacity=".5"/>
+    <circle cx="20" cy="14" r="2.4" fill="var(--twinkle)"/>
+    <circle cx="19.2" cy="13.2" r=".8" fill="var(--glare)" opacity=".7"/>
+    <rect y="22" width="40" height="1.6" fill="var(--deskD)" opacity=".5"/>
+  </g>
   <clipPath id="search-arch"><path d="M36 284 C40 170 100 60 240 36 C320 26 380 60 384 150 V284 Z"/></clipPath>
 </defs>
 <g><g class="rise">

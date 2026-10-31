@@ -3,5 +3,18 @@ import Foundation
 
 /// The illustrated-state scenes. Each asset carries a light and a dark appearance.
 enum TdayIllustration: String, CaseIterable {
+    case anytime = "IllusAnytime"
+    case box = "IllusBox"
+    case cal = "IllusCal"
+    case done = "IllusDone"
+    case history = "IllusHistory"
+    case lost = "IllusLost"
     case offline = "IllusOffline"
+    case oops = "IllusOops"
+    case overdue = "IllusOverdue"
+    case search = "IllusSearch"
+    case signout = "IllusSignout"
+    case srv = "IllusSrv"
+    case sync = "IllusSync"
+    case update = "IllusUpdate"
 }
