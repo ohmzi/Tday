@@ -1,11 +1,8 @@
 package com.ohmz.tday.compose.feature.widget
 
-import android.graphics.Color
 import androidx.annotation.ColorInt
 import androidx.compose.ui.graphics.toArgb
-import androidx.core.graphics.ColorUtils
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColorOrNull
-import kotlin.math.roundToInt
 
 /**
  * A chosen list's own colour, resolved for a widget render: the value to paint with in each theme,
@@ -17,6 +14,7 @@ import kotlin.math.roundToInt
  * tint correct through a day/night flip this app's process may never have been alive to see.
  */
 internal data class WidgetListAccent(
+    /** The day glyph colour, deepened from the palette key when it is too bright to read on a day surface. */
     @ColorInt val light: Int,
     @ColorInt val night: Int,
     /** [light] at [LIGHT_WASH_ALPHA]; composited over the host's surface, not pre-blended. */
@@ -36,38 +34,15 @@ internal data class WidgetListAccent(
  * colour the same list shows in the app.
  */
 internal fun widgetListAccentFor(colorKey: String?): WidgetListAccent? {
-    val light = tdayListAccentColorOrNull(colorKey)?.toArgb() ?: return null
-    val night = liftedForNight(light)
+    val palette = tdayListAccentColorOrNull(colorKey)?.toArgb() ?: return null
+    val light = WidgetColorMath.deepenedForDay(palette)
+    val night = WidgetColorMath.liftedForNight(palette)
     return WidgetListAccent(
         light = light,
         night = night,
-        lightWash = light.withAlphaFraction(LIGHT_WASH_ALPHA),
-        nightWash = night.withAlphaFraction(NIGHT_WASH_ALPHA),
+        lightWash = WidgetColorMath.withAlpha(light, LIGHT_WASH_ALPHA),
+        nightWash = WidgetColorMath.withAlpha(night, NIGHT_WASH_ALPHA),
     )
-}
-
-/**
- * The app's list palette has ONE value per key and no night variant — in-app those colours are
- * read on a themed surface, where a dark key still reads. A widget has no such guarantee: the
- * watermark is drawn at 10% alpha, and a key darker than the night widget surface (#171A20)
- * composites to nothing at all — SLATE (#3E4774) is literally darker than it, so the glyph would
- * vanish rather than merely dim.
- *
- * So in night the hue is kept and lightness is raised toward white only as far as it takes to clear
- * [NIGHT_LUMINANCE_FLOOR], which is where the two hand-tuned night accents this app already ships
- * sit (`tday_widget_today_accent` #8DC3F3 ≈ 0.51, `tday_widget_floater_accent` #7FC7B9 ≈ 0.49 — the
- * floor is deliberately below both, so the nudge is the smallest one that works). A key already
- * bright enough (GOLD, YELLOW) is returned untouched.
- */
-@ColorInt
-private fun liftedForNight(@ColorInt color: Int): Int {
-    var blend = 0f
-    var lifted = color
-    while (blend < NIGHT_LIFT_LIMIT && ColorUtils.calculateLuminance(lifted) < NIGHT_LUMINANCE_FLOOR) {
-        blend += NIGHT_LIFT_STEP
-        lifted = ColorUtils.blendARGB(color, Color.WHITE, blend)
-    }
-    return lifted
 }
 
 /**
@@ -75,19 +50,13 @@ private fun liftedForNight(@ColorInt color: Int): Int {
  * wallpaper, and the only surface this process can name is its own `tday_widget_surface`, which is
  * not what the pixels behind the button are. Letting the host composite keeps the button sitting on
  * whatever is actually there.
+ *
+ * Light wash is 0.20, not the 0.13 it was. The floater kind's own wash, #EAF6F1, is teal at about
+ * 0.11 over white, and a 0.13 wash of a light key (YELLOW, LIME, GOLD, PINK) left the pill reading
+ * as white on a light host. 0.20 gives the pill the same presence the built-in widgets have, while
+ * still letting the host's surface show through.
  */
-@ColorInt
-private fun Int.withAlphaFraction(fraction: Float): Int =
-    ColorUtils.setAlphaComponent(this, (fraction * 255f).roundToInt())
-
-/** Matches the alpha the hand-authored kind washes imply (#EAF5FF is #6EA8E1 at ~14% on white). */
-private const val LIGHT_WASH_ALPHA = 0.13f
+private const val LIGHT_WASH_ALPHA = 0.20f
 
 /** A touch stronger than light: the same alpha over a near-black surface reads as almost nothing. */
 private const val NIGHT_WASH_ALPHA = 0.18f
-
-private const val NIGHT_LUMINANCE_FLOOR = 0.42
-private const val NIGHT_LIFT_STEP = 0.02f
-
-/** A ceiling on the nudge: past this the result stops being recognisably the user's colour. */
-private const val NIGHT_LIFT_LIMIT = 0.60f
