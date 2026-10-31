@@ -548,7 +548,7 @@ fun CalendarScreen( // skipcq: KT-R1006
         // so the results re-scope to the new month, week or day. Only a day tap
         // closes it, because a live query would otherwise override that day and
         // the tap would look ignored. See [closesSearchOn].
-        if (searchActive && closesSearchOn(source)) closeSearch()
+        if (searchExpanded && closesSearchOn(source)) closeSearch()
     }
     // Pager settles, and Today jumps (which run through the same callback).
     fun settleToDate(date: LocalDate) = applyDateSelection(date, DateSelectionSource.PagerSettle)

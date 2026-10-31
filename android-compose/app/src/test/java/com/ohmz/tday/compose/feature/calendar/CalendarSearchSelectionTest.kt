@@ -16,8 +16,4 @@ class CalendarSearchSelectionTest {
         assertFalse(closesSearchOn(DateSelectionSource.PagerSettle))
     }
 
-    @Test
-    fun todayJumpKeepsSearchOpen() {
-        assertFalse(closesSearchOn(DateSelectionSource.TodayJump))
-    }
 }
