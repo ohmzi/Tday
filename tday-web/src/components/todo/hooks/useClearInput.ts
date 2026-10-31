@@ -12,7 +12,7 @@ export function useClearInput(
     setDesc,
     setTitle,
     setDateRange,
-    setPriority,
+    setPriorityTouchedByUser,
     setRruleOptions,
   } = useTodoForm();
   const clearInput = useCallback(
@@ -27,7 +27,9 @@ export function useClearInput(
         from: todoItem?.due ? todoItem.due : now,
         to: todoItem?.due ? todoItem.due : now,
       });
-      setPriority("Low");
+      // Re-arm the list default rather than hard-coding "Low": the form's list-default
+      // effect re-seeds the priority from the active list on the next render.
+      setPriorityTouchedByUser(false);
       setRruleOptions(null);
       if (titleRef.current) {
         titleRef.current.textContent = "";

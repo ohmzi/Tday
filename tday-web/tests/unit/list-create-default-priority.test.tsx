@@ -3,8 +3,11 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+type ListMeta = Record<string, { name: string; defaultPriority?: string | null }>;
+
 const createMutateFn = vi.fn();
-let scheduledListMeta: Record<string, { name: string; defaultPriority?: string | null }> = {};
+// Read on every render, so a rerender with a new object is what a list-meta refetch looks like.
+let scheduledListMeta: ListMeta = {};
 // What the NLP title field reports as a typed priority ("!!", "low priority", ...).
 let nlpPriority: "Lowest" | "Low" | "Medium" | "High" | null = null;
 
@@ -96,9 +99,15 @@ vi.mock("@/components/todo/component/TodoForm/NLPTitleInput", async () => {
 
 import TodoFormContainer from "@/components/todo/component/TodoForm/TodoFormContainer";
 
-function renderCreateInList(listID: string) {
+type Harness = {
+  submit: () => void;
+  /** Simulates a list-meta refetch: the next render sees a new listMetaData object. */
+  refetchListMeta: (meta: ListMeta) => void;
+};
+
+function renderCreateInList(listID: string): Harness {
   let submit: (() => void) | undefined;
-  render(
+  const tree = () => (
     <TodoFormContainer
       displayForm
       setDisplayForm={vi.fn()}
@@ -106,23 +115,32 @@ function renderCreateInList(listID: string) {
       registerSubmit={(fn) => {
         submit = fn;
       }}
-    />,
+    />
   );
-  return () => submit?.();
+  const view = render(tree());
+  return {
+    submit: () => submit?.(),
+    refetchListMeta: (meta) => {
+      scheduledListMeta = meta;
+      view.rerender(tree());
+    },
+  };
 }
 
-/** Lets effects and list-meta re-renders settle before the test acts. */
+/** Lets the mount-time effects and the NLP stand-in's timer run. */
 async function settle() {
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 }
+
+const WORK_HIGH: ListMeta = { "list-1": { name: "Work", defaultPriority: "High" } };
 
 describe("scheduled list create starts on the list's default priority", () => {
   beforeEach(() => {
     createMutateFn.mockReset();
     nlpPriority = null;
-    scheduledListMeta = {
-      "list-1": { name: "Work", defaultPriority: "High" },
-    };
+    scheduledListMeta = WORK_HIGH;
   });
 
   afterEach(() => {
@@ -130,40 +148,63 @@ describe("scheduled list create starts on the list's default priority", () => {
   });
 
   it("sends the list default priority when the user does not pick one", async () => {
-    const submit = renderCreateInList("list-1");
+    const form = renderCreateInList("list-1");
     await settle();
-    submit();
+    form.submit();
     expect(createMutateFn).toHaveBeenCalledTimes(1);
     expect(createMutateFn.mock.calls[0][0]).toMatchObject({ listID: "list-1", priority: "High" });
   });
 
   it("keeps a priority the user hand-picks over the list default", async () => {
-    const submit = renderCreateInList("list-1");
+    const form = renderCreateInList("list-1");
     await settle();
     // Open the priority selector from its row, then pick "Lowest" (the "low" label).
     fireEvent.click(screen.getByRole("button", { name: /^priority,/ }));
     fireEvent.click(screen.getByText("low"));
     await settle();
-    submit();
+    form.refetchListMeta({ "list-1": { name: "Work", defaultPriority: "High" } });
+    form.submit();
     expect(createMutateFn.mock.calls[0][0]).toMatchObject({ listID: "list-1", priority: "Lowest" });
   });
 
-  it("keeps a priority typed into the title over the list default", async () => {
+  it("keeps a priority typed into the title when list meta refetches afterwards", async () => {
     nlpPriority = "Low";
-    const submit = renderCreateInList("list-1");
-    await act(async () => {
-      await settle();
-      await settle();
-    });
-    submit();
+    const form = renderCreateInList("list-1");
+    await settle();
+    // The title's "!!"-style priority is in; a later list-meta refetch must not overwrite it.
+    form.refetchListMeta({ "list-1": { name: "Work", defaultPriority: "High" } });
+    await settle();
+    form.submit();
+    expect(createMutateFn.mock.calls[0][0]).toMatchObject({ listID: "list-1", priority: "Low" });
+  });
+
+  it("applies the list default when list meta arrives after the form opened", async () => {
+    scheduledListMeta = {};
+    const form = renderCreateInList("list-1");
+    await settle();
+    form.refetchListMeta(WORK_HIGH);
+    await settle();
+    form.submit();
+    expect(createMutateFn.mock.calls[0][0]).toMatchObject({ listID: "list-1", priority: "High" });
+  });
+
+  it("keeps a title-typed priority when the list meta arrives late", async () => {
+    scheduledListMeta = {};
+    nlpPriority = "Low";
+    const form = renderCreateInList("list-1");
+    await settle();
+    // Typed before the list loaded, then the list's default lands: the typed one stays.
+    form.refetchListMeta(WORK_HIGH);
+    await settle();
+    form.submit();
     expect(createMutateFn.mock.calls[0][0]).toMatchObject({ listID: "list-1", priority: "Low" });
   });
 
   it("does not seed from the default when the list has none", async () => {
     scheduledListMeta = { "list-1": { name: "Work", defaultPriority: null } };
-    const submit = renderCreateInList("list-1");
+    const form = renderCreateInList("list-1");
     await settle();
-    submit();
+    form.submit();
     expect(createMutateFn.mock.calls[0][0]).toMatchObject({ listID: "list-1", priority: "Low" });
   });
 });
