@@ -347,12 +347,12 @@
       "deepLink": null,
       "helpAnchors": [],
       "title": "Copia i dettagli dell'attività",
-      "summary": "Copia il titolo, le note, la scadenza e la priorità di un'attività come testo.",
+      "summary": "Copia il titolo, le note e la scadenza di un'attività come testo.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Scorri un'attività e tocca Copia — oppure usa il pulsante Copia su desktop — per copiarne titolo, note, scadenza e priorità come testo semplice, pronto da incollare ovunque."
+            "Scorri un'attività e tocca Copia — oppure usa il pulsante Copia su desktop — per copiarne titolo, note e scadenza come testo semplice, pronto da incollare ovunque."
           ]
         },
         {
@@ -364,7 +364,7 @@
       ],
       "searchTitle": "copia i dettagli dell'attivita",
       "searchKeywords": "copia, appunti, condividi, testo, scorri",
-      "searchBody": "copia il titolo, le note, la scadenza e la priorita di un'attivita come testo. scorri un'attivita e tocca copia — oppure usa il pulsante copia su desktop — per copiarne titolo, note, scadenza e priorita come testo semplice, pronto da incollare ovunque. utile per incollare un'attivita in un messaggio, un'email o un'altra app senza doverla riscrivere."
+      "searchBody": "copia il titolo, le note e la scadenza di un'attivita come testo. scorri un'attivita e tocca copia — oppure usa il pulsante copia su desktop — per copiarne titolo, note e scadenza come testo semplice, pronto da incollare ovunque. utile per incollare un'attivita in un messaggio, un'email o un'altra app senza doverla riscrivere."
     },
     {
       "id": "long-press-actions",

@@ -347,12 +347,12 @@
       "deepLink": null,
       "helpAnchors": [],
       "title": "Aufgabendetails kopieren",
-      "summary": "Kopiere Titel, Notizen, Fälligkeitsdatum und Priorität einer Aufgabe als Text.",
+      "summary": "Kopiere Titel, Notizen und Fälligkeitsdatum einer Aufgabe als Text.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Wische eine Aufgabe und tippe auf Kopieren — oder nutze die Kopieren-Schaltfläche am Desktop —, um Titel, Notizen, Fälligkeitsdatum und Priorität als reinen Text zu kopieren, bereit zum Einfügen überall."
+            "Wische eine Aufgabe und tippe auf Kopieren — oder nutze die Kopieren-Schaltfläche am Desktop —, um Titel, Notizen und Fälligkeitsdatum als reinen Text zu kopieren, bereit zum Einfügen überall."
           ]
         },
         {
@@ -364,7 +364,7 @@
       ],
       "searchTitle": "aufgabendetails kopieren",
       "searchKeywords": "kopieren, zwischenablage, teilen, text, wischen",
-      "searchBody": "kopiere titel, notizen, falligkeitsdatum und prioritat einer aufgabe als text. wische eine aufgabe und tippe auf kopieren — oder nutze die kopieren-schaltflache am desktop —, um titel, notizen, falligkeitsdatum und prioritat als reinen text zu kopieren, bereit zum einfugen uberall. praktisch, um eine aufgabe in eine nachricht, e-mail oder eine andere app einzufugen, ohne sie neu zu tippen."
+      "searchBody": "kopiere titel, notizen und falligkeitsdatum einer aufgabe als text. wische eine aufgabe und tippe auf kopieren — oder nutze die kopieren-schaltflache am desktop —, um titel, notizen und falligkeitsdatum als reinen text zu kopieren, bereit zum einfugen uberall. praktisch, um eine aufgabe in eine nachricht, e-mail oder eine andere app einzufugen, ohne sie neu zu tippen."
     },
     {
       "id": "long-press-actions",

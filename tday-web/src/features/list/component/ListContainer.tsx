@@ -21,6 +21,7 @@ import { useReorderListTodo } from "../query/reorder-list-todo";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
 import TaskSelectionProvider from "@/providers/TaskSelectionProvider";
 import BulkSelectButton from "@/components/todo/bulk/BulkSelectButton";
+import BulkSelectAllButton from "@/components/todo/bulk/BulkSelectAllButton";
 import { useList } from "../query/get-list-todos";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import NativePageHeader, { useNativePageBarSlots } from "@/components/app/NativePageHeader";
@@ -217,6 +218,7 @@ const ListContainer = ({ id }: { id: string }) => {
                                     gesture belongs to drag-to-reschedule on the
                                     native clients and parity means one entry point. */}
                                 <BulkSelectButton />
+                                <BulkSelectAllButton />
                                 {/* Same gate the native list screens use: a summary is
                                     only offered where there is something to summarize. */}
                                 {listTodos.length > 0 ? (

@@ -369,7 +369,7 @@ final class TodoListViewModel {
         }
     }
 
-    /// Swipe-to-copy: writes the task's title/notes/due/priority as plain text
+    /// Swipe-to-copy: writes the task's title/notes/due as plain text (no priority)
     /// to the system pasteboard. Synchronous and can't meaningfully fail (a
     /// pasteboard write has no throwing API), so this always confirms success —
     /// mirroring web's success-toast path for the same action.
