@@ -247,20 +247,28 @@ private fun buildPseudoListSnapshot(
     nowEpochMs: Long,
     taskLimit: Int,
 ): WidgetSnapshot {
-    val tasks = TaskSortEngine.sortedTodos(
-        state.todos.filter { task ->
-            if (task.completed) return@filter false
-            val dueEpochMs = task.dueEpochMs ?: return@filter false
-            if (listType == WidgetListType.OVERDUE) dueEpochMs < nowEpochMs
-            else dueEpochMs >= nowEpochMs
-        },
-    ) { it.toTodoSortKey() }
+    val tasks = TaskSortEngine.sortedTodos(pseudoListTasks(state, listType, nowEpochMs)) { it.toTodoSortKey() }
     return WidgetSnapshot(
         generatedAtEpochMs = nowEpochMs,
         status = if (tasks.isEmpty()) WidgetSnapshotStatus.EMPTY else WidgetSnapshotStatus.TASKS,
         taskCount = tasks.size,
         rows = tasks.take(taskLimit).map { it.toSnapshotRow(nowEpochMs) },
     )
+}
+
+/**
+ * The open dated tasks a pseudo list holds at [nowEpochMs], unsorted. Shared with the List widget
+ * picker so its row counts are the same numbers the widget and the screen it opens show.
+ */
+internal fun pseudoListTasks(
+    state: OfflineSyncState,
+    listType: WidgetListType,
+    nowEpochMs: Long,
+): List<CachedTodoRecord> = state.todos.filter { task ->
+    if (task.completed) return@filter false
+    val dueEpochMs = task.dueEpochMs ?: return@filter false
+    if (listType == WidgetListType.OVERDUE) dueEpochMs < nowEpochMs
+    else dueEpochMs >= nowEpochMs
 }
 
 /** Moved verbatim from the old `FloaterTasksWidgetModel.kt` (deleted). */
