@@ -305,6 +305,17 @@
                 android:layout_marginStart="8dp"
                 android:contentDescription="@string/widget_today_tasks_add">
 
+                <!-- A per-list widget's pill, tinted with the list colour through setImageTintList.
+                     See TaskWidgetRemoteViews.applyAddButtonAccent. -->
+                <ImageView
+                    android:id="@+id/widget_add_pill"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@null"
+                    android:scaleType="fitXY"
+                    android:src="@drawable/widget_add_button_background_list"
+                    android:visibility="gone" />
+
                 <ImageView
                     android:id="@+id/widget_add_icon"
                     android:layout_width="17dp"
