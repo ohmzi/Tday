@@ -7207,7 +7207,6 @@ private fun SwipeTaskRow( // skipcq: KT-R1006
     )
     val clipboardManager = LocalClipboardManager.current
     val snackbarManager = LocalSnackbarManager.current
-    val copyContext = LocalContext.current
     val copiedMessage = stringResource(R.string.task_copied_toast)
     val copyFailedMessage = stringResource(R.string.task_copy_failed_toast)
     // Read from the hoisted [TaskCompletionStaging] rather than owned here —
@@ -7536,7 +7535,7 @@ private fun SwipeTaskRow( // skipcq: KT-R1006
                             TdayHaptics.buttonPress(view)
                             closeSwipeSlot()
                             runCatching {
-                                clipboardManager.setText(AnnotatedString(taskCopyText(copyContext, todo)))
+                                clipboardManager.setText(AnnotatedString(taskCopyText(todo)))
                             }.onSuccess {
                                 snackbarManager?.showSuccess(copiedMessage)
                             }.onFailure {

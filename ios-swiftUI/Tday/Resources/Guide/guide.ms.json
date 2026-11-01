@@ -347,12 +347,12 @@
       "deepLink": null,
       "helpAnchors": [],
       "title": "Salin butiran tugasan",
-      "summary": "Salin tajuk, nota dan tarikh akhir tugasan sebagai teks.",
+      "summary": "Salin tajuk dan nota tugasan sebagai teks.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Leret tugasan dan ketik Salin — atau guna butang Salin pada desktop — untuk menyalin tajuk, nota dan tarikh akhirnya sebagai teks biasa, sedia untuk ditampal di mana-mana."
+            "Leret tugasan dan ketik Salin — atau guna butang Salin pada desktop — untuk menyalin tajuk dan notanya sebagai teks biasa, sedia untuk ditampal di mana-mana."
           ]
         },
         {
@@ -364,7 +364,7 @@
       ],
       "searchTitle": "salin butiran tugasan",
       "searchKeywords": "salin, papan keratan, kongsi, teks, leret",
-      "searchBody": "salin tajuk, nota dan tarikh akhir tugasan sebagai teks. leret tugasan dan ketik salin — atau guna butang salin pada desktop — untuk menyalin tajuk, nota dan tarikh akhirnya sebagai teks biasa, sedia untuk ditampal di mana-mana. berguna untuk menampal tugasan ke dalam mesej, e-mel, atau aplikasi lain tanpa menaipnya semula."
+      "searchBody": "salin tajuk dan nota tugasan sebagai teks. leret tugasan dan ketik salin — atau guna butang salin pada desktop — untuk menyalin tajuk dan notanya sebagai teks biasa, sedia untuk ditampal di mana-mana. berguna untuk menampal tugasan ke dalam mesej, e-mel, atau aplikasi lain tanpa menaipnya semula."
     },
     {
       "id": "long-press-actions",

@@ -692,14 +692,12 @@ export function CalendarTaskRow({
     onOpen: announceSwipeOpen,
   });
 
-  /** Copies the task's title/notes/due to the clipboard as plain text. */
+  /** Copies the task's title and notes to the clipboard as plain text. */
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(
         buildTaskShareText({
-          todo: { title: todo.title, description: todo.description, due: todo.due },
-          lang: i18n.language,
-          t: appDict,
+          todo: { title: todo.title, description: todo.description },
         }),
       );
       toast({ description: appDict("taskCopied") });

@@ -347,12 +347,12 @@
       "deepLink": null,
       "helpAnchors": [],
       "title": "Copy task details",
-      "summary": "Copy a task's title, notes, and due date as text.",
+      "summary": "Copy a task's title and notes as text.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Swipe a task and tap Copy — or use the Copy button on desktop — to copy its title, notes, and due date as plain text, ready to paste anywhere."
+            "Swipe a task and tap Copy — or use the Copy button on desktop — to copy its title and notes as plain text, ready to paste anywhere."
           ]
         },
         {
@@ -364,7 +364,7 @@
       ],
       "searchTitle": "copy task details",
       "searchKeywords": "copy, clipboard, share, text, swipe",
-      "searchBody": "copy a task's title, notes, and due date as text. swipe a task and tap copy — or use the copy button on desktop — to copy its title, notes, and due date as plain text, ready to paste anywhere. handy for pasting a task into a message, email, or another app without retyping it."
+      "searchBody": "copy a task's title and notes as text. swipe a task and tap copy — or use the copy button on desktop — to copy its title and notes as plain text, ready to paste anywhere. handy for pasting a task into a message, email, or another app without retyping it."
     },
     {
       "id": "long-press-actions",

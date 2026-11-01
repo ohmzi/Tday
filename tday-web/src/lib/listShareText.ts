@@ -12,36 +12,22 @@ export interface ShareableTodo {
   due?: Date | null;
 }
 
-// Minimal shape for a single task's plain-text export (swipe-to-copy, and
-// eventually a single-task share sheet). Title, notes and due — the task as it
-// reads, without the priority flag: copying a task copies the task, and the
-// urgency tier is a list-view marking rather than part of what the task says.
+// Minimal shape for a single task's plain-text export (swipe-to-copy). Title
+// and notes only. A copy is text to paste somewhere else, so it leaves out the
+// due date and time and the priority flag, which are scheduling details.
 export interface ShareableSingleTodo {
   title: string;
   description?: string | null;
-  due?: Date | null;
 }
 
-// Canonical plain-text export of a single task — title + flattened notes + due.
+// Canonical plain-text export of a single task: title + flattened notes.
 // Mirrors iOS's ShareSheet.taskShareText and Android's ShareUtils.taskCopyText
 // so a task copied from any platform reads the same.
-export function buildTaskShareText({
-  todo,
-  lang,
-  t,
-}: {
-  todo: ShareableSingleTodo;
-  lang: string;
-  t: TFunction;
-}): string {
-  const locale = getDateFnsLocale(lang);
+export function buildTaskShareText({ todo }: { todo: ShareableSingleTodo }): string {
   const lines: string[] = [todo.title];
   const notes = flattenNotesToPlainText(todo.description).trim();
   if (notes) {
     lines.push(notes);
-  }
-  if (todo.due) {
-    lines.push(t("shareDueLabel", { date: format(todo.due, "PPp", { locale }) }));
   }
   return lines.join("\n");
 }

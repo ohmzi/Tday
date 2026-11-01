@@ -67,7 +67,6 @@ import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -957,7 +956,6 @@ private fun CompletedSwipeRow(
         rememberTaskSwipeRevealState(item.id, revealWidth = CompletedSwipeRevealWidth)
     val clipboardManager = LocalClipboardManager.current
     val snackbarManager = LocalSnackbarManager.current
-    val copyContext = LocalContext.current
     val copiedMessage = stringResource(R.string.task_copied_toast)
     val copyFailedMessage = stringResource(R.string.task_copy_failed_toast)
     var restorePhase by remember(item.id) { mutableStateOf(CompletedRestorePhase.Completed) }
@@ -1160,7 +1158,7 @@ private fun CompletedSwipeRow(
                             TdayHaptics.buttonPress(view)
                             closeSwipeSlot()
                             runCatching {
-                                clipboardManager.setText(AnnotatedString(taskCopyText(copyContext, item)))
+                                clipboardManager.setText(AnnotatedString(taskCopyText(item)))
                             }.onSuccess {
                                 snackbarManager?.showSuccess(copiedMessage)
                             }.onFailure {

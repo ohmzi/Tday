@@ -835,9 +835,9 @@
       },
       "copy-task-text": {
         "title": "Aufgabendetails kopieren",
-        "summary": "Kopiere Titel, Notizen und Fälligkeitsdatum einer Aufgabe als Text.",
+        "summary": "Kopiere Titel und Notizen einer Aufgabe als Text.",
         "keywords": "kopieren, zwischenablage, teilen, text, wischen",
-        "body": "Wische eine Aufgabe und tippe auf Kopieren — oder nutze die Kopieren-Schaltfläche am Desktop —, um Titel, Notizen und Fälligkeitsdatum als reinen Text zu kopieren, bereit zum Einfügen überall.",
+        "body": "Wische eine Aufgabe und tippe auf Kopieren — oder nutze die Kopieren-Schaltfläche am Desktop —, um Titel und Notizen als reinen Text zu kopieren, bereit zum Einfügen überall.",
         "tip": "Praktisch, um eine Aufgabe in eine Nachricht, E-Mail oder eine andere App einzufügen, ohne sie neu zu tippen."
       },
       "long-press-actions": {

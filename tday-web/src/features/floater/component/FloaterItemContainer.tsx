@@ -57,7 +57,7 @@ export default function FloaterItemContainer({
   const { floaterListMetaData } = useFloaterListMetaData();
   const { completeMutateFn } = useCompleteFloater();
   const { deleteMutateFn } = useDeleteFloater();
-  const { t: appDict, i18n } = useTranslation("app");
+  const { t: appDict } = useTranslation("app");
   const { toast } = useToast();
   const { title, description, completed, priority, listID } = floater;
   // Same rule as the scheduled row, and applied here even though this screen's rows
@@ -113,8 +113,6 @@ export default function FloaterItemContainer({
       await navigator.clipboard.writeText(
         buildTaskShareText({
           todo: { title, description },
-          lang: i18n.language,
-          t: appDict,
         }),
       );
       toast({ description: appDict("taskCopied") });

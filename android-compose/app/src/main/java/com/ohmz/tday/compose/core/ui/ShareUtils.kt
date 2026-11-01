@@ -6,7 +6,6 @@ import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
-import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -15,35 +14,24 @@ private val SHARE_DATE_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
         .withZone(ZoneId.systemDefault())
 
-// Title + flattened notes + due as plain text — the single source of truth for
-// "what a task looks like as text", shared by the share sheet and the
-// swipe-to-copy clipboard action so both read the same on every platform (see
-// iOS's ShareSheet.taskShareText, web's buildTaskShareText).
+// Title + flattened notes as plain text: what the swipe-to-copy clipboard action
+// puts on the clipboard, read the same on every platform (see iOS's
+// ShareSheet.taskShareText, web's buildTaskShareText).
 //
-// The priority flag is deliberately not part of this: copying a task copies the
-// task, and the urgency tier is a list-view marking rather than part of what the
-// task says.
-private fun taskCopyText(
-    context: Context,
-    title: String,
-    description: String?,
-    due: Instant?,
-): String {
+// The due date/time and the priority flag are deliberately left out. A copy is
+// text to paste somewhere else, and those are scheduling details rather than
+// what the task says.
+internal fun taskCopyText(title: String, description: String?): String {
     val parts = buildList {
         add(title)
         flattenNotesToPlainText(description).takeIf { it.isNotBlank() }?.let { add(it) }
-        due?.let {
-            add(context.getString(R.string.share_due_label, SHARE_DATE_FORMATTER.format(it)))
-        }
     }
     return parts.joinToString("\n")
 }
 
-fun taskCopyText(context: Context, todo: TodoItem): String =
-    taskCopyText(context, todo.title, todo.description, todo.due)
+fun taskCopyText(todo: TodoItem): String = taskCopyText(todo.title, todo.description)
 
-fun taskCopyText(context: Context, item: CompletedItem): String =
-    taskCopyText(context, item.title, item.description, item.due)
+fun taskCopyText(item: CompletedItem): String = taskCopyText(item.title, item.description)
 
 fun buildListShareText(context: Context, listName: String, items: List<TodoItem>): String {
     val parts = buildList {
