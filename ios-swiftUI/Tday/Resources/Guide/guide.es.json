@@ -347,12 +347,12 @@
       "deepLink": null,
       "helpAnchors": [],
       "title": "Copiar detalles de la tarea",
-      "summary": "Copia el título, las notas y la fecha de vencimiento de una tarea como texto.",
+      "summary": "Copia el título y las notas de una tarea como texto.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Desliza una tarea y toca Copiar — o usa el botón Copiar en el escritorio — para copiar su título, notas y fecha de vencimiento como texto sin formato, listo para pegar en cualquier lugar."
+            "Desliza una tarea y toca Copiar — o usa el botón Copiar en el escritorio — para copiar su título y notas como texto sin formato, listo para pegar en cualquier lugar."
           ]
         },
         {
@@ -364,7 +364,7 @@
       ],
       "searchTitle": "copiar detalles de la tarea",
       "searchKeywords": "copiar, portapapeles, compartir, texto, deslizar",
-      "searchBody": "copia el titulo, las notas y la fecha de vencimiento de una tarea como texto. desliza una tarea y toca copiar — o usa el boton copiar en el escritorio — para copiar su titulo, notas y fecha de vencimiento como texto sin formato, listo para pegar en cualquier lugar. util para pegar una tarea en un mensaje, correo electronico u otra aplicacion sin volver a escribirla."
+      "searchBody": "copia el titulo y las notas de una tarea como texto. desliza una tarea y toca copiar — o usa el boton copiar en el escritorio — para copiar su titulo y notas como texto sin formato, listo para pegar en cualquier lugar. util para pegar una tarea en un mensaje, correo electronico u otra aplicacion sin volver a escribirla."
     },
     {
       "id": "long-press-actions",

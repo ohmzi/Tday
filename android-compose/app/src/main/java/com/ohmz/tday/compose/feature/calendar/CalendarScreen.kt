@@ -94,7 +94,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -2900,7 +2899,6 @@ private fun CalendarTodoRow(
     val swipeRevealState = rememberTaskSwipeRevealState(todo.id, revealWidth = CalendarSwipeRevealWidth)
     val clipboardManager = LocalClipboardManager.current
     val snackbarManager = LocalSnackbarManager.current
-    val copyContext = LocalContext.current
     val copiedMessage = stringResource(R.string.task_copied_toast)
     val copyFailedMessage = stringResource(R.string.task_copy_failed_toast)
     var localChecked by remember(todo.id) { mutableStateOf(false) }
@@ -3100,7 +3098,7 @@ private fun CalendarTodoRow(
                         TdayHaptics.buttonPress(view)
                         closeSwipeSlot()
                         runCatching {
-                            clipboardManager.setText(AnnotatedString(taskCopyText(copyContext, todo)))
+                            clipboardManager.setText(AnnotatedString(taskCopyText(todo)))
                         }.onSuccess {
                             snackbarManager?.showSuccess(copiedMessage)
                         }.onFailure {

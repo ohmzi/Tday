@@ -104,7 +104,6 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -1682,7 +1681,6 @@ private fun ScheduledTaskHomeTodayTaskRow(
     val swipeRevealState = rememberTaskSwipeRevealState(todo.id, revealWidth = SwipeRevealWidth)
     val clipboardManager = LocalClipboardManager.current
     val snackbarManager = LocalSnackbarManager.current
-    val copyContext = LocalContext.current
     val copiedMessage = stringResource(R.string.task_copied_toast)
     val copyFailedMessage = stringResource(R.string.task_copy_failed_toast)
     var localChecked by remember(todo.id) { mutableStateOf(false) }
@@ -1873,7 +1871,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
                         TdayHaptics.buttonPress(view)
                         closeSwipeSlot()
                         runCatching {
-                            clipboardManager.setText(AnnotatedString(taskCopyText(copyContext, todo)))
+                            clipboardManager.setText(AnnotatedString(taskCopyText(todo)))
                         }.onSuccess {
                             snackbarManager?.showSuccess(copiedMessage)
                         }.onFailure {

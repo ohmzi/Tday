@@ -347,12 +347,12 @@
       "deepLink": null,
       "helpAnchors": [],
       "title": "Copier les détails de la tâche",
-      "summary": "Copiez le titre, les notes et l'échéance d'une tâche sous forme de texte.",
+      "summary": "Copiez le titre et les notes d'une tâche sous forme de texte.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Balayez une tâche et appuyez sur Copier — ou utilisez le bouton Copier sur ordinateur — pour copier son titre, ses notes et son échéance en texte brut, prêt à coller n'importe où."
+            "Balayez une tâche et appuyez sur Copier — ou utilisez le bouton Copier sur ordinateur — pour copier son titre et ses notes en texte brut, prêt à coller n'importe où."
           ]
         },
         {
@@ -364,7 +364,7 @@
       ],
       "searchTitle": "copier les details de la tache",
       "searchKeywords": "copier, presse-papiers, partager, texte, balayer",
-      "searchBody": "copiez le titre, les notes et l'echeance d'une tache sous forme de texte. balayez une tache et appuyez sur copier — ou utilisez le bouton copier sur ordinateur — pour copier son titre, ses notes et son echeance en texte brut, pret a coller n'importe ou. pratique pour coller une tache dans un message, un e-mail ou une autre application sans avoir a la retaper."
+      "searchBody": "copiez le titre et les notes d'une tache sous forme de texte. balayez une tache et appuyez sur copier — ou utilisez le bouton copier sur ordinateur — pour copier son titre et ses notes en texte brut, pret a coller n'importe ou. pratique pour coller une tache dans un message, un e-mail ou une autre application sans avoir a la retaper."
     },
     {
       "id": "long-press-actions",
