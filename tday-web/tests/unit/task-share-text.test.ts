@@ -1,27 +1,21 @@
 import { describe, expect, it } from "vitest";
-import type { TFunction } from "i18next";
 import { buildTaskShareText } from "@/lib/listShareText";
 
 /**
- * The plain text a copied task becomes. It used to carry a "Priority: High" line
- * too; copying a task should copy the task, and the urgency tier is a list-view
- * marking rather than part of what the task says, so the line is gone on all
- * three platforms.
+ * The plain text a copied task becomes: title and notes only. It used to carry
+ * "Priority: High" and "Due: …" lines too. Both are scheduling details rather
+ * than what the task says, so they're gone on all three platforms.
  */
-const translate = ((key: string) => key) as unknown as TFunction;
-
 describe("buildTaskShareText", () => {
   it("is the title alone for a bare task", () => {
     expect(
-      buildTaskShareText({ todo: { title: "Buy milk" }, lang: "en", t: translate }),
+      buildTaskShareText({ todo: { title: "Buy milk" } }),
     ).toBe("Buy milk");
   });
 
   it("appends flattened notes under the title", () => {
     const text = buildTaskShareText({
       todo: { title: "Buy milk", description: "Semi-skimmed\n2 litres" },
-      lang: "en",
-      t: translate,
     });
     expect(text.split("\n")).toEqual(["Buy milk", "Semi-skimmed", "2 litres"]);
   });
@@ -31,9 +25,15 @@ describe("buildTaskShareText", () => {
     // one to offer simply cannot hand it over.
     const text = buildTaskShareText({
       todo: { title: "Pay rent" },
-      lang: "en",
-      t: translate,
     });
     expect(text.toLowerCase()).not.toContain("priority");
+  });
+
+  it("never carries the due date or time", () => {
+    // Also not part of the input shape: a scheduled task copies as title and notes.
+    const text = buildTaskShareText({
+      todo: { title: "Update passport details", description: "Bring the old one" },
+    });
+    expect(text).toBe("Update passport details\nBring the old one");
   });
 });
