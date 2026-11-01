@@ -306,7 +306,10 @@
                 android:contentDescription="@string/widget_today_tasks_add">
 
                 <!-- A per-list widget's pill, tinted with the list colour through setImageTintList.
-                     See TaskWidgetRemoteViews.applyAddButtonAccent. -->
+                     See TaskWidgetRemoteViews.applyAddButtonAccent. tintMode must be src_in: the
+                     ImageView default (src_atop) keeps the white pill's full opacity and lays the
+                     translucent wash over it, which reads as a cream pill on a dark widget. src_in
+                     keeps only the pill's shape and takes the wash's own alpha. -->
                 <ImageView
                     android:id="@+id/widget_add_pill"
                     android:layout_width="match_parent"
@@ -314,6 +317,7 @@
                     android:contentDescription="@null"
                     android:scaleType="fitXY"
                     android:src="@drawable/widget_add_button_background_list"
+                    android:tintMode="src_in"
                     android:visibility="gone" />
 
                 <ImageView
