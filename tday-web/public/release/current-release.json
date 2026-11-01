@@ -1,11 +1,10 @@
 {
-  "version": "0.8.9",
-  "publishedAt": "2026-10-31T13:41:52-04:00",
+  "version": "0.8.10",
+  "publishedAt": "2026-11-01T01:45:15-04:00",
   "notes": [
-    "Add illustrated empty, error and update states on web, Android and iOS",
-    "Illustrated empty and error states (generator not yet passing)",
-    "Add a header Select all and drop priority from the copy guide"
+    "Copy a task as its title and notes only",
+    "Show the list colour pill behind the list widget's add button"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.9",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.8..v0.8.9"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.10",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.9..v0.8.10"
 }
