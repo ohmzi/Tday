@@ -45,6 +45,7 @@ Image("ActionEdit")
 3. Android: add `ic_lucide_<glyph>.xml` (paths only), render via `painterResource`.
 4. iOS: add a `<Name>.imageset` template SVG, render via `Image("<Name>")` + `.renderingMode(.template)`.
 5. Keep the three in sync — same glyph everywhere.
+6. A **list icon** also needs an Android widget watermark: run `python3 scripts/widget-watermarks.py` (needs `pip install skia-pathops fonttools`). It writes `widget_watermark_<glyph>.xml`, the glyph as a filled outline with its 10% weight baked in, plus the glyph-to-watermark map in `WidgetWatermarkGlyphs.kt`. `WidgetWatermarkGlyphsTest` fails if a list glyph has none. Widget watermarks are drawn like the Today moon (filled, baked alpha, full ImageView alpha); some launchers draw nothing for a stroked glyph faded with `setImageAlpha`.
 
 ## Current shared glyphs
 
