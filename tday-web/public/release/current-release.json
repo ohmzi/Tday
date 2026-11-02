@@ -1,10 +1,9 @@
 {
-  "version": "0.8.10",
-  "publishedAt": "2026-11-01T01:45:15-04:00",
+  "version": "0.8.11",
+  "publishedAt": "2026-11-01T19:14:15-05:00",
   "notes": [
-    "Copy a task as its title and notes only",
-    "Show the list colour pill behind the list widget's add button"
+    "Let the list widget's add pill take the wash's alpha in dark mode"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.10",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.9..v0.8.10"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.11",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.10..v0.8.11"
 }
