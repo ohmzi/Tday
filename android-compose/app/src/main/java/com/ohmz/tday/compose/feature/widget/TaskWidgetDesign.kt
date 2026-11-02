@@ -386,7 +386,9 @@ internal object TaskWidgetRemoteViews {
      *
      * The wash is drawn by the `widget_add_pill` ImageView through `setImageTintList`, the same
      * call that colours the glyph, and not by `setBackgroundTintList` on the button. Hosts dropped
-     * the background tint, which left the white pill invisible on the white widget surface.
+     * the background tint, which left the white pill invisible on the white widget surface. The
+     * washes are opaque (see `widgetListAccentFor`), so the pill looks the same whichever tint mode
+     * the host draws with.
      */
     private fun RemoteViews.applyAddButtonAccent(visuals: TaskWidgetVisuals) {
         val accent = visuals.accent

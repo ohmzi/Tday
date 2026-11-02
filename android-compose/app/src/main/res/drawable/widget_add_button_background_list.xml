@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?><!-- The add button's pill on a per-list widget, whose colour is the one the user gave that list and
      so cannot be named here. Opaque white although it is never drawn white: it is the src of the
      widget_add_pill ImageView, which the render tints through ImageView.setImageTintList (API 31+
-     only — see TaskWidgetRemoteViews.applyAddButtonAccent) with the src_in tintMode set in widget_task.xml, which takes BOTH the tint's colour and its alpha and keeps nothing of this
-     shape but its geometry. So the list colour arrives already translucent and composites over
-     whatever the host draws behind the widget, rather than over a surface this process guessed at.
+     only — see TaskWidgetRemoteViews.applyAddButtonAccent). The tint is an opaque wash already
+     blended over the widget card's colour (see widgetListAccentFor), so only this shape's geometry
+     survives, whether the host honours the src_in tintMode in widget_task.xml or draws src_atop.
      White rather than either accent wash, so if the tint is ever dropped the button cannot fall
      back to the Today or Floater identity. 14dp radius matches widget_add_button_background. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"

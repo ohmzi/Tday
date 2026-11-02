@@ -17,7 +17,7 @@ internal data class WidgetListAccent(
     /** The day glyph colour, deepened from the palette key when it is too bright to read on a day surface. */
     @ColorInt val light: Int,
     @ColorInt val night: Int,
-    /** [light] at [LIGHT_WASH_ALPHA]; composited over the host's surface, not pre-blended. */
+    /** [light] at [LIGHT_WASH_ALPHA] pre-blended over the day widget surface, so fully opaque. */
     @ColorInt val lightWash: Int,
     @ColorInt val nightWash: Int,
 )
@@ -40,24 +40,32 @@ internal fun widgetListAccentFor(colorKey: String?): WidgetListAccent? {
     return WidgetListAccent(
         light = light,
         night = night,
-        lightWash = WidgetColorMath.withAlpha(light, LIGHT_WASH_ALPHA),
-        nightWash = WidgetColorMath.withAlpha(night, NIGHT_WASH_ALPHA),
+        lightWash = WidgetColorMath.blend(DAY_WIDGET_SURFACE, light, LIGHT_WASH_ALPHA),
+        nightWash = WidgetColorMath.blend(NIGHT_WIDGET_SURFACE, night, NIGHT_WASH_ALPHA),
     )
 }
 
 /**
- * The wash is the accent at low alpha, NOT a pre-blended opaque colour: a widget sits on the host's
- * wallpaper, and the only surface this process can name is its own `tday_widget_surface`, which is
- * not what the pixels behind the button are. Letting the host composite keeps the button sitting on
- * whatever is actually there.
+ * The wash is the accent pre-blended over the widget's own card colour into an OPAQUE colour, the
+ * same kind of value the Today and Floater kinds ship as `tday_widget_*accent_wash`. The pill sits
+ * on that card (`widget_preview_background`, filled with `tday_widget_surface`), never on the
+ * wallpaper, so the card is the only thing behind it.
+ *
+ * It used to be the accent at low alpha, relying on the pill ImageView's `src_in` tintMode to carry
+ * that alpha through. Some launchers draw the tint with the ImageView default (src_atop), which
+ * keeps the white pill opaque and left it cream in dark mode. An opaque tint looks the same under
+ * either mode.
  *
  * Light wash is 0.20, not the 0.13 it was. The floater kind's own wash, #EAF6F1, is teal at about
  * 0.11 over white, and a 0.13 wash of a light key (YELLOW, LIME, GOLD, PINK) left the pill reading
- * as white on a light host. 0.20 gives the pill the same presence the built-in widgets have, while
- * still letting the host's surface show through.
+ * as white on a light host. 0.20 gives the pill the same presence the built-in widgets have.
  */
 // Must stay in step with iOS `TodayTasksWidget.addButtonWashOpacity` (0.20) in TodayTasksWidget.swift.
 private const val LIGHT_WASH_ALPHA = 0.20f
 
-/** A touch stronger than light: the same alpha over a near-black surface reads as almost nothing. */
+/** A touch under light: the night accent is lifted toward white, so 0.18 of it already reads clearly on the dark card. */
 private const val NIGHT_WASH_ALPHA = 0.18f
+
+/** `tday_widget_surface` in values/ and values-night/; `WidgetListAccentTest` pins them to colors.xml. */
+internal const val DAY_WIDGET_SURFACE = 0xFFFFFFFF.toInt()
+internal const val NIGHT_WIDGET_SURFACE = 0xFF171A20.toInt()
