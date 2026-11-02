@@ -11,7 +11,7 @@
         android:width="128dp"
         android:height="128dp"
         android:bottom="-12dp"
-        android:drawable="@drawable/widget_empty_watermark_floater"
+        android:drawable="@drawable/widget_preview_watermark_floater"
         android:gravity="bottom|end"
         android:right="-12dp" />
 </layer-list>
