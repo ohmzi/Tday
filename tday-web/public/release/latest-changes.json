@@ -1,9 +1,9 @@
 {
-  "version": "0.8.11",
-  "publishedAt": "2026-11-01T19:14:15-05:00",
+  "version": "0.8.12",
+  "publishedAt": "2026-11-01T21:10:26-05:00",
   "notes": [
-    "Let the list widget's add pill take the wash's alpha in dark mode"
+    "Give the list widget's add pill an opaque wash"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.11",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.10..v0.8.11"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.12",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.11..v0.8.12"
 }
