@@ -1,9 +1,9 @@
 {
-  "version": "0.8.13",
-  "publishedAt": "2026-11-01T23:33:13-05:00",
+  "version": "0.8.14",
+  "publishedAt": "2026-11-02T00:51:26-05:00",
   "notes": [
-    "Draw the Floater widget's leaf watermark the way list glyphs are drawn"
+    "Draw every widget watermark the way the Today moon is drawn"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.13",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.12..v0.8.13"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.14",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.13..v0.8.14"
 }
