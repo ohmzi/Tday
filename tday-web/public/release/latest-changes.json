@@ -1,9 +1,9 @@
 {
-  "version": "0.8.12",
-  "publishedAt": "2026-11-01T21:10:26-05:00",
+  "version": "0.8.13",
+  "publishedAt": "2026-11-01T23:33:13-05:00",
   "notes": [
-    "Give the list widget's add pill an opaque wash"
+    "Draw the Floater widget's leaf watermark the way list glyphs are drawn"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.12",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.11..v0.8.12"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.13",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.12..v0.8.13"
 }
