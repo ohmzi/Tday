@@ -5,6 +5,9 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.annotation.ColorInt
+import androidx.annotation.ColorRes
+import androidx.annotation.DrawableRes
 import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.MainActivity
 import com.ohmz.tday.compose.R
@@ -156,11 +159,10 @@ internal fun listWidgetVisualsFor(
         // instead, the same one its picker row shows.
         val pseudoGlyph = if (listType.isPseudoList) pseudoIconRes(listType) else null
         if (pseudoGlyph == null) return base
-        val pseudoWatermark = TaskWidgetWatermark(
-            drawable = pseudoGlyph,
+        val pseudoWatermark = glyphWatermark(
+            glyph = pseudoGlyph,
             tint = todayWidgetAccentColor(isDaytime),
             tintArgb = null,
-            alpha = TaskWidgetWatermark.WATERMARK_ALPHA,
         )
         return base.copy(emptyWatermark = pseudoWatermark, setupWatermark = pseudoWatermark)
     }
@@ -168,16 +170,13 @@ internal fun listWidgetVisualsFor(
     // list has no colour. The type used to own the accent outright, which is why a red floater
     // list wore the floater green: the glyph came from the list and the tint did not.
     val listAccent = widgetListAccentFor(listColorKey)
-    val watermark = TaskWidgetWatermark(
-        drawable = tdayListIconResForList(listIconKey, listName),
+    val watermark = glyphWatermark(
+        glyph = tdayListIconResForList(listIconKey, listName),
         tint = when (listType) {
             WidgetListType.FLOATER -> R.color.tday_widget_floater_accent
             WidgetListType.TODO, WidgetListType.SCHEDULED, WidgetListType.OVERDUE -> todayWidgetAccentColor(isDaytime)
         },
         tintArgb = listAccent?.light,
-        // A shared Lucide glyph is white at full opacity, so the watermark weight the other
-        // drawables bake has to be applied here instead.
-        alpha = TaskWidgetWatermark.WATERMARK_ALPHA,
     )
     return base.copy(emptyWatermark = watermark, setupWatermark = watermark, accent = listAccent)
 }
@@ -217,6 +216,23 @@ internal fun pseudoTitleRes(listType: WidgetListType): Int? = when (listType) {
 }
 
 /** The fixed Lucide glyph a pseudo list's picker row and widget watermark wear. */
+/**
+ * A list glyph's watermark, drawn the way the Today widget's moon is: a filled vector with its
+ * 10% weight baked in, at full ImageView alpha, recoloured by the SRC_ATOP filter. The stroked
+ * Lucide glyph faded with `setImageAlpha` drew nothing on some launchers at some widget sizes.
+ * A glyph with no generated watermark (one added without re-running scripts/widget-watermarks.py)
+ * falls back to that older route rather than to no watermark.
+ */
+internal fun glyphWatermark(@DrawableRes glyph: Int, @ColorRes tint: Int, @ColorInt tintArgb: Int?): TaskWidgetWatermark {
+    val baked = WidgetWatermarkForGlyph[glyph]
+    return TaskWidgetWatermark(
+        drawable = baked ?: glyph,
+        tint = tint,
+        tintArgb = tintArgb,
+        alpha = if (baked != null) TaskWidgetWatermark.OPAQUE_ALPHA else TaskWidgetWatermark.WATERMARK_ALPHA,
+    )
+}
+
 internal fun pseudoIconRes(listType: WidgetListType): Int? = when (listType) {
     WidgetListType.SCHEDULED -> R.drawable.ic_lucide_calendar_clock
     WidgetListType.OVERDUE -> R.drawable.ic_lucide_alarm_clock

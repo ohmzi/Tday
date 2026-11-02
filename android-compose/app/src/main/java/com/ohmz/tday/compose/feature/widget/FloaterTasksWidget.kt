@@ -21,8 +21,6 @@ private val FloaterWidgetWatermark = TaskWidgetWatermark(
     drawable = R.drawable.widget_empty_watermark_floater,
     // The accent the drawable already bakes; see TaskWidgetWatermark for why it is restated here.
     tint = R.color.tday_widget_floater_accent,
-    // The drawable's strokes are opaque; the watermark weight is applied here, as for Lucide glyphs.
-    alpha = TaskWidgetWatermark.WATERMARK_ALPHA,
 )
 
 /** Reused by `ListTasksWidget` for a floater-list instance — same undated shape as Floater. */
