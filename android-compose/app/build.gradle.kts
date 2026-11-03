@@ -269,7 +269,7 @@ dependencies {
     // The offline cache holds task titles, notes and unsynced mutations, so it is encrypted at
     // rest with SQLCipher. androidx-compatible artifact (net.zetetic:sqlcipher-android) so it
     // plugs into Room's openHelperFactory directly. See DatabaseModule / DatabasePassphraseStore.
-    implementation("net.zetetic:sqlcipher-android:4.19.1")
+    implementation("net.zetetic:sqlcipher-android:4.20.0")
     implementation("androidx.sqlite:sqlite:2.7.1")
 
     // Optional, opt-in app lock (BiometricPrompt with device-credential fallback).
@@ -280,13 +280,13 @@ dependencies {
 
     implementation("com.squareup.retrofit2:retrofit:3.0.0")
     implementation("com.squareup.retrofit2:converter-kotlinx-serialization:3.0.0")
-    implementation("com.squareup.okhttp3:okhttp:5.5.0")
-    implementation("com.squareup.okhttp3:okhttp-urlconnection:5.5.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:5.5.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    implementation("com.squareup.okhttp3:okhttp:5.5.1")
+    implementation("com.squareup.okhttp3:okhttp-urlconnection:5.5.1")
+    implementation("com.squareup.okhttp3:logging-interceptor:5.5.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.12.0")
 
-    implementation("io.sentry:sentry-okhttp:8.61.0")
+    implementation("io.sentry:sentry-okhttp:8.62.0")
 
     implementation("androidx.security:security-crypto:1.1.0")
 
@@ -304,7 +304,7 @@ dependencies {
     }
 
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.12.0")
     testImplementation("io.mockk:mockk:1.14.11")
     testImplementation("app.cash.turbine:turbine:1.2.1")
 
