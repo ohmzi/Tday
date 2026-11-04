@@ -245,6 +245,7 @@ internal fun floaterListToCache(list: ListSummary): CachedFloaterListRecord {
         memberCount = list.memberCount,
         ownerUsername = list.ownerUsername,
         reusable = list.reusable,
+        showOnMainScreen = list.showOnMainScreen,
         defaultPriority = list.defaultPriority,
     )
 }
@@ -266,6 +267,7 @@ internal fun floaterListFromCache(
         memberCount = cache.memberCount,
         ownerUsername = cache.ownerUsername,
         reusable = cache.reusable,
+        showOnMainScreen = cache.showOnMainScreen,
         defaultPriority = cache.defaultPriority,
     )
 }
@@ -453,6 +455,7 @@ internal fun mapFloaterListDto(dto: FloaterListDto, iconFallback: String? = null
         memberCount = dto.memberCount,
         ownerUsername = dto.ownerUsername,
         reusable = dto.reusable,
+        showOnMainScreen = dto.showOnMainScreen,
         defaultPriority = dto.defaultPriority,
     )
 }

@@ -78,6 +78,7 @@ data class CachedFloaterListEntity(
     val ownerUsername: String? = null,
     @ColumnInfo(defaultValue = "0") val reusable: Boolean = false,
     val defaultPriority: String? = null,
+    @ColumnInfo(defaultValue = "1") val showOnMainScreen: Boolean = true,
 )
 
 @Entity(
@@ -143,6 +144,7 @@ data class PendingMutationEntity(
     val reusable: Boolean? = null,
     val defaultPriority: String? = null,
     val defaultPriorityChanged: Boolean? = null,
+    val showOnMainScreen: Boolean? = null,
     // The non-replayable placeholder a delayed-commit complete/delete parks in the queue for the
     // length of its Undo window (v14; see PendingMutationRecord.staged). SyncManager starts every
     // pass from a database read, so a flag this row dropped meant a sync inside the window replayed

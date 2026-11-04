@@ -106,6 +106,7 @@ fun CachedFloaterListRecord.toEntity() = CachedFloaterListEntity(
     memberCount = memberCount,
     ownerUsername = ownerUsername,
     reusable = reusable,
+    showOnMainScreen = showOnMainScreen,
     defaultPriority = defaultPriority,
 )
 
@@ -122,6 +123,7 @@ fun CachedFloaterListEntity.toRecord() = CachedFloaterListRecord(
     memberCount = memberCount,
     ownerUsername = ownerUsername,
     reusable = reusable,
+    showOnMainScreen = showOnMainScreen,
     defaultPriority = defaultPriority,
 )
 
@@ -199,6 +201,7 @@ fun PendingMutationRecord.toEntity() = PendingMutationEntity(
     color = color,
     iconKey = iconKey,
     reusable = reusable,
+    showOnMainScreen = showOnMainScreen,
     defaultPriority = defaultPriority,
     defaultPriorityChanged = defaultPriorityChanged,
     staged = staged,
@@ -222,6 +225,7 @@ fun PendingMutationEntity.toRecord() = PendingMutationRecord(
     color = color,
     iconKey = iconKey,
     reusable = reusable,
+    showOnMainScreen = showOnMainScreen,
     defaultPriority = defaultPriority,
     defaultPriorityChanged = defaultPriorityChanged,
     staged = staged ?: false,

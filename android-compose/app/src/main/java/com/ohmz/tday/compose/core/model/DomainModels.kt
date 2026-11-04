@@ -150,6 +150,8 @@ data class ListSummary(
     // Drives both the settings toggle and the header's Reset affordance, exactly
     // as `listMeta.reusable` does on web (FloaterListContainer).
     val reusable: Boolean = false,
+    // Off keeps the list's tasks out of the Floater feed, widget and summary.
+    val showOnMainScreen: Boolean = true,
     // The priority a new task in this list starts with, unless the create-task
     // sheet's caller overrides it or the user changes it before saving. Null
     // means the list has no default.

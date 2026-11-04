@@ -46,6 +46,7 @@ class FloaterListRepository @Inject constructor(
         iconKey: String? = null,
         reusable: Boolean = false,
         defaultPriority: String? = null,
+        showOnMainScreen: Boolean = true,
     ) {
         val normalizedName = capitalizeFirstListLetter(name).trim()
         if (normalizedName.isBlank()) return
@@ -63,6 +64,7 @@ class FloaterListRepository @Inject constructor(
                 createdAtEpochMs = timestampMs,
                 updatedAtEpochMs = timestampMs,
                 reusable = reusable,
+                showOnMainScreen = showOnMainScreen,
                 defaultPriority = defaultPriority,
             )
             state.copy(
@@ -76,6 +78,7 @@ class FloaterListRepository @Inject constructor(
                     color = color,
                     iconKey = iconKey,
                     reusable = reusable,
+                    showOnMainScreen = showOnMainScreen,
                     defaultPriority = defaultPriority,
                     defaultPriorityChanged = true,
                 ),
@@ -101,6 +104,7 @@ class FloaterListRepository @Inject constructor(
                             color = color,
                             iconKey = iconKey,
                             reusable = reusable,
+                            showOnMainScreen = showOnMainScreen,
                             defaultPriority = defaultPriority,
                         ),
                     ),
@@ -131,6 +135,7 @@ class FloaterListRepository @Inject constructor(
                                     updatedAtEpochMs = updatedAt,
                                     createdAtEpochMs = createdAt,
                                     reusable = createdList.reusable,
+                                    showOnMainScreen = createdList.showOnMainScreen,
                                     defaultPriority = createdList.defaultPriority,
                                 )
                             } else {
@@ -152,6 +157,7 @@ class FloaterListRepository @Inject constructor(
         reusable: Boolean? = null,
         defaultPriority: String? = null,
         defaultPriorityChanged: Boolean = false,
+        showOnMainScreen: Boolean? = null,
     ) {
         val trimmedName = capitalizeFirstListLetter(name).trim()
         if (listId.isBlank()) return
@@ -170,6 +176,7 @@ class FloaterListRepository @Inject constructor(
                                 iconKey = iconKey ?: list.iconKey,
                                 updatedAtEpochMs = timestampMs,
                                 reusable = reusable ?: list.reusable,
+                                showOnMainScreen = showOnMainScreen ?: list.showOnMainScreen,
                                 defaultPriority = if (defaultPriorityChanged) defaultPriority else list.defaultPriority,
                             )
                         } else {
@@ -184,6 +191,7 @@ class FloaterListRepository @Inject constructor(
                                 iconKey = iconKey ?: mutation.iconKey,
                                 timestampEpochMs = timestampMs,
                                 reusable = reusable ?: mutation.reusable,
+                                showOnMainScreen = showOnMainScreen ?: mutation.showOnMainScreen,
                                 defaultPriority = if (defaultPriorityChanged) defaultPriority else mutation.defaultPriority,
                             )
                         } else {
@@ -209,6 +217,7 @@ class FloaterListRepository @Inject constructor(
             color = color,
             iconKey = iconKey,
             reusable = reusable,
+            showOnMainScreen = showOnMainScreen,
             defaultPriority = defaultPriority,
             defaultPriorityChanged = defaultPriorityChanged,
         )
@@ -222,6 +231,7 @@ class FloaterListRepository @Inject constructor(
                             iconKey = iconKey ?: list.iconKey,
                             updatedAtEpochMs = timestampMs,
                             reusable = reusable ?: list.reusable,
+                            showOnMainScreen = showOnMainScreen ?: list.showOnMainScreen,
                             defaultPriority = if (defaultPriorityChanged) defaultPriority else list.defaultPriority,
                         )
                     } else {
@@ -249,6 +259,7 @@ class FloaterListRepository @Inject constructor(
                         color = color,
                         iconKey = iconKey,
                         reusable = reusable,
+                        showOnMainScreen = showOnMainScreen,
                         defaultPriority = defaultPriority,
                         defaultPriorityChanged = defaultPriorityChanged,
                     ),

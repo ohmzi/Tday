@@ -82,6 +82,15 @@ internal class Migration13To14 : Migration(13, 14) {
     }
 }
 
+// v15: the floater-list `showOnMainScreen` flag, and its nullable twin on the mutation queue. The
+// list column defaults to 1 so every existing list stays on the main screen after the upgrade.
+internal class Migration14To15 : Migration(14, 15) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE cached_floater_lists ADD COLUMN showOnMainScreen INTEGER NOT NULL DEFAULT 1")
+        db.execSQL("ALTER TABLE pending_mutations ADD COLUMN showOnMainScreen INTEGER")
+    }
+}
+
 /**
  * Releases the staged markers a dead process left behind.
  *
@@ -151,6 +160,7 @@ object DatabaseModule {
                 Migration11To12(),
                 Migration12To13(),
                 Migration13To14(),
+                Migration14To15(),
             )
             .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6)
             .addCallback(ReleaseStagedMutationsOnOpen())
