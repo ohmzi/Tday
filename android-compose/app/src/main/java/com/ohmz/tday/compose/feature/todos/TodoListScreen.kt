@@ -1337,8 +1337,9 @@ fun TodoListScreen( // skipcq: KT-R1006
     // already did above (`timelineItems` is `uiState.items` itself then, and `isDragActive` is
     // false), and `buildTimelineSections` is pure — so reuse it instead of grouping and sorting
     // the same list twice per data change. Either condition makes the inputs differ, and the
-    // screen builds its own.
-    val timelineSections = if (!scopedSearchActive && !timelineDragActive) {
+    // screen builds its own. So does the Floater home screen, which leaves hidden lists out of its
+    // rows while `scopeSections` keeps answering for every task.
+    val timelineSections = if (!scopedSearchActive && !timelineDragActive && !isFloaterTaskHomeScreen) {
         scopeSections
     } else {
         remember(
@@ -1346,10 +1347,16 @@ fun TodoListScreen( // skipcq: KT-R1006
             timelineItems,
             timelineDragActive,
             uiState.earlierItems,
+            uiState.lists,
+            isFloaterTaskHomeScreen,
         ) {
             buildTimelineSections(
                 mode = uiState.mode,
-                items = timelineItems,
+                items = if (isFloaterTaskHomeScreen) {
+                    floaterTaskHomeFeedItems(timelineItems, uiState.lists)
+                } else {
+                    timelineItems
+                },
                 isDragActive = timelineDragActive,
                 earlierItems = uiState.earlierItems,
             )
@@ -2612,6 +2619,10 @@ fun TodoListScreen( // skipcq: KT-R1006
     }
     fun openFloaterTaskHomeSearchResult(todo: TodoItem) {
         closeFloaterTaskHomeSearch()
+        hiddenListForSearchResult(todo, uiState.lists)?.let { list ->
+            onOpenFloaterList(list.id, list.name)
+            return
+        }
         val target = floaterTaskHomeTodoListTarget(todo.id) ?: return
         screenScope.launch {
             // Same constant, the other scale: nothing navigates here. What settles is

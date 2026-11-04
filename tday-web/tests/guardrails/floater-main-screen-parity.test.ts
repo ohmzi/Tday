@@ -19,6 +19,17 @@ describe("floater main-screen rule", () => {
     expect(source).toContain("listId == null || listId !in hiddenListIds");
   });
 
+  it("reaches the Android feed on the normal path, not only while searching or dragging", () => {
+    const source = read(
+      "android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt",
+    );
+    // `scopeSections` is the unfiltered build. Reusing it on the Floater home screen would put
+    // hidden tasks straight back in the feed, and no JVM test can see a composable's branch.
+    expect(source).toContain(
+      "val timelineSections = if (!scopedSearchActive && !timelineDragActive && !isFloaterTaskHomeScreen) {",
+    );
+  });
+
   it("is mirrored on web", () => {
     const source = read("tday-web/src/lib/floater/mainScreen.ts");
     expect(source).toContain("listId == null || !hiddenListIds.has(listId)");
