@@ -44,6 +44,7 @@
 		384B88FF643D87A6157C76C2 /* Nunito.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D9D2A99D6C098B63352D4FB8 /* Nunito.ttf */; };
 		3E0BE8F327DB1A2EE5B101C4 /* ReminderPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3407352DB3FED037D2A26BF /* ReminderPreferenceStore.swift */; };
 		434143484D41505045525300 /* CacheMappersDateParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 434143484D41505045525301 /* CacheMappersDateParsingTests.swift */; };
+		F100A7E0000000000000B003 /* FloaterListVisibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100A7E0000000000000B004 /* FloaterListVisibilityTests.swift */; };
 		494E748270A233BECED5A359 /* TodayTasksWidgetSnapshotStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC92D6152EADEDF915AE116B /* TodayTasksWidgetSnapshotStoreTests.swift */; };
 		4A7B9C0D1E2F3456789ABC01 /* CompletedSyncMergeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A7B9C0D1E2F3456789ABC02 /* CompletedSyncMergeTests.swift */; };
 		2E4095C91E58D5F74B3F3764 /* CachedRecordDiffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2641DC4E4BD6C1D1D5E14544 /* CachedRecordDiffTests.swift */; };
@@ -76,6 +77,7 @@
 		F2ABDCC2586F4A91A6164D16 /* RichNotesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8412653FEEA14E08BD2EEFA7 /* RichNotesTests.swift */; };
 		72304EA28CF49303A8CCB6B0 /* TodayTasksWidgetSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC80072C8B232C0C09CE3139 /* TodayTasksWidgetSnapshotStore.swift */; };
 		765ED719B3CCBB90176C55EB /* DomainModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A6D006E491513605369E7D5 /* DomainModels.swift */; };
+		F100A7E0000000000000B001 /* FloaterMainScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100A7E0000000000000B002 /* FloaterMainScreen.swift */; };
 		7A1C0FE30B2D4A9C8E5F1A20 /* WidgetBackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C0FE30B2D4A9C8E5F1A21 /* WidgetBackgroundRefresh.swift */; };
 		7A5C0F7E900000000000A103 /* TaskSortEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A5C0F7E900000000000A102 /* TaskSortEngine.swift */; };
 		846AE66C58EF435FB506E3E6 /* OnboardingWizardOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D617DF23936179DDFF13A36D /* OnboardingWizardOverlay.swift */; };
@@ -327,6 +329,7 @@
 		39ADD9E07BF8B32C3FC7B170 /* TdayTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayTheme.swift; sourceTree = "<group>"; };
 		42749601AFF38EAE17BD3213 /* ScheduledTaskHomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledTaskHomeViewModel.swift; sourceTree = "<group>"; };
 		434143484D41505045525301 /* CacheMappersDateParsingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheMappersDateParsingTests.swift; sourceTree = "<group>"; };
+		F100A7E0000000000000B004 /* FloaterListVisibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloaterListVisibilityTests.swift; sourceTree = "<group>"; };
 		4A7B9C0D1E2F3456789ABC02 /* CompletedSyncMergeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedSyncMergeTests.swift; sourceTree = "<group>"; };
 		2641DC4E4BD6C1D1D5E14544 /* CachedRecordDiffTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedRecordDiffTests.swift; sourceTree = "<group>"; };
 		A5C0CF00000000000000A102 /* AsyncLockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AsyncLockTests.swift; sourceTree = "<group>"; };
@@ -364,6 +367,7 @@
 		85ADE7E6DE0AADEF0E503DE5 /* OfflineCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCacheManager.swift; sourceTree = "<group>"; };
 		86E84C14E60D9CBC7F667F1C /* SentryConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentryConfiguration.swift; sourceTree = "<group>"; };
 		8A6D006E491513605369E7D5 /* DomainModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainModels.swift; sourceTree = "<group>"; };
+		F100A7E0000000000000B002 /* FloaterMainScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloaterMainScreen.swift; sourceTree = "<group>"; };
 		8A7EC85EB5D9686D401249C6 /* UserFacingError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserFacingError.swift; sourceTree = "<group>"; };
 		8E76499BCA95FB33B03366C1 /* CompletedRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedRepository.swift; sourceTree = "<group>"; };
 		91CFC3C0B9ADD376389DF63C /* NetworkConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkConfiguration.swift; sourceTree = "<group>"; };
@@ -614,6 +618,7 @@
 				629820F1BA29236313992076 /* ApiModelContractTests.swift */,
 				A5C0CF00000000000000A102 /* AsyncLockTests.swift */,
 				434143484D41505045525301 /* CacheMappersDateParsingTests.swift */,
+				F100A7E0000000000000B004 /* FloaterListVisibilityTests.swift */,
 				B10000000000000000000005 /* CarTaskModelsTests.swift */,
 				4A7B9C0D1E2F3456789ABC02 /* CompletedSyncMergeTests.swift */,
 				2641DC4E4BD6C1D1D5E14544 /* CachedRecordDiffTests.swift */,
@@ -882,6 +887,7 @@
 				6049166B683EE082F8C551DD /* ApiModels.swift */,
 				FEEDFACE0000000000000003 /* DataExport.swift */,
 				8A6D006E491513605369E7D5 /* DomainModels.swift */,
+				F100A7E0000000000000B002 /* FloaterMainScreen.swift */,
 				CAFE0D1E0000000000000003 /* GuideModels.swift */,
 				AB49A43AFEE66EEDB3315F86 /* OfflineSyncModels.swift */,
 				593DCCDF3ADC95BE1CDC78FC /* StringHelpers.swift */,
@@ -1421,6 +1427,7 @@
 				B4995200636F408E4296FF0D /* ApiModelContractTests.swift in Sources */,
 				A5C0CF00000000000000A101 /* AsyncLockTests.swift in Sources */,
 				434143484D41505045525300 /* CacheMappersDateParsingTests.swift in Sources */,
+				F100A7E0000000000000B003 /* FloaterListVisibilityTests.swift in Sources */,
 				B10000000000000000000025 /* CarTaskModelsTests.swift in Sources */,
 				4A7B9C0D1E2F3456789ABC01 /* CompletedSyncMergeTests.swift in Sources */,
 				2E4095C91E58D5F74B3F3764 /* CachedRecordDiffTests.swift in Sources */,
@@ -1551,6 +1558,7 @@
 				58BD5E982FB87AE6986E3E79 /* CreateTodoUseCase.swift in Sources */,
 				535CABAC18AD47FEF15D2C11 /* CredentialEnvelope.swift in Sources */,
 				765ED719B3CCBB90176C55EB /* DomainModels.swift in Sources */,
+				F100A7E0000000000000B001 /* FloaterMainScreen.swift in Sources */,
 				FCDE195DEB990E58558699B1 /* ErrorRetryView.swift in Sources */,
 				F2E1D0C9B8A7F6E5D4C3B2A1 /* HapticManager.swift in Sources */,
 				5DB03218BE341B7C186F01AE /* CalendarPagingScrollView.swift in Sources */,

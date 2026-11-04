@@ -30,6 +30,17 @@ describe("floater main-screen rule", () => {
     );
   });
 
+  it("is mirrored on iOS", () => {
+    const source = read("ios-swiftUI/Tday/Core/Model/FloaterMainScreen.swift");
+    expect(source).toContain("guard let listId else { return true }");
+    expect(source).toContain("return !hiddenListIds.contains(listId)");
+  });
+
+  it("reaches the iOS feed", () => {
+    const source = read("ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift");
+    expect(source).toContain("FloaterMainScreen.feedItems(timelineItems, lists: viewModel.lists)");
+  });
+
   it("is mirrored on web", () => {
     const source = read("tday-web/src/lib/floater/mainScreen.ts");
     expect(source).toContain("listId == null || !hiddenListIds.has(listId)");

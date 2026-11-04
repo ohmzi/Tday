@@ -969,7 +969,9 @@ struct TodoListScreen: View {
     /// gesture, so the target set cannot change shape under the finger.
     private var groupedSections: [TodoTimelineSection] {
         buildSections(
-            items: timelineItems,
+            items: isFloaterTaskHomeScreen
+                ? FloaterMainScreen.feedItems(timelineItems, lists: viewModel.lists)
+                : timelineItems,
             mode: viewModel.mode,
             showsEmptyDropTargets: draggedTodo != nil
         )
@@ -2073,9 +2075,9 @@ struct TodoListScreen: View {
             createTaskSheetContent
         }
         .tdayBottomSheetPresentation(isPresented: $showingCreateList) {
-            CreateListSheet(showsReusable: viewModel.mode == .floater) { name, color, iconKey, reusable, defaultPriority in
+            CreateListSheet(showsReusable: viewModel.mode == .floater) { name, color, iconKey, reusable, showOnMainScreen, defaultPriority in
                 Task {
-                    await viewModel.createList(name: name, color: color, iconKey: iconKey, reusable: reusable ?? false, defaultPriority: defaultPriority)
+                    await viewModel.createList(name: name, color: color, iconKey: iconKey, reusable: reusable ?? false, showOnMainScreen: showOnMainScreen ?? true, defaultPriority: defaultPriority)
                 }
             }
         }
@@ -2852,13 +2854,14 @@ struct TodoListScreen: View {
                 showingListSettings = false
             },
             showsReusable: viewModel.mode == .floater,
-            onSubmit: { name, color, iconKey, reusable, defaultPriority in
+            onSubmit: { name, color, iconKey, reusable, showOnMainScreen, defaultPriority in
                 Task {
                     await viewModel.updateListSettings(
                         name: name,
                         color: color,
                         iconKey: iconKey,
                         reusable: reusable,
+                        showOnMainScreen: showOnMainScreen,
                         defaultPriority: defaultPriority,
                         defaultPriorityChanged: true
                     )
@@ -3157,6 +3160,12 @@ struct TodoListScreen: View {
 
     private func openFloaterTaskHomeSearchResult(_ todo: TodoItem, using proxy: ScrollViewProxy) {
         guard openingFloaterTaskHomeSearchResultID == nil else {
+            return
+        }
+        // The feed has no row to scroll to, so the task's own list is where it opens.
+        if let list = FloaterMainScreen.hiddenList(for: todo, lists: viewModel.lists) {
+            closeFloaterTaskHomeSearch()
+            onOpenFloaterList(list.id, list.name)
             return
         }
         openingFloaterTaskHomeSearchResultID = todo.id
@@ -5679,7 +5688,7 @@ private struct ListSettingsSheet: View {
     /// scheduled list has no Reset to reveal, so the row is hidden and the save
     /// submits nil (the shared UpdateFloaterListRequest reads that as "leave it").
     var showsReusable: Bool = false
-    let onSubmit: (String, String?, String?, Bool?, String?) -> Void
+    let onSubmit: (String, String?, String?, Bool?, Bool?, String?) -> Void
     let onDeleteRequest: () -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(\.tdayColors) private var tdayColors
@@ -5691,6 +5700,8 @@ private struct ListSettingsSheet: View {
     /// shown — web's sheet posts `reusable` on every save, so an off-flip has to
     /// reach the server or the Reset it reveals can never be retired.
     @State private var reusable = false
+    /// Seeded and submitted the same way as `reusable`.
+    @State private var showOnMainScreen = true
     /// Seeded from the SAVED list on open. Nil means "no default"; always sent on
     /// save since this row, unlike `showsReusable`, is never hidden.
     @State private var defaultPriority: String? = nil
@@ -5903,6 +5914,25 @@ private struct ListSettingsSheet: View {
                         }
                     }
 
+                    if showsReusable {
+                        TdaySheetCard {
+                            Toggle(isOn: $showOnMainScreen) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(L("Show on main screen"))
+                                        .font(.tdayRounded(size: 17, weight: .heavy))
+                                        .foregroundStyle(tdayColors.onSurface)
+                                    Text(L("Off keeps its tasks inside this list only."))
+                                        .font(.tdayRounded(size: 12, weight: .bold))
+                                        .foregroundStyle(tdayColors.onSurfaceVariant.opacity(0.78))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            .tint(accentColor)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 14)
+                        }
+                    }
+
                     if list != nil, shareText != nil || onMembersRequest != nil {
                         TdaySheetSectionTitle(text: L("Sharing"))
                         HStack(spacing: 10) {
@@ -5978,6 +6008,7 @@ private struct ListSettingsSheet: View {
             )
             iconTouched = false
             reusable = list?.reusable ?? false
+            showOnMainScreen = list?.showOnMainScreen ?? true
             defaultPriority = list?.defaultPriority
         }
     }
@@ -5994,7 +6025,7 @@ private struct ListSettingsSheet: View {
         //
         // `reusable` is the other way round: it is always sent when the row is
         // shown, so switching it off is a change and not an omission.
-        onSubmit(trimmedName, color, iconTouched ? iconKey : nil, showsReusable ? reusable : nil, defaultPriority)
+        onSubmit(trimmedName, color, iconTouched ? iconKey : nil, showsReusable ? reusable : nil, showsReusable ? showOnMainScreen : nil, defaultPriority)
         dismiss()
     }
 

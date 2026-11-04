@@ -1487,7 +1487,7 @@ struct CreateListSheet: View {
     /// trailing closure, and a trailing closure binds to the LAST memberwise
     /// parameter.
     var showsReusable: Bool = false
-    let onSubmit: (String, String?, String?, Bool?, String?) -> Void
+    let onSubmit: (String, String?, String?, Bool?, Bool?, String?) -> Void
 
     /// Seeds the colour per feed — SLATE for a scheduled list, GOLD for a floater one — which a
     /// property initialiser cannot do, so the memberwise init is written out. The parameter
@@ -1495,7 +1495,7 @@ struct CreateListSheet: View {
     /// closure.
     init(
         showsReusable: Bool = false,
-        onSubmit: @escaping (String, String?, String?, Bool?, String?) -> Void
+        onSubmit: @escaping (String, String?, String?, Bool?, Bool?, String?) -> Void
     ) {
         self.showsReusable = showsReusable
         self.onSubmit = onSubmit
@@ -1509,6 +1509,7 @@ struct CreateListSheet: View {
     @State private var color: String
     @State private var iconKey = "inbox"
     @State private var reusable = false
+    @State private var showOnMainScreen = true
     /// Nil means "no default". Always sent on create — there is no saved list
     /// to diff against yet, so there is no touched/untouched distinction here.
     @State private var defaultPriority: String? = nil
@@ -1562,7 +1563,7 @@ struct CreateListSheet: View {
                     // (`CreateTaskSheet.submit`), so it gets the same pulse.
                     HapticManager.completion()
                     isSubmitting = true
-                    onSubmit(trimmedName, color, iconTouched ? iconKey : nil, showsReusable ? reusable : nil, defaultPriority)
+                    onSubmit(trimmedName, color, iconTouched ? iconKey : nil, showsReusable ? reusable : nil, showsReusable ? showOnMainScreen : nil, defaultPriority)
                     dismiss()
                 }
             )
@@ -1723,6 +1724,25 @@ struct CreateListSheet: View {
                                         .font(.tdayRounded(size: 17, weight: .heavy))
                                         .foregroundStyle(colors.onSurface)
                                     Text(L("Show a Reset to un-check everything and run it again"))
+                                        .font(.tdayRounded(size: 12, weight: .bold))
+                                        .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            .tint(accentColor)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 14)
+                        }
+                    }
+
+                    if showsReusable {
+                        TdaySheetCard {
+                            Toggle(isOn: $showOnMainScreen) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(L("Show on main screen"))
+                                        .font(.tdayRounded(size: 17, weight: .heavy))
+                                        .foregroundStyle(colors.onSurface)
+                                    Text(L("Off keeps its tasks inside this list only."))
                                         .font(.tdayRounded(size: 12, weight: .bold))
                                         .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
                                         .fixedSize(horizontal: false, vertical: true)

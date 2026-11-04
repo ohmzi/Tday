@@ -279,6 +279,7 @@ func mapFloaterListDTO(_ dto: FloaterListDTO, iconFallback: String? = nil) -> Li
         memberCount: dto.memberCount ?? 0,
         ownerUsername: dto.ownerUsername,
         reusable: dto.reusable ?? false,
+        showOnMainScreen: dto.showOnMainScreen ?? true,
         defaultPriority: dto.defaultPriority
     )
 }
@@ -314,6 +315,7 @@ func floaterListToCache(_ list: ListSummary) -> CachedFloaterListRecord {
         memberCount: list.memberCount,
         ownerUsername: list.ownerUsername,
         reusable: list.reusable,
+        showOnMainScreen: list.showOnMainScreen,
         defaultPriority: list.defaultPriority
     )
 }
@@ -377,6 +379,7 @@ func floaterListFromCache(_ record: CachedFloaterListRecord, todoCountOverride: 
         memberCount: record.memberCount ?? 0,
         ownerUsername: record.ownerUsername,
         reusable: record.reusable ?? false,
+        showOnMainScreen: record.showOnMainScreen ?? true,
         defaultPriority: record.defaultPriority
     )
 }

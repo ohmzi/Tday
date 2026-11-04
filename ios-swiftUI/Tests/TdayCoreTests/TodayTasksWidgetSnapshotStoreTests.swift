@@ -231,6 +231,24 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
         XCTAssertEqual(snapshot.tasks.map(\.id), ["listed", "open"])
     }
 
+    func testFloaterSnapshotLeavesOutAHiddenListButKeepsItsPerListSlice() {
+        var hidden = floaterList(id: "hidden", name: "Someday")
+        hidden.showOnMainScreen = false
+        let state = OfflineSyncState(
+            floaters: [
+                floater(id: "open", title: "Open"),
+                floater(id: "tucked", title: "Tucked", listId: "hidden")
+            ],
+            floaterLists: [hidden]
+        )
+
+        let snapshot = FloaterTasksWidgetSnapshotStore.makeSnapshot(from: state)
+
+        XCTAssertEqual(snapshot.taskCount, 1)
+        XCTAssertEqual(snapshot.tasks.map(\.id), ["open"])
+        XCTAssertEqual(snapshot.perList["hidden"]?.tasks.map(\.id), ["tucked"])
+    }
+
     func testFloaterSnapshotSortsByFixedOrdering() {
         // Fixed FLOATER ordering: pinned, priority High->Low, modified desc, id.
         // priorityRank is vocabulary-tolerant to match the shared engine: "Urgent"
