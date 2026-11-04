@@ -1187,6 +1187,15 @@
         "step1": "Vá marcando os itens como de costume.",
         "step2": "Quando precisar de novo, toque em Reiniciar para desmarcar tudo."
       },
+      "hidden-floater-lists": {
+        "title": "Ocultar uma lista da tela principal",
+        "summary": "Mantenha as tarefas de uma lista floater dentro da lista.",
+        "keywords": "ocultar, oculta, tela principal, floater, lista, a qualquer momento, feed, widget, mostrar",
+        "body": "Desative \"Mostrar na tela principal\" nas configurações de uma lista floater e as tarefas ficam dentro dessa lista. Elas saem do feed principal, do widget Floater e do resumo Floater, mas continuam na busca, na própria lista e em Concluídas. Tarefas abertas em uma lista oculta impedem a cena de \"tudo feito\". Em uma lista compartilhada, a escolha do dono vale para todos.",
+        "step0": "Abra uma lista floater e vá às configurações.",
+        "step1": "Desative \"Mostrar na tela principal\" e salve.",
+        "step2": "Para trazer as tarefas de volta, ative novamente."
+      },
       "brain-dump": {
         "title": "Despejo mental",
         "summary": "Esvazie a cabeça numa caixa; o T'Day organiza em tarefas.",

@@ -694,6 +694,43 @@
       "searchBody": "reimposta una lista per rifarla: valigia, faccende, spesa. segna una lista anytime come riutilizzabile e appare reimposta. un tocco deseleziona tutto per rifare la stessa lista, senza ricrearla. apri una lista floater e attiva \"riutilizzabile\" nelle sue impostazioni. procedi spuntando gli elementi come al solito. quando ti serve di nuovo, tocca reimposta per deselezionare tutto."
     },
     {
+      "id": "hidden-floater-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "eye-off",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.8.15",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Nascondere una lista dalla schermata principale",
+      "summary": "Tieni le attività di una lista floater dentro la lista.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Disattiva «Mostra nella schermata principale» nelle impostazioni di una lista floater e le sue attività restano in quella lista. Escono dal feed principale, dal widget Floater e dal riepilogo Floater, ma compaiono ancora nella ricerca, nella lista stessa e in Completate. Le attività aperte di una lista nascosta impediscono la comparsa della scena «tutto fatto». In una lista condivisa, la scelta del proprietario vale per tutti."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Apri una lista floater e vai alle sue impostazioni.",
+            "Disattiva «Mostra nella schermata principale» e salva.",
+            "Per riavere le sue attività, riattivalo."
+          ]
+        }
+      ],
+      "searchTitle": "nascondere una lista dalla schermata principale",
+      "searchKeywords": "nascondere, nascosta, schermata principale, floater, lista, in qualsiasi momento, feed, widget, mostra",
+      "searchBody": "tieni le attivita di una lista floater dentro la lista. disattiva «mostra nella schermata principale» nelle impostazioni di una lista floater e le sue attivita restano in quella lista. escono dal feed principale, dal widget floater e dal riepilogo floater, ma compaiono ancora nella ricerca, nella lista stessa e in completate. le attivita aperte di una lista nascosta impediscono la comparsa della scena «tutto fatto». in una lista condivisa, la scelta del proprietario vale per tutti. apri una lista floater e vai alle sue impostazioni. disattiva «mostra nella schermata principale» e salva. per riavere le sue attivita, riattivalo."
+    },
+    {
       "id": "scheduled-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

@@ -1187,6 +1187,15 @@
         "step1": "Coche les éléments au fur et à mesure, comme d'habitude.",
         "step2": "Quand tu en as de nouveau besoin, touche Réinitialiser pour tout décocher."
       },
+      "hidden-floater-lists": {
+        "title": "Masquer une liste de l'écran principal",
+        "summary": "Gardez les tâches d'une liste floater dans la liste.",
+        "keywords": "masquer, masquée, écran principal, floater, liste, à tout moment, flux, widget, afficher",
+        "body": "Désactivez « Afficher sur l'écran principal » dans les réglages d'une liste floater et ses tâches restent dans cette liste. Elles quittent le flux principal, le widget Floater et le résumé Floater, mais apparaissent toujours dans la recherche, dans la liste elle-même et dans Terminées. Les tâches ouvertes d'une liste masquée empêchent l'affichage de la scène « tout est fait ». Sur une liste partagée, le choix du propriétaire s'applique à tous.",
+        "step0": "Ouvrez une liste floater et accédez à ses réglages.",
+        "step1": "Désactivez « Afficher sur l'écran principal » et enregistrez.",
+        "step2": "Pour retrouver ses tâches, réactivez-le."
+      },
       "brain-dump": {
         "title": "Vide-cerveau",
         "summary": "Vide ta tête dans une zone ; T'Day la trie en tâches.",

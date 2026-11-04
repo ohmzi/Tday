@@ -12,6 +12,7 @@
       "calendar-views"
     ],
     "widget": [
+      "hidden-floater-lists",
       "api-key-homarr"
     ],
     "offline": [
@@ -46,6 +47,7 @@
       "default-home-screen",
       "promote-and-float",
       "reusable-lists",
+      "hidden-floater-lists",
       "root-feeds",
       "create-task",
       "brain-dump",
@@ -61,7 +63,8 @@
       "api-key-homarr"
     ],
     "search": [
-      "search-tasks"
+      "search-tasks",
+      "hidden-floater-lists"
     ],
     "priority": [
       "priorities",

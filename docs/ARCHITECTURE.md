@@ -127,7 +127,7 @@ The application is organized around these core domains:
 | **Todos** | Scheduled task CRUD, RFC 5545 recurrence, priorities, ordering | `Todo`, `TodoInstance`, `CompletedTodo` |
 | **Floaters** | Unscheduled Anytime task CRUD, priorities, ordering | `Floater`, `CompletedFloater` |
 | **Lists** | Scheduled-task project grouping with colors and icons | `List` |
-| **Floater Lists** | Floater project grouping with colors and icons | `FloaterList` |
+| **Floater Lists** | Floater project grouping with colors and icons, and whether a list's tasks show on the Floater main screen | `FloaterList` |
 | **Files** | Reserved/legacy file metadata retained for cleanup paths; no active upload/download API | `File` |
 | **Preferences** | Sort/group/direction settings per user | `UserPreferences` |
 | **Admin** | App configuration, user management | `AppConfig` |

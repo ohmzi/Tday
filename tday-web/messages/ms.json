@@ -1187,6 +1187,15 @@
         "step1": "Teruskan menanda item seperti biasa.",
         "step2": "Bila perlu lagi, ketik Set Semula untuk nyahtanda semua."
       },
+      "hidden-floater-lists": {
+        "title": "Sembunyikan senarai daripada skrin utama",
+        "summary": "Kekalkan tugas senarai floater di dalam senarai.",
+        "keywords": "sembunyi, tersembunyi, skrin utama, floater, senarai, bila-bila masa, suapan, widget, tunjuk",
+        "body": "Matikan \"Tunjukkan pada skrin utama\" dalam tetapan senarai floater dan tugasnya kekal di dalam senarai itu. Tugas itu keluar daripada suapan utama, widget Floater dan ringkasan Floater, tetapi masih muncul dalam carian, dalam senarai itu sendiri dan dalam Selesai. Tugas terbuka dalam senarai tersembunyi menghalang paparan \"semua selesai\". Pada senarai kongsi, pilihan pemilik terpakai kepada semua orang.",
+        "step0": "Buka senarai floater dan pergi ke tetapannya.",
+        "step1": "Matikan \"Tunjukkan pada skrin utama\" dan simpan.",
+        "step2": "Untuk memulangkan tugasnya, hidupkan semula."
+      },
       "brain-dump": {
         "title": "Curah minda",
         "summary": "Kosongkan kepala ke satu kotak; T'Day susun jadi tugasan.",

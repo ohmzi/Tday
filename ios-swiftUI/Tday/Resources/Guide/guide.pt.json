@@ -694,6 +694,43 @@
       "searchBody": "reinicie uma lista para usa-la de novo: mala, tarefas, compras. marque uma lista anytime como reutilizavel e um reiniciar aparece. um toque desmarca todos os itens para refazer a mesma lista, sem recria-la. abra uma lista flutuante e ative \"reutilizavel\" nas configuracoes. va marcando os itens como de costume. quando precisar de novo, toque em reiniciar para desmarcar tudo."
     },
     {
+      "id": "hidden-floater-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "eye-off",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.8.15",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Ocultar uma lista da tela principal",
+      "summary": "Mantenha as tarefas de uma lista floater dentro da lista.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Desative \"Mostrar na tela principal\" nas configurações de uma lista floater e as tarefas ficam dentro dessa lista. Elas saem do feed principal, do widget Floater e do resumo Floater, mas continuam na busca, na própria lista e em Concluídas. Tarefas abertas em uma lista oculta impedem a cena de \"tudo feito\". Em uma lista compartilhada, a escolha do dono vale para todos."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Abra uma lista floater e vá às configurações.",
+            "Desative \"Mostrar na tela principal\" e salve.",
+            "Para trazer as tarefas de volta, ative novamente."
+          ]
+        }
+      ],
+      "searchTitle": "ocultar uma lista da tela principal",
+      "searchKeywords": "ocultar, oculta, tela principal, floater, lista, a qualquer momento, feed, widget, mostrar",
+      "searchBody": "mantenha as tarefas de uma lista floater dentro da lista. desative \"mostrar na tela principal\" nas configuracoes de uma lista floater e as tarefas ficam dentro dessa lista. elas saem do feed principal, do widget floater e do resumo floater, mas continuam na busca, na propria lista e em concluidas. tarefas abertas em uma lista oculta impedem a cena de \"tudo feito\". em uma lista compartilhada, a escolha do dono vale para todos. abra uma lista floater e va as configuracoes. desative \"mostrar na tela principal\" e salve. para trazer as tarefas de volta, ative novamente."
+    },
+    {
       "id": "scheduled-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

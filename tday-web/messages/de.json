@@ -1187,6 +1187,15 @@
         "step1": "Arbeite sie ab und hake Punkte wie gewohnt ab.",
         "step2": "Wenn du sie wieder brauchst, tippe auf Zurücksetzen."
       },
+      "hidden-floater-lists": {
+        "title": "Eine Liste vom Hauptbildschirm ausblenden",
+        "summary": "Behalte die Aufgaben einer Floater-Liste in der Liste.",
+        "keywords": "ausblenden, versteckt, hauptbildschirm, floater, liste, jederzeit, feed, widget, anzeigen",
+        "body": "Schalte in den Einstellungen einer Floater-Liste „Auf dem Hauptbildschirm anzeigen“ aus, und ihre Aufgaben bleiben in dieser Liste. Sie verschwinden aus dem Haupt-Feed, dem Floater-Widget und der Floater-Zusammenfassung, erscheinen aber weiterhin in der Suche, in der Liste selbst und unter Erledigt. Offene Aufgaben in einer ausgeblendeten Liste verhindern die „Alles erledigt“-Anzeige. Bei einer geteilten Liste gilt die Wahl des Eigentümers für alle.",
+        "step0": "Öffne eine Floater-Liste und gehe zu ihren Einstellungen.",
+        "step1": "Schalte „Auf dem Hauptbildschirm anzeigen“ aus und speichere.",
+        "step2": "Schalte es wieder ein, um die Aufgaben zurückzuholen."
+      },
       "brain-dump": {
         "title": "Gedanken-Dump",
         "summary": "Leere deinen Kopf in ein Feld; T'Day sortiert es in Aufgaben.",
