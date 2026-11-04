@@ -292,14 +292,14 @@ class McpTestWorld(
 
         override suspend fun create(
             userId: String, name: String, color: String?, iconKey: String?,
-            reusable: Boolean, defaultPriority: String?,
+            reusable: Boolean, defaultPriority: String?, showOnMainScreen: Boolean,
         ) =
             addFloaterList(name).copy(color = color, iconKey = iconKey, reusable = reusable, defaultPriority = defaultPriority)
                 .also { floaterLists[it.id] = it }.right()
 
         override suspend fun update(
             userId: String, id: String, name: String?, color: String?, iconKey: String?, reusable: Boolean?,
-            defaultPriority: String?, defaultPriorityChanged: Boolean?,
+            defaultPriority: String?, defaultPriorityChanged: Boolean?, showOnMainScreen: Boolean?,
         ) = Unit.right()
 
         override suspend fun resetFloaters(userId: String, listId: String) = 0.right()

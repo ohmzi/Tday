@@ -8,6 +8,8 @@ import com.ohmz.tday.plugins.AuthUserKey
 import com.ohmz.tday.plugins.configureSerialization
 import com.ohmz.tday.plugins.configureStatusPages
 import com.ohmz.tday.security.JwtUserClaims
+import com.ohmz.tday.models.response.FloaterListResponse
+import com.ohmz.tday.services.FloaterListService
 import com.ohmz.tday.services.FloaterService
 import com.ohmz.tday.services.NlpParseResult
 import com.ohmz.tday.services.TodoNlpService
@@ -428,6 +430,51 @@ class TodoRoutesTest {
     }
 
     @Test
+    fun `floater summary leaves out a list hidden from the main screen`() = testApplication {
+        application {
+            configureTodoRoutesTestApp(
+                todoService = RecordingTodoService(),
+                floaterService = RecordingFloaterService(
+                    floaters = listOf(
+                        makeFloater(id = "shown", title = "Visible task", listID = "floater_list_1"),
+                        makeFloater(id = "hidden", title = "Tucked away", listID = "floater_list_2"),
+                        makeFloater(id = "loose", title = "No list", listID = null),
+                    ),
+                ),
+                floaterListService = FakeFloaterListService(hiddenListId = "floater_list_2"),
+                summaryService = FakeTodoSummaryService(response = null),
+            )
+        }
+
+        val response = client.postSummary(TodoSummaryRequest(mode = "floater", timeZone = "UTC"))
+
+        val body = json.decodeFromString<TodoSummaryResponse>(response.bodyAsText())
+        assertEquals(2, body.taskCount)
+        assertFalse(body.summary.orEmpty().contains("Tucked away"))
+    }
+
+    @Test
+    fun `a hidden list's own summary still covers its tasks`() = testApplication {
+        application {
+            configureTodoRoutesTestApp(
+                todoService = RecordingTodoService(),
+                floaterService = RecordingFloaterService(
+                    floaters = listOf(makeFloater(id = "hidden", title = "Tucked away", listID = "floater_list_2")),
+                ),
+                floaterListService = FakeFloaterListService(hiddenListId = "floater_list_2"),
+                summaryService = FakeTodoSummaryService(response = null),
+            )
+        }
+
+        val response = client.postSummary(
+            TodoSummaryRequest(mode = "floater", listId = "floater_list_2", timeZone = "UTC"),
+        )
+
+        val body = json.decodeFromString<TodoSummaryResponse>(response.bodyAsText())
+        assertEquals(1, body.taskCount)
+    }
+
+    @Test
     fun `empty anytime view gets the undated empty line, not the deadline one`() = testApplication {
         // The route used to hand the engine SummaryScope.ALL for the empty case to mean "already
         // filtered", so an empty Anytime view on web, iOS and online Android read "No tasks need
@@ -819,12 +866,14 @@ class TodoRoutesTest {
         todoService: TodoService,
         floaterService: FloaterService = RecordingFloaterService(),
         summaryService: TodoSummaryService = FakeTodoSummaryService(),
+        floaterListService: FloaterListService = FakeFloaterListService(),
     ) {
         install(Koin) {
             modules(
                 module {
                     single<TodoService> { todoService }
                     single<FloaterService> { floaterService }
+                    single<FloaterListService> { floaterListService }
                     single<TodoNlpService> { FakeTodoNlpService() }
                     single<TodoSummaryService> { summaryService }
                     single<com.ohmz.tday.services.CompletedTodoService> { FakeCompletedTodoService() }
@@ -969,6 +1018,27 @@ class TodoRoutesTest {
             todoIds: List<String>,
         ): Either<com.ohmz.tday.domain.AppError, Map<String, com.ohmz.tday.services.RecurrenceState>> =
             emptyMap<String, com.ohmz.tday.services.RecurrenceState>().right()
+    }
+
+    private class FakeFloaterListService(private val hiddenListId: String? = null) : FloaterListService {
+        override suspend fun getAll(userId: String) = listOfNotNull(
+            hiddenListId?.let {
+                FloaterListResponse(id = it, name = "Hidden", showOnMainScreen = false)
+            },
+        ).right()
+
+        override suspend fun getById(userId: String, listId: String) = error("not used")
+        override suspend fun getFloatersForList(userId: String, listId: String) = error("not used")
+        override suspend fun create(
+            userId: String, name: String, color: String?, iconKey: String?,
+            reusable: Boolean, defaultPriority: String?, showOnMainScreen: Boolean,
+        ) = error("not used")
+        override suspend fun update(
+            userId: String, id: String, name: String?, color: String?, iconKey: String?, reusable: Boolean?,
+            defaultPriority: String?, defaultPriorityChanged: Boolean?, showOnMainScreen: Boolean?,
+        ) = error("not used")
+        override suspend fun resetFloaters(userId: String, listId: String) = error("not used")
+        override suspend fun deleteMany(userId: String, ids: List<String>) = error("not used")
     }
 
     private class RecordingFloaterService(
