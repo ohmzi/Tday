@@ -249,6 +249,8 @@
     "sweepDone": "All caught up",
     "reusableList": "Reusable list",
     "reusableListHint": "Show a Reset to un-check everything and run it again",
+    "showOnMainScreen": "Show on main screen",
+    "showOnMainScreenHint": "Off keeps its tasks inside this list only.",
     "resetFloaterList": "Reset list",
     "floaterListReset": "List reset — everything un-checked",
     "steps": "Steps",

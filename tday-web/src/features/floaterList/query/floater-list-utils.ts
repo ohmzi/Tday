@@ -23,6 +23,7 @@ export function normalizeFloaterList(
     color: list.color,
     iconKey: list.iconKey ?? null,
     reusable: list.reusable ?? false,
+    showOnMainScreen: list.showOnMainScreen ?? true,
     todoCount: list.todoCount ?? 0,
     userID: list.userID ?? null,
     createdAt: parseOptionalDate(list.createdAt),

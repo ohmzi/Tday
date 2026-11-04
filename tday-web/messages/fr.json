@@ -249,6 +249,8 @@
     "sweepDone": "Tout est à jour",
     "reusableList": "Liste réutilisable",
     "reusableListHint": "Affiche Réinitialiser pour tout décocher et refaire",
+    "showOnMainScreen": "Afficher sur l'écran principal",
+    "showOnMainScreenHint": "Désactivé, ses tâches restent uniquement dans cette liste.",
     "resetFloaterList": "Réinitialiser la liste",
     "floaterListReset": "Liste réinitialisée — tout décoché",
     "steps": "Étapes",

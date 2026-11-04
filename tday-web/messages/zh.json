@@ -249,6 +249,8 @@
     "sweepDone": "全部处理完毕",
     "reusableList": "可重用清单",
     "reusableListHint": "显示“重置”以取消所有勾选并再次使用",
+    "showOnMainScreen": "在主屏幕显示",
+    "showOnMainScreenHint": "关闭后，任务仅保留在此列表中。",
     "resetFloaterList": "重置清单",
     "floaterListReset": "清单已重置——全部取消勾选",
     "steps": "步骤",

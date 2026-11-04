@@ -249,6 +249,8 @@
     "sweepDone": "Semua terkini",
     "reusableList": "Senarai boleh guna semula",
     "reusableListHint": "Tunjuk Set Semula untuk nyahtanda semua dan guna lagi",
+    "showOnMainScreen": "Tunjukkan pada skrin utama",
+    "showOnMainScreenHint": "Jika dimatikan, tugasnya kekal dalam senarai ini sahaja.",
     "resetFloaterList": "Set semula senarai",
     "floaterListReset": "Senarai diset semula — semua dinyahtanda",
     "steps": "Langkah",

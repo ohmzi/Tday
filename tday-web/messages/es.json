@@ -249,6 +249,8 @@
     "sweepDone": "Todo al día",
     "reusableList": "Lista reutilizable",
     "reusableListHint": "Muestra Reiniciar para desmarcar todo y volver a usarla",
+    "showOnMainScreen": "Mostrar en la pantalla principal",
+    "showOnMainScreenHint": "Si está desactivado, sus tareas quedan solo en esta lista.",
     "resetFloaterList": "Reiniciar lista",
     "floaterListReset": "Lista reiniciada: todo desmarcado",
     "steps": "Pasos",

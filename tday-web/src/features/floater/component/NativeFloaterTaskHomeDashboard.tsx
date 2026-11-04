@@ -9,6 +9,7 @@ import { useRowPlacement } from "@/hooks/useRowPlacement";
 import { DELAY_MS } from "@/lib/motion";
 import { Link, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
+import { hiddenFloaterListIds, isFloaterShownOnMainScreen } from "@/lib/floater/mainScreen";
 import { sortFloatersByPriority } from "@/lib/floater/sortFloaters";
 import { getListIconForList } from "@/lib/listIcons";
 import {
@@ -96,6 +97,16 @@ export default function NativeFloaterTaskHomeDashboard() {
     () => sortFloatersByPriority(filteredFloaters),
     [filteredFloaters],
   );
+  // Search keeps reaching hidden lists, so only the rows below are narrowed; the tile counts and
+  // the pending count stay on every task. See `FloaterMainScreen` in shared/.
+  const feedFloaters = useMemo(() => {
+    const hiddenListIds = hiddenFloaterListIds(
+      Object.entries(floaterListMetaData).map(([id, list]) => ({ id, ...list })),
+    );
+    return sortedFloaters.filter((floater) =>
+      isFloaterShownOnMainScreen(floater.listID, hiddenListIds),
+    );
+  }, [floaterListMetaData, sortedFloaters]);
   const isSearching = Boolean(searchQuery.trim());
   // Counted rather than tested for existence, because the cancel needs the
   // number and not the boolean: a row ARRIVING is what ends a celebration, and
@@ -249,16 +260,16 @@ export default function NativeFloaterTaskHomeDashboard() {
             64 px cards stood in for a flat row of 62. `TaskRowSkeletonGroup` is the feed's
             own row geometry, and it is the same primitive the sibling list screen loads
             behind: two root feeds that load differently are two root feeds. */}
-        {showSkeleton || (!floaterLoading && sortedFloaters.length > 0) ? (
+        {showSkeleton || (!floaterLoading && feedFloaters.length > 0) ? (
           <div>
             {showSkeleton ? (
               <div className={skeletonClassName}>
                 <TaskRowSkeletonGroup />
               </div>
             ) : null}
-            {!floaterLoading && sortedFloaters.length > 0 ? (
+            {!floaterLoading && feedFloaters.length > 0 ? (
               <FloaterGroup
-                floaters={sortedFloaters}
+                floaters={feedFloaters}
                 className="tday-content-enter"
                 highlightedFloaterId={focusedFloaterId}
               />

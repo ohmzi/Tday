@@ -249,6 +249,8 @@
     "sweepDone": "Tutto in pari",
     "reusableList": "Lista riutilizzabile",
     "reusableListHint": "Mostra Reimposta per deselezionare tutto e rifarla",
+    "showOnMainScreen": "Mostra nella schermata principale",
+    "showOnMainScreenHint": "Se disattivato, le attività restano solo in questa lista.",
     "resetFloaterList": "Reimposta lista",
     "floaterListReset": "Lista reimpostata: tutto deselezionato",
     "steps": "Passaggi",
