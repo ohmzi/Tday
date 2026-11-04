@@ -41,6 +41,13 @@ describe("floater main-screen rule", () => {
     expect(source).toContain("FloaterMainScreen.feedItems(timelineItems, lists: viewModel.lists)");
   });
 
+  it("takes every iOS create-list closure at the sheet's six parameters", () => {
+    const source = read("ios-swiftUI/Tday/Feature/ScheduledTaskHome/ScheduledTaskHomeScreen.swift");
+    // iOS is not compiled on Linux hosts, so a trailing closure left at the old arity would only
+    // surface on macOS CI.
+    expect(source).toContain("CreateListSheet { name, color, iconKey, _, _, defaultPriority in");
+  });
+
   it("is mirrored on web", () => {
     const source = read("tday-web/src/lib/floater/mainScreen.ts");
     expect(source).toContain("listId == null || !hiddenListIds.has(listId)");

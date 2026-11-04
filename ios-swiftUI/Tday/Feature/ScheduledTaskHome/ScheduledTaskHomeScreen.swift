@@ -566,7 +566,7 @@ struct ScheduledTaskHomeScreen: View {
             )
         }
         .tdayBottomSheetPresentation(isPresented: $showingCreateList) {
-            CreateListSheet { name, color, iconKey, _, defaultPriority in
+            CreateListSheet { name, color, iconKey, _, _, defaultPriority in
                 Task {
                     await viewModel.createList(name: name, color: color, iconKey: iconKey, defaultPriority: defaultPriority)
                 }
