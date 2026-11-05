@@ -37,6 +37,7 @@ export interface FloaterListItemMetaType {
   iconKey?: string | null;
   defaultPriority?: "Lowest" | "Low" | "Medium" | "High" | null;
   reusable?: boolean;
+  showOnMainScreen?: boolean;
   todoCount?: number;
   userID?: string | null;
   createdAt?: Date | null;

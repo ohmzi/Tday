@@ -169,6 +169,7 @@ class RateLimitingTest {
                     single<UserService> { userService }
                     single<TodoService> { todoService }
                     single<FloaterService> { NoOpFloaterService() }
+                    single<com.ohmz.tday.services.FloaterListService> { NoOpFloaterListService() }
                     single<TodoSummaryService> { todoSummaryService }
                     single<TodoNlpService> { NoOpTodoNlpService() }
                     single<com.ohmz.tday.services.CompletedTodoService> { NoOpCompletedTodoService() }
@@ -456,4 +457,21 @@ class RateLimitingTest {
     private class NoOpSessionControl : SessionControl {
         override suspend fun revokeUserSessions(userId: String, revokeApiKeys: Boolean) = Unit
     }
+}
+
+private class NoOpFloaterListService : com.ohmz.tday.services.FloaterListService {
+    override suspend fun getAll(userId: String) =
+        arrow.core.Either.Right(emptyList<com.ohmz.tday.models.response.FloaterListResponse>())
+    override suspend fun getById(userId: String, listId: String) = error("not used")
+    override suspend fun getFloatersForList(userId: String, listId: String) = error("not used")
+    override suspend fun create(
+        userId: String, name: String, color: String?, iconKey: String?,
+        reusable: Boolean, defaultPriority: String?, showOnMainScreen: Boolean,
+    ) = error("not used")
+    override suspend fun update(
+        userId: String, id: String, name: String?, color: String?, iconKey: String?, reusable: Boolean?,
+        defaultPriority: String?, defaultPriorityChanged: Boolean?, showOnMainScreen: Boolean?,
+    ) = error("not used")
+    override suspend fun resetFloaters(userId: String, listId: String) = error("not used")
+    override suspend fun deleteMany(userId: String, ids: List<String>) = error("not used")
 }

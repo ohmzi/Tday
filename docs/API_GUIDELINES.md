@@ -271,6 +271,8 @@ than as "does not repeat" — see `docs/design/bulk-selection.md` §4.1.
 
 Floater lists group floaters.
 
+`POST` and `PATCH` accept `showOnMainScreen`, and responses carry it. It defaults to `true`, and a `PATCH` that omits it leaves the value alone. It never filters `GET /api/floater`; clients apply it per surface (see `docs/DATA_MODEL.md`). `POST /api/todo/summary` in `floater` mode leaves hidden lists out unless a `listId` is given.
+
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/api/floaterList` | List all floater lists |

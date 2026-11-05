@@ -195,6 +195,7 @@ class ExportServiceImpl(
                 it[FloaterLists.color] = parseListColor(list.color)
                 it[FloaterLists.iconKey] = list.iconKey
                 it[FloaterLists.userID] = userId
+                it[FloaterLists.showOnMainScreen] = list.showOnMainScreen
                 it[FloaterLists.createdAt] = parseTodoDateTime(list.createdAt) ?: now
                 it[FloaterLists.updatedAt] = parseTodoDateTime(list.updatedAt) ?: now
             }
@@ -392,6 +393,7 @@ class ExportServiceImpl(
         color = this[FloaterLists.color]?.name,
         iconKey = this[FloaterLists.iconKey],
         userID = this[FloaterLists.userID],
+        showOnMainScreen = this[FloaterLists.showOnMainScreen],
         createdAt = this[FloaterLists.createdAt].toString(),
         updatedAt = this[FloaterLists.updatedAt].toString(),
     )

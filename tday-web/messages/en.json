@@ -249,6 +249,8 @@
     "sweepDone": "All caught up",
     "reusableList": "Reusable list",
     "reusableListHint": "Show a Reset to un-check everything and run it again",
+    "showOnMainScreen": "Show on main screen",
+    "showOnMainScreenHint": "Off keeps its tasks inside this list only.",
     "resetFloaterList": "Reset list",
     "floaterListReset": "List reset — everything un-checked",
     "steps": "Steps",
@@ -1184,6 +1186,15 @@
         "step0": "Open a floater list and turn on \"Reusable\" in its settings.",
         "step1": "Work through it, checking items off as usual.",
         "step2": "When you need it again, tap Reset to un-check everything."
+      },
+      "hidden-floater-lists": {
+        "title": "Hide a list from the main screen",
+        "summary": "Keep a floater list's tasks inside the list.",
+        "keywords": "hide, hidden, main screen, floater, list, anytime, feed, widget, show",
+        "body": "Turn off \"Show on main screen\" in a floater list's settings and its tasks stay inside that list. They leave the main feed, the Floater widget and the Floater summary, but still appear in search, in the list itself and in Completed. Open tasks in a hidden list keep the \"all done\" scene from showing. On a shared list, the owner's choice applies to everyone.",
+        "step0": "Open a floater list and go to its settings.",
+        "step1": "Turn off \"Show on main screen\" and save.",
+        "step2": "To bring its tasks back, turn it on again."
       },
       "brain-dump": {
         "title": "Brain dump",

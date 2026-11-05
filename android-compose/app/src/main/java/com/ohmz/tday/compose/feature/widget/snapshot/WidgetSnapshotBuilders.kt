@@ -1,6 +1,7 @@
 package com.ohmz.tday.compose.feature.widget.snapshot
 
 import com.ohmz.tday.compose.core.data.CachedFloaterRecord
+import com.ohmz.tday.shared.floater.FloaterMainScreen
 import com.ohmz.tday.compose.core.data.CachedTodoRecord
 import com.ohmz.tday.compose.core.data.OfflineSyncState
 import com.ohmz.tday.compose.ui.priority.isImportantPriority
@@ -286,8 +287,9 @@ internal fun buildFloaterWidgetSnapshot(
         )
     }
 
+    val hiddenListIds = state.floaterLists.filterNot { it.showOnMainScreen }.mapTo(mutableSetOf()) { it.id }
     val floaterTasks = TaskSortEngine.sortedFloaters(
-        state.floaters.filter { !it.completed },
+        state.floaters.filter { !it.completed && FloaterMainScreen.isShown(it.listId, hiddenListIds) },
     ) { floater ->
         TaskSortKey(
             id = floater.id,

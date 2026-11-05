@@ -97,6 +97,8 @@ export type LocalListRow = {
 
 export type LocalFloaterListRow = LocalListRow & {
   reusable: boolean;
+  /** Absent on a row written before this field existed, which reads as shown. */
+  showOnMainScreen?: boolean;
   /**
    * Set only on a list this workspace recreated from `uncompleteFloater`'s
    * find-or-create step (see localFloaters.ts) — names the id of the

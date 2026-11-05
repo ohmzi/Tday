@@ -109,6 +109,7 @@ data class CreateFloaterListRequest(
     val iconKey: String? = null,
     val reusable: Boolean = false,
     val defaultPriority: String? = null,
+    val showOnMainScreen: Boolean = true,
 )
 
 @Serializable
@@ -124,6 +125,8 @@ data class FloaterListDto(
     /** A reusable list can be Reset (all its floaters un-completed) to run again. */
     val reusable: Boolean = false,
     val defaultPriority: String? = null,
+    /** Off keeps the list's tasks out of the Floater feed, widget and summary. See `FloaterMainScreen`. */
+    val showOnMainScreen: Boolean = true,
     // Sharing metadata. myRole is null on responses from servers that predate
     // sharing; treat null as OWNER.
     val myRole: String? = null,
@@ -153,6 +156,7 @@ data class UpdateFloaterListRequest(
     val reusable: Boolean? = null,
     val defaultPriority: String? = null,
     val defaultPriorityChanged: Boolean? = null,
+    val showOnMainScreen: Boolean? = null,
 )
 
 @Serializable

@@ -14,7 +14,9 @@ import com.ohmz.tday.models.response.CompletedTodoResponse
 import com.ohmz.tday.models.response.FloaterResponse
 import com.ohmz.tday.models.response.TodoResponse
 import com.ohmz.tday.services.CompletedTodoService
+import com.ohmz.tday.services.FloaterListService
 import com.ohmz.tday.services.FloaterService
+import com.ohmz.tday.shared.floater.FloaterMainScreen
 import com.ohmz.tday.services.TodoNlpService
 import com.ohmz.tday.services.TodoService
 import com.ohmz.tday.services.TodoSummaryService
@@ -52,6 +54,7 @@ private const val ERR_INVALID_INSTANCE_DATE = "instanceDate must be a valid ISO-
 fun Route.todoRoutes() {
     val todoService by inject<TodoService>()
     val floaterService by inject<FloaterService>()
+    val floaterListService by inject<FloaterListService>()
     val todoNlpService by inject<TodoNlpService>()
     val todoSummaryService by inject<TodoSummaryService>()
     val completedTodoService by inject<CompletedTodoService>()
@@ -64,7 +67,7 @@ fun Route.todoRoutes() {
         todoCompleteRoutes(todoService)
         todoInstanceRoutes(todoService)
         todoDemoteRoute(todoService)
-        todoUtilityRoutes(todoService, floaterService, todoNlpService, todoSummaryService, completedTodoService)
+        todoUtilityRoutes(todoService, floaterService, floaterListService, todoNlpService, todoSummaryService, completedTodoService)
     }
 }
 
@@ -281,6 +284,7 @@ private fun Route.todoInstanceRoutes(todoService: TodoService) {
 private fun Route.todoUtilityRoutes( // skipcq: KT-R1006
     todoService: TodoService,
     floaterService: FloaterService,
+    floaterListService: FloaterListService,
     todoNlpService: TodoNlpService,
     todoSummaryService: TodoSummaryService,
     completedTodoService: CompletedTodoService,
@@ -356,11 +360,20 @@ private fun Route.todoUtilityRoutes( // skipcq: KT-R1006
                 } else {
                     emptyList()
                 }
+                // Reads shared lists too, so a member's summary follows the owner's setting.
+                val hiddenFloaterListIds = if (scope.usesFloaters) {
+                    (floaterListService.getAll(user.id).getOrNull() ?: emptyList())
+                        .filterNot { it.showOnMainScreen }
+                        .mapTo(mutableSetOf()) { it.id }
+                } else {
+                    emptySet()
+                }
                 val tasks = buildSummaryTasks(
                     scope = scope,
                     listId = body.listId,
                     todos = todos,
                     floaters = floaters,
+                    hiddenFloaterListIds = hiddenFloaterListIds,
                     zoneId = zoneId,
                 )
                 if (tasks.isEmpty()) {
@@ -528,6 +541,7 @@ private fun buildSummaryTasks(
     listId: String?,
     todos: List<TodoResponse>,
     floaters: List<FloaterResponse>,
+    hiddenFloaterListIds: Set<String>,
     zoneId: ZoneId,
 ): List<SummaryTask> {
     val normalizedListId = listId?.trim()?.takeIf { it.isNotEmpty() }
@@ -538,7 +552,13 @@ private fun buildSummaryTasks(
         SummaryScope.FLOATER -> floaters
             .asSequence()
             .filterNot { it.completed }
-            .filter { normalizedListId == null || it.listID == normalizedListId }
+            .filter {
+                if (normalizedListId == null) {
+                    FloaterMainScreen.isShown(it.listID, hiddenFloaterListIds)
+                } else {
+                    it.listID == normalizedListId
+                }
+            }
             .map {
                 SummaryTask(
                     title = it.title,

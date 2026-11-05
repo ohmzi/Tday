@@ -993,12 +993,12 @@ fun TodoListScreen( // skipcq: KT-R1006
     onBulkSetPriority: (todos: List<TodoItem>, priority: String) -> Unit = { _, _ -> },
     onBulkMoveToList: (todos: List<TodoItem>, listId: String?) -> Unit = { _, _ -> },
     onOpenMorningSweep: () -> Unit = {},
-    onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?, reusable: Boolean?, defaultPriority: String?) -> Unit,
+    onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?, reusable: Boolean?, defaultPriority: String?, showOnMainScreen: Boolean?) -> Unit,
     onDeleteList: (listId: String) -> Unit,
     onOpenFloaterList: (listId: String, listName: String) -> Unit = { _, _ -> },
     onOpenCompleted: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
-    onCreateList: (name: String, color: String?, iconKey: String?, reusable: Boolean, defaultPriority: String?) -> Unit = { _, _, _, _, _ -> },
+    onCreateList: (name: String, color: String?, iconKey: String?, reusable: Boolean, defaultPriority: String?, showOnMainScreen: Boolean) -> Unit = { _, _, _, _, _, _ -> },
     /**
      * Reset a reusable floater list (un-check everything so it can be run again).
      * The twin of web's `resetFloaterList` header button in FloaterListContainer.
@@ -1337,8 +1337,9 @@ fun TodoListScreen( // skipcq: KT-R1006
     // already did above (`timelineItems` is `uiState.items` itself then, and `isDragActive` is
     // false), and `buildTimelineSections` is pure — so reuse it instead of grouping and sorting
     // the same list twice per data change. Either condition makes the inputs differ, and the
-    // screen builds its own.
-    val timelineSections = if (!scopedSearchActive && !timelineDragActive) {
+    // screen builds its own. So does the Floater home screen, which leaves hidden lists out of its
+    // rows while `scopeSections` keeps answering for every task.
+    val timelineSections = if (!scopedSearchActive && !timelineDragActive && !isFloaterTaskHomeScreen) {
         scopeSections
     } else {
         remember(
@@ -1346,10 +1347,16 @@ fun TodoListScreen( // skipcq: KT-R1006
             timelineItems,
             timelineDragActive,
             uiState.earlierItems,
+            uiState.lists,
+            isFloaterTaskHomeScreen,
         ) {
             buildTimelineSections(
                 mode = uiState.mode,
-                items = timelineItems,
+                items = if (isFloaterTaskHomeScreen) {
+                    floaterTaskHomeFeedItems(timelineItems, uiState.lists)
+                } else {
+                    timelineItems
+                },
                 isDragActive = timelineDragActive,
                 earlierItems = uiState.earlierItems,
             )
@@ -2355,6 +2362,8 @@ fun TodoListScreen( // skipcq: KT-R1006
     // Unlike the icon, this is always sent (never a "touched" flag): web's sheet
     // posts `reusable` on every save, so an off-flip must reach the server.
     var listSettingsReusable by rememberSaveable { mutableStateOf(false) }
+    // Seeded and sent the same way as `listSettingsReusable`.
+    var listSettingsShowOnMainScreen by rememberSaveable { mutableStateOf(true) }
     // Seeded from the SAVED list's `defaultPriority`, always sent on save (like
     // `listSettingsReusable`) since the row is shown for every list.
     var listSettingsDefaultPriority by rememberSaveable { mutableStateOf<String?>(null) }
@@ -2362,6 +2371,7 @@ fun TodoListScreen( // skipcq: KT-R1006
     var createListColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_FLOATER_LIST_COLOR_KEY) }
     var createListIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
     var createListReusable by rememberSaveable { mutableStateOf(false) }
+    var createListShowOnMainScreen by rememberSaveable { mutableStateOf(true) }
     var createListDefaultPriority by rememberSaveable { mutableStateOf<String?>(null) }
     // Mirrors `listSettingsIconTouched` above, for the sheet that never had it. The
     // picker still shows a glyph the whole time; what changes is that an untouched
@@ -2535,6 +2545,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                         // Seeded from the saved value, like name/color/icon: web's
                         // sheet reads `list.reusable` the same way.
                         listSettingsReusable = selectedList.reusable
+                        listSettingsShowOnMainScreen = selectedList.showOnMainScreen
                         listSettingsDefaultPriority = selectedList.defaultPriority
                         showListSettingsSheet = true
                     }
@@ -2608,6 +2619,10 @@ fun TodoListScreen( // skipcq: KT-R1006
     }
     fun openFloaterTaskHomeSearchResult(todo: TodoItem) {
         closeFloaterTaskHomeSearch()
+        hiddenListForSearchResult(todo, uiState.lists)?.let { list ->
+            onOpenFloaterList(list.id, list.name)
+            return
+        }
         val target = floaterTaskHomeTodoListTarget(todo.id) ?: return
         screenScope.launch {
             // Same constant, the other scale: nothing navigates here. What settles is
@@ -3709,6 +3724,8 @@ fun TodoListScreen( // skipcq: KT-R1006
             },
             reusable = createListReusable,
             onReusableChange = { createListReusable = it },
+            showOnMainScreen = createListShowOnMainScreen,
+            onShowOnMainScreenChange = { createListShowOnMainScreen = it },
             defaultPriority = createListDefaultPriority,
             onDefaultPriorityChange = { createListDefaultPriority = it },
             showDelete = false,
@@ -3722,12 +3739,14 @@ fun TodoListScreen( // skipcq: KT-R1006
                         createListIconKey.takeIf { createListIconTouched },
                         createListReusable,
                         createListDefaultPriority,
+                        createListShowOnMainScreen,
                     )
                     createListName = ""
                     createListColor = TDAY_DEFAULT_FLOATER_LIST_COLOR_KEY
                     createListIconKey = TDAY_DEFAULT_LIST_ICON_KEY
                     createListIconTouched = false
                     createListReusable = false
+                    createListShowOnMainScreen = true
                     createListDefaultPriority = null
                     showCreateListSheet = false
                 }
@@ -3761,6 +3780,8 @@ fun TodoListScreen( // skipcq: KT-R1006
             // hides the row AND keeps the save from writing the flag on one.
             reusable = if (uiState.mode == TodoListMode.FLOATER) listSettingsReusable else null,
             onReusableChange = { listSettingsReusable = it },
+            showOnMainScreen = if (uiState.mode == TodoListMode.FLOATER) listSettingsShowOnMainScreen else null,
+            onShowOnMainScreenChange = { listSettingsShowOnMainScreen = it },
             defaultPriority = listSettingsDefaultPriority,
             onDefaultPriorityChange = { listSettingsDefaultPriority = it },
             onShare = {
@@ -3790,6 +3811,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                     if (uiState.mode == TodoListMode.FLOATER) listSettingsReusable else null,
                     // The priority row is shown for every list, so this is always sent.
                     listSettingsDefaultPriority,
+                    if (uiState.mode == TodoListMode.FLOATER) listSettingsShowOnMainScreen else null,
                 )
                 showListSettingsSheet = false
                 listSettingsTargetId = null
@@ -5098,6 +5120,9 @@ private fun ListSettingsBottomSheet(
     /** Null hides the Reusable row — a scheduled list has no Reset to reveal. */
     reusable: Boolean? = null,
     onReusableChange: (Boolean) -> Unit = {},
+    /** Null hides the row, the same as [reusable]: this is a floater-list setting. */
+    showOnMainScreen: Boolean? = null,
+    onShowOnMainScreenChange: (Boolean) -> Unit = {},
     /** The priority a new task in this list starts with; null means no default. Shown
      *  for every list, scheduled or Anytime, unlike the floater-only Reusable row. */
     defaultPriority: String? = null,
@@ -5291,9 +5316,22 @@ private fun ListSettingsBottomSheet(
                         // Web draws this card between the icon picker and the
                         // sharing/delete actions, with the hint under the title.
                         TdaySheetCard {
-                            ListSettingsReusableToggleRow(
+                            ListSettingsToggleRow(
+                                title = stringResource(R.string.reusable_list),
+                                hint = stringResource(R.string.reusable_list_hint),
                                 checked = reusable,
                                 onCheckedChange = onReusableChange,
+                            )
+                        }
+                    }
+
+                    if (showOnMainScreen != null) {
+                        TdaySheetCard {
+                            ListSettingsToggleRow(
+                                title = stringResource(R.string.show_on_main_screen),
+                                hint = stringResource(R.string.show_on_main_screen_hint),
+                                checked = showOnMainScreen,
+                                onCheckedChange = onShowOnMainScreenChange,
                             )
                         }
                     }
@@ -5593,7 +5631,9 @@ private fun ListSettingsPriorityChip(
 }
 
 @Composable
-private fun ListSettingsReusableToggleRow(
+private fun ListSettingsToggleRow(
+    title: String,
+    hint: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
@@ -5613,13 +5653,13 @@ private fun ListSettingsReusableToggleRow(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = stringResource(R.string.reusable_list),
+                text = title,
                 style = MaterialTheme.typography.titleMedium,
                 color = colorScheme.onSurface,
                 fontWeight = FontWeight.ExtraBold,
             )
             Text(
-                text = stringResource(R.string.reusable_list_hint),
+                text = hint,
                 style = MaterialTheme.typography.bodySmall,
                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
                 fontWeight = FontWeight.Bold,

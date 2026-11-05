@@ -215,6 +215,11 @@ object GuideCatalog {
             body = listOf(para(GuideTopicIds.REUSABLE_LISTS), steps(GuideTopicIds.REUSABLE_LISTS, 3)),
         ),
         topic(
+            GuideTopicIds.HIDDEN_FLOATER_LISTS, GuideSectionId.ORGANIZING, "eye-off",
+            setOf(WEB, ANDROID, IOS), sinceVersion = "0.8.15",
+            body = listOf(para(GuideTopicIds.HIDDEN_FLOATER_LISTS), steps(GuideTopicIds.HIDDEN_FLOATER_LISTS, 3)),
+        ),
+        topic(
             GuideTopicIds.SCHEDULED_LISTS, GuideSectionId.ORGANIZING, "list-todo",
             setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.SCHEDULED_LISTS)),
         ),

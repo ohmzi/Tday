@@ -93,6 +93,7 @@ export function exportWorkspace() {
       createdAt: list.createdAt,
       updatedAt: list.updatedAt,
       reusable: list.reusable,
+      showOnMainScreen: list.showOnMainScreen !== false,
       myRole: "OWNER",
       isShared: false,
       memberCount: 0,
@@ -207,6 +208,7 @@ export function importWorkspace(body: Record<string, unknown>) {
     color: optionalText(row.color),
     iconKey: optionalText(row.iconKey),
     reusable: row.reusable === true,
+    showOnMainScreen: row.showOnMainScreen !== false,
     createdAt: optionalText(row.createdAt) ?? now,
     updatedAt: optionalText(row.updatedAt) ?? now,
   }));

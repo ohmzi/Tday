@@ -624,6 +624,40 @@
       "sinceVersion": "0.6.0"
     },
     {
+      "id": "hidden-floater-lists",
+      "section": "ORGANIZING",
+      "icon": "eye-off",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.hidden-floater-lists.title",
+      "summaryKey": "guide.topics.hidden-floater-lists.summary",
+      "keywordsKey": "guide.topics.hidden-floater-lists.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.hidden-floater-lists.body"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "keys": [
+            "guide.topics.hidden-floater-lists.step0",
+            "guide.topics.hidden-floater-lists.step1",
+            "guide.topics.hidden-floater-lists.step2"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.8.15"
+    },
+    {
       "id": "scheduled-lists",
       "section": "ORGANIZING",
       "icon": "list-todo",

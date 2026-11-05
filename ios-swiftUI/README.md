@@ -127,7 +127,7 @@ decodes schema version 3 snapshots and keeps a legacy fallback for older payload
 
 - Snapshot status is `setup`, `empty`, or `tasks`, with task count, generated time, and capped task rows.
 - Today includes pending scheduled tasks due today; Floater includes active unscheduled floaters
-  across all floater lists. Completed tasks and overdue scheduled tasks are excluded.
+  across all floater lists, leaving out lists with "Show on main screen" off. Completed tasks and overdue scheduled tasks are excluded.
 - The Today snapshot records its local day and carries the next six days as well, so the widget
   turns over at midnight on its own (a timeline entry at the next local midnight) even when nothing
   syncs or writes — offline, say. Past the last carried day it shows "Open T'Day" instead of a stale

@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.feature.widget.snapshot
 
+import com.ohmz.tday.compose.core.data.CachedFloaterListRecord
 import com.ohmz.tday.compose.core.data.CachedFloaterRecord
 import com.ohmz.tday.compose.core.data.OfflineSyncState
 import org.junit.Assert.assertEquals
@@ -23,6 +24,40 @@ class FloaterWidgetSnapshotBuilderTest {
         assertEquals(WidgetSnapshotStatus.TASKS, snapshot.status)
         assertEquals(2, snapshot.taskCount)
         assertEquals(listOf("listed", "open"), snapshot.rows.map { it.id })
+    }
+
+    @Test
+    fun `snapshot leaves out a list hidden from the main screen`() {
+        val snapshot = buildFloaterWidgetSnapshot(
+            state = OfflineSyncState(
+                floaterLists = listOf(
+                    CachedFloaterListRecord(id = "hidden", name = "Someday", showOnMainScreen = false),
+                ),
+                floaters = listOf(
+                    floater(id = "open", title = "Open"),
+                    floater(id = "tucked", title = "Tucked", listId = "hidden"),
+                ),
+            ),
+            workspaceConfigured = true,
+        )
+
+        assertEquals(1, snapshot.taskCount)
+        assertEquals(listOf("open"), snapshot.rows.map { it.id })
+    }
+
+    @Test
+    fun `snapshot is empty when only hidden tasks remain`() {
+        val snapshot = buildFloaterWidgetSnapshot(
+            state = OfflineSyncState(
+                floaterLists = listOf(
+                    CachedFloaterListRecord(id = "hidden", name = "Someday", showOnMainScreen = false),
+                ),
+                floaters = listOf(floater(id = "tucked", title = "Tucked", listId = "hidden")),
+            ),
+            workspaceConfigured = true,
+        )
+
+        assertEquals(WidgetSnapshotStatus.EMPTY, snapshot.status)
     }
 
     /**

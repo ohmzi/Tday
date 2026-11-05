@@ -30,8 +30,8 @@ interface FloaterListService {
     suspend fun getAll(userId: String): Either<AppError, List<FloaterListResponse>>
     suspend fun getById(userId: String, listId: String): Either<AppError, FloaterListResponse>
     suspend fun getFloatersForList(userId: String, listId: String): Either<AppError, List<FloaterListTodoResponse>>
-    suspend fun create(userId: String, name: String, color: String?, iconKey: String?, reusable: Boolean = false, defaultPriority: String? = null): Either<AppError, FloaterListResponse>
-    suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?, reusable: Boolean? = null, defaultPriority: String? = null, defaultPriorityChanged: Boolean? = null): Either<AppError, Unit>
+    suspend fun create(userId: String, name: String, color: String?, iconKey: String?, reusable: Boolean = false, defaultPriority: String? = null, showOnMainScreen: Boolean = true): Either<AppError, FloaterListResponse>
+    suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?, reusable: Boolean? = null, defaultPriority: String? = null, defaultPriorityChanged: Boolean? = null, showOnMainScreen: Boolean? = null): Either<AppError, Unit>
     suspend fun resetFloaters(userId: String, listId: String): Either<AppError, Int>
     suspend fun deleteMany(userId: String, ids: List<String>): Either<AppError, List<String>>
 }
@@ -151,7 +151,7 @@ class FloaterListServiceImpl(
         return floaters.right()
     }
 
-    override suspend fun create(userId: String, name: String, color: String?, iconKey: String?, reusable: Boolean, defaultPriority: String?): Either<AppError, FloaterListResponse> {
+    override suspend fun create(userId: String, name: String, color: String?, iconKey: String?, reusable: Boolean, defaultPriority: String?, showOnMainScreen: Boolean): Either<AppError, FloaterListResponse> {
         val id = CuidGenerator.newCuid()
         val now = LocalDateTime.now(ZoneOffset.UTC)
         newSuspendedTransaction(Dispatchers.IO) {
@@ -163,6 +163,7 @@ class FloaterListServiceImpl(
                 it[FloaterLists.defaultPriority] = defaultPriority?.let { p -> Priority.valueOf(p) }
                 it[FloaterLists.userID] = userId
                 it[FloaterLists.reusable] = reusable
+                it[FloaterLists.showOnMainScreen] = showOnMainScreen
                 it[FloaterLists.createdAt] = now
                 it[FloaterLists.updatedAt] = now
             }
@@ -176,13 +177,14 @@ class FloaterListServiceImpl(
             defaultPriority = defaultPriority,
             userID = userId,
             reusable = reusable,
+            showOnMainScreen = showOnMainScreen,
             createdAt = now.toString(),
             updatedAt = now.toString(),
             myRole = ShareRole.OWNER.name,
         ).right()
     }
 
-    override suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?, reusable: Boolean?, defaultPriority: String?, defaultPriorityChanged: Boolean?): Either<AppError, Unit> {
+    override suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?, reusable: Boolean?, defaultPriority: String?, defaultPriorityChanged: Boolean?, showOnMainScreen: Boolean?): Either<AppError, Unit> {
         when (shareService.accessFor(userId, id, ListType.FLOATER)) {
             null -> return AppError.NotFound("floater list not found").left()
             ShareRole.OWNER -> Unit
@@ -194,6 +196,7 @@ class FloaterListServiceImpl(
                 color?.let { c -> it[FloaterLists.color] = ListColor.valueOf(c) }
                 iconKey?.let { k -> it[FloaterLists.iconKey] = k }
                 reusable?.let { r -> it[FloaterLists.reusable] = r }
+                showOnMainScreen?.let { s -> it[FloaterLists.showOnMainScreen] = s }
                 if (defaultPriorityChanged == true) {
                     it[FloaterLists.defaultPriority] = defaultPriority?.let { p -> Priority.valueOf(p) }
                 }
@@ -298,6 +301,7 @@ class FloaterListServiceImpl(
         userID = this[FloaterLists.userID],
         todoCount = todoCountOverride,
         reusable = this[FloaterLists.reusable],
+        showOnMainScreen = this[FloaterLists.showOnMainScreen],
         createdAt = this[FloaterLists.createdAt].toString(),
         updatedAt = this[FloaterLists.updatedAt].toString(),
     )

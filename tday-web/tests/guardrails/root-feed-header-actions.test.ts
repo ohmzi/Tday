@@ -304,7 +304,7 @@ describe("the Anytime feed's Completed entry", () => {
     const web = readCode(WEB_FLOATER_DASHBOARD);
     const tileAt = web.indexOf('href="/app/completed?scope=floater"');
     const sceneAt = web.indexOf("showEmpty || sceneLeavingOnCancel");
-    const rowsAt = web.indexOf("showSkeleton || (!floaterLoading && sortedFloaters.length > 0)");
+    const rowsAt = web.indexOf("showSkeleton || (!floaterLoading && feedFloaters.length > 0)");
     const listsAt = web.indexOf("lists.length > 0");
 
     expect(tileAt).toBeGreaterThan(-1);

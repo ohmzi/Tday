@@ -249,6 +249,8 @@
     "sweepDone": "Semua terkini",
     "reusableList": "Senarai boleh guna semula",
     "reusableListHint": "Tunjuk Set Semula untuk nyahtanda semua dan guna lagi",
+    "showOnMainScreen": "Tunjukkan pada skrin utama",
+    "showOnMainScreenHint": "Jika dimatikan, tugasnya kekal dalam senarai ini sahaja.",
     "resetFloaterList": "Set semula senarai",
     "floaterListReset": "Senarai diset semula — semua dinyahtanda",
     "steps": "Langkah",
@@ -1184,6 +1186,15 @@
         "step0": "Buka senarai floater dan hidupkan \"Boleh guna semula\" dalam tetapannya.",
         "step1": "Teruskan menanda item seperti biasa.",
         "step2": "Bila perlu lagi, ketik Set Semula untuk nyahtanda semua."
+      },
+      "hidden-floater-lists": {
+        "title": "Sembunyikan senarai daripada skrin utama",
+        "summary": "Kekalkan tugas senarai floater di dalam senarai.",
+        "keywords": "sembunyi, tersembunyi, skrin utama, floater, senarai, bila-bila masa, suapan, widget, tunjuk",
+        "body": "Matikan \"Tunjukkan pada skrin utama\" dalam tetapan senarai floater dan tugasnya kekal di dalam senarai itu. Tugas itu keluar daripada suapan utama, widget Floater dan ringkasan Floater, tetapi masih muncul dalam carian, dalam senarai itu sendiri dan dalam Selesai. Tugas terbuka dalam senarai tersembunyi menghalang paparan \"semua selesai\". Pada senarai kongsi, pilihan pemilik terpakai kepada semua orang.",
+        "step0": "Buka senarai floater dan pergi ke tetapannya.",
+        "step1": "Matikan \"Tunjukkan pada skrin utama\" dan simpan.",
+        "step2": "Untuk memulangkan tugasnya, hidupkan semula."
       },
       "brain-dump": {
         "title": "Curah minda",

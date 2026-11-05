@@ -323,6 +323,8 @@
     <string name="todos_list_settings">Listeneinstellungen</string>
     <string name="reusable_list">Wiederverwendbare Liste</string>
     <string name="reusable_list_hint">Zeigt Zurücksetzen, um alles abzuwählen und erneut zu nutzen</string>
+    <string name="show_on_main_screen">Auf dem Hauptbildschirm anzeigen</string>
+    <string name="show_on_main_screen_hint">Aus: Die Aufgaben bleiben nur in dieser Liste.</string>
     <string name="reset_floater_list">Liste zurücksetzen</string>
     <string name="floater_list_reset">Liste zurückgesetzt – alles abgewählt</string>
     <string name="error_reset_list_failed">Liste konnte nicht zurückgesetzt werden.</string>

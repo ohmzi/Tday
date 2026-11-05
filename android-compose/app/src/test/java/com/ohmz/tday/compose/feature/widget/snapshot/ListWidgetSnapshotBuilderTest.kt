@@ -89,6 +89,24 @@ class ListWidgetSnapshotBuilderTest {
     }
 
     @Test
+    fun `a widget set to a hidden list still shows its tasks`() {
+        val snapshot = buildListWidgetSnapshot(
+            state = OfflineSyncState(
+                floaterLists = listOf(
+                    CachedFloaterListRecord(id = "list-1", name = "Someday", showOnMainScreen = false),
+                ),
+                floaters = listOf(floater(id = "in-list", title = "In list", listId = "list-1")),
+            ),
+            listId = "list-1",
+            listType = WidgetListType.FLOATER,
+            workspaceConfigured = true,
+            nowEpochMs = now,
+        )
+
+        assertEquals(listOf("in-list"), snapshot.rows.map { it.id })
+    }
+
+    @Test
     fun `floater snapshot includes only pending floaters from the chosen list`() {
         val snapshot = buildListWidgetSnapshot(
             state = OfflineSyncState(

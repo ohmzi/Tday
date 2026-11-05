@@ -42,6 +42,7 @@ import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
 import com.ohmz.tday.shared.sort.TaskSortEngine
 import com.ohmz.tday.shared.sort.TaskSortKey
 import com.ohmz.tday.shared.summary.SummaryEngine
+import com.ohmz.tday.shared.floater.FloaterMainScreen
 import com.ohmz.tday.shared.summary.SummaryScope
 import com.ohmz.tday.shared.summary.SummaryTaskInput
 import kotlinx.coroutines.Dispatchers
@@ -1275,7 +1276,7 @@ class TodoRepository @Inject constructor(
     ): TodoSummaryResponse {
         val state = cacheManager.loadOfflineState()
         val inputs = if (mode == TodoListMode.FLOATER) {
-            state.floaters.filterNot { it.completed }.map(CachedFloaterRecord::toSummaryInput)
+            floatersForSummary(state, listId).map(CachedFloaterRecord::toSummaryInput)
         } else {
             state.todos
                 .filterNot { it.completed }
@@ -1650,6 +1651,17 @@ internal fun OfflineSyncState.withDeletedTodoCached(
  * "untouched in months" sentence was unreachable in the shipped app. `0L` is the cache's "never
  * synced" sentinel, mapped to null so an unstamped row reads as ACTIVE rather than as 1970.
  */
+/**
+ * The floaters a summary reads. The engine narrows to [listId] itself, so a list's own summary
+ * keeps every row here; only the Floater-wide summary leaves hidden lists out.
+ */
+internal fun floatersForSummary(state: OfflineSyncState, listId: String?): List<CachedFloaterRecord> {
+    val pending = state.floaters.filterNot { it.completed }
+    if (!listId.isNullOrBlank()) return pending
+    val hiddenListIds = state.floaterLists.filterNot { it.showOnMainScreen }.mapTo(mutableSetOf()) { it.id }
+    return pending.filter { FloaterMainScreen.isShown(it.listId, hiddenListIds) }
+}
+
 internal fun CachedFloaterRecord.toSummaryInput(): SummaryTaskInput = SummaryTaskInput(
     title = title,
     priority = priority,
