@@ -1,9 +1,11 @@
 {
-  "version": "0.8.14",
-  "publishedAt": "2026-11-02T00:51:26-05:00",
+  "version": "0.8.15",
+  "publishedAt": "2026-11-05T18:02:06-05:00",
   "notes": [
-    "Draw every widget watermark the way the Today moon is drawn"
+    "Add the hidden floater lists guide topic and docs",
+    "Hide floater list tasks from the web main screen",
+    "Store floater list main-screen visibility on Android"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.14",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.13..v0.8.14"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.15",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.14..v0.8.15"
 }
