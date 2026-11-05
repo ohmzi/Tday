@@ -350,6 +350,9 @@ struct ListSummary: Identifiable, Equatable, Hashable, Codable {
     /// Drives both the settings toggle and the header's Reset, exactly as
     /// `listMeta.reusable` does on web. False for scheduled lists.
     var reusable: Bool = false
+    /// Off keeps the list's tasks out of the Floater feed, widget and summary. See
+    /// `FloaterMainScreen`. True for scheduled lists, which have no such setting.
+    var showOnMainScreen: Bool = true
     /// Pre-fills a new task's priority when created in this list. Nil means no default.
     var defaultPriority: String? = nil
 
@@ -358,7 +361,7 @@ struct ListSummary: Identifiable, Equatable, Hashable, Codable {
 
     private enum CodingKeys: String, CodingKey {
         case id, name, color, iconKey, todoCount, updatedAt, createdAt
-        case myRole, isShared, memberCount, ownerUsername, reusable, defaultPriority
+        case myRole, isShared, memberCount, ownerUsername, reusable, showOnMainScreen, defaultPriority
     }
 
     init(
@@ -374,6 +377,7 @@ struct ListSummary: Identifiable, Equatable, Hashable, Codable {
         memberCount: Int = 0,
         ownerUsername: String? = nil,
         reusable: Bool = false,
+        showOnMainScreen: Bool = true,
         defaultPriority: String? = nil
     ) {
         self.id = id
@@ -388,6 +392,7 @@ struct ListSummary: Identifiable, Equatable, Hashable, Codable {
         self.memberCount = memberCount
         self.ownerUsername = ownerUsername
         self.reusable = reusable
+        self.showOnMainScreen = showOnMainScreen
         self.defaultPriority = defaultPriority
     }
 
@@ -406,6 +411,7 @@ struct ListSummary: Identifiable, Equatable, Hashable, Codable {
         memberCount = try container.decodeIfPresent(Int.self, forKey: .memberCount) ?? 0
         ownerUsername = try container.decodeIfPresent(String.self, forKey: .ownerUsername)
         reusable = try container.decodeIfPresent(Bool.self, forKey: .reusable) ?? false
+        showOnMainScreen = try container.decodeIfPresent(Bool.self, forKey: .showOnMainScreen) ?? true
         defaultPriority = try container.decodeIfPresent(String.self, forKey: .defaultPriority)
     }
 }

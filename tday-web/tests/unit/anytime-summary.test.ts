@@ -377,6 +377,7 @@ describe("anytime summary count and staleness", () => {
 
 const workspace = {
   floaters: [] as Array<Record<string, unknown>>,
+  floaterLists: [] as Array<Record<string, unknown>>,
   todos: [],
   completedTodos: [],
 };

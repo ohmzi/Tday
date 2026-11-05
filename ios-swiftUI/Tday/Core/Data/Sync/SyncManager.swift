@@ -661,6 +661,7 @@ final class SyncManager {
                         updatedAtEpochMs: list.updatedAtEpochMs,
                         createdAtEpochMs: list.createdAtEpochMs,
                         reusable: list.reusable,
+                        showOnMainScreen: list.showOnMainScreen,
                         defaultPriority: list.defaultPriority
                     )
                 }
@@ -823,6 +824,7 @@ final class SyncManager {
                 color: list.color,
                 iconKey: list.iconKey,
                 reusable: list.reusable,
+                showOnMainScreen: list.showOnMainScreen,
                 defaultPriority: list.defaultPriority,
                 defaultPriorityChanged: true
             )
@@ -928,7 +930,7 @@ final class SyncManager {
                 return
             }
             let response = try await api.createFloaterList(
-                payload: CreateFloaterListRequest(name: mutation.name ?? "Untitled", color: mutation.color, iconKey: mutation.iconKey, reusable: mutation.reusable ?? false, defaultPriority: mutation.defaultPriority)
+                payload: CreateFloaterListRequest(name: mutation.name ?? "Untitled", color: mutation.color, iconKey: mutation.iconKey, reusable: mutation.reusable ?? false, showOnMainScreen: mutation.showOnMainScreen ?? true, defaultPriority: mutation.defaultPriority)
             )
             guard let createdList = response.list else { return }
             resolvedFloaterListIDs[localListID] = createdList.id
@@ -945,6 +947,7 @@ final class SyncManager {
                     color: mutation.color,
                     iconKey: mutation.iconKey,
                     reusable: mutation.reusable,
+                    showOnMainScreen: mutation.showOnMainScreen,
                     defaultPriority: mutation.defaultPriority,
                     defaultPriorityChanged: mutation.defaultPriorityChanged
                 )
@@ -1496,6 +1499,7 @@ final class SyncManager {
                     updatedAtEpochMs: list.updatedAtEpochMs,
                     createdAtEpochMs: list.createdAtEpochMs,
                     reusable: list.reusable,
+                    showOnMainScreen: list.showOnMainScreen,
                     defaultPriority: list.defaultPriority
                 )
             }.dedupedByID(),

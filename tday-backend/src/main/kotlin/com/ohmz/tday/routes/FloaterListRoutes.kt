@@ -43,7 +43,7 @@ fun Route.floaterListRoutes() {
                     validateCreateFloaterList.validateOrFail(body).bind()
                     val color = validateOptionalEnumValue<ListColor>(body.color, "color").bind()
                     val defaultPriority = validateOptionalEnumValue<Priority>(body.defaultPriority, "defaultPriority").bind()
-                    val list = floaterListService.create(user.id, body.name, color, body.iconKey, body.reusable, defaultPriority).bind()
+                    val list = floaterListService.create(user.id, body.name, color, body.iconKey, body.reusable, defaultPriority, body.showOnMainScreen).bind()
                     CreateFloaterListResponse(message = "floater list created", list = list)
                 }
             }
@@ -56,7 +56,7 @@ fun Route.floaterListRoutes() {
                     validatePatchFloaterList.validateOrFail(body).bind()
                     val color = validateOptionalEnumValue<ListColor>(body.color, "color").bind()
                     val defaultPriority = validateOptionalEnumValue<Priority>(body.defaultPriority, "defaultPriority").bind()
-                    floaterListService.update(user.id, body.id, body.name, color, body.iconKey, body.reusable, defaultPriority, body.defaultPriorityChanged).bind()
+                    floaterListService.update(user.id, body.id, body.name, color, body.iconKey, body.reusable, defaultPriority, body.defaultPriorityChanged, body.showOnMainScreen).bind()
                     mapOf("message" to "floater list updated")
                 }
             }

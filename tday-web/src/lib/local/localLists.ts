@@ -235,6 +235,7 @@ function toFloaterListDto(row: LocalFloaterListRow, todoCount: number) {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     reusable: row.reusable,
+    showOnMainScreen: row.showOnMainScreen !== false,
     ...OWNED,
   };
 }
@@ -265,6 +266,7 @@ export function createFloaterList(body: Record<string, unknown>) {
     iconKey: normalize(body.iconKey),
     defaultPriority: optionalPriority(body.defaultPriority) ?? null,
     reusable: body.reusable === true,
+    showOnMainScreen: body.showOnMainScreen !== false,
     createdAt: now,
     updatedAt: now,
   };
@@ -288,6 +290,7 @@ export function updateFloaterList(body: Record<string, unknown>) {
     if (iconKey) row.iconKey = iconKey;
     if (defaultPriority !== undefined) row.defaultPriority = defaultPriority;
     if (typeof body.reusable === "boolean") row.reusable = body.reusable;
+    if (typeof body.showOnMainScreen === "boolean") row.showOnMainScreen = body.showOnMainScreen;
     row.updatedAt = nowApiDateTime();
   });
 

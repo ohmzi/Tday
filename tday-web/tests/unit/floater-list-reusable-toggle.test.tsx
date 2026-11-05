@@ -140,7 +140,8 @@ function renderContainer() {
 /** Opens the owner's edit sheet, which is what seeds the form from the list. */
 const openEditSheet = () =>
   fireEvent.click(screen.getByLabelText("listSettings Packing"));
-const toggle = () => screen.getByRole("switch");
+const toggle = () => screen.getByRole("switch", { name: /reusableList/ });
+const mainScreenToggle = () => screen.getByRole("switch", { name: /showOnMainScreen/ });
 const confirm = () => fireEvent.click(screen.getByText("confirm"));
 
 beforeEach(() => {
@@ -175,5 +176,27 @@ describe("the floater list edit sheet's Reusable switch", () => {
     await waitFor(() => expect(patchMock).toHaveBeenCalled());
     const body = JSON.parse(patchMock.mock.calls[0][0].body);
     expect(body).toMatchObject({ id: "list-1", reusable: false });
+  });
+});
+
+describe("the floater list edit sheet's Show on main screen switch", () => {
+  it("seeds ON for a list that has never stored the field", () => {
+    renderContainer();
+    openEditSheet();
+
+    expect(mainScreenToggle().getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("persists turning it off", async () => {
+    renderContainer();
+    openEditSheet();
+
+    fireEvent.click(mainScreenToggle());
+    expect(mainScreenToggle().getAttribute("aria-checked")).toBe("false");
+    confirm();
+
+    await waitFor(() => expect(patchMock).toHaveBeenCalled());
+    const body = JSON.parse(patchMock.mock.calls[0][0].body);
+    expect(body).toMatchObject({ id: "list-1", showOnMainScreen: false });
   });
 });

@@ -1280,6 +1280,7 @@ class TodoListViewModel @Inject constructor(
         reusable: Boolean? = null,
         defaultPriority: String? = null,
         defaultPriorityChanged: Boolean = false,
+        showOnMainScreen: Boolean? = null,
     ) {
         val trimmedName = capitalizeFirstListLetter(name).trim()
         if (trimmedName.isBlank()) return
@@ -1319,6 +1320,7 @@ class TodoListViewModel @Inject constructor(
                             color = color ?: list.color,
                             iconKey = iconKey ?: list.iconKey,
                             reusable = reusable ?: list.reusable,
+                            showOnMainScreen = showOnMainScreen ?: list.showOnMainScreen,
                             defaultPriority = if (defaultPriorityChanged) defaultPriority else list.defaultPriority,
                         )
                     } else {
@@ -1338,6 +1340,7 @@ class TodoListViewModel @Inject constructor(
                         color = color,
                         iconKey = iconKey,
                         reusable = reusable,
+                        showOnMainScreen = showOnMainScreen,
                         defaultPriority = defaultPriority,
                         defaultPriorityChanged = defaultPriorityChanged,
                     )
@@ -1403,6 +1406,7 @@ class TodoListViewModel @Inject constructor(
         iconKey: String? = null,
         reusable: Boolean = false,
         defaultPriority: String? = null,
+        showOnMainScreen: Boolean = true,
     ) {
         val trimmedName = capitalizeFirstListLetter(name).trim()
         if (trimmedName.isBlank()) return
@@ -1420,6 +1424,7 @@ class TodoListViewModel @Inject constructor(
                         color = color,
                         iconKey = iconKey,
                         reusable = reusable,
+                        showOnMainScreen = showOnMainScreen,
                         defaultPriority = defaultPriority,
                     )
                 } else {

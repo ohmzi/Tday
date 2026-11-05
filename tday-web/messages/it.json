@@ -249,6 +249,8 @@
     "sweepDone": "Tutto in pari",
     "reusableList": "Lista riutilizzabile",
     "reusableListHint": "Mostra Reimposta per deselezionare tutto e rifarla",
+    "showOnMainScreen": "Mostra nella schermata principale",
+    "showOnMainScreenHint": "Se disattivato, le attività restano solo in questa lista.",
     "resetFloaterList": "Reimposta lista",
     "floaterListReset": "Lista reimpostata: tutto deselezionato",
     "steps": "Passaggi",
@@ -1184,6 +1186,15 @@
         "step0": "Apri una lista floater e attiva \"Riutilizzabile\" nelle sue impostazioni.",
         "step1": "Procedi spuntando gli elementi come al solito.",
         "step2": "Quando ti serve di nuovo, tocca Reimposta per deselezionare tutto."
+      },
+      "hidden-floater-lists": {
+        "title": "Nascondere una lista dalla schermata principale",
+        "summary": "Tieni le attività di una lista floater dentro la lista.",
+        "keywords": "nascondere, nascosta, schermata principale, floater, lista, in qualsiasi momento, feed, widget, mostra",
+        "body": "Disattiva «Mostra nella schermata principale» nelle impostazioni di una lista floater e le sue attività restano in quella lista. Escono dal feed principale, dal widget Floater e dal riepilogo Floater, ma compaiono ancora nella ricerca, nella lista stessa e in Completate. Le attività aperte di una lista nascosta impediscono la comparsa della scena «tutto fatto». In una lista condivisa, la scelta del proprietario vale per tutti.",
+        "step0": "Apri una lista floater e vai alle sue impostazioni.",
+        "step1": "Disattiva «Mostra nella schermata principale» e salva.",
+        "step2": "Per riavere le sue attività, riattivalo."
       },
       "brain-dump": {
         "title": "Scarico mentale",

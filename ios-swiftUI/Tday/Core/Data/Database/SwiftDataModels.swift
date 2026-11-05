@@ -109,6 +109,8 @@ final class CachedFloaterListEntity {
     // Optional so SwiftData lightweight migration covers pre-reusable-list stores;
     // nil reads back as "not reusable" (see `CachedFloaterListRecord.reusable`).
     var reusable: Bool?
+    // Optional for the same migration; nil reads back as shown, never hidden.
+    var showOnMainScreen: Bool?
 
     init(from record: CachedFloaterListRecord) {
         id = record.id
@@ -124,6 +126,7 @@ final class CachedFloaterListEntity {
         ownerUsername = record.ownerUsername
         defaultPriority = record.defaultPriority
         reusable = record.reusable
+        showOnMainScreen = record.showOnMainScreen
     }
 }
 
@@ -213,6 +216,7 @@ final class PendingMutationEntity {
     // alone" — so turning Reusable off never reached the server and the next sync switched it
     // back on. Optional, so the lightweight migration fills existing rows with nil.
     var reusable: Bool?
+    var showOnMainScreen: Bool?
 
     init(from record: PendingMutationRecord) {
         mutationId = record.mutationId
@@ -235,6 +239,7 @@ final class PendingMutationEntity {
         defaultPriority = record.defaultPriority
         defaultPriorityChanged = record.defaultPriorityChanged
         reusable = record.reusable
+        showOnMainScreen = record.showOnMainScreen
     }
 }
 

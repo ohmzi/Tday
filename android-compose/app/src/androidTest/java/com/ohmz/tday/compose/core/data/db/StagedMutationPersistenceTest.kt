@@ -127,6 +127,23 @@ class StagedMutationPersistenceTest {
     }
 
     @Test
+    fun migrating_from_14_keeps_every_floater_list_on_the_main_screen() {
+        migrationHelper.createDatabase(MIGRATION_DB, 14).use { v14 ->
+            v14.execSQL(
+                "INSERT INTO cached_floater_lists (id, name, todoCount, updatedAtEpochMs, createdAtEpochMs) " +
+                    "VALUES ('fl-1', 'Packing', 0, 1000, 1000)",
+            )
+        }
+
+        migrationHelper.runMigrationsAndValidate(MIGRATION_DB, 15, true, Migration14To15()).use { v15 ->
+            v15.query("SELECT showOnMainScreen FROM cached_floater_lists WHERE id = 'fl-1'").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(1, cursor.getInt(0))
+            }
+        }
+    }
+
+    @Test
     fun migrating_from_13_keeps_the_queue_and_reads_it_back_unstaged() {
         migrationHelper.createDatabase(MIGRATION_DB, 13).use { v13 ->
             v13.execSQL(
@@ -147,7 +164,7 @@ class StagedMutationPersistenceTest {
         // And through the real Room mapping: the migrated file opens under the v14 schema's
         // identity hash, and the surviving row comes back whole.
         val migrated = Room.databaseBuilder(context, TdayDatabase::class.java, MIGRATION_DB)
-            .addMigrations(Migration13To14())
+            .addMigrations(Migration13To14(), Migration14To15())
             .allowMainThreadQueries()
             .build()
         migrated.closing { database ->

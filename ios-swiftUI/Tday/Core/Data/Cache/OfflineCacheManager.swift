@@ -202,6 +202,7 @@ final class OfflineCacheManager {
                 memberCount: $0.memberCount,
                 ownerUsername: $0.ownerUsername,
                 reusable: $0.reusable,
+                showOnMainScreen: $0.showOnMainScreen,
                 defaultPriority: $0.defaultPriority
             )
         }
@@ -288,6 +289,7 @@ final class OfflineCacheManager {
                     color: $0.color,
                     iconKey: $0.iconKey,
                     reusable: $0.reusable,
+                    showOnMainScreen: $0.showOnMainScreen,
                     defaultPriority: $0.defaultPriority,
                     defaultPriorityChanged: $0.defaultPriorityChanged,
                     staged: $0.staged

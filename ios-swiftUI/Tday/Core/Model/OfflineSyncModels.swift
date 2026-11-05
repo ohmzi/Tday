@@ -206,6 +206,9 @@ struct CachedFloaterListRecord: Identifiable, Equatable, Codable {
     /// Optional for the same reason as the sharing fields: state persisted
     /// before the flag existed decodes as "not reusable".
     var reusable: Bool?
+    /// Nil, as in state persisted before the flag existed, reads as shown: always read this
+    /// with `?? true`.
+    var showOnMainScreen: Bool?
     var defaultPriority: String?
 
     init(
@@ -221,6 +224,7 @@ struct CachedFloaterListRecord: Identifiable, Equatable, Codable {
         memberCount: Int? = nil,
         ownerUsername: String? = nil,
         reusable: Bool? = nil,
+        showOnMainScreen: Bool? = nil,
         defaultPriority: String? = nil
     ) {
         self.id = id
@@ -235,6 +239,7 @@ struct CachedFloaterListRecord: Identifiable, Equatable, Codable {
         self.memberCount = memberCount
         self.ownerUsername = ownerUsername
         self.reusable = reusable
+        self.showOnMainScreen = showOnMainScreen
         self.defaultPriority = defaultPriority
     }
 }
@@ -336,6 +341,7 @@ struct PendingMutationRecord: Identifiable, Equatable, Codable {
     // mutation", the same convention the shared UpdateFloaterListRequest uses.
     // Defaulted so the existing memberwise-init call sites keep compiling.
     var reusable: Bool? = nil
+    var showOnMainScreen: Bool? = nil
     // Default-priority fields for the list/floater-list create/update mutations,
     // mirroring the `reusable` pair above but not floater-only: the update side
     // uses the same tri-state convention as the shared `UpdateFloaterListRequest`

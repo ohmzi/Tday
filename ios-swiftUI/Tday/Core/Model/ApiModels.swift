@@ -467,6 +467,8 @@ struct CreateFloaterListRequest: Codable {
     /// Defaults false, matching the shared `CreateFloaterListRequest` and the
     /// backend column default.
     var reusable: Bool = false
+    /// Defaults true, matching the shared request and the backend column default.
+    var showOnMainScreen: Bool = true
     var defaultPriority: String? = nil
 }
 
@@ -497,6 +499,8 @@ struct FloaterListDTO: Codable, Equatable {
     let createdAt: String?
     /// A reusable list can be Reset (all floaters un-completed) to run again.
     var reusable: Bool?
+    /// Nil reads as shown. See `FloaterMainScreen`.
+    var showOnMainScreen: Bool?
     // Sharing metadata; nil on responses from servers that predate sharing.
     var myRole: String?
     var isShared: Bool?
@@ -597,6 +601,7 @@ struct UpdateFloaterListRequest: Codable {
     /// `UpdateFloaterListRequest` uses. The settings sheet always sends a value
     /// for a floater list, so an off-flip reaches the server.
     var reusable: Bool? = nil
+    var showOnMainScreen: Bool? = nil
     var defaultPriority: String? = nil
     var defaultPriorityChanged: Bool? = nil
 }

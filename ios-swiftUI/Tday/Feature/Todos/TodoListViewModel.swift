@@ -701,6 +701,7 @@ final class TodoListViewModel {
         color: String?,
         iconKey: String?,
         reusable: Bool? = nil,
+        showOnMainScreen: Bool? = nil,
         defaultPriority: String? = nil,
         defaultPriorityChanged: Bool = false
     ) async {
@@ -714,6 +715,7 @@ final class TodoListViewModel {
                     color: color,
                     iconKey: iconKey,
                     reusable: reusable,
+                    showOnMainScreen: showOnMainScreen,
                     defaultPriority: defaultPriority,
                     defaultPriorityChanged: defaultPriorityChanged
                 )
@@ -756,11 +758,11 @@ final class TodoListViewModel {
         }
     }
 
-    func createList(name: String, color: String?, iconKey: String?, reusable: Bool = false, defaultPriority: String? = nil) async {
+    func createList(name: String, color: String?, iconKey: String?, reusable: Bool = false, showOnMainScreen: Bool = true, defaultPriority: String? = nil) async {
         TdayTelemetry.addBreadcrumb("list.create", data: listTelemetryData(color: color, iconKey: iconKey))
         do {
             if mode == .floater {
-                try await container.floaterListRepository.createList(name: name, color: color, iconKey: iconKey, reusable: reusable, defaultPriority: defaultPriority)
+                try await container.floaterListRepository.createList(name: name, color: color, iconKey: iconKey, reusable: reusable, showOnMainScreen: showOnMainScreen, defaultPriority: defaultPriority)
             } else {
                 try await container.listRepository.createList(name: name, color: color, iconKey: iconKey, defaultPriority: defaultPriority)
             }

@@ -694,6 +694,43 @@
       "searchBody": "set semula senarai untuk guna lagi — mengemas, kerja rumah, barangan. tandai senarai anytime sebagai boleh guna semula dan butang set semula muncul. satu ketik menyahtanda semua item supaya anda boleh guna senarai yang sama sekali lagi — tanpa mencipta semula. buka senarai floater dan hidupkan \"boleh guna semula\" dalam tetapannya. teruskan menanda item seperti biasa. bila perlu lagi, ketik set semula untuk nyahtanda semua."
     },
     {
+      "id": "hidden-floater-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "eye-off",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.8.15",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Sembunyikan senarai daripada skrin utama",
+      "summary": "Kekalkan tugas senarai floater di dalam senarai.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Matikan \"Tunjukkan pada skrin utama\" dalam tetapan senarai floater dan tugasnya kekal di dalam senarai itu. Tugas itu keluar daripada suapan utama, widget Floater dan ringkasan Floater, tetapi masih muncul dalam carian, dalam senarai itu sendiri dan dalam Selesai. Tugas terbuka dalam senarai tersembunyi menghalang paparan \"semua selesai\". Pada senarai kongsi, pilihan pemilik terpakai kepada semua orang."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Buka senarai floater dan pergi ke tetapannya.",
+            "Matikan \"Tunjukkan pada skrin utama\" dan simpan.",
+            "Untuk memulangkan tugasnya, hidupkan semula."
+          ]
+        }
+      ],
+      "searchTitle": "sembunyikan senarai daripada skrin utama",
+      "searchKeywords": "sembunyi, tersembunyi, skrin utama, floater, senarai, bila-bila masa, suapan, widget, tunjuk",
+      "searchBody": "kekalkan tugas senarai floater di dalam senarai. matikan \"tunjukkan pada skrin utama\" dalam tetapan senarai floater dan tugasnya kekal di dalam senarai itu. tugas itu keluar daripada suapan utama, widget floater dan ringkasan floater, tetapi masih muncul dalam carian, dalam senarai itu sendiri dan dalam selesai. tugas terbuka dalam senarai tersembunyi menghalang paparan \"semua selesai\". pada senarai kongsi, pilihan pemilik terpakai kepada semua orang. buka senarai floater dan pergi ke tetapannya. matikan \"tunjukkan pada skrin utama\" dan simpan. untuk memulangkan tugasnya, hidupkan semula."
+    },
+    {
       "id": "scheduled-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

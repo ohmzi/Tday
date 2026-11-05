@@ -694,6 +694,43 @@
       "searchBody": "reset a checklist to run it again — packing, chores, groceries. mark an anytime list as reusable and a reset appears. one tap un-completes every item so you can run the same checklist again — no need to recreate it. open a floater list and turn on \"reusable\" in its settings. work through it, checking items off as usual. when you need it again, tap reset to un-check everything."
     },
     {
+      "id": "hidden-floater-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "eye-off",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.8.15",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Hide a list from the main screen",
+      "summary": "Keep a floater list's tasks inside the list.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Turn off \"Show on main screen\" in a floater list's settings and its tasks stay inside that list. They leave the main feed, the Floater widget and the Floater summary, but still appear in search, in the list itself and in Completed. Open tasks in a hidden list keep the \"all done\" scene from showing. On a shared list, the owner's choice applies to everyone."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Open a floater list and go to its settings.",
+            "Turn off \"Show on main screen\" and save.",
+            "To bring its tasks back, turn it on again."
+          ]
+        }
+      ],
+      "searchTitle": "hide a list from the main screen",
+      "searchKeywords": "hide, hidden, main screen, floater, list, anytime, feed, widget, show",
+      "searchBody": "keep a floater list's tasks inside the list. turn off \"show on main screen\" in a floater list's settings and its tasks stay inside that list. they leave the main feed, the floater widget and the floater summary, but still appear in search, in the list itself and in completed. open tasks in a hidden list keep the \"all done\" scene from showing. on a shared list, the owner's choice applies to everyone. open a floater list and go to its settings. turn off \"show on main screen\" and save. to bring its tasks back, turn it on again."
+    },
+    {
       "id": "scheduled-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

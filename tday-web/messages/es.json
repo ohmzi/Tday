@@ -249,6 +249,8 @@
     "sweepDone": "Todo al día",
     "reusableList": "Lista reutilizable",
     "reusableListHint": "Muestra Reiniciar para desmarcar todo y volver a usarla",
+    "showOnMainScreen": "Mostrar en la pantalla principal",
+    "showOnMainScreenHint": "Si está desactivado, sus tareas quedan solo en esta lista.",
     "resetFloaterList": "Reiniciar lista",
     "floaterListReset": "Lista reiniciada: todo desmarcado",
     "steps": "Pasos",
@@ -1184,6 +1186,15 @@
         "step0": "Abre una lista flotante y activa \"Reutilizable\" en sus ajustes.",
         "step1": "Ve marcando los elementos como siempre.",
         "step2": "Cuando la necesites otra vez, toca Reiniciar para desmarcar todo."
+      },
+      "hidden-floater-lists": {
+        "title": "Ocultar una lista de la pantalla principal",
+        "summary": "Mantén las tareas de una lista floater dentro de la lista.",
+        "keywords": "ocultar, oculta, pantalla principal, floater, lista, en cualquier momento, feed, widget, mostrar",
+        "body": "Desactiva «Mostrar en la pantalla principal» en los ajustes de una lista floater y sus tareas quedarán dentro de esa lista. Salen del feed principal, del widget de Floater y del resumen de Floater, pero siguen apareciendo en la búsqueda, en la propia lista y en Completadas. Las tareas abiertas de una lista oculta impiden que aparezca la escena de «todo hecho». En una lista compartida, la elección del propietario se aplica a todos.",
+        "step0": "Abre una lista floater y ve a sus ajustes.",
+        "step1": "Desactiva «Mostrar en la pantalla principal» y guarda.",
+        "step2": "Para recuperar sus tareas, vuelve a activarlo."
       },
       "brain-dump": {
         "title": "Volcado mental",

@@ -100,6 +100,7 @@ class FreshInstallMigrationTest {
             val columns = conn.column("SELECT table_name || '.' || column_name FROM information_schema.columns WHERE table_schema = 'public'")
             val expected = listOf(
                 "floaterproject.reusable",
+                "floaterproject.showOnMainScreen",
                 "floaterproject.defaultPriority",
                 "floaterproject.recreatedFromListID",
                 "completedfloaters.originalListID",

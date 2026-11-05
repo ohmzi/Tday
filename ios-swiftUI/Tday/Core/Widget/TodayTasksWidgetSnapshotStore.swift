@@ -922,8 +922,13 @@ enum FloaterTasksWidgetSnapshotStore {
 
         // Fixed FLOATER ordering (TaskSortEngine), identical to the app, applied
         // before the display cap so the widget shows the same leading tasks.
+        // A hidden list leaves this feed only; `perList` below reads `state.floaters` directly, so
+        // a widget set to that list keeps showing it.
+        let hiddenListIds = Set(state.floaterLists.filter { !($0.showOnMainScreen ?? true) }.map(\.id))
         let floaterTasks = TaskSortEngine.sortedFloaters(
-            state.floaters.filter { !$0.completed },
+            state.floaters.filter {
+                !$0.completed && FloaterMainScreen.isShown(listId: $0.listId, hiddenListIds: hiddenListIds)
+            },
             key: taskSortKey
         )
 

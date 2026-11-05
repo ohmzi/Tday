@@ -83,6 +83,8 @@ data class CachedFloaterListRecord(
     // the flag existed still decodes as "not reusable".
     val reusable: Boolean = false,
     val defaultPriority: String? = null,
+    // Defaulted so state persisted before the flag existed reads as shown. See `FloaterMainScreen`.
+    val showOnMainScreen: Boolean = true,
 )
 
 @Serializable
@@ -143,6 +145,8 @@ data class PendingMutationRecord(
     // CREATE_FLOATER_LIST). Null means "not part of this mutation", the same
     // convention the shared UpdateFloaterListRequest uses for `reusable`.
     val reusable: Boolean? = null,
+    // Same null convention as `reusable`, for the floater-list create/update mutations.
+    val showOnMainScreen: Boolean? = null,
     // Default priority for the list create/update mutations (CREATE_LIST, UPDATE_LIST,
     // CREATE_FLOATER_LIST, UPDATE_FLOATER_LIST). `defaultPriorityChanged` disambiguates
     // "leave unchanged" from "clear the default", the same tri-state UpdateListRequest uses.

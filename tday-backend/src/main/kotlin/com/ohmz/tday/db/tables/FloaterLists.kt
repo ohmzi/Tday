@@ -13,6 +13,7 @@ object FloaterLists : Table("FloaterProject") {
     val defaultPriority = pgEnum<Priority>("defaultPriority", "\"Priority\"").nullable()
     val userID = varchar("userID", 30).references(Users.id).index()
     val reusable = bool("reusable").default(false)
+    val showOnMainScreen = bool("showOnMainScreen").default(true)
     val createdAt = datetime("createdAt")
     val updatedAt = datetime("updatedAt")
 

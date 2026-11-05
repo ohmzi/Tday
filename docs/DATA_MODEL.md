@@ -53,6 +53,20 @@ Scheduled tasks and floaters are intentionally different:
 - Completing a todo creates completed-todo history; completing a floater creates completed-floater history.
 - List deletion must preserve completed history metadata (`listName`, `listColor`) where the backend/mobile model supports it. For floaters specifically, deleting a list no longer deletes its `CompletedFloaters` rows (backend: `ON DELETE SET NULL`, plus an unconstrained `originalListID` snapshot; Android and iOS: `FloaterListRepository` stops pruning `completedFloaters` on list delete, in both the staging step and the real commit step) — undoing such an item recreates the list under its original name/color, converging duplicate undos from the same deleted list onto one recreated list. `CompletedFloaterDto.listDeleted` / `CachedCompletedFloaterRecord.listDeleted` flag this case. See `docs/design/completed-floaters-durability.md`. The identical bug for scheduled `Todo`/`CompletedTodos` is a deliberate, separate product decision and is untouched.
 
+
+### Floater list main-screen visibility
+
+`FloaterLists.showOnMainScreen` (Postgres `floaterproject."showOnMainScreen"`, `NOT NULL DEFAULT TRUE`, V33; `FloaterListDto.showOnMainScreen`) decides whether a list's tasks reach the Floater main-screen surfaces. It belongs to the list, so nothing is stored per task, and moving a task between lists changes its visibility. Absent or null always reads as `true`.
+
+One rule decides it, `FloaterMainScreen.isShown(listId, hiddenListIds)` in `shared/`, mirrored by `tday-web/src/lib/floater/mainScreen.ts` and `ios-swiftUI/Tday/Core/Model/FloaterMainScreen.swift`. A task with no list, or whose list has not loaded, is shown.
+
+| Surface | With the setting off |
+| --- | --- |
+| Floater main feed rows, all-floaters widget, Floater summary without a `listId` | Tasks left out |
+| Main-screen search, list tile counts, list screen, per-list widget, a list's own summary, Completed | Unchanged |
+| "All done" scene and celebration | Hidden tasks still count as pending, so it does not show while any remain |
+
+The API returns every floater; each surface filters on its own. Android and iOS open a hidden task's list from main-screen search, because the feed has no row to scroll to. Only the owner can change the value, and it applies to everyone on a shared list.
 ## Recurrence
 
 Recurring scheduled tasks use RFC 5545 RRULE strings.
@@ -247,7 +261,7 @@ Current mutation kinds:
 
 Server Mode replays pending mutations through `SyncManager`. Local Mode clears/ignores pending mutations because there is no remote target.
 
-The list and floater-list create/update mutations carry the list's own fields beside `name`/`color`/`iconKey`: `reusable` (floater lists only), `defaultPriority`, and `defaultPriorityChanged`, which tells "clear the default" apart from "leave it alone". All three are nullable, and null means "not part of this mutation". Both clients persist them with the queued mutation — Android's `pending_mutations` Room table since schema v13 (`Migration12To13`), iOS's SwiftData `PendingMutationEntity` — because the queue is read back from storage before a replay, and a field the store dropped came back null: an offline "Reusable off" then replayed as "leave it alone", and the next sync switched it back on.
+The list and floater-list create/update mutations carry the list's own fields beside `name`/`color`/`iconKey`: `reusable` and `showOnMainScreen` (floater lists only), `defaultPriority`, and `defaultPriorityChanged`, which tells "clear the default" apart from "leave it alone". All three are nullable, and null means "not part of this mutation". Both clients persist them with the queued mutation — Android's `pending_mutations` Room table since schema v13 (`Migration12To13`), iOS's SwiftData `PendingMutationEntity` — because the queue is read back from storage before a replay, and a field the store dropped came back null: an offline "Reusable off" then replayed as "leave it alone", and the next sync switched it back on.
 
 `staged` (Android/iOS, default `false`) marks a mutation written by a delayed-commit action's stage step while the Undo toast is still open: `DELETE_LIST`/`DELETE_FLOATER_LIST` (`ListRepository.stageDeleteList`/`FloaterListRepository.stageDeleteList`) and the `COMPLETE_*`/`DELETE_*` mutations of the todo and floater actions. Both clients persist it — Android as a nullable `staged` column on `pending_mutations` since schema v14 (`Migration13To14`), iOS in SwiftData — because sync reads the queue back from storage: before the column existed, a sync that started inside the undo window saw an ordinary mutation and replayed it early, so Undo could no longer restore the row. A marker a dead process left behind is released when the Android database opens (`ReleaseStagedMutationsOnOpen`), so it replays on the next launch as it always did. A staged delete is never replayed to the server (the whole point of staging is that Undo needs no network trace), but it counts the same as a real pending delete for `SyncManager`'s merge-time resurrection guard, so a pull-to-refresh landing inside the undo window can't write the still-server-side list back into the cache. The commit step (`deleteList()`) replaces the staged marker with a normal pending mutation of the same kind; Undo removes the marker outright.
 

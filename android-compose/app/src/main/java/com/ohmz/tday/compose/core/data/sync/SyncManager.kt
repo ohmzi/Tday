@@ -720,6 +720,7 @@ class SyncManager @Inject constructor(
                     color = mutation.color,
                     iconKey = mutation.iconKey,
                     reusable = mutation.reusable ?: false,
+                    showOnMainScreen = mutation.showOnMainScreen ?: true,
                 ),
             ),
             "Could not create floater list",
@@ -749,6 +750,7 @@ class SyncManager @Inject constructor(
                     color = mutation.color,
                     iconKey = mutation.iconKey,
                     reusable = mutation.reusable,
+                    showOnMainScreen = mutation.showOnMainScreen,
                 ),
             ),
             "Could not update floater list",
@@ -1940,6 +1942,7 @@ class SyncManager @Inject constructor(
                     color = localList.color,
                     iconKey = localList.iconKey,
                     reusable = localList.reusable,
+                    showOnMainScreen = localList.showOnMainScreen,
                 ),
             )
         }
@@ -1999,7 +2002,8 @@ class SyncManager @Inject constructor(
         return local.name != remote.name ||
                 local.color != remote.color ||
                 local.iconKey != remote.iconKey ||
-                local.reusable != remote.reusable
+                local.reusable != remote.reusable ||
+                local.showOnMainScreen != remote.showOnMainScreen
     }
 
     private fun mergePendingMutations(

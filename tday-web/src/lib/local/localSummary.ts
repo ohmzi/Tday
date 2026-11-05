@@ -12,6 +12,7 @@ import {
   planFloaterSummary,
   renderFloaterSummary,
 } from "@/lib/floaterSummary";
+import { hiddenFloaterListIds, isFloaterShownOnMainScreen } from "@/lib/floater/mainScreen";
 import { parseRecurrencePriority, parseTodoTitle } from "@/lib/todoNlp";
 import {
   buildReadableTaskSummary,
@@ -198,9 +199,14 @@ export function summarizeLocal(body: Record<string, unknown>) {
   const workspace = loadWorkspace();
 
   if (mode === "floater" || mode === "anytime") {
+    const hiddenListIds = hiddenFloaterListIds(workspace.floaterLists);
     const floaters = workspace.floaters
       .filter((floater) => !floater.completed)
-      .filter((floater) => listId === null || floater.listID === listId);
+      .filter((floater) =>
+        listId === null
+          ? isFloaterShownOnMainScreen(floater.listID, hiddenListIds)
+          : floater.listID === listId,
+      );
     // "No tasks need attention" is a sentence about deadlines; an empty Anytime view has none to
     // be clear of. It is simply empty, and says so.
     if (floaters.length === 0) return respond(st("floaterClear"), 0, "empty");

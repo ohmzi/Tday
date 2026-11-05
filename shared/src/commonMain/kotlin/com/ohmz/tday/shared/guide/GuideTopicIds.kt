@@ -30,6 +30,7 @@ object GuideTopicIds {
     const val FLOATER_LISTS = "floater-lists"
     const val RESTING_FLOATERS = "resting-floaters"
     const val REUSABLE_LISTS = "reusable-lists"
+    const val HIDDEN_FLOATER_LISTS = "hidden-floater-lists"
     const val SCHEDULED_LISTS = "scheduled-lists"
     const val LIST_ICONS = "list-icons"
     const val COMPLETED_HISTORY = "completed-history"

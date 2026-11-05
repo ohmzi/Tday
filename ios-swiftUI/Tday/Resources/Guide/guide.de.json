@@ -694,6 +694,43 @@
       "searchBody": "setze eine liste zuruck, um sie erneut zu nutzen: packen, aufgaben, einkauf. markiere eine anytime-liste als wiederverwendbar, und ein zurucksetzen erscheint. ein tippen hebt alle hakchen auf, sodass du dieselbe liste erneut durchgehen kannst – ohne sie neu zu erstellen. offne eine floater-liste und aktiviere „wiederverwendbar“ in den einstellungen. arbeite sie ab und hake punkte wie gewohnt ab. wenn du sie wieder brauchst, tippe auf zurucksetzen."
     },
     {
+      "id": "hidden-floater-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "eye-off",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.8.15",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Eine Liste vom Hauptbildschirm ausblenden",
+      "summary": "Behalte die Aufgaben einer Floater-Liste in der Liste.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Schalte in den Einstellungen einer Floater-Liste „Auf dem Hauptbildschirm anzeigen“ aus, und ihre Aufgaben bleiben in dieser Liste. Sie verschwinden aus dem Haupt-Feed, dem Floater-Widget und der Floater-Zusammenfassung, erscheinen aber weiterhin in der Suche, in der Liste selbst und unter Erledigt. Offene Aufgaben in einer ausgeblendeten Liste verhindern die „Alles erledigt“-Anzeige. Bei einer geteilten Liste gilt die Wahl des Eigentümers für alle."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Öffne eine Floater-Liste und gehe zu ihren Einstellungen.",
+            "Schalte „Auf dem Hauptbildschirm anzeigen“ aus und speichere.",
+            "Schalte es wieder ein, um die Aufgaben zurückzuholen."
+          ]
+        }
+      ],
+      "searchTitle": "eine liste vom hauptbildschirm ausblenden",
+      "searchKeywords": "ausblenden, versteckt, hauptbildschirm, floater, liste, jederzeit, feed, widget, anzeigen",
+      "searchBody": "behalte die aufgaben einer floater-liste in der liste. schalte in den einstellungen einer floater-liste „auf dem hauptbildschirm anzeigen“ aus, und ihre aufgaben bleiben in dieser liste. sie verschwinden aus dem haupt-feed, dem floater-widget und der floater-zusammenfassung, erscheinen aber weiterhin in der suche, in der liste selbst und unter erledigt. offene aufgaben in einer ausgeblendeten liste verhindern die „alles erledigt“-anzeige. bei einer geteilten liste gilt die wahl des eigentumers fur alle. offne eine floater-liste und gehe zu ihren einstellungen. schalte „auf dem hauptbildschirm anzeigen“ aus und speichere. schalte es wieder ein, um die aufgaben zuruckzuholen."
+    },
+    {
       "id": "scheduled-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

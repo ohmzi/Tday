@@ -323,6 +323,8 @@
     <string name="todos_list_settings">リスト設定</string>
     <string name="reusable_list">再利用リスト</string>
     <string name="reusable_list_hint">「リセット」を表示し、全て外して再利用できます</string>
+    <string name="show_on_main_screen">メイン画面に表示</string>
+    <string name="show_on_main_screen_hint">オフにすると、タスクはこのリスト内だけに表示されます。</string>
     <string name="reset_floater_list">リストをリセット</string>
     <string name="floater_list_reset">リストをリセットしました。全て外れました</string>
     <string name="error_reset_list_failed">リストをリセットできませんでした。</string>

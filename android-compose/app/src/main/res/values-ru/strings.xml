@@ -323,6 +323,8 @@
     <string name="todos_list_settings">Настройки списка</string>
     <string name="reusable_list">Многоразовый список</string>
     <string name="reusable_list_hint">Показывает «Сбросить», чтобы снять все отметки и пройти заново</string>
+    <string name="show_on_main_screen">Показывать на главном экране</string>
+    <string name="show_on_main_screen_hint">Если выключено, задачи остаются только в этом списке.</string>
     <string name="reset_floater_list">Сбросить список</string>
     <string name="floater_list_reset">Список сброшен — все отметки сняты</string>
     <string name="error_reset_list_failed">Не удалось сбросить список.</string>

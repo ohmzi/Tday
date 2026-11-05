@@ -45,6 +45,7 @@ final class FloaterListRepository {
         color: String? = nil,
         iconKey: String? = nil,
         reusable: Bool = false,
+        showOnMainScreen: Bool = true,
         defaultPriority: String? = nil
     ) async throws {
         let normalizedName = capitalizeFirstListLetter(name).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -67,6 +68,7 @@ final class FloaterListRepository {
                     updatedAtEpochMs: now,
                     createdAtEpochMs: now,
                     reusable: reusable,
+                    showOnMainScreen: showOnMainScreen,
                     defaultPriority: defaultPriority
                 )
             )
@@ -89,6 +91,7 @@ final class FloaterListRepository {
                     color: color,
                     iconKey: iconKey,
                     reusable: reusable,
+                    showOnMainScreen: showOnMainScreen,
                     defaultPriority: defaultPriority
                 )
             )
@@ -110,7 +113,7 @@ final class FloaterListRepository {
         await cacheManager.withSyncLock {
             do {
                 let response = try await api.createFloaterList(
-                    payload: CreateFloaterListRequest(name: normalizedName, color: color, iconKey: iconKey, reusable: reusable, defaultPriority: defaultPriority)
+                    payload: CreateFloaterListRequest(name: normalizedName, color: color, iconKey: iconKey, reusable: reusable, showOnMainScreen: showOnMainScreen, defaultPriority: defaultPriority)
                 )
                 guard let createdList = response.list else {
                     return
@@ -137,6 +140,7 @@ final class FloaterListRepository {
                             updatedAtEpochMs: updatedAt,
                             createdAtEpochMs: createdAt,
                             reusable: createdList.reusable ?? reusable,
+                            showOnMainScreen: createdList.showOnMainScreen ?? showOnMainScreen,
                             defaultPriority: createdList.defaultPriority ?? defaultPriority
                         )
                     }
@@ -155,6 +159,7 @@ final class FloaterListRepository {
         color: String? = nil,
         iconKey: String? = nil,
         reusable: Bool? = nil,
+        showOnMainScreen: Bool? = nil,
         defaultPriority: String? = nil,
         defaultPriorityChanged: Bool = false
     ) async throws {
@@ -180,6 +185,7 @@ final class FloaterListRepository {
                         updatedAtEpochMs: now,
                         createdAtEpochMs: list.createdAtEpochMs,
                         reusable: reusable ?? list.reusable,
+                        showOnMainScreen: showOnMainScreen ?? list.showOnMainScreen,
                         defaultPriority: defaultPriorityChanged ? defaultPriority : list.defaultPriority
                     )
                 }
@@ -208,6 +214,7 @@ final class FloaterListRepository {
                         color: color ?? mutation.color,
                         iconKey: iconKey ?? mutation.iconKey,
                         reusable: reusable ?? mutation.reusable,
+                        showOnMainScreen: showOnMainScreen ?? mutation.showOnMainScreen,
                         defaultPriority: defaultPriorityChanged ? defaultPriority : mutation.defaultPriority
                     )
                 }
@@ -233,6 +240,7 @@ final class FloaterListRepository {
                     updatedAtEpochMs: now,
                     createdAtEpochMs: list.createdAtEpochMs,
                     reusable: reusable ?? list.reusable,
+                    showOnMainScreen: showOnMainScreen ?? list.showOnMainScreen,
                     defaultPriority: defaultPriorityChanged ? defaultPriority : list.defaultPriority
                 )
             }
@@ -256,6 +264,7 @@ final class FloaterListRepository {
                     color: color,
                     iconKey: iconKey,
                     reusable: reusable,
+                    showOnMainScreen: showOnMainScreen,
                     defaultPriority: defaultPriority,
                     defaultPriorityChanged: defaultPriorityChanged
                 )
@@ -569,6 +578,7 @@ final class FloaterListRepository {
                 updatedAtEpochMs: list.updatedAtEpochMs,
                 createdAtEpochMs: list.createdAtEpochMs,
                 reusable: list.reusable,
+                showOnMainScreen: list.showOnMainScreen,
                 defaultPriority: list.defaultPriority
             )
         }.dedupedByID()
@@ -591,6 +601,7 @@ final class FloaterListRepository {
                 color: mutation.color,
                 iconKey: mutation.iconKey,
                 reusable: mutation.reusable,
+                showOnMainScreen: mutation.showOnMainScreen,
                 defaultPriority: mutation.defaultPriority,
                 defaultPriorityChanged: mutation.defaultPriorityChanged
             )

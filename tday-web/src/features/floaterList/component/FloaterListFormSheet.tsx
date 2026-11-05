@@ -43,6 +43,7 @@ type EditableFloaterList = {
   iconKey?: string | null;
   defaultPriority?: string | null;
   reusable?: boolean;
+  showOnMainScreen?: boolean;
 };
 
 type FloaterListFormSheetProps = {
@@ -68,6 +69,7 @@ async function patchFloaterList({
   color,
   iconKey,
   reusable,
+  showOnMainScreen,
   defaultPriority,
 }: {
   id: string;
@@ -79,6 +81,7 @@ async function patchFloaterList({
    */
   iconKey?: string;
   reusable: boolean;
+  showOnMainScreen: boolean;
   defaultPriority: string | null;
 }) {
   await api.PATCH({
@@ -90,6 +93,7 @@ async function patchFloaterList({
       color,
       iconKey,
       reusable,
+      showOnMainScreen,
       defaultPriority,
       // Always visible with a definite selection — see `ListFormSheet`'s `patchList`.
       defaultPriorityChanged: true,
@@ -138,6 +142,7 @@ export default function FloaterListFormSheet({
   const [iconTouched, setIconTouched] = useState(false);
   const [iconKey, setIconKey] = useState(() => seedIconKey());
   const [reusable, setReusable] = useState(list?.reusable ?? false);
+  const [showOnMainScreen, setShowOnMainScreen] = useState(list?.showOnMainScreen ?? true);
   const [defaultPriority, setDefaultPriority] = useState<Priority | null>(
     (list?.defaultPriority as Priority | null | undefined) ?? null,
   );
@@ -165,6 +170,7 @@ export default function FloaterListFormSheet({
     setIconKey(seedIconKey());
     setIconTouched(false);
     setReusable(list?.reusable ?? false);
+    setShowOnMainScreen(list?.showOnMainScreen ?? true);
     setDefaultPriority((list?.defaultPriority as Priority | null | undefined) ?? null);
     setError(null);
     setConfirmingDelete(false);
@@ -278,6 +284,7 @@ export default function FloaterListFormSheet({
         color === (list.color ?? DEFAULT_FLOATER_LIST_COLOR) &&
         !iconChanged &&
         reusable === (list.reusable ?? false) &&
+        showOnMainScreen === (list.showOnMainScreen ?? true) &&
         defaultPriority === (list.defaultPriority ?? null)
       ) {
         onOpenChange(false);
@@ -289,6 +296,7 @@ export default function FloaterListFormSheet({
         color,
         iconKey: iconTouched ? iconKey : undefined,
         reusable,
+        showOnMainScreen,
         defaultPriority,
       });
       return;
@@ -302,6 +310,7 @@ export default function FloaterListFormSheet({
         // is free to take one from its name. See `ListFormSheet`.
         iconKey: iconTouched ? iconKey : undefined,
         reusable,
+        showOnMainScreen,
         defaultPriority,
       });
       onSaved?.(created);
@@ -481,6 +490,38 @@ export default function FloaterListFormSheet({
                 className={cn(
                   "inline-block h-5 w-5 rounded-full bg-white shadow transition-transform",
                   reusable ? "translate-x-[22px]" : "translate-x-[2px]",
+                )}
+              />
+            </span>
+          </button>
+        </SheetCard>
+
+        <SheetCard className="p-[18px]">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showOnMainScreen}
+            onClick={() => { hapticTick(); setShowOnMainScreen((v) => !v); }}
+            className="flex w-full items-center justify-between gap-3 text-left"
+          >
+            <span className="min-w-0">
+              <span className="block text-[1.05rem] font-black text-foreground">
+                {appDict("showOnMainScreen")}
+              </span>
+              <span className="mt-0.5 block text-xs font-extrabold text-muted-foreground">
+                {appDict("showOnMainScreenHint")}
+              </span>
+            </span>
+            <span
+              className={cn(
+                "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors",
+                showOnMainScreen ? "bg-accent" : "bg-muted-foreground/30",
+              )}
+            >
+              <span
+                className={cn(
+                  "inline-block h-5 w-5 rounded-full bg-white shadow transition-transform",
+                  showOnMainScreen ? "translate-x-[22px]" : "translate-x-[2px]",
                 )}
               />
             </span>
