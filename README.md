@@ -76,12 +76,7 @@ team projects or Kanban boards, T'Day isn't built for that.
 
 <div align="center">
 
-<p>
-  <img src="docs/assets/readme/web-mobile-today.png" alt="The T'Day Today feed in the web app on a phone: today's tasks with lists and priority flags" width="205">
-  <img src="docs/assets/readme/web-mobile-dashboard.png" alt="The T'Day web dashboard on a phone: counts for Scheduled, Priority, Overdue, All, Completed, and Calendar, with My Lists below" width="205">
-  <img src="docs/assets/readme/web-mobile-calendar.png" alt="The T'Day month calendar in the web app on a phone, with task counts under each day" width="205">
-  <img src="docs/assets/readme/web-mobile-floater.png" alt="The Floater feed in the web app on a phone: undated Anytime tasks and floater lists" width="205">
-</p>
+<img src="docs/assets/readme/tday-web-mobile.webp" alt="The T'Day web app on a phone: the Today feed, the dashboard counts with My Lists, the month calendar, and the Floater feed" width="100%">
 
 </div>
 
@@ -89,15 +84,7 @@ team projects or Kanban boards, T'Day isn't built for that.
 
 <div align="center">
 
-<p>
-  <img src="docs/assets/readme/android-today.png" alt="T'Day on Android: the Today feed with today's scheduled tasks, lists, and priority flags" width="230">
-  <img src="docs/assets/readme/android-dashboard.png" alt="T'Day on Android: counts for Scheduled, Priority, Overdue, All, Completed, and Calendar, with the user's lists below" width="230">
-  <img src="docs/assets/readme/android-calendar.png" alt="T'Day on Android: the month calendar with task counts under each day" width="230">
-</p>
-<p>
-  <img src="docs/assets/readme/android-floater.png" alt="T'Day on Android: the Floater feed with undated Anytime tasks" width="230">
-  <img src="docs/assets/readme/android-widgets.png" alt="T'Day home-screen widgets on Android showing Today, Floater Tasks, and a list" width="230">
-</p>
+<img src="docs/assets/readme/tday-android.webp" alt="T'Day on Android: the Today feed, the dashboard counts with lists, the month calendar, the Floater feed, and home-screen widgets" width="100%">
 
 </div>
 
@@ -105,15 +92,7 @@ team projects or Kanban boards, T'Day isn't built for that.
 
 <div align="center">
 
-<p>
-  <img src="docs/assets/readme/ios-today.png" alt="T'Day on iOS: the Today feed with today's scheduled tasks, lists, and priority flags" width="230">
-  <img src="docs/assets/readme/ios-dashboard.png" alt="T'Day on iOS: counts for Scheduled, Priority, Overdue, All, Completed, and Calendar, with the user's lists below" width="230">
-  <img src="docs/assets/readme/ios-calendar.png" alt="T'Day on iOS: the month calendar with task counts under each day" width="230">
-</p>
-<p>
-  <img src="docs/assets/readme/ios-floater.png" alt="T'Day on iOS: the Floater feed with undated Anytime tasks" width="230">
-  <img src="docs/assets/readme/ios-widgets.jpg" alt="T'Day home-screen widgets on iOS showing Today, Floater Tasks, and a list" width="230">
-</p>
+<img src="docs/assets/readme/tday-ios.webp" alt="T'Day on iOS: the Today feed, the dashboard counts with lists, the month calendar, the Floater feed, and home-screen widgets" width="100%">
 
 </div>
 
