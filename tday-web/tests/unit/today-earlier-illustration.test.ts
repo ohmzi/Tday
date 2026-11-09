@@ -212,7 +212,7 @@ describe("shouldShowTodayEmptyIllustration", () => {
       // The one state the flag cannot be read for, and the whole of this
       // hand-off's other half: a collapse drops `expanded` on the tap because
       // that is what arms the rows' fade, so reading it alone would put the
-      // scene back on the slot in the same frame — 42vh claimed on top of rows
+      // scene back on the slot in the same frame — 36vh claimed on top of rows
       // still holding their own height, which is the pile-up the beat exists
       // to unpick.
       expect(

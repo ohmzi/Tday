@@ -143,6 +143,7 @@ import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayClosesSwipeRowOnOutsideTap
+import com.ohmz.tday.compose.core.ui.tdayEmptySlotHeight
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
@@ -1069,7 +1070,7 @@ fun CalendarScreen( // skipcq: KT-R1006
                                 title = stringResource(R.string.scheduled_task_home_search_no_results),
                                 illustration = TdayIllustration.SEARCH,
                                 description = stringResource(R.string.search_no_results_body),
-                                modifier = Modifier.padding(vertical = TdayDimens.SpacingLg),
+                                modifier = Modifier.heightIn(min = tdayEmptySlotHeight()),
                             )
                         } else {
                             TdayEmptyState(
@@ -1078,7 +1079,7 @@ fun CalendarScreen( // skipcq: KT-R1006
                                 title = stringResource(R.string.calendar_no_pending),
                                 illustration = TdayIllustration.CAL,
                                 description = stringResource(R.string.calendar_no_pending_body),
-                                modifier = Modifier.padding(vertical = TdayDimens.SpacingLg),
+                                modifier = Modifier.heightIn(min = tdayEmptySlotHeight()),
                             )
                         }
                     }

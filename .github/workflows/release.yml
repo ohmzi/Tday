@@ -71,6 +71,9 @@ jobs:
       - name: Verify the list icon table is not stale
         run: ./gradlew :shared:verifyListIconTable --no-daemon
 
+      - name: Verify layout tokens are not stale
+        run: ./gradlew :shared:verifyLayoutTokens --no-daemon
+
       # `build-and-release` hangs off this job, so an Android regression caught here stops the
       # APK from being published rather than shipping inside it. PRs are gated earlier and
       # separately by `android.yml`; this is the last line, for whatever a merge commit

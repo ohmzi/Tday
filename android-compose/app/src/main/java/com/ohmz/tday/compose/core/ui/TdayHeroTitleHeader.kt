@@ -190,13 +190,12 @@ object TdayHeroTitleMetrics {
     /** Band below the toolbar that dissolves content as it passes under it. */
     val ContentFadeHeight = 24.dp
 
-    /**
-     * Clear space kept under the block, so that when the title has finished
-     * docking the first row comes to rest BELOW the fade band rather than with
-     * its top edge dissolved into it. Deliberately not part of [HeroHeight]: it
-     * moves the content down without changing when the title arrives.
-     */
-    val SettledContentGap = ContentFadeHeight
+    // The clear space under the block is not a constant any more: it is spent by
+    // `tdayContentGap` (TdayScreenLayout.kt) so the first row starts on the shared
+    // content line, a ratio of the screen height that iOS and the web read too. The
+    // floor it never goes under is the fade band plus 6 — see `LayoutTokens`. It is
+    // still deliberately not part of [HeroHeight]: it moves the content down without
+    // changing when the title arrives.
 
     /**
      * How quickly the fade band comes in. Off at rest, because there is nothing
@@ -819,7 +818,7 @@ fun TdayHeroTitleBlock(
                     translationY = -with(density) { m.HeroTitleLift.toPx() } * gone
                 },
         )
-        Spacer(modifier = Modifier.height(m.SettledContentGap))
+        Spacer(modifier = Modifier.height(tdayContentGap()))
     }
 }
 

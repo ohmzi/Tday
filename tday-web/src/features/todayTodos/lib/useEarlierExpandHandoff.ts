@@ -35,7 +35,7 @@ export type EarlierHandoff = "idle" | "scene-leaving" | "rows-leaving";
  *   rather than landing on top of a body that is still on its way out.
  *
  * Collapsing used to be the immediate branch, which cost a tap two jumps: the
- * scene remounted into an already-open track and claimed its 42vh in one
+ * scene remounted into an already-open track and claimed its 36vh in one
  * frame, while the rows it landed on held their own height behind it for the
  * whole of their fade. Sequencing it spends the same beat the rows were
  * already fading for, and gets a swap instead of a pile-up.
@@ -48,7 +48,7 @@ export type EarlierHandoff = "idle" | "scene-leaving" | "rows-leaving";
  *
  * COLLAPSE — kept, on an argument Android's does not reach. `.tday-empty-slot`
  * is declared at `grid-template-rows: 1fr` with a transition, and a transition
- * has no start value on mount: the scene's 42vh appears in ONE frame whenever
+ * has no start value on mount: the scene's 36vh appears in ONE frame whenever
  * the node mounts, with no track to open through. Reordering the blocks does
  * not touch that. So without the wait the scene would still hard-mount its full
  * height under rows that are holding their own height for the whole of
@@ -253,7 +253,7 @@ export function useEarlierExpandHandoff(sceneExitMs: number, rowsExitMs: number)
  * costs the scene its node: React unmounts the slot on the closing render and
  * the effect mounts a fresh one carrying the exit classes. That is three
  * defects, not one — a blank frame between the two commits; a track whose FIRST
- * computed style is already `0fr`, so the 42vh is reclaimed in a single frame
+ * computed style is already `0fr`, so the 36vh is reclaimed in a single frame
  * instead of over `.tday-empty-slot`'s transition; and `.tday-empty-enter`
  * restarting on the element that is supposed to be leaving, a 520ms Scene
  * arrival playing underneath a 200ms departure.

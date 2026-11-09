@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 /**
  * The SLOT an empty scene sits in, as opposed to the ink on it.
  *
- * `EmptyState` is 42vh of the page. Both of the ways it can leave want that
+ * `EmptyState` is 36vh of the page. Both of the ways it can leave want that
  * height given back over the same beat the ink fades on, rather than dropped in
  * the frame the node goes away — which is the single largest jump either
  * departure can make, and the reason `.tday-empty-slot` exists at all (see its

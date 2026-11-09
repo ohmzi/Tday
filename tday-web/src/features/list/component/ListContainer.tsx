@@ -184,7 +184,7 @@ const ListContainer = ({ id }: { id: string }) => {
             >
                 {/* The page's children travel when one of them takes a new slot — the
                     leg of this the three scoped feeds already had. The empty scene is
-                    `min-h-[42vh]`, so the frame that prunes the last CURRENT task also
+                    `a 36svh min-height`, so the frame that prunes the last CURRENT task also
                     hands that block of the screen to a scene that was not there before,
                     and the `TimelineSections` block below it — which goes on rendering
                     for as long as the list holds overdue tasks, because `showEmpty`
@@ -347,7 +347,7 @@ const ListContainer = ({ id }: { id: string }) => {
                         it, and `placesEarlierBeforeToday` makes Earlier the
                         first section a list builds, so this lands directly
                         under its header. With the scene above, expanding
-                        Earlier shrank a 42vh box sitting ABOVE the header and
+                        Earlier shrank a 36vh box sitting ABOVE the header and
                         threw the header to the top of the screen mid-tap; with
                         it below, the rows grow downward from a header that does
                         not move. See `AllTasksTimelineContainer` for the full

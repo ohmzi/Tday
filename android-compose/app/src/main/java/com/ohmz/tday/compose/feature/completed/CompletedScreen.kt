@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -118,6 +119,7 @@ import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
 import com.ohmz.tday.compose.core.ui.tdayClosesSwipeRowOnOutsideTap
+import com.ohmz.tday.compose.core.ui.tdayEmptySlotHeight
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
@@ -648,39 +650,16 @@ fun CompletedScreen(  // skipcq: KT-R1006
                             key = emptySceneKey,
                             contentType = "completed-empty",
                         ) {
-                            // Centred in what is left under the tab strip, down to the
-                            // bottom of the list, rather than hugging the strip. The item
-                            // takes the room below its own top as its minimum height and
-                            // centres the scene in it; its top is the one thing that does
-                            // not depend on its height, so this settles in a frame. Read in
-                            // the layout phase, so a scroll re-measures this item and
-                            // recomposes nothing.
+                            // The scene sits in the same slot every other screen gives
+                            // it — a ratio of the screen height from the item's own top,
+                            // centred in it — so it lands at the same height here as on
+                            // the list screens and on iOS and the web. It used to take
+                            // everything left under the tab strip instead, which put it
+                            // lower the shorter the screen was.
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .layout { measurable, constraints ->
-                                        val info = listState.layoutInfo
-                                        val own =
-                                            info.visibleItemsInfo.firstOrNull { it.key == emptySceneKey }
-                                        val top = own?.offset
-                                            ?: info.visibleItemsInfo.lastOrNull()
-                                                ?.let { it.offset + it.size }
-                                            ?: 0
-                                        val remaining =
-                                            (info.viewportEndOffset - info.afterContentPadding - top)
-                                                .coerceAtLeast(0)
-                                        val placeable = measurable.measure(
-                                            constraints.copy(
-                                                minHeight = remaining.coerceIn(
-                                                    constraints.minHeight,
-                                                    constraints.maxHeight,
-                                                ),
-                                            ),
-                                        )
-                                        layout(placeable.width, placeable.height) {
-                                            placeable.place(0, 0)
-                                        }
-                                    },
+                                    .heightIn(min = tdayEmptySlotHeight()),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 if (searchActive) {

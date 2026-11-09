@@ -6,7 +6,7 @@
  * so nothing here can measure a track; what it can pin is that the classes the
  * stylesheet hangs all of that off reach the DOM at all, and that the two of
  * them go on TOGETHER. Both are the part a refactor of this file drops
- * silently: the scene still renders, the tests still pass, and the 42vh goes
+ * silently: the scene still renders, the tests still pass, and the 36vh goes
  * back to arriving and leaving in one frame.
  *
  * The departure itself is argued in `emptySceneIsLeaving` and asserted against

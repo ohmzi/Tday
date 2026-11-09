@@ -467,7 +467,7 @@ struct CalendarScreen: View {
                 // their top half dissolves into the bar.
                 .listRowInsets(
                     EdgeInsets(
-                        top: TodoTimelineMetrics.settledContentGap,
+                        top: TdayLayout.heroContentGap(),
                         leading: TodoTimelineMetrics.horizontalPadding,
                         bottom: 14,
                         trailing: TodoTimelineMetrics.horizontalPadding
@@ -834,7 +834,8 @@ struct CalendarScreen: View {
     /// did, so the way out is another date or another word.
     @ViewBuilder
     private var calendarDayEmptyState: some View {
-        if isSearching {
+        Group {
+            if isSearching {
             TdayEmptyState(
                 assetName: "NavSearch",
                 accentColor: calendarAccentColor,
@@ -862,7 +863,11 @@ struct CalendarScreen: View {
                 description: L("Select another date on the calendar."),
                 illustration: .cal
             )
+            }
         }
+        // The slot every empty scene sits in, so this one is the height it is on the
+        // list screens and on Android and the web — see `TdayLayout`.
+        .frame(maxWidth: .infinity, minHeight: TdayLayout.emptySlotHeight(), alignment: .center)
     }
 
     private var animatedCalendarModeCard: some View {

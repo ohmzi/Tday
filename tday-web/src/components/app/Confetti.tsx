@@ -215,7 +215,7 @@ const exitEase = easingSampler(EASE_CURVE.exit);
  *
  * A `<canvas>` clips to its own bitmap, which is the one way this client differs from
  * the other two: Compose draws into a `Box` and iOS into an overlay, neither of which
- * cuts anything. The container is `min-h-[42vh]`, so on a short viewport the apex —
+ * cuts anything. The container is `a 36svh min-height`, so on a short viewport the apex —
  * 0.195 of the WIDTH above the origin — lands outside the element at full opacity and
  * the topmost pieces are sliced off mid-flight rather than fading out.
  */
