@@ -986,7 +986,7 @@
 
 /* The slot the scene sits in, as opposed to the ink on it.
 
-   `.tday-empty-exit` below animates paint. Its box used to hold all 42vh of the
+   `.tday-empty-exit` below animates paint. Its box used to hold all 36vh of the
    slot for the whole beat and then be released in the single frame the hand-off
    swapped Earlier's rows in — a motion, then a jump, and the jump the larger of
    the two. The track closes under the fade instead, so the page has taken the
@@ -1017,7 +1017,7 @@
    (`shouldShowTodayEmptyIllustration`'s last line), so a tap landing in it
    swaps nothing and is never sequenced at all (`earlierSlotChangesHands`). A
    track closed on that path would have had to open again the frame the class
-   came off — 42vh taken out from under Earlier's rows and put straight back —
+   came off — 36vh taken out from under Earlier's rows and put straight back —
    and the ink that did fade there snapped back to full opacity with it.
 
    The child's two declarations are scoped to the closing rather than left on: a
@@ -1088,7 +1088,7 @@
    row coming back, which is already on screen underneath.
 
    The track closes on the same rung and the same curve, rather than being left
-   to drop in the frame the node goes away. `.tday-empty-slot` is 42vh of the
+   to drop in the frame the node goes away. `.tday-empty-slot` is 36vh of the
    screen; fading its ink while holding its space and then releasing it is the
    exact jump the slot was invented to remove, and `.tday-empty-slot-closing`
    above makes the argument at length. Both properties on one transition, one

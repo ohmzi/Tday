@@ -174,7 +174,7 @@ describe("useCelebrationSceneExit", () => {
  * is the same render that makes `celebrate` false, so a beat armed one commit
  * later arrives to find the scene already unmounted and hangs its exit classes
  * on a brand new element. A fresh node is the whole defect — its track's FIRST
- * computed style is the closed one, so the 42vh goes in a frame rather than
+ * computed style is the closed one, so the 36vh goes in a frame rather than
  * over a transition, and `.tday-empty-enter` restarts on the thing that is
  * leaving. None of that is visible from the mock; all of it is visible from
  * asking whether the element is the same element.

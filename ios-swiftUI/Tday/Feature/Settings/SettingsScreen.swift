@@ -557,7 +557,7 @@ struct SettingsScreen: View {
             ),
             illustration: .search
         )
-        .padding(.vertical, 24)
+        .frame(maxWidth: .infinity, minHeight: TdayLayout.emptySlotHeight(), alignment: .center)
     }
 
     private var settingsHeroTitleRow: some View {

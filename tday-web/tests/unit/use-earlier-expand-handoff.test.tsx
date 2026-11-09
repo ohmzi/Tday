@@ -154,7 +154,7 @@ describe("useEarlierExpandHandoff", () => {
       });
 
       // The defect this replaced: the scene remounted into an already-open
-      // track on the tap frame and claimed its 42vh while the rows it landed
+      // track on the tap frame and claimed its 36vh while the rows it landed
       // on were still holding their own height behind it. Ending the beat at
       // the scene's exit instead of the rows' would leave most of that overlap
       // in place, so the two numbers are kept apart to prove which one is read.

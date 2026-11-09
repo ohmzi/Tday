@@ -183,6 +183,8 @@ import com.ohmz.tday.compose.core.ui.TaskSwipeSlot
 import com.ohmz.tday.compose.core.ui.TaskSwipeSlotBackHandler
 import com.ohmz.tday.compose.core.ui.TdayDragLift
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
+import com.ohmz.tday.compose.core.ui.tdayContentStartInset
+import com.ohmz.tday.compose.core.ui.tdayEmptySlotHeight
 import com.ohmz.tday.compose.core.ui.TdayIllustration
 import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
 import com.ohmz.tday.compose.core.ui.TdayHaptics
@@ -1982,7 +1984,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                     // this now.
                     modifier = displacedFeedItemMotion(timelineAnimationsEnabled),
                 ) {
-                    val gapHeight = (LocalConfiguration.current.screenHeightDp * 0.42f).dp
+                    val gapHeight = tdayEmptySlotHeight()
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -2240,8 +2242,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                     // actually asked for.
                     modifier = displacedFeedItemMotion(sceneAnimates),
                 ) {
-                    val gapHeight =
-                        (LocalConfiguration.current.screenHeightDp * 0.34f).dp
+                    val gapHeight = tdayEmptySlotHeight()
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -3079,9 +3080,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .heightIn(
-                                        min = (LocalConfiguration.current.screenHeightDp * 0.32f).dp,
-                                    ),
+                                    .heightIn(min = tdayEmptySlotHeight()),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 TdayEmptyState(
@@ -3299,9 +3298,21 @@ fun TodoListScreen( // skipcq: KT-R1006
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding),
-                    contentAlignment = Alignment.Center,
+                    // A hero screen starts its scene on the shared content line, where
+                    // the first row would have been, so the scene is at the same height
+                    // here as on every other titled screen and on iOS and the web. The
+                    // root feeds lead with a collapsing toolbar rather than a hero disc
+                    // and keep the scene centred in what is left.
+                    contentAlignment = if (usesRootFeedChrome) Alignment.Center else Alignment.TopCenter,
                 ) {
                     TdayEmptyState(
+                        modifier = if (usesRootFeedChrome) {
+                            Modifier
+                        } else {
+                            Modifier
+                                .padding(top = tdayContentStartInset())
+                                .heightIn(min = tdayEmptySlotHeight())
+                        },
                         // Day Done keeps its own glyph and its date line: it is
                         // a payoff, not an absence, and the scope's own icon
                         // would undersell it.

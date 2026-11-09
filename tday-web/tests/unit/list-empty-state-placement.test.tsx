@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
 /**
- * The custom-list screen was the fourth screen with the 42vh problem and the one
+ * The custom-list screen was the fourth screen with the 36vh problem and the one
  * that never got the travel. Ticking the last CURRENT task off a list mounts the
- * empty scene — `min-h-[42vh]` — in the frame that prunes the row, and the Earlier
+ * empty scene — `a 36svh min-height` — in the frame that prunes the row, and the Earlier
  * block underneath it goes on rendering for as long as the list holds overdue
  * tasks, so most of a screen arrives above a block that then lands in its new place
  * with nothing to read it by. `AllTasksTimelineContainer`,

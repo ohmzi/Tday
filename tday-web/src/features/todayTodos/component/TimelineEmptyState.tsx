@@ -12,7 +12,7 @@ import type { EarlierHandoff } from "../lib/useEarlierExpandHandoff";
  * payoff state instead of the generic no-tasks message).
  *
  * The wrapper is the scene's SLOT and not just a box around it: a departure
- * closes its track as well as fading its ink, so the 42vh this claims is given
+ * closes its track as well as fading its ink, so the 36vh this claims is given
  * back over that beat rather than in the frame that ends it.
  * `EmptyStateSlot` owns that markup rather than this file, because the two
  * Anytime feeds draw `EmptyState` with no Earlier bucket around it and needed
@@ -43,7 +43,7 @@ export default function TimelineEmptyState({
   /**
    * How long the celebration waits for the page to settle before any of it plays
    * (see `EmptyState`'s own doc). Both callers pass the travel their own children
-   * take to reach their new slots, because this scene claims its 42vh out of a page
+   * take to reach their new slots, because this scene claims its 36vh out of a page
    * those children sit in — the list screen included, where Earlier's block goes on
    * rendering underneath it for as long as the list holds overdue tasks. The zero
    * default is `EmptyState`'s own, kept here so the two contracts stay the same

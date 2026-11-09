@@ -69,6 +69,18 @@ The `shared/` module is a Kotlin Multiplatform (KMP) library targeting JVM, Andr
 | Android (`android-compose`) | Android | Gradle `project(":shared")` |
 | iOS (`ios-swiftUI`) | Swift models | Mirrored manually in `Core/Model/ApiModels.swift` and checked with contract tests |
 
+### Screen Layout Tokens
+
+Every titled screen (Today and the other scopes, list detail, Completed, Calendar, Settings, the guide, release and sweep pages) leads with the same hero block: a 96 disc holding the page's glyph, then the title. Where the content starts under it, and where an empty scene sits, are **ratios of the screen height** in `shared/.../layout/LayoutTokens.kt`, so the first row, and the scene that stands in for it, land at the same height on Android, iOS and the web:
+
+| Token | Value | Meaning |
+|-------|-------|---------|
+| `ContentStartRatio` | 0.38 | Where the first content under a hero title starts, from the top of the screen |
+| `ContentGapMin` / `ContentGapMax` | 36 / 64 | Bounds on the gap under the title. The floor is the fade band plus 6, so the first row rests below the band that dissolves rows under the pinned bar |
+| `EmptySlotRatio` | 0.36 | Minimum height of the slot an empty scene is centred in, on every screen |
+
+Each client measures where its own title ends (safe-area inset plus bar plus hero block, which legitimately differ per platform) and spends what reaches the line: `contentGap` in Kotlin, `TdayLayout.contentGap` on iOS, `contentGapPx` on the web. Android imports the Kotlin object directly; iOS (`TdayLayoutGenerated.swift`) and the web (`src/generated/layout-tokens.ts`) read generated copies written by `./gradlew :shared:exportLayoutTokens`, and `:shared:verifyLayoutTokens` is the CI drift gate. The root feeds (Scheduled and Floater homes) are out of scope: they lead with a collapsing search toolbar, not the hero disc. On the web a page's `beneathTitle` slot (the Completed tab switcher) stays inside the hero block, so the line is where the content *after* it starts; the native clients treat that control as content.
+
 ## Repository Layout
 
 ```

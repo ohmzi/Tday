@@ -1,6 +1,7 @@
 import { useRef, type CSSProperties, type ElementType, type ReactNode } from "react";
 import Confetti from "@/components/app/Confetti";
 import { useFadeUnmount } from "@/hooks/useFadeUnmount";
+import { EMPTY_SLOT_MIN_HEIGHT } from "@/lib/layoutTokens";
 import { DURATION_MS } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import Illustration, { type IllustrationId } from "@/components/illustrations/Illustration";
@@ -93,9 +94,12 @@ export default function EmptyState({
   return (
     <div
       className={cn(
-        "relative mx-auto flex min-h-[42vh] w-full max-w-sm flex-col items-center justify-center px-6 text-center",
+        "relative mx-auto flex w-full max-w-sm flex-col items-center justify-center px-6 text-center",
         className,
       )}
+      // The slot every empty scene sits in, as a ratio of the screen — the same
+      // ratio and the same unit Android and iOS read from the shared layout tokens.
+      style={{ minHeight: EMPTY_SLOT_MIN_HEIGHT }}
     >
       {/* The arrival is on this wrapper rather than on the box above, so the
           confetti below is not faded up along with the scene it flies over. */}
