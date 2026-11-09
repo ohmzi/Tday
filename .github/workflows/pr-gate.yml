@@ -124,3 +124,6 @@ jobs:
 
       - name: Verify the list icon table is not stale
         run: ./gradlew :shared:verifyListIconTable --no-daemon
+
+      - name: Verify layout tokens are not stale
+        run: ./gradlew :shared:verifyLayoutTokens --no-daemon

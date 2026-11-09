@@ -7,7 +7,7 @@
  * This is a document-order claim and jsdom is the right place for it: no layout
  * is needed to ask which node comes first, and document order is exactly what
  * decides whether expanding Earlier grows downward from a header that stays put
- * or shrinks a 42vh box sitting above it and throws the header to the top of the
+ * or shrinks a 36vh box sitting above it and throws the header to the top of the
  * screen. That was web's behaviour, it was the last client with it, and the
  * comment asserting it claimed parity as the reason — so a rewritten comment
  * alone would leave nothing to stop the next refactor putting the block back.

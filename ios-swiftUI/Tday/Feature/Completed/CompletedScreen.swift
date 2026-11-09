@@ -404,10 +404,18 @@ struct CompletedScreen: View {
                             emptyStateReservedTopHeight,
                             max(0, proxy.size.height - completedEmptyStateMinimumRemainder)
                         )
+                        // Starts under the strip and is centred in the same slot every
+                        // other screen gives its scene — a ratio of the screen, shared
+                        // with Android and the web (`TdayLayout`) — rather than in
+                        // whatever was left, which put it lower the taller the frame.
                         VStack(spacing: 0) {
                             Color.clear.frame(height: reservedTop)
-                            Spacer(minLength: 0)
                             completedEmptyScene
+                                .frame(
+                                    maxWidth: .infinity,
+                                    minHeight: TdayLayout.emptySlotHeight(),
+                                    alignment: .center
+                                )
                             Spacer(minLength: 0)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -120,6 +120,36 @@ run {
     }
 }
 
+// ── Layout token codegen ─────────────────────────────────────────────────
+// Generates the committed iOS/web copies of the shared LayoutTokens (where content
+// starts under a hero title, and the empty-scene slot, as ratios of the screen).
+// Android imports the object directly. `verifyLayoutTokens` (--check) is the CI drift
+// gate.
+run {
+    val jvmMainCompilation = kotlin.jvm().compilations.getByName("main")
+    val exporterMain = "com.ohmz.tday.shared.layout.export.LayoutTokenExporterKt"
+    val exporterClasspath =
+        jvmMainCompilation.output.allOutputs + requireNotNull(jvmMainCompilation.runtimeDependencyFiles)
+
+    tasks.register<JavaExec>("exportLayoutTokens") {
+        group = "layout"
+        description = "Generate the committed layout token artifacts for iOS and web."
+        dependsOn(jvmMainCompilation.compileTaskProvider)
+        classpath = exporterClasspath
+        mainClass.set(exporterMain)
+        args(rootProject.rootDir.absolutePath)
+    }
+
+    tasks.register<JavaExec>("verifyLayoutTokens") {
+        group = "layout"
+        description = "Fail if the committed layout token artifacts are stale (CI drift gate)."
+        dependsOn(jvmMainCompilation.compileTaskProvider)
+        classpath = exporterClasspath
+        mainClass.set(exporterMain)
+        args(rootProject.rootDir.absolutePath, "--check")
+    }
+}
+
 // ── Motion token codegen ─────────────────────────────────────────────────
 // The repo's second cross-platform Gradle codegen, modelled on the guide one
 // above: generates the committed Android/iOS/web motion artifacts from the

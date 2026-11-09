@@ -132,7 +132,7 @@ export default function NativeFloaterTaskHomeDashboard() {
       <ScreenWatermark icon={Leaf} color={floaterAccent} />
       {/* The same travel the scheduled task home's column got, for the worse version of
           its problem. Ticking the last Anytime task swaps a one-row feed for the
-          `min-h-[42vh]` empty state, so the lists below drop by most of a screen — and
+          `a 36svh min-height` empty state, so the lists below drop by most of a screen — and
           they did it in the frame the confetti fired, which put the biggest uncued jump
           in the app underneath the one moment nobody is looking at the layout. Now the
           tiles glide down first and the celebration waits for them; see the empty
@@ -196,7 +196,7 @@ export default function NativeFloaterTaskHomeDashboard() {
             inside is still fading and this element is what it is painted into —
             an undo that unmounts the scene cuts the fade one layer down, which
             is the same complaint the fade exists to answer. The slot closes its
-            42vh track under that fade too, so the Completed tile below and the
+            36vh track under that fade too, so the Completed tile below and the
             lists under that take the space back over the beat rather than in the
             frame the node goes.
 

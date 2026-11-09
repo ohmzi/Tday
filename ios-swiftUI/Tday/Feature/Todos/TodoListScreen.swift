@@ -1138,8 +1138,11 @@ struct TodoListScreen: View {
         isFloaterTaskHomeScreen && floaterTaskHomeAnswer == .empty
     }
 
+    /// The slot an empty scene is centred in: a ratio of the screen, shared with
+    /// Android and the web (`TdayLayout`) so the scene lands at the same height on
+    /// every client.
     private var inlineEmptyStateGapHeight: CGFloat {
-        UIScreen.main.bounds.height * 0.42
+        TdayLayout.emptySlotHeight()
     }
 
     private var isListDetailScreen: Bool {
@@ -2208,10 +2211,20 @@ struct TodoListScreen: View {
                                     emptyStateReservedTopHeight,
                                     max(0, proxy.size.height - EmptyStateIllustrationLayout.minimumRemainder)
                                 )
+                                // The scene starts on the shared content line — where
+                                // the first row would have been, which is exactly what
+                                // the reservation measures — and is centred in a slot
+                                // that is a ratio of the screen. It used to be centred
+                                // in whatever was left, which put it lower the taller
+                                // the frame and at a different height on every platform.
                                 VStack(spacing: 0) {
                                     Color.clear.frame(height: reservedTop)
-                                    Spacer(minLength: 0)
                                     emptyStateIllustration(for: context.date)
+                                        .frame(
+                                            maxWidth: .infinity,
+                                            minHeight: inlineEmptyStateGapHeight,
+                                            alignment: .center
+                                        )
                                     Spacer(minLength: 0)
                                 }
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -4647,7 +4660,10 @@ struct TimelineExpandedTitleRow: View {
             alignment: .bottom
         )
         .clipped()
-        .padding(.bottom, TodoTimelineMetrics.settledContentGap)
+        // A ratio of the screen, not a fixed 36: the first row starts on the line
+        // Android and the web start theirs on. Outside the frame above, so it moves
+        // the content without changing when the title arrives.
+        .padding(.bottom, TdayLayout.heroContentGap())
         .allowsHitTesting(false)
     }
 

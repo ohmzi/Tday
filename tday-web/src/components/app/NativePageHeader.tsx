@@ -7,6 +7,8 @@ import { rootFeedHeaderButtonClass } from "./RootFeedHeroHeader";
 import { nativeAppScrollAttribute } from "./nativeAppLayout";
 import { clamp01, smootherstep } from "./nativeHeaderEasing";
 import { nativePageBarTitleReserve } from "./nativePageBarTitleReserve";
+import { LAYOUT_TOKENS } from "@/generated/layout-tokens";
+import { contentGapStyle } from "@/lib/layoutTokens";
 import { cn } from "@/lib/utils";
 
 /**
@@ -198,6 +200,51 @@ export function useNativePageBarResync(scope: HTMLElement | null, dependency: un
   }, [scope, dependency]);
 }
 
+/**
+ * Spends the gap under the title block so the page's content starts on the shared
+ * content line — a ratio of the viewport that iOS and Android read too — instead of
+ * wherever each page's own margin happened to leave it.
+ *
+ * Written straight onto the spacer's node, never through state: the page behind the
+ * header must not re-render for a layout read. The spacer sits OUTSIDE the block the
+ * collapse measures, for the same reason iOS keeps `settledContentGap` out of
+ * `titleCollapseDistance` — it moves the content down without changing when the
+ * title arrives.
+ *
+ * `getBoundingClientRect().top + scrollTop` is where the spacer sits with the page
+ * at its top. Two frames are measured rather than one because a route transition may
+ * still be moving the page on the first, and a transform is the one thing a resize
+ * observer never reports.
+ */
+function useContentLineGap(gapRef: RefObject<HTMLDivElement | null>, dependency: unknown) {
+  useLayoutEffect(() => {
+    const gap = gapRef.current;
+    if (!gap) return;
+    const scroller = gap.closest(`[${nativeAppScrollAttribute}]`) as HTMLElement | null;
+
+    const apply = () => {
+      const restTop = gap.getBoundingClientRect().top + (scroller?.scrollTop ?? 0);
+      gap.style.cssText = contentGapStyle(restTop);
+    };
+
+    apply();
+    const frame = requestAnimationFrame(() => {
+      apply();
+      requestAnimationFrame(apply);
+    });
+    const observer =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(apply);
+    if (gap.previousElementSibling) observer?.observe(gap.previousElementSibling);
+    void document.fonts?.ready.then(apply);
+    window.addEventListener("resize", apply);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
+      window.removeEventListener("resize", apply);
+    };
+  }, [gapRef, dependency]);
+}
+
 type Props = {
   title: string;
   accentColor: string;
@@ -290,6 +337,7 @@ export default function NativePageHeader({
 }: Props) {
   const EchoIcon = echoIcon ?? Icon;
   const m = nativePageHeaderMetrics;
+  const contentGapFloor = LAYOUT_TOKENS.contentGapMin;
   const heroRef = useRef<HTMLDivElement | null>(null);
   const markBoxRef = useRef<HTMLDivElement | null>(null);
   const markRef = useRef<HTMLDivElement | null>(null);
@@ -297,6 +345,9 @@ export default function NativePageHeader({
   const heroTitleRef = useRef<HTMLHeadingElement | null>(null);
   /** Never shown; exists only to be measured. See the span at the foot of the block. */
   const titleMeasureRef = useRef<HTMLSpanElement | null>(null);
+  /** The spacer under the block: spends what reaches the shared content line. */
+  const contentGapRef = useRef<HTMLDivElement | null>(null);
+  useContentLineGap(contentGapRef, `${title}\n${subtitle ?? ""}`);
   const ownSlots = useNativePageBarSlots();
   const slots = barSlots ?? ownSlots;
   const { barRef, dockedTitleRef, fadeRef, leadingRef, trailingRef } = slots;
@@ -671,6 +722,9 @@ export default function NativePageHeader({
           {title}
         </span>
       </div>
+      {/* The floor until the effect above has measured, so the first paint is never
+          tighter than the settled one. Outside the block the collapse measures. */}
+      <div ref={contentGapRef} aria-hidden style={{ height: contentGapFloor }} />
     </>
   );
 }

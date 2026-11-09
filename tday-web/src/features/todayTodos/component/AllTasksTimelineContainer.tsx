@@ -311,7 +311,7 @@ const AllTasksTimelineContainer = ({
     >
       <TaskSelectionProvider rows={selectableTodos}>
         {/* The page's children travel when one of them takes a new slot. The empty
-            state is why: it is `min-h-[42vh]`, so the frame that prunes the last row
+            state is why: it is `a 36svh min-height`, so the frame that prunes the last row
             also hands that block of the screen to a scene that was not there before —
             and everything under it (the Earlier bucket, the no-results state, the
             pager) was put in its new place in that same frame, which is the one moment
@@ -449,7 +449,7 @@ const AllTasksTimelineContainer = ({
               above Earlier", citing the hand-off order as though parity were
               the reason for it. It was the divergence. Keeping the scene out
               from under the header was a real argument, but it cost the header
-              its anchor: Earlier's header sat BELOW a 42vh box, so expanding
+              its anchor: Earlier's header sat BELOW a 36vh box, so expanding
               the bucket shrank something above the header and the header
               itself jumped to the top of the screen — the one thing on the
               page the finger had just touched moved out from under it, and the
