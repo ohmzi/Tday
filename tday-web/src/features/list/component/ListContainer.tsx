@@ -205,7 +205,7 @@ const ListContainer = ({ id }: { id: string }) => {
                                 ? `${appDict("searchIn")} ${listName}...`
                                 : `${appDict("searchTasks")}...`
                         }
-                        pageCollapse={{ ...barSlots, title: listName, accentColor: listAccent }}
+                        pageCollapse={{ ...barSlots, title: listName }}
                         // Same gate as the summary beside it, for the same reason: an
                         // empty list has nothing for a query to narrow, and the button
                         // would only raise a keyboard over the empty-state scene. The

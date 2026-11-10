@@ -335,7 +335,6 @@ const AllTasksTimelineContainer = ({
             pageCollapse={{
               ...barSlots,
               title: pageHeading,
-              accentColor: timelineScopeAccentColors[scope],
             }}
             trailingAction={
               <div className="flex shrink-0 items-center gap-2">
