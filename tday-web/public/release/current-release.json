@@ -1,9 +1,9 @@
 {
-  "version": "0.8.16",
-  "publishedAt": "2026-11-09T16:58:38-05:00",
+  "version": "0.8.17",
+  "publishedAt": "2026-11-09T22:36:16-05:00",
   "notes": [
-    "Align screen content start and empty scenes by screen-height ratio"
+    "Draw every titled screen's name in the ink colour"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.16",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.15..v0.8.16"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.17",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.16..v0.8.17"
 }
