@@ -14,6 +14,7 @@
     <string name="action_create_task">Создать задачу</string>
     <string name="action_create_list">Создать список</string>
     <string name="action_edit">Изменить</string>
+    <string name="action_edit_list">Изменить список</string>
     <string name="action_edit_task">Изменить задачу</string>
     <string name="action_copy">Копировать</string>
     <string name="action_copy_task">Копировать задачу</string>
@@ -52,7 +53,6 @@
     <string name="task_promote_failed">Не удалось запланировать задачу</string>
     <string name="task_float_failed">Не удалось отпустить задачу</string>
     <string name="action_complete">Завершить</string>
-    <string name="action_more_options">Дополнительно</string>
     <string name="action_save">Сохранить</string>
     <string name="action_save_task">Сохранить задачу</string>
     <string name="action_cancel">Отмена</string>

@@ -14,6 +14,7 @@
     <string name="action_create_task">Crea attività</string>
     <string name="action_create_list">Crea elenco</string>
     <string name="action_edit">Modifica</string>
+    <string name="action_edit_list">Modifica elenco</string>
     <string name="action_edit_task">Modifica attività</string>
     <string name="action_copy">Copia</string>
     <string name="action_copy_task">Copia attività</string>
@@ -52,7 +53,6 @@
     <string name="task_promote_failed">Impossibile pianificare l\'attività</string>
     <string name="task_float_failed">Impossibile far fluttuare l\'attività</string>
     <string name="action_complete">Completa</string>
-    <string name="action_more_options">Altre opzioni</string>
     <string name="action_save">Salva</string>
     <string name="action_save_task">Salva attività</string>
     <string name="action_cancel">Annulla</string>

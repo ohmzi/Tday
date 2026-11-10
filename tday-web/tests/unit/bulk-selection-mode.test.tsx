@@ -46,7 +46,6 @@ vi.mock("@/components/ListDot", () => ({
   default: () => <span data-testid="list-dot" />,
 }));
 
-import BulkSelectAllButton from "@/components/todo/bulk/BulkSelectAllButton";
 import TaskSelectionProvider, {
   useTaskSelection,
 } from "@/providers/TaskSelectionProvider";
@@ -130,7 +129,6 @@ function Harness({
         empty-the-screen
       </button>
       <TaskSelectionProvider rows={rows} scopeListId={scopeListId}>
-        <BulkSelectAllButton />
         <SelectionControls rows={rows} />
       </TaskSelectionProvider>
     </QueryClientProvider>
@@ -154,30 +152,6 @@ describe("bulk selection mode", () => {
   });
 
   afterEach(cleanup);
-
-  it("header Select all opens selection mode with every row selected, then hides", () => {
-    const rows = [
-      buildTodo({ id: "a:null" }),
-      buildTodo({ id: "b:null" }),
-      buildTodo({ id: "c:null" }),
-    ];
-    render(<Harness initialRows={rows} />);
-    const headerSelectAll = screen.getAllByRole("button", { name: "bulkSelectAll" });
-    expect(headerSelectAll).toHaveLength(1);
-
-    fireEvent.click(headerSelectAll[0]);
-
-    expect(screen.getByTestId("mode").textContent).toBe("true");
-    expect(screen.getByTestId("count").textContent).toBe("3");
-    // Inside selection mode the bar owns Select all / Deselect all, so the
-    // header button steps aside and only the bar's toggle remains.
-    expect(screen.getAllByRole("button", { name: /bulk(De)?[sS]electAll/ })).toHaveLength(1);
-  });
-
-  it("header Select all is hidden when there is nothing to select", () => {
-    render(<Harness initialRows={[]} />);
-    expect(screen.queryByRole("button", { name: "bulkSelectAll" })).toBeNull();
-  });
 
   it("sends no delete until the dialog is confirmed AND the toast settles", () => {
     const rows = [

@@ -21,7 +21,6 @@ import { useReorderListTodo } from "../query/reorder-list-todo";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
 import TaskSelectionProvider from "@/providers/TaskSelectionProvider";
 import BulkSelectButton from "@/components/todo/bulk/BulkSelectButton";
-import BulkSelectAllButton from "@/components/todo/bulk/BulkSelectAllButton";
 import { useList } from "../query/get-list-todos";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import NativePageHeader, { useNativePageBarSlots } from "@/components/app/NativePageHeader";
@@ -41,7 +40,7 @@ import { DELAY_MS, DURATION_MS } from "@/lib/motion";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/navigation";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
-import { Pencil, Search, Users } from "lucide-react";
+import { Pencil, Search, Users, UsersRound } from "lucide-react";
 import { resolveFocusedRowId } from "@/lib/todo/todo-id";
 import { useExpandEarlierForFocus, useFocusParamHandoff } from "@/lib/todo/focusHandoff";
 import { TODO_FOCUS_INSTANCE_QUERY_PARAM, TODO_FOCUS_TASK_QUERY_PARAM } from "@/lib/todoToastNavigation";
@@ -213,17 +212,18 @@ const ListContainer = ({ id }: { id: string }) => {
                         searchUnavailable={!listTodosLoading && listTodos.length === 0}
                         trailingAction={
                             <div className="flex shrink-0 items-center gap-2">
-                                {/* Selection mode is entered from an explicit button
-                                    in the header cluster, never a long-press — that
-                                    gesture belongs to drag-to-reschedule on the
-                                    native clients and parity means one entry point. */}
-                                <BulkSelectButton />
-                                <BulkSelectAllButton />
                                 {/* Same gate the native list screens use: a summary is
                                     only offered where there is something to summarize. */}
                                 {listTodos.length > 0 ? (
                                     <SummaryButton mode="list" listId={id} />
                                 ) : null}
+                                {/* Selection mode is entered from an explicit button
+                                    in the header cluster, never a long-press — that
+                                    gesture belongs to drag-to-reschedule on the
+                                    native clients and parity means one entry point.
+                                    Summarize first, then Select, as on Android and iOS;
+                                    Select all lives inside selection mode, as there. */}
+                                <BulkSelectButton />
                                 {editableList ? (
                                     // One entry point per role: owners get the edit sheet
                                     // (which hosts the Sharing section); members go straight
@@ -243,7 +243,7 @@ const ListContainer = ({ id }: { id: string }) => {
                                         {myRole === "OWNER" ? (
                                             <Pencil className="h-6 w-6 stroke-[2.6]" />
                                         ) : (
-                                            <Users className="h-6 w-6 stroke-[2.6]" />
+                                            <UsersRound className="h-6 w-6 stroke-[2.6]" />
                                         )}
                                     </Button>
                                 ) : null}

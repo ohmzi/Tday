@@ -14,6 +14,7 @@
     <string name="action_create_task">创建任务</string>
     <string name="action_create_list">创建列表</string>
     <string name="action_edit">编辑</string>
+    <string name="action_edit_list">编辑列表</string>
     <string name="action_edit_task">编辑任务</string>
     <string name="action_copy">复制</string>
     <string name="action_copy_task">复制任务</string>
@@ -52,7 +53,6 @@
     <string name="task_promote_failed">无法安排任务</string>
     <string name="task_float_failed">无法放漂任务</string>
     <string name="action_complete">完成</string>
-    <string name="action_more_options">更多选项</string>
     <string name="action_save">保存</string>
     <string name="action_save_task">保存任务</string>
     <string name="action_cancel">取消</string>
