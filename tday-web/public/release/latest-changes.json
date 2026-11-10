@@ -1,9 +1,9 @@
 {
-  "version": "0.8.17",
-  "publishedAt": "2026-11-09T22:36:16-05:00",
+  "version": "0.8.18",
+  "publishedAt": "2026-11-09T23:12:45-05:00",
   "notes": [
-    "Draw every titled screen's name in the ink colour"
+    "Give every list bar the same buttons in the same order"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.17",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.16..v0.8.17"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.18",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.17..v0.8.18"
 }
