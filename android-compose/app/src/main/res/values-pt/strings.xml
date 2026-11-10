@@ -14,6 +14,7 @@
     <string name="action_create_task">Criar tarefa</string>
     <string name="action_create_list">Criar lista</string>
     <string name="action_edit">Editar</string>
+    <string name="action_edit_list">Editar lista</string>
     <string name="action_edit_task">Editar tarefa</string>
     <string name="action_copy">Copiar</string>
     <string name="action_copy_task">Copiar tarefa</string>
@@ -52,7 +53,6 @@
     <string name="task_promote_failed">Não foi possível agendar a tarefa</string>
     <string name="task_float_failed">Não foi possível deixar a tarefa flutuar</string>
     <string name="action_complete">Concluir</string>
-    <string name="action_more_options">Mais opções</string>
     <string name="action_save">Salvar</string>
     <string name="action_save_task">Salvar tarefa</string>
     <string name="action_cancel">Cancelar</string>
