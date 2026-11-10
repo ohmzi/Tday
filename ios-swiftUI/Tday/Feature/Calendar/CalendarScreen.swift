@@ -2493,6 +2493,8 @@ private extension Optional where Wrapped == [TodoItem] {
 
 private struct CalendarElasticTopBar: View {
     let title: String
+    /// Tints the mark and its wash. The title itself is always the ink colour, as on
+    /// every other titled screen.
     let accentColor: Color
     /// Read here and nowhere above: this bar is the one view that depends on the
     /// collapse, so a pan frame redraws the bar and not the calendar under it. Handed
@@ -2751,7 +2753,7 @@ private struct CalendarElasticTopBar: View {
                 if !searchActive, titleReserve.hasRoom {
                     Text(title)
                         .font(dockedTitleFont)
-                        .foregroundStyle(accentColor)
+                        .foregroundStyle(colors.onSurface)
                         .lineLimit(1)
                         // The backstop below the floor, and nothing more now. It
                         // is Android's `DockedTitleMinScale` in origin — that
@@ -2835,7 +2837,7 @@ private struct CalendarElasticTopBar: View {
                     // either copy cannot leave the reserve answering a question
                     // about a size nobody draws.
                     .font(dockedTitleFont)
-                    .foregroundStyle(accentColor)
+                    .foregroundStyle(colors.onSurface)
                     .lineLimit(1)
                     .opacity(expandedTitleOpacity)
                     .offset(y: expandedTitleOffsetY)

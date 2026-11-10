@@ -123,7 +123,8 @@ export const nativePageBarTitleLayerClassName = cn(
  * natural width against, where a divergence would silently answer the wrong
  * question. They matched by hand-maintained coincidence until this constant.
  */
-const nativePageTitleTypeClassName = "text-[2.1rem] font-black leading-tight tracking-normal";
+const nativePageTitleTypeClassName =
+  "text-[2.1rem] font-black leading-tight tracking-normal text-foreground";
 
 /**
  * The docked title itself, inside that layer. Full-width so the symmetric
@@ -615,7 +616,7 @@ export default function NativePageHeader({
           <span
             ref={dockedTitleRef}
             className={nativePageBarDockedTitleClassName}
-            style={{ color: accentColor, opacity: 0, visibility: "hidden" }}
+            style={{ opacity: 0, visibility: "hidden" }}
           >
             {title}
           </span>
@@ -679,7 +680,6 @@ export default function NativePageHeader({
         <h1
           ref={heroTitleRef}
           className={cn("mt-[18px] truncate", nativePageTitleTypeClassName)}
-          style={{ color: accentColor }}
         >
           {title}
         </h1>

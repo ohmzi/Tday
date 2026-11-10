@@ -118,7 +118,7 @@ export default function FloaterListContainer({ id }: { id: string }) {
         placeholder={
           listName ? `${appDict("searchIn")} ${listName}...` : appDict("searchFloatersPlaceholder")
         }
-        pageCollapse={{ ...barSlots, title: listName, accentColor: listAccent }}
+        pageCollapse={{ ...barSlots, title: listName }}
         // An empty list has nothing for a query to narrow, and the button would
         // only raise a keyboard over the empty-state scene. The unsearched set,
         // so a word that matches nothing keeps the field.

@@ -67,7 +67,6 @@ const CompletedTodoContainer = ({
         pageCollapse={{
           ...barSlots,
           title: completedDict("title"),
-          accentColor: nativeScreenAccentColors.completed,
         }}
       />
 

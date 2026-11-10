@@ -4325,7 +4325,6 @@ struct TimelineTopBar: View {
         TodoTimelineTitleLabel(
             title: title,
             nightTitle: nightTitle,
-            accentColor: accentColor,
             showsTimeOfDayIcon: showsTimeOfDayIcon
         )
     }
@@ -4641,7 +4640,6 @@ struct TimelineExpandedTitleRow: View {
             TodoTimelineTitleLabel(
                 title: title,
                 nightTitle: nightTitle,
-                accentColor: accentColor,
                 showsTimeOfDayIcon: showsTimeOfDayIcon
             )
                 .frame(
@@ -4731,8 +4729,11 @@ private struct TodoTimelineTitleLabel: View {
     /// moment, that nothing re-runs at 18:00 while the screen sits open — which is
     /// exactly the bug `TodoListViewModel.title` has as a stored property.
     let nightTitle: String?
-    let accentColor: Color
     let showsTimeOfDayIcon: Bool
+
+    /// Every titled screen draws its name in the ink colour — the screen's own colour
+    /// lives in its mark, its bar buttons and its add button, never in the word.
+    @Environment(\.tdayColors) private var colors
 
     private func resolvedTitle(at date: Date) -> String {
         guard let nightTitle, !TdayTimeOfDay.isDaytime(date) else { return title }
@@ -4750,7 +4751,7 @@ private struct TodoTimelineTitleLabel: View {
 
                 Text(resolvedTitle(at: context.date))
                     .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
-                    .foregroundStyle(accentColor)
+                    .foregroundStyle(colors.onSurface)
                     .lineLimit(1)
             }
             .lineLimit(1)

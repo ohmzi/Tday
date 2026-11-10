@@ -3370,7 +3370,6 @@ fun TodoListScreen( // skipcq: KT-R1006
                 // it instead of starting under it.
                 TdayHeroToolbar(
                     title = displayTitle,
-                    titleColor = titleColor,
                     collapseProgress = heroCollapse.progress,
                     // Gone while the field is up: a back chevron beside an
                     // open search is a second way out that leaves the screen

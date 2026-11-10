@@ -1025,7 +1025,6 @@ export default function SettingsPage() {
         pageCollapse={{
           ...barSlots,
           title: sidebarDict("settings"),
-          accentColor: nativeScreenAccentColors.settings,
         }}
       />
 

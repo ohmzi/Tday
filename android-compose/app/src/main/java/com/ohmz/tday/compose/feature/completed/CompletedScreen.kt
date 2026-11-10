@@ -341,12 +341,10 @@ fun CompletedScreen(  // skipcq: KT-R1006
     // It tints the mark and everything the mark is drawn in — the hero's front glyph, its
     // echo, the page watermark, the empty state's badge — and the tab strip.
     //
-    // The disc's wash, the hero title and the toolbar keep [COMPLETED_TITLE_COLOR], the
-    // page's own slate chrome. The wash is the one of those that touches the mark, and it
-    // is left alone deliberately: on the natives it sits directly above a slate title,
-    // and re-tinting it alone would put a green disc over a slate title where web has the
-    // two the same colour. Re-colouring the chrome is a change to a shape this did not
-    // come to make.
+    // The disc's wash keeps [COMPLETED_TITLE_COLOR], the page's own slate chrome, and is
+    // left alone deliberately: re-tinting it alone would put a green disc on a slate wash.
+    // The hero and docked titles are not part of that chrome any more — every titled
+    // screen draws its title in `onBackground`.
     val activeScopeAccent = TdayCompletedTileAccent
     // The tab switch scrolls the new tab to its own top — web's `scrollCompletedToTop()`.
     val scrollScope = rememberCoroutineScope()
@@ -458,7 +456,6 @@ fun CompletedScreen(  // skipcq: KT-R1006
                         // `frontMark` for the mark itself.
                         icon = completedEchoIcon,
                         accentColor = COMPLETED_TITLE_COLOR,
-                        titleColor = COMPLETED_TITLE_COLOR,
                         collapseProgress = heroCollapse.progress,
                         frontMark = {
                             CompletedMark(
@@ -773,7 +770,6 @@ fun CompletedScreen(  // skipcq: KT-R1006
             // Last, so it draws over the content passing behind it.
             TdayHeroToolbar(
                 title = completedTitle,
-                titleColor = COMPLETED_TITLE_COLOR,
                 collapseProgress = heroCollapse.progress,
                 // Gone while the field is up: a back chevron beside an open
                 // search is a second way out that leaves the screen rather than
