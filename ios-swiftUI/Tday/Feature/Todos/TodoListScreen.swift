@@ -1568,11 +1568,15 @@ struct TodoListScreen: View {
         if isListDetailScreen {
             // One entry point per role: owners get list settings (which hosts
             // the Sharing section); members go straight to the members sheet.
+            // A pencil and the people glyph, named for what they open — the same
+            // glyphs and names web and Android use. Not an ellipsis: it opens the
+            // sheet directly, there is no menu behind it.
+            let isOwner = selectedListSummary?.isOwner != false
             actions.append(TimelineTopBarAction(
-                systemName: "ellipsis",
-                assetName: "NavEllipsis",
+                systemName: isOwner ? "pencil" : "person.2",
+                assetName: isOwner ? "LucidePencil" : "LucideUsersRound",
                 usesCircularChrome: true,
-                accessibilityLabel: L("More"),
+                accessibilityLabel: isOwner ? L("Edit list") : L("Members"),
                 action: {
                     if selectedListSummary?.isOwner == false {
                         showingMembers = true

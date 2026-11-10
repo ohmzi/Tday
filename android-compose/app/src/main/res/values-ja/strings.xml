@@ -14,6 +14,7 @@
     <string name="action_create_task">タスクを作成</string>
     <string name="action_create_list">リストを作成</string>
     <string name="action_edit">編集</string>
+    <string name="action_edit_list">リストを編集</string>
     <string name="action_edit_task">タスクを編集</string>
     <string name="action_copy">コピー</string>
     <string name="action_copy_task">タスクをコピー</string>
@@ -52,7 +53,6 @@
     <string name="task_promote_failed">タスクを予定できませんでした</string>
     <string name="task_float_failed">タスクをフロートできませんでした</string>
     <string name="action_complete">完了</string>
-    <string name="action_more_options">その他のオプション</string>
     <string name="action_save">保存</string>
     <string name="action_save_task">タスクを保存</string>
     <string name="action_cancel">キャンセル</string>

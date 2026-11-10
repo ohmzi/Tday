@@ -2462,15 +2462,6 @@ fun TodoListScreen( // skipcq: KT-R1006
         } else {
             null
         },
-        if (hasSweepableTasks) {
-            TodoTopBarAction(
-                icon = ImageVector.vectorResource(R.drawable.ic_lucide_sun),
-                contentDescription = stringResource(R.string.sweep_title),
-                onClick = onOpenMorningSweep,
-            )
-        } else {
-            null
-        },
         if (canSummarizeCurrentMode) {
             TodoTopBarAction(
                 icon = ImageVector.vectorResource(R.drawable.ic_lucide_sparkles),
@@ -2498,6 +2489,17 @@ fun TodoListScreen( // skipcq: KT-R1006
         } else {
             null
         },
+        // After Summarize and Select, which every screen with a bar leads with in
+        // that order, so the screen-specific buttons trail the shared ones.
+        if (hasSweepableTasks) {
+            TodoTopBarAction(
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_sun),
+                contentDescription = stringResource(R.string.sweep_title),
+                onClick = onOpenMorningSweep,
+            )
+        } else {
+            null
+        },
         if (
             isListDetailScreen &&
             uiState.mode == TodoListMode.FLOATER &&
@@ -2519,9 +2521,20 @@ fun TodoListScreen( // skipcq: KT-R1006
         if (isListDetailScreen && selectedList != null) {
             // One entry point per role: owners get list settings (which hosts
             // the Sharing section); members go straight to the members sheet.
+            // A pencil for the owner and the people glyph for everyone else — the
+            // glyphs and names web and iOS use for the same one entry point. Not an
+            // ellipsis: it opens the sheet directly, there is no menu behind it.
             TodoTopBarAction(
-                icon = ImageVector.vectorResource(R.drawable.ic_lucide_ellipsis),
-                contentDescription = stringResource(R.string.action_more_options),
+                icon = ImageVector.vectorResource(
+                    if (selectedList.isOwner) {
+                        R.drawable.ic_lucide_pencil
+                    } else {
+                        R.drawable.ic_lucide_users_round
+                    },
+                ),
+                contentDescription = stringResource(
+                    if (selectedList.isOwner) R.string.action_edit_list else R.string.members_title,
+                ),
                 onClick = {
                     if (!selectedList.isOwner) {
                         showMembersSheet = true

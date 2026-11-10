@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Pencil, RotateCcw, Search, Users } from "lucide-react";
+import { Pencil, RotateCcw, Search, Users, UsersRound } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { TODO_FOCUS_TASK_QUERY_PARAM } from "@/lib/todoToastNavigation";
 import { useFocusParamHandoff } from "@/lib/todo/focusHandoff";
@@ -178,7 +178,7 @@ export default function FloaterListContainer({ id }: { id: string }) {
               {myRole === "OWNER" ? (
                 <Pencil className="h-6 w-6 stroke-[2.6]" />
               ) : (
-                <Users className="h-6 w-6 stroke-[2.6]" />
+                <UsersRound className="h-6 w-6 stroke-[2.6]" />
               )}
             </Button>
           ) : null}

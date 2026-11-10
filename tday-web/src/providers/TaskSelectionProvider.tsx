@@ -32,8 +32,6 @@ type TaskSelectionContextValue = {
   selectAll: () => void;
   deselectAll: () => void;
   enterSelection: () => void;
-  /** Opens selection mode with everything Select all can reach already selected. */
-  enterSelectionWithAll: () => void;
   exitSelection: () => void;
 };
 
@@ -49,7 +47,6 @@ const INERT: TaskSelectionContextValue = {
   selectAll: () => {},
   deselectAll: () => {},
   enterSelection: () => {},
-  enterSelectionWithAll: () => {},
   exitSelection: () => {},
 };
 
@@ -136,11 +133,6 @@ export default function TaskSelectionProvider({
     );
   }, [rows]);
 
-  const enterSelectionWithAll = useCallback(() => {
-    selectAll();
-    setSelectionMode(true);
-  }, [selectAll]);
-
   const deselectAll = useCallback(() => {
     setSelectedIds(EMPTY_SELECTION);
   }, []);
@@ -215,13 +207,11 @@ export default function TaskSelectionProvider({
       selectAll,
       deselectAll,
       enterSelection,
-      enterSelectionWithAll,
       exitSelection,
     };
   }, [
     deselectAll,
     enterSelection,
-    enterSelectionWithAll,
     exitSelection,
     readOnly,
     rows.length,
