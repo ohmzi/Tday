@@ -73,7 +73,6 @@ const CompletedFloaterContainer = ({
         pageCollapse={{
           ...barSlots,
           title: completedDict("title"),
-          accentColor: completedAccent,
         }}
       />
 

@@ -113,7 +113,6 @@ export default function GuideScreen() {
         pageCollapse={{
           ...barSlots,
           title: t("guide.title"),
-          accentColor: nativeScreenAccentColors.settings,
         }}
       />
 

@@ -1393,7 +1393,6 @@ export default function CalendarClient() {
         pageCollapse={{
           ...barSlots,
           title: sidebarDict("calendar"),
-          accentColor: nativeScreenAccentColors.calendar,
         }}
         results={searchResults}
         onSelectResult={handleSelectSearchResult}

@@ -45,7 +45,7 @@ interface MobileSearchHeaderProps {
    * drops its own brand to make room. NativePageHeader owns the scroll maths
    * and writes to these nodes; this component only places them.
    */
-  pageCollapse?: NativePageBarSlots & { title: string; accentColor: string };
+  pageCollapse?: NativePageBarSlots & { title: string };
 }
 
 const collapsedButtonClassName = cn(
@@ -280,7 +280,7 @@ export default function MobileSearchHeader({
               // instead — see NativePageHeader. `useNativePageBarResync` above
               // already re-runs it whenever `isExpanded` flips.
               data-bar-title-suppressed={isExpanded ? "true" : "false"}
-              style={{ color: pageCollapse.accentColor, opacity: 0, visibility: "hidden" }}
+              style={{ opacity: 0, visibility: "hidden" }}
             >
               {pageCollapse.title}
             </span>

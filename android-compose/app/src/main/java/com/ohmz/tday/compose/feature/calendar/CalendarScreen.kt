@@ -192,11 +192,10 @@ private val CalendarAccentPurple = Color(0xFF7D67B6)
  * rule, and `TdayLightPrimary`/`TdayDarkPrimary` lift further than this does.
  *
  * It is deliberately NOT swapped into the accent's other call sites on this
- * screen — but not because they are all fills. Four of them are ink.
- * `titleColor` on `tdayHeroTitleItem` and on `TdayHeroToolbar` is the hero and
- * the docked "Calendar" at 32sp ExtraBold: WCAG large text, which owes 3:1 and
- * has it — 4.33:1 light, 4.35:1 on the static dark background, 3.88:1 at the
- * worst dynamic dark. The other two are the day-cell task counts, `stateTint`'s
+ * screen — but not because they are all fills. Two of them are ink. (The hero
+ * and docked "Calendar" titles used to be a third and fourth; every titled
+ * screen draws its title in `onBackground` now, so they are not accent ink any
+ * more.) The two that remain are the day-cell task counts, `stateTint`'s
  * `else ->` branch reaching `Text` in `CalendarWeekDayCell` and
  * `CalendarDayCell` at 11sp ExtraBold, which is NOT large text: it owes 4.5:1
  * and misses, at 4.35:1 static dark and 3.48-3.97:1 across dynamic dark. Worse
@@ -772,7 +771,6 @@ fun CalendarScreen( // skipcq: KT-R1006
                     title = calendarTitle,
                     icon = calendarIcon,
                     accentColor = CalendarAccentPurple,
-                    titleColor = CalendarAccentPurple,
                     collapseProgress = heroCollapse.progress,
                 )
                 item {
@@ -1137,7 +1135,6 @@ fun CalendarScreen( // skipcq: KT-R1006
             // Last, so it draws over the content passing behind it.
         TdayHeroToolbar(
             title = calendarTitle,
-            titleColor = CalendarAccentPurple,
             collapseProgress = heroCollapse.progress,
             // Gone while the field is up: a back chevron beside an open search
             // is a second way out that leaves the screen rather than the query,
