@@ -221,7 +221,7 @@ dependencies {
 
     // HTML sanitizer for the notes rich-text encoding — allow-lists the same
     // small tag set as tday-web's DOMParser-based sanitizer (see richNotes.ts).
-    implementation("org.jsoup:jsoup:1.23.2")
+    implementation("org.jsoup:jsoup:1.24.1")
 
     implementation("androidx.core:core-ktx:1.19.1")
     // Per-app language override (AppCompatDelegate.setApplicationLocales); works
@@ -240,15 +240,15 @@ dependencies {
 
     // The Compose BOM keeps every Compose artifact (including the ones only reached transitively, like
     // foundation and animation) on one release; 2026.09.00 maps ui to 1.12.1 and material3 to 1.4.0.
-    implementation(platform("androidx.compose:compose-bom:2026.09.00"))
-    androidTestImplementation(platform("androidx.compose:compose-bom:2026.09.00"))
+    implementation(platform("androidx.compose:compose-bom:2026.11.01"))
+    androidTestImplementation(platform("androidx.compose:compose-bom:2026.11.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     // Backdrop blur for the bottom toast so it matches iOS's translucent
     // .ultraThinMaterial look (RenderEffect on API 31+, translucent fallback below).
-    implementation("dev.chrisbanes.haze:haze:2.0.1")
-    implementation("dev.chrisbanes.haze:haze-blur:2.0.1")
+    implementation("dev.chrisbanes.haze:haze:2.1.0")
+    implementation("dev.chrisbanes.haze:haze-blur:2.1.0")
     implementation("androidx.navigation:navigation-compose:2.10.2")
     implementation("com.google.android.material:material:1.14.0")
     implementation("androidx.credentials:credentials:1.6.0")
@@ -269,7 +269,7 @@ dependencies {
     // The offline cache holds task titles, notes and unsynced mutations, so it is encrypted at
     // rest with SQLCipher. androidx-compatible artifact (net.zetetic:sqlcipher-android) so it
     // plugs into Room's openHelperFactory directly. See DatabaseModule / DatabasePassphraseStore.
-    implementation("net.zetetic:sqlcipher-android:4.19.1")
+    implementation("net.zetetic:sqlcipher-android:4.20.0")
     implementation("androidx.sqlite:sqlite:2.7.1")
 
     // Optional, opt-in app lock (BiometricPrompt with device-credential fallback).
@@ -280,13 +280,13 @@ dependencies {
 
     implementation("com.squareup.retrofit2:retrofit:3.0.0")
     implementation("com.squareup.retrofit2:converter-kotlinx-serialization:3.0.0")
-    implementation("com.squareup.okhttp3:okhttp:5.5.0")
-    implementation("com.squareup.okhttp3:okhttp-urlconnection:5.5.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:5.5.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    implementation("com.squareup.okhttp3:okhttp:5.5.1")
+    implementation("com.squareup.okhttp3:okhttp-urlconnection:5.5.1")
+    implementation("com.squareup.okhttp3:logging-interceptor:5.5.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.13.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
-    implementation("io.sentry:sentry-okhttp:8.61.0")
+    implementation("io.sentry:sentry-okhttp:8.65.0")
 
     implementation("androidx.security:security-crypto:1.1.0")
 
@@ -299,13 +299,13 @@ dependencies {
     // needs its Android keystore integration, which the JVM artifact lacks), and it carries every
     // Tink class the connector calls (HybridDecrypt/HybridEncrypt and the subtle.* helpers; checked
     // against the connector's bytecode), so the JVM copy is dropped rather than the other way round.
-    implementation("org.unifiedpush.android:connector:3.3.5") {
+    implementation("org.unifiedpush.android:connector:3.3.6") {
         exclude(group = "com.google.crypto.tink", module = "tink")
     }
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
-    testImplementation("io.mockk:mockk:1.14.11")
+    testImplementation("io.mockk:mockk:1.14.12")
     testImplementation("app.cash.turbine:turbine:1.2.1")
 
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
